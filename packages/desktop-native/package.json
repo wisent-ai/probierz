@@ -1,0 +1,22 @@
+{
+  "name": "@wisent-tester/desktop-native",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:mac": "wdio run ./wdio.mac.conf.ts",
+    "test:win": "wdio run ./wdio.win.conf.ts",
+    "appium": "appium"
+  },
+  "devDependencies": {
+    "@wdio/cli": "^9.0.7",
+    "@wdio/local-runner": "^9.0.7",
+    "@wdio/mocha-framework": "^9.0.7",
+    "@wdio/spec-reporter": "^9.0.7",
+    "appium": "^2.11.2",
+    "appium-mac2-driver": "^1.17.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "@types/node": "^20.14.0",
+    "@types/mocha": "^10.0.7"
+  }
+}

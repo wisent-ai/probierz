@@ -1,0 +1,26 @@
+{
+  "name": "wisent-tester",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native).",
+  "workspaces": [
+    "packages/web",
+    "packages/electron",
+    "packages/mobile",
+    "packages/desktop-native"
+  ],
+  "scripts": {
+    "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps && npm --workspace packages/electron exec playwright install",
+    "test:web": "npm --workspace packages/web run test",
+    "test:electron": "npm --workspace packages/electron run test",
+    "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
+    "test:mobile:android": "npm --workspace packages/mobile run test:android",
+    "test:desktop:mac": "npm --workspace packages/desktop-native run test:mac",
+    "test:desktop:win": "npm --workspace packages/desktop-native run test:win",
+    "appium": "appium"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@types/node": "^20.14.0"
+  }
+}

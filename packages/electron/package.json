@@ -1,0 +1,14 @@
+{
+  "name": "@wisent-tester/electron",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "electron": "^31.3.0"
+  }
+}
