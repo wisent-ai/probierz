@@ -1,7 +1,7 @@
 import { browser, $, $$ } from '@wdio/globals';
 import { writeFileSync } from 'node:fs';
 
-// Swiatowid iOS (ai.wisent.swiatowid) full end-to-end test:
+// Oko iOS (ai.wisent.swiatowid) full end-to-end test:
 //   real email-OTP login -> Strategy / Velocity tabs -> sign out -> chat round-trip.
 // The OTP is read from the lukasz.bartoszcze@wisent.ai inbox via the Gmail API
 // (token passed in GMAIL_TOKEN). Each describe logs in only when signed out, so
@@ -83,7 +83,7 @@ async function loginIfNeeded(): Promise<void> {
   await (await $('~Verify & sign in')).click();
 }
 
-describe('Swiatowid iOS — authenticated tabs', () => {
+describe('Oko iOS — authenticated tabs', () => {
   before(async () => {
     await loginIfNeeded();
     await (await $('~Tab Bar')).waitForDisplayed();
@@ -117,11 +117,11 @@ describe('Swiatowid iOS — authenticated tabs', () => {
     const sendBtn = await $('~Send code');
     await sendBtn.waitForExist();
     await expect(sendBtn).toBeDisplayed();
-    await expect(await $('~Swiatowid')).toBeDisplayed();
+    await expect(await $('~Oko')).toBeDisplayed();
   });
 });
 
-describe('Swiatowid iOS — chat round-trip', () => {
+describe('Oko iOS — chat round-trip', () => {
   before(async () => {
     await loginIfNeeded();
     await (await $('~Tab Bar')).waitForDisplayed();
