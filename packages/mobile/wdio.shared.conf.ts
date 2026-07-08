@@ -12,10 +12,6 @@ process.env.APPIUM_HOME = process.env.APPIUM_HOME || `${process.env.HOME}/.appiu
  */
 export const shared: Partial<Options.Testrunner> = {
   runner: 'local',
-  autoCompileOpts: {
-    autoCompile: true,
-    tsNodeOpts: { project: './tsconfig.json', transpileOnly: true },
-  },
   specs: ['./test/specs/**/*.e2e.ts'],
   maxInstances: 1,
   logLevel: 'info',
