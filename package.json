@@ -1,5 +1,5 @@
 {
-  "name": "wisent-tester",
+  "name": "probierz",
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native).",

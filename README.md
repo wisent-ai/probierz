@@ -1,4 +1,4 @@
-# wisent-tester
+# Probierz
 
 Cross-platform test automation toolkit. One TypeScript/Node monorepo (npm
 workspaces) covering **web**, **mobile (iOS + Android)** and **desktop (Electron

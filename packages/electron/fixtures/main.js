@@ -4,7 +4,7 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow() {
-  const win = new BrowserWindow({ width: 800, height: 600, title: 'wisent-tester sample' });
+  const win = new BrowserWindow({ width: 800, height: 600, title: 'probierz sample' });
   win.loadFile(path.join(__dirname, 'index.html'));
 }
 
