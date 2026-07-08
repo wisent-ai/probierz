@@ -17,7 +17,6 @@ export const config: Options.Testrunner = {
   capabilities: [
     {
       platformName: 'windows',
-      // @ts-expect-error WinAppDriver uses the legacy `app` capability
       app: process.env.WIN_APP || 'Microsoft.WindowsCalculator_8wekyb3d8bbwe!App',
       'appium:deviceName': 'WindowsPC',
     },

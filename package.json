@@ -2,7 +2,7 @@
   "name": "probierz",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native). Ships a read-only agent surface (CLI + stdio MCP) that discovers surfaces/specs and emits run commands.",
+  "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native). Agent surface (CLI + stdio MCP) with a read-only discovery layer (surfaces/specs/run commands) and an execution layer that runs a target under chosen conditions, records video/trace/screenshots, and analyzes the result.",
   "bin": {
     "probierz": "agent/cli.mjs",
     "probierz-mcp": "agent/mcp.mjs"

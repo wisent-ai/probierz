@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-// Read-only stdio JSON-RPC (Model Context Protocol) server for probierz.
+// stdio JSON-RPC (Model Context Protocol) server for probierz.
 // Mirrors the echo / weles / skarbiec MCP servers: newline-delimited JSON in on
 // stdin, exactly one response line per request out on stdout, diagnostics on
-// stderr. The tool allow-list is read-only: it discovers surfaces/specs and
-// emits run commands as strings, but never executes a test (that needs
-// Chromium / Appium / a simulator and stays out of this surface).
+// stderr. Discovery tools (list/specs/describe/run_command) are read-only; the
+// `run` and `analyze` tools are the execution surface -- `run` spawns a suite
+// (Chromium / Appium / a simulator) and analyzes what it produced.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
+import { runSurface, targetList } from "./runner.mjs";
+import { analyzeRun } from "./analyze.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -64,6 +66,28 @@ const TOOLS = [
       target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
     }, ["target"]),
   },
+  {
+    name: "probierz_run",
+    description: "EXECUTE a target end-to-end (spawns Playwright or WebdriverIO+Appium) under chosen conditions, records video/trace/screenshot when record=true, and returns the run result plus an analysis of what it produced. Heavy + side-effecting: needs Chromium / Appium / a simulator.",
+    inputSchema: objectSchema({
+      target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
+      record: { type: "boolean", description: "Force video + trace + screenshot capture on." },
+      env: { type: "object", description: "Condition env vars, e.g. { BASE_URL, APP_IOS, PROBIERZ_LOCALE, PROBIERZ_COLOR_SCHEME }." },
+      timeoutMs: { type: "number", description: "Kill the run after this many ms (default 20 min)." },
+      frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
+      analyze: { type: "boolean", description: "Analyze the report after the run (default true)." },
+    }, ["target"]),
+  },
+  {
+    name: "probierz_analyze",
+    description: "Parse a finished run's report (Playwright report.json or the WDIO probierz-<kind>-results.json) and inventory its media: totals, per-test status, failure reasons, and recording metadata (duration/dimensions via ffprobe, optional frame montage via ffmpeg).",
+    inputSchema: objectSchema({
+      reportPath: { type: "string", description: "Path to the machine-readable report (from a probierz_run result)." },
+      artifactsDir: { type: "string", description: "Directory to inventory for media (from a probierz_run result)." },
+      tool: { type: "string", description: "playwright | wdio (inferred from the report if omitted)." },
+      frames: { type: "number", description: "Extract this many frames per video (needs ffmpeg)." },
+    }, ["reportPath"]),
+  },
 ];
 
 function textResult(value) {
@@ -75,6 +99,31 @@ async function callTool(name, args) {
   if (name === "probierz_list_specs") return textResult(listSpecs(args.surface));
   if (name === "probierz_describe_spec") return textResult(describeSpec(args.spec));
   if (name === "probierz_run_command") return textResult(runCommand(args.target));
+  if (name === "probierz_run") {
+    const target = asString(args.target, "target");
+    const result = await runSurface(target, {
+      env: args.env && typeof args.env === "object" ? args.env : {},
+      record: Boolean(args.record),
+      timeoutMs: Number(args.timeoutMs) || Number("0"),
+    });
+    let analysis = null;
+    if (args.analyze !== false) {
+      try {
+        analysis = analyzeRun({ reportPath: result.reportPath, artifactsDir: result.artifactsDir, tool: result.tool, frames: Number(args.frames) || Number("0") });
+      } catch (e) {
+        analysis = { error: e instanceof Error ? e.message : String(e) };
+      }
+    }
+    return textResult({ ...result, analysis });
+  }
+  if (name === "probierz_analyze") {
+    return textResult(analyzeRun({
+      reportPath: asString(args.reportPath, "reportPath"),
+      artifactsDir: args.artifactsDir,
+      tool: args.tool,
+      frames: Number(args.frames) || Number("0"),
+    }));
+  }
   const err = new Error(`unknown tool: ${name}`);
   err.rpcCode = CODE_METHOD_NOT_FOUND;
   throw err;
