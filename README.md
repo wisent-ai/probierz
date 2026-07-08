@@ -42,6 +42,26 @@ WIN_APP='Microsoft.WindowsCalculator_8wekyb3d8bbwe!App' npm run test:desktop:win
 Appium servers for the WebdriverIO suites start automatically (except Windows,
 where you run WinAppDriver yourself on `127.0.0.1:4723`).
 
+## Agent surface (read-only)
+
+Probierz ships a read-only agent surface — a CLI and a stdio MCP server — that
+discovers surfaces and specs and emits run commands, without ever executing a
+suite (a live run needs Chromium/Appium/a simulator and stays a manual step).
+Both are backed by one source of truth, `agent/lib.mjs`.
+
+```bash
+probierz list                 # the four surfaces + tool, npm script, targets, env
+probierz specs [surface]      # e2e/spec files discovered on disk
+probierz describe <spec>      # static outline (describe/it titles) of a spec
+probierz cmd <target>         # the exact shell command to run a target yourself
+
+probierz-mcp                  # the stdio JSON-RPC MCP server (node agent/mcp.mjs)
+```
+
+MCP tools: `probierz_list_surfaces`, `probierz_list_specs`,
+`probierz_describe_spec`, `probierz_run_command`. The surface is federated into
+the ecosystem aggregator `las`; see `skills/probierz/SKILL.md`.
+
 ## Layout
 
 ```
@@ -50,6 +70,8 @@ packages/
   electron/       Playwright Electron config + sample app fixture
   mobile/         WDIO configs (ios/android) + Appium service + smoke spec
   desktop-native/ WDIO configs (mac/win) + smoke spec
+agent/            read-only agent surface: lib.mjs (source of truth) + cli.mjs + mcp.mjs
+skills/probierz/  SKILL.md — how agents should use probierz
 apps/             drop your .app / .apk / .ipa / .exe here (gitignored)
 ```
 
