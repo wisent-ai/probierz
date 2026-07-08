@@ -7,7 +7,7 @@
 // ffprobe, an optional frame montage via ffmpeg; both best-effort so a missing
 // binary never fails the analysis), and a raw inventory of every other file the
 // run left behind.
-import { readFileSync, existsSync, statSync, readdirSync, mkdirSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync, mkdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
@@ -57,12 +57,16 @@ function probeVideo(file) {
 
 // Extract up to `count` evenly spaced frames from a video into
 // <artifactsDir>/frames/<name>/. Best-effort: needs ffmpeg. Returns the frame
-// paths (empty if ffmpeg is missing or extraction failed). The output dir holds
-// only the frames this call writes, so every file in it is a frame.
+// paths (empty if ffmpeg is missing or extraction failed). The output dir is
+// cleared first, so on a re-run stale frames never linger; every file in it is
+// a frame this call wrote.
 export function extractFrames(video, artifactsDir, count = 6) {
-  if (!hasBinary("ffmpeg")) return [];
   const name = path.basename(video, path.extname(video));
   const outDir = path.join(artifactsDir, "frames", name);
+  // Clear any prior frames unconditionally so stale files never linger -- even
+  // when ffmpeg is unavailable and this call writes nothing.
+  rmSync(outDir, { recursive: true, force: true });
+  if (!hasBinary("ffmpeg")) return [];
   mkdirSync(outDir, { recursive: true });
   const meta = probeVideo(video);
   const dur = meta && meta.durationSec ? meta.durationSec : 0;
