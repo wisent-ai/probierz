@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
 import { runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
+import { preflight, runSetup } from "./preflight.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -67,6 +68,21 @@ const TOOLS = [
     }, ["target"]),
   },
   {
+    name: "probierz_check",
+    description: "Preflight a target's toolchain WITHOUT running anything: reports whether it is ready and, for each missing piece, exactly how to fix it -- `probierz setup <target>` for parts probierz owns (Playwright browsers, Appium drivers) or a host install command for the rest (Xcode, Android SDK, simulators, WinAppDriver). Read-only.",
+    inputSchema: objectSchema({
+      target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
+    }, ["target"]),
+  },
+  {
+    name: "probierz_setup",
+    description: "Install the toolchain parts probierz owns for a target (npm deps + Playwright browsers, or npm deps + the Appium driver). Does NOT install host-level dependencies (Xcode, Android SDK, simulators, WinAppDriver) -- probierz_check reports those. Side-effecting: runs npm / appium driver install.",
+    inputSchema: objectSchema({
+      target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
+      timeoutMs: { type: "number", description: "Kill a setup step after this many ms (default 30 min)." },
+    }, ["target"]),
+  },
+  {
     name: "probierz_run",
     description: "EXECUTE a target end-to-end (spawns Playwright or WebdriverIO+Appium) under chosen conditions, records video/trace/screenshot when record=true, and returns the run result plus an analysis of what it produced. Heavy + side-effecting: needs Chromium / Appium / a simulator.",
     inputSchema: objectSchema({
@@ -76,6 +92,7 @@ const TOOLS = [
       timeoutMs: { type: "number", description: "Kill the run after this many ms (default 20 min)." },
       frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
       analyze: { type: "boolean", description: "Analyze the report after the run (default true)." },
+      force: { type: "boolean", description: "Skip the preflight gate and spawn even if the toolchain looks incomplete." },
     }, ["target"]),
   },
   {
@@ -105,7 +122,10 @@ async function callTool(name, args) {
       env: args.env && typeof args.env === "object" ? args.env : {},
       record: Boolean(args.record),
       timeoutMs: Number(args.timeoutMs) || Number("0"),
+      force: Boolean(args.force),
     });
+    // Gate-skipped: return the preflight detail; there is no report to analyze.
+    if (result.skipped) return textResult(result);
     let analysis = null;
     if (args.analyze !== false) {
       try {
@@ -115,6 +135,14 @@ async function callTool(name, args) {
       }
     }
     return textResult({ ...result, analysis });
+  }
+  if (name === "probierz_check") {
+    return textResult(preflight(asString(args.target, "target")));
+  }
+  if (name === "probierz_setup") {
+    const target = asString(args.target, "target");
+    const result = runSetup(target, { timeoutMs: Number(args.timeoutMs) || Number("0") });
+    return textResult({ ...result, preflight: preflight(target) });
   }
   if (name === "probierz_analyze") {
     return textResult(analyzeRun({

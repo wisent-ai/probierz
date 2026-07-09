@@ -43,18 +43,23 @@ probierz specs [surface]      # e2e/spec files discovered on disk (optional filt
 probierz describe <spec>      # static outline (describe/it titles) of a spec file
 probierz cmd <target>         # the exact shell command to run a target yourself
 
+# toolchain
+probierz check <target>       # is the toolchain ready? what is missing + how to fix
+probierz setup <target>       # install the parts probierz owns (browsers / appium drivers)
+
 # execution + analysis
-probierz run <target> [opts]  # EXECUTE a target, capture the result, auto-analyze
+probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture result, auto-analyze
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
 ```
 
 Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
 `desktop:win`.
 
-`run` options: `--record` (force video+trace+screenshot on), `--frames N`
-(extract N frames per recorded video, needs ffmpeg), `--timeout MS`,
-`--no-analyze`, and any `KEY=VALUE` condition env (e.g. `BASE_URL=...`,
-`APP_IOS=...`, `PROBIERZ_LOCALE=...`, `PROBIERZ_COLOR_SCHEME=dark`).
+`run` options: `--record` (force video+trace+screenshot on), `--force` (skip the
+preflight gate and spawn anyway), `--frames N` (extract N frames per recorded
+video, needs ffmpeg), `--timeout MS`, `--no-analyze`, and any `KEY=VALUE`
+condition env (e.g. `BASE_URL=...`, `APP_IOS=...`, `PROBIERZ_LOCALE=...`,
+`PROBIERZ_COLOR_SCHEME=dark`).
 
 ## MCP
 
@@ -74,10 +79,15 @@ response per request, diagnostics on stderr. Tools:
 - `probierz_list_specs` - spec files on disk; optional `surface` filter.
 - `probierz_describe_spec` - static describe/it/test outline of a spec by path.
 - `probierz_run_command` - the exact command string for a target (never run).
+- `probierz_check` - preflight a target's toolchain without running anything:
+  ready? what is missing + exactly how to fix each piece. Read-only.
+- `probierz_setup` - install the parts probierz owns for a target (npm deps +
+  Playwright browsers or the Appium driver). Side-effecting.
 - `probierz_run` - EXECUTE a target end-to-end under chosen conditions, record
-  when `record=true`, and return the run result plus an analysis. Args:
-  `target` (required), `record`, `env` (condition vars), `timeoutMs`, `frames`,
-  `analyze`.
+  when `record=true`, and return the run result plus an analysis. Preflight-
+  gated: if the toolchain is not ready it returns `{skipped:true, preflight}`
+  and does not spawn (pass `force:true` to override). Args: `target` (required),
+  `record`, `env` (condition vars), `timeoutMs`, `frames`, `analyze`, `force`.
 - `probierz_analyze` - parse a finished run's report + inventory its media. Args:
   `reportPath` (required), `artifactsDir`, `tool`, `frames`.
 
@@ -101,17 +111,39 @@ classifies media (video / screenshot / trace) with sizes, pulls recording
 metadata (duration/dimensions via ffprobe), and can extract a frame montage
 (ffmpeg). ffprobe/ffmpeg are optional - missing binaries just omit that detail.
 
+## Toolchain
+
+`run` is preflight-gated: before spawning it checks the target's toolchain and,
+if something is missing, returns exactly what and how to fix it instead of a
+failure buried in npm/Playwright/Appium. `check` runs that preflight on its own.
+
+What probierz **owns and installs itself** (`setup`): npm deps, Playwright
+browsers, Appium drivers (`xcuitest` / `uiautomator2` / `mac2`). The Appium
+server the WDIO configs auto-start.
+
+What is **host-level and probierz only detects + tells you how to get** (never
+installs): Xcode + command-line tools, the Android SDK / `ANDROID_HOME`, iOS
+simulators, WinAppDriver, physical devices. Driver detection is a deterministic
+filesystem check against `$APPIUM_HOME/node_modules/appium-<name>-driver`.
+
+Typical flow: `probierz check mobile:ios` -> if it names a missing driver, run
+`probierz setup mobile:ios`; if it names Xcode/a simulator, install those, then
+`probierz run mobile:ios --record APP_IOS=/abs/Byk.app`.
+
 ## Operational rules
 
-- Discovery is read-only; `run` is the only path that executes a suite or writes
-  artifacts. `cmd` / `probierz_run_command` still return a string to run
-  yourself - use them when you want the invocation without running it.
+- Discovery is read-only; `check` is read-only; `setup` and `run` are the only
+  paths that mutate (install deps) or execute a suite. `cmd` /
+  `probierz_run_command` still return a string to run yourself.
 - Keep MCP and CLI stdout clean: only JSON-RPC frames and command output on
   stdout; diagnostics on stderr.
-- `agent/lib.mjs` (discovery) and `agent/runner.mjs` (execution) are the single
-  sources of truth for surfaces/targets - add one there, not scattered across
-  the CLI and server.
+- `agent/lib.mjs` (discovery), `agent/runner.mjs` (execution) and
+  `agent/preflight.mjs` (toolchain) are the single sources of truth for
+  surfaces/targets/checks - add one there, not scattered across the CLI/server.
+- probierz installs the parts it owns (browsers, drivers) but never host-level
+  dependencies (Xcode, Android SDK, simulators, WinAppDriver) - `check` reports
+  those with a one-line install hint.
 - Authoring or editing a spec under `test/` is gated by the harness
   device-level-test consent (DEVICE_LEVEL_TESTS_APPROVED set outside the
   session). Running an existing suite via `run` is not spec authoring; it does
-  need the real toolchain (Chromium/Appium/simulator) present.
+  need the real toolchain present (which `check`/`setup` help you reach).

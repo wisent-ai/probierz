@@ -7,6 +7,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { preflight } from "./preflight.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // probierz/agent -> probierz project root.
@@ -44,8 +45,12 @@ const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
 //   env        extra condition vars (BASE_URL, APP_IOS, PROBIERZ_LOCALE, ...)
 //   record     force video/trace/screenshot capture on (sets PROBIERZ_RECORD=1)
 //   timeoutMs  kill the run after this long (default 20 min)
+//   force      skip the preflight gate and spawn even if the toolchain looks
+//              incomplete (for when detection is wrong or deps are elsewhere)
 // Resolves to a structured result; a failing suite is NOT an error (the exit
-// code carries that). Rejects only on an unknown target or a spawn error.
+// code carries that). When the toolchain is not ready and force is unset, it
+// resolves early with { ready:false, skipped:true, preflight } and never
+// spawns. Rejects only on an unknown target or a spawn error.
 export function runSurface(target, opts = {}) {
   const t = TARGETS[target];
   if (!t) {
@@ -57,6 +62,26 @@ export function runSurface(target, opts = {}) {
   const artifactsDir = path.join(pkgDir, "test-results");
   const reportPath = reportFor(t, artifactsDir);
   const record = Boolean(opts.record);
+
+  // Preflight gate: unless forced, refuse to spawn when the toolchain is not
+  // ready and return exactly what is missing + how to fix it, rather than an
+  // opaque failure deep inside npm/Playwright/Appium.
+  if (!opts.force) {
+    const pf = preflight(target);
+    if (!pf.ready) {
+      return Promise.resolve({
+        target,
+        tool: t.tool,
+        pkg: t.pkg,
+        script: t.script,
+        ready: false,
+        skipped: true,
+        preflight: pf,
+        artifactsDir,
+        reportPath,
+      });
+    }
+  }
 
   const env = { ...process.env, ...(opts.env || {}), PROBIERZ_ARTIFACTS: artifactsDir };
   if (record) env.PROBIERZ_RECORD = "1";
