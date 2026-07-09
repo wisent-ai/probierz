@@ -71,6 +71,25 @@ function availableIosRuntimes() {
   }
 }
 
+// Device names that have at least one available simulator, e.g.
+// ["iPhone 17","iPad (A16)"]. Same simctl source; empty when xcrun is missing.
+function availableIosDevices() {
+  try {
+    const r = spawnSync("xcrun", ["simctl", "list", "devices", "available", "--json"],
+      { encoding: "utf8", timeout: PROBE_MS });
+    if (r.status !== Number("0") || !r.stdout) return [];
+    const byRuntime = JSON.parse(r.stdout).devices || {};
+    const out = [];
+    for (const list of Object.values(byRuntime)) {
+      if (!Array.isArray(list)) continue;
+      for (const d of list) if (d && d.name) out.push(d.name);
+    }
+    return [...new Set(out)].sort();
+  } catch {
+    return [];
+  }
+}
+
 // A dependency package present in the workspace (node_modules resolved).
 function pkgInstalled(rel) {
   return existsSync(path.join(ROOT, "node_modules", rel))
@@ -103,10 +122,19 @@ function checksFor(target) {
           ? `iOS ${pinned} runtime not installed. Available: ${runtimes.join(", ")}. Set IOS_VERSION to one of these, or add ${pinned} via Xcode > Settings > Platforms.`
           : "no iOS simulator runtimes found; open Xcode > Settings > Platforms and add one")
       : "no iOS simulator runtimes found; open Xcode > Settings > Platforms and add one";
+    // wdio.ios.conf.ts uses deviceName = IOS_DEVICE || "iPhone 15". A device name
+    // absent from the installed runtime fails session creation opaquely, so
+    // verify the resolved name exists and, on a miss, list what does.
+    const wantedDevice = process.env.IOS_DEVICE || "iPhone 15";
+    const devices = availableIosDevices();
+    const deviceHint = devices.length
+      ? `simulator "${wantedDevice}" not found. Available: ${devices.join(", ")}. Set IOS_DEVICE to one of these.`
+      : "no iOS simulators found; open Xcode > Settings > Platforms and add a runtime";
     return [
       { name: "Xcode command-line tools (xcrun)", ok: hasBinary("xcrun", ["--version"]), own: false, hint: "install Xcode from the App Store, then: xcode-select --install" },
       { name: "xcodebuild", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store" },
       { name: simName, ok: simOk, own: false, hint: simHint },
+      { name: `simulator device "${wantedDevice}"`, ok: devices.includes(wantedDevice), own: false, hint: deviceHint },
       { name: "appium driver: xcuitest", ok: appiumDriverInstalled("xcuitest"), own: true, hint: setupHint(target) },
     ];
   }
