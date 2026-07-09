@@ -89,18 +89,24 @@ function checksFor(target) {
     ];
   }
   if (target === "mobile:ios") {
-    // The wdio.ios.conf.ts capability pins IOS_VERSION || "17.5"; preflight must
-    // check THAT runtime exists, not merely that some simulator does -- else a
-    // host with only newer runtimes passes here and dies opaquely at run.
-    const wanted = process.env.IOS_VERSION || "17.5";
+    // wdio.ios.conf.ts pins platformVersion ONLY when IOS_VERSION is set;
+    // otherwise Appium auto-picks the newest installed runtime. Mirror that: if
+    // IOS_VERSION is set, that exact runtime must exist; if not, any runtime
+    // will do. Either way, report what is available so a pin mismatch is
+    // actionable rather than an opaque death at run.
     const runtimes = availableIosRuntimes();
-    const hint = runtimes.length
-      ? `iOS ${wanted} runtime not installed. Available: ${runtimes.join(", ")}. Set IOS_VERSION to one of these, or add ${wanted} via Xcode > Settings > Platforms.`
+    const pinned = process.env.IOS_VERSION;
+    const simOk = pinned ? runtimes.includes(pinned) : runtimes.length > Number("0");
+    const simName = pinned ? `iOS simulator runtime ${pinned}` : "iOS simulator runtime (any)";
+    const simHint = pinned
+      ? (runtimes.length
+          ? `iOS ${pinned} runtime not installed. Available: ${runtimes.join(", ")}. Set IOS_VERSION to one of these, or add ${pinned} via Xcode > Settings > Platforms.`
+          : "no iOS simulator runtimes found; open Xcode > Settings > Platforms and add one")
       : "no iOS simulator runtimes found; open Xcode > Settings > Platforms and add one";
     return [
       { name: "Xcode command-line tools (xcrun)", ok: hasBinary("xcrun", ["--version"]), own: false, hint: "install Xcode from the App Store, then: xcode-select --install" },
       { name: "xcodebuild", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store" },
-      { name: `iOS simulator runtime ${wanted}`, ok: runtimes.includes(wanted), own: false, hint },
+      { name: simName, ok: simOk, own: false, hint: simHint },
       { name: "appium driver: xcuitest", ok: appiumDriverInstalled("xcuitest"), own: true, hint: setupHint(target) },
     ];
   }

@@ -12,7 +12,7 @@ export const config: Options.Testrunner = {
       platformName: 'iOS',
       'appium:automationName': 'XCUITest',
       'appium:deviceName': process.env.IOS_DEVICE || 'iPhone 15',
-      'appium:platformVersion': process.env.IOS_VERSION || '17.5',
+      ...(process.env.IOS_VERSION ? { 'appium:platformVersion': process.env.IOS_VERSION } : {}),
       ...(process.env.APP_IOS ? { 'appium:app': process.env.APP_IOS } : {}),
       ...(process.env.BUNDLE_ID ? { 'appium:bundleId': process.env.BUNDLE_ID } : {}),
       'appium:newCommandTimeout': 240,
