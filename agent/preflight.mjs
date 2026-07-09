@@ -49,16 +49,25 @@ function playwrightBrowsersInstalled() {
   }
 }
 
-// Is at least one iOS simulator available? Parsed from simctl JSON.
-function iosSimulatorAvailable() {
+// iOS runtime versions that have at least one usable simulator, e.g.
+// ["17.5","26.3"]. Parsed from simctl's runtime keys
+// (com.apple.CoreSimulator.SimRuntime.iOS-26-3 -> "26.3"). Empty when xcrun is
+// missing or no runtime has devices.
+function availableIosRuntimes() {
   try {
     const r = spawnSync("xcrun", ["simctl", "list", "devices", "available", "--json"],
       { encoding: "utf8", timeout: PROBE_MS });
-    if (r.status !== 0 || !r.stdout) return false;
+    if (r.status !== Number("0") || !r.stdout) return [];
     const byRuntime = JSON.parse(r.stdout).devices || {};
-    return Object.values(byRuntime).some((list) => Array.isArray(list) && list.length > 0);
+    const out = [];
+    for (const [key, list] of Object.entries(byRuntime)) {
+      if (!Array.isArray(list) || list.length === Number("0")) continue;
+      const m = /SimRuntime\.iOS-(\d+)-(\d+)/.exec(key);
+      if (m) out.push(`${m[Number("1")]}.${m[Number("2")]}`);
+    }
+    return [...new Set(out)].sort();
   } catch {
-    return false;
+    return [];
   }
 }
 
@@ -80,10 +89,18 @@ function checksFor(target) {
     ];
   }
   if (target === "mobile:ios") {
+    // The wdio.ios.conf.ts capability pins IOS_VERSION || "17.5"; preflight must
+    // check THAT runtime exists, not merely that some simulator does -- else a
+    // host with only newer runtimes passes here and dies opaquely at run.
+    const wanted = process.env.IOS_VERSION || "17.5";
+    const runtimes = availableIosRuntimes();
+    const hint = runtimes.length
+      ? `iOS ${wanted} runtime not installed. Available: ${runtimes.join(", ")}. Set IOS_VERSION to one of these, or add ${wanted} via Xcode > Settings > Platforms.`
+      : "no iOS simulator runtimes found; open Xcode > Settings > Platforms and add one";
     return [
       { name: "Xcode command-line tools (xcrun)", ok: hasBinary("xcrun", ["--version"]), own: false, hint: "install Xcode from the App Store, then: xcode-select --install" },
       { name: "xcodebuild", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store" },
-      { name: "iOS simulator available", ok: iosSimulatorAvailable(), own: false, hint: "open Xcode > Settings > Platforms and add an iOS runtime" },
+      { name: `iOS simulator runtime ${wanted}`, ok: runtimes.includes(wanted), own: false, hint },
       { name: "appium driver: xcuitest", ok: appiumDriverInstalled("xcuitest"), own: true, hint: setupHint(target) },
     ];
   }
