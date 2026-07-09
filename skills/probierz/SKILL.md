@@ -34,7 +34,13 @@ Single sources of truth, imported by both the CLI and the MCP server:
 `agent/runner.mjs` (execution - spawns a suite), `agent/analyze.mjs` (analysis -
 parses the report + inventories media), `agent/preflight.mjs` (toolchain
 readiness + self-provisioning), `agent/affected.mjs` (change -> affected-target
-selection).
+selection), `agent/orchestrate.mjs` (the change-driven `ci` composition).
+
+`ci` is the composition the others build up to: `affected` picks the targets a
+change touches, each runs preflight-gated (`check`/`run`), `analyze` reads what
+ran, and it returns one verdict. Deciding WHICH targets is structural and lives
+here; deciding whether a failure is real or what to change is an LLM's job
+(brama), one layer up - probierz stays a deterministic instrument.
 
 ## CLI
 
@@ -53,6 +59,7 @@ probierz setup <target>       # install the parts probierz owns (browsers / appi
 probierz affected [ref]       # which targets a change touched (git diff vs ref, or --files a b c)
 probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture result, auto-analyze
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
+probierz ci [ref] [opts]      # change-driven: affected -> run the ready ones -> analyze -> verdict
 ```
 
 Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
@@ -97,6 +104,10 @@ response per request, diagnostics on stderr. Tools:
   what is relevant. Deterministic + structural (file -> target by package
   containment; agent/ or repo-root files are cross-cutting -> all). Args: `files`
   (explicit paths) or `ref` (git diff the working tree against it, default HEAD).
+- `probierz_ci` - change-driven pass: select affected targets, run the ready
+  ones (blocked ones reported with their fix, not spawned), analyze, and return
+  `{summary:{passed,failed,blocked,ran}, results}`. Composes affected + run +
+  analyze. Args: `files` or `ref`, plus `record`, `force`, `frames`, `timeoutMs`.
 
 ## Recording
 

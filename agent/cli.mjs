@@ -12,6 +12,7 @@
 //   probierz run <target> [opts]  — EXECUTE a target (preflight-gated), auto-analyze
 //   probierz analyze <report> [dir] — parse a report + inventory media
 //   probierz affected [ref]       — which targets a change touched (git diff, or --files)
+//   probierz ci [ref] [opts]      — change-driven pass: affected -> run ready -> analyze
 //
 // run options: --record  --force  --frames N  --timeout MS  --no-analyze  KEY=VALUE...
 // analyze options: [artifactsDir] --frames N --tool playwright|wdio
@@ -20,6 +21,7 @@ import { runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
 import { affectedFromGit, affectedTargets } from "./affected.mjs";
+import { orchestrate } from "./orchestrate.mjs";
 
 function out(value) {
   process.stdout.write(JSON.stringify(value, null, Number("2")) + "\n");
@@ -38,6 +40,7 @@ function usage() {
       "  probierz run <target> [opts]  execute a target (preflight-gated), capture result, auto-analyze",
       "  probierz analyze <report> [dir]  parse a report + inventory media",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
+      "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --record  --force (skip preflight)  --frames N  --timeout MS  --no-analyze  KEY=VALUE...",
       "surfaces: web | electron | mobile | desktop-native",
@@ -154,6 +157,20 @@ async function main() {
       const ref = rest[Number("0")] && !rest[Number("0")].startsWith("--") ? rest[Number("0")] : undefined;
       out(affectedFromGit(ref));
     }
+    return;
+  }
+  if (cmd === "ci") {
+    // probierz ci [ref] [--files a b c] [--record] [--force] [--frames N] [--timeout MS]
+    // Change-driven pass: select affected targets, run the ready ones, analyze.
+    const opts = parseRunArgs(rest);
+    const fi = rest.indexOf("--files");
+    const input = fi >= Number("0")
+      ? { files: rest.slice(fi + Number("1")).filter((a) => !a.startsWith("--")) }
+      : { ref: rest[Number("0")] && !rest[Number("0")].startsWith("--") ? rest[Number("0")] : undefined };
+    const result = await orchestrate(input, { record: opts.record, force: opts.force, frames: opts.frames, timeoutMs: opts.timeoutMs });
+    out(result);
+    // Non-zero exit when anything failed or is blocked, so CI can gate on it.
+    if (result.summary.failed > Number("0") || result.summary.blocked > Number("0")) process.exitCode = Number("1");
     return;
   }
   usage();

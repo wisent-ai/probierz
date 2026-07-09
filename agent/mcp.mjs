@@ -13,6 +13,7 @@ import { runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
 import { affectedFromGit, affectedTargets } from "./affected.mjs";
+import { orchestrate } from "./orchestrate.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -114,6 +115,18 @@ const TOOLS = [
       ref: { type: "string", description: "git ref to diff the working tree against when `files` is omitted (default HEAD)." },
     }),
   },
+  {
+    name: "probierz_ci",
+    description: "Change-driven test pass: select the targets a change affects, run the ready ones (preflight-gated, blocked ones are reported with their fix, not spawned), analyze what ran, and return a consolidated verdict {summary:{passed,failed,blocked,ran}, results}. Composes probierz_affected + probierz_run + probierz_analyze. Heavy: runs real suites. Deterministic selection; no LLM reasoning about the results.",
+    inputSchema: objectSchema({
+      files: { type: "array", items: { type: "string" }, description: "Changed file paths (repo-relative). If given, git is not consulted." },
+      ref: { type: "string", description: "git ref to diff the working tree against when `files` is omitted (default HEAD)." },
+      record: { type: "boolean", description: "Force video/trace/screenshot capture on for every run." },
+      force: { type: "boolean", description: "Skip each target's preflight gate and spawn anyway." },
+      frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
+      timeoutMs: { type: "number", description: "Per-run timeout in ms." },
+    }),
+  },
 ];
 
 function textResult(value) {
@@ -164,6 +177,15 @@ async function callTool(name, args) {
   if (name === "probierz_affected") {
     if (Array.isArray(args.files)) return textResult(affectedTargets(args.files));
     return textResult(affectedFromGit(args.ref));
+  }
+  if (name === "probierz_ci") {
+    const input = Array.isArray(args.files) ? { files: args.files } : { ref: args.ref };
+    return textResult(await orchestrate(input, {
+      record: Boolean(args.record),
+      force: Boolean(args.force),
+      frames: Number(args.frames) || Number("0"),
+      timeoutMs: Number(args.timeoutMs) || Number("0"),
+    }));
   }
   const err = new Error(`unknown tool: ${name}`);
   err.rpcCode = CODE_METHOD_NOT_FOUND;
