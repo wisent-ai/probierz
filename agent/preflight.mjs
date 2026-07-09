@@ -90,6 +90,21 @@ function availableIosDevices() {
   }
 }
 
+// The iOS SDK version an .app/.ipa was built against (Info.plist
+// DTPlatformVersion), e.g. "26.2", or null if unreadable. When IOS_VERSION is
+// unset, XCUITest targets THIS version, so it must be an installed runtime.
+function appBuildSdk(appPath) {
+  try {
+    const r = spawnSync("/usr/libexec/PlistBuddy",
+      ["-c", "Print :DTPlatformVersion", path.join(appPath, "Info.plist")],
+      { encoding: "utf8", timeout: PROBE_MS });
+    if (r.status !== Number("0")) return null;
+    return r.stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 // A dependency package present in the workspace (node_modules resolved).
 function pkgInstalled(rel) {
   return existsSync(path.join(ROOT, "node_modules", rel))
@@ -130,13 +145,29 @@ function checksFor(target) {
     const deviceHint = devices.length
       ? `simulator "${wantedDevice}" not found. Available: ${devices.join(", ")}. Set IOS_DEVICE to one of these.`
       : "no iOS simulators found; open Xcode > Settings > Platforms and add a runtime";
-    return [
+    const checks = [
       { name: "Xcode command-line tools (xcrun)", ok: hasBinary("xcrun", ["--version"]), own: false, hint: "install Xcode from the App Store, then: xcode-select --install" },
       { name: "xcodebuild", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store" },
       { name: simName, ok: simOk, own: false, hint: simHint },
       { name: `simulator device "${wantedDevice}"`, ok: devices.includes(wantedDevice), own: false, hint: deviceHint },
       { name: "appium driver: xcuitest", ok: appiumDriverInstalled("xcuitest"), own: true, hint: setupHint(target) },
     ];
+    // With no IOS_VERSION pin, XCUITest targets the app's OWN build SDK. If the
+    // app was built against a runtime that is not installed, the run dies with
+    // "'<sdk>' does not exist" -- catch that here and say to pin IOS_VERSION.
+    if (process.env.APP_IOS && !pinned) {
+      const sdk = appBuildSdk(process.env.APP_IOS);
+      if (sdk && runtimes.length && !runtimes.includes(sdk)) {
+        const suggest = runtimes[runtimes.length - Number("1")];
+        checks.push({
+          name: `app build SDK iOS ${sdk} installed`,
+          ok: false,
+          own: false,
+          hint: `APP_IOS was built against iOS ${sdk}, which is not installed (have: ${runtimes.join(", ")}). Without IOS_VERSION, XCUITest targets the build SDK and fails. Set IOS_VERSION=${suggest} to force an installed runtime.`,
+        });
+      }
+    }
+    return checks;
   }
   if (target === "mobile:android") {
     return [
