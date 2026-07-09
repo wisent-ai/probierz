@@ -17,6 +17,12 @@ const record = process.env.PROBIERZ_RECORD === '1' || process.env.PROBIERZ_RECOR
 const artifactsDir = process.env.PROBIERZ_ARTIFACTS || join(process.cwd(), 'test-results');
 const results: Array<{ title: string; passed: boolean; duration: number; video?: string; error?: string }> = [];
 const slug = (s: string) => s.replace(/[^a-z\d]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+// PROBIERZ_SPEC scopes the run to one spec. Accept a bare filename, a
+// package-relative path, or a repo-relative path -- match by basename anywhere
+// under test/specs so any of those forms resolves to the same file.
+const specGlob = process.env.PROBIERZ_SPEC
+  ? [`./test/specs/**/${process.env.PROBIERZ_SPEC.split('/').pop()}`]
+  : ['./test/specs/**/*.e2e.ts'];
 
 /**
  * Settings common to iOS and Android runs. Platform-specific configs spread
@@ -24,7 +30,7 @@ const slug = (s: string) => s.replace(/[^a-z\d]+/gi, '_').replace(/^_+|_+$/g, ''
  */
 export const shared: Partial<Options.Testrunner> = {
   runner: 'local',
-  specs: ['./test/specs/**/*.e2e.ts'],
+  specs: specGlob,
   maxInstances: 1,
   logLevel: 'info',
   bail: 0,

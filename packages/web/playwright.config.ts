@@ -7,9 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
 const record = process.env.PROBIERZ_RECORD === '1' || process.env.PROBIERZ_RECORD === 'true';
 const cs = process.env.PROBIERZ_COLOR_SCHEME;
 const colorScheme = cs === 'dark' ? 'dark' : cs === 'light' ? 'light' : undefined;
+// PROBIERZ_SPEC scopes the run to one spec (matched by basename anywhere).
+const testMatch = process.env.PROBIERZ_SPEC ? `**/${process.env.PROBIERZ_SPEC.split('/').pop()}` : undefined;
 
 export default defineConfig({
   testDir: './tests',
+  testMatch,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

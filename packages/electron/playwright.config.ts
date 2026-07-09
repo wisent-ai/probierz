@@ -5,9 +5,12 @@ import { defineConfig } from '@playwright/test';
 // context feature and does not attach to Electron windows, so it is web/
 // mobile-primary. The analyzer inventories whatever media a run produces.
 const record = process.env.PROBIERZ_RECORD === '1' || process.env.PROBIERZ_RECORD === 'true';
+// PROBIERZ_SPEC scopes the run to one spec (matched by basename anywhere).
+const testMatch = process.env.PROBIERZ_SPEC ? `**/${process.env.PROBIERZ_SPEC.split('/').pop()}` : undefined;
 
 export default defineConfig({
   testDir: './tests',
+  testMatch,
   fullyParallel: false,
   workers: 1,
   reporter: [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'test-results/report.json' }]],

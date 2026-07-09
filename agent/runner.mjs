@@ -87,19 +87,19 @@ export function runSurface(target, opts = {}) {
 
   const env = { ...process.env, ...(opts.env || {}), PROBIERZ_ARTIFACTS: artifactsDir };
   if (record) env.PROBIERZ_RECORD = "1";
+  // Single-spec filter via env, not CLI args: the run goes through nested npm
+  // workspace scripts (npm run test:mobile:ios -> npm --workspace ... run
+  // test:ios -> wdio), and each npm layer eats `--` passthrough differently. An
+  // env var the configs read is immune to that. wdio.shared.conf and the
+  // Playwright configs override their spec set when PROBIERZ_SPEC is present.
+  if (opts.spec) env.PROBIERZ_SPEC = opts.spec;
 
-  // Optional single-spec filter, forwarded to the underlying tool via `npm -- `:
-  // Playwright takes a bare path/substring; WebdriverIO takes `--spec <path>`.
-  const specArgs = opts.spec
-    ? (t.tool === "playwright" ? ["--", opts.spec] : ["--", "--spec", opts.spec])
-    : [];
-  const runArgs = ["run", t.script, ...specArgs];
-  const command = `npm ${runArgs.join(" ")}`;
+  const command = `npm run ${t.script}${opts.spec ? ` (PROBIERZ_SPEC=${opts.spec})` : ""}`;
   const wanted = Number(opts.timeoutMs);
   const timeoutMs = wanted > Number("0") ? wanted : DEFAULT_TIMEOUT_MS;
 
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", runArgs, {
+    const child = spawn("npm", ["run", t.script], {
       cwd: ROOT,
       env,
       stdio: ["ignore", "pipe", "pipe"],
