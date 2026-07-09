@@ -66,10 +66,11 @@ Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
 `desktop:win`.
 
 `run` options: `--record` (force video+trace+screenshot on), `--force` (skip the
-preflight gate and spawn anyway), `--frames N` (extract N frames per recorded
-video, needs ffmpeg), `--timeout MS`, `--no-analyze`, and any `KEY=VALUE`
-condition env (e.g. `BASE_URL=...`, `APP_IOS=...`, `PROBIERZ_LOCALE=...`,
-`PROBIERZ_COLOR_SCHEME=dark`).
+preflight gate and spawn anyway), `--spec <path>` (run only one spec, e.g. a
+single app's suite instead of every spec in the package), `--frames N` (extract
+N frames per recorded video, needs ffmpeg), `--timeout MS`, `--no-analyze`, and
+any `KEY=VALUE` condition env (e.g. `BASE_URL=...`, `APP_IOS=...`,
+`PROBIERZ_LOCALE=...`, `PROBIERZ_COLOR_SCHEME=dark`).
 
 ## MCP
 
@@ -97,7 +98,7 @@ response per request, diagnostics on stderr. Tools:
   when `record=true`, and return the run result plus an analysis. Preflight-
   gated: if the toolchain is not ready it returns `{skipped:true, preflight}`
   and does not spawn (pass `force:true` to override). Args: `target` (required),
-  `record`, `env` (condition vars), `timeoutMs`, `frames`, `analyze`, `force`.
+  `record`, `env` (condition vars), `timeoutMs`, `frames`, `analyze`, `force`, `spec`.
 - `probierz_analyze` - parse a finished run's report + inventory its media. Args:
   `reportPath` (required), `artifactsDir`, `tool`, `frames`.
 - `probierz_affected` - which targets a change could affect, so you re-run only

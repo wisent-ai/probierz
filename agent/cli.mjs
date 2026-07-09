@@ -42,7 +42,7 @@ function usage() {
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
-      "run opts: --record  --force (skip preflight)  --frames N  --timeout MS  --no-analyze  KEY=VALUE...",
+      "run opts: --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --no-analyze  KEY=VALUE...",
       "surfaces: web | electron | mobile | desktop-native",
       "targets:  web | electron | mobile:ios | mobile:android | desktop:mac | desktop:win",
     ].join("\n") + "\n",
@@ -51,7 +51,7 @@ function usage() {
 
 // Split run args into flags, an env map (KEY=VALUE), and leftovers.
 function parseRunArgs(rest) {
-  const opts = { env: {}, record: false, analyze: true, force: false, frames: Number("0"), timeoutMs: Number("0") };
+  const opts = { env: {}, record: false, analyze: true, force: false, spec: undefined, frames: Number("0"), timeoutMs: Number("0") };
   for (let i = Number("0"); i < rest.length; i += Number("1")) {
     const a = rest[i];
     if (a === "--record") opts.record = true;
@@ -59,6 +59,7 @@ function parseRunArgs(rest) {
     else if (a === "--no-analyze") opts.analyze = false;
     else if (a === "--frames") { i += Number("1"); opts.frames = Number(rest[i]); }
     else if (a === "--timeout") { i += Number("1"); opts.timeoutMs = Number(rest[i]); }
+    else if (a === "--spec") { i += Number("1"); opts.spec = rest[i]; }
     else if (a.includes("=")) {
       const eq = a.indexOf("=");
       opts.env[a.slice(Number("0"), eq)] = a.slice(eq + Number("1"));
@@ -100,7 +101,7 @@ async function main() {
     const target = rest[Number("0")];
     if (!target) throw new Error(`run needs a target (one of ${targetList().join(", ")})`);
     const opts = parseRunArgs(rest.slice(Number("1")));
-    const result = await runSurface(target, { env: opts.env, record: opts.record, timeoutMs: opts.timeoutMs, force: opts.force });
+    const result = await runSurface(target, { env: opts.env, record: opts.record, timeoutMs: opts.timeoutMs, force: opts.force, spec: opts.spec });
     // Gate-skipped (toolchain not ready): report it, do not analyze a report
     // that was never produced.
     if (result.skipped) {

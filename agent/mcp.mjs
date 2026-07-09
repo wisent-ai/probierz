@@ -95,6 +95,7 @@ const TOOLS = [
       frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
       analyze: { type: "boolean", description: "Analyze the report after the run (default true)." },
       force: { type: "boolean", description: "Skip the preflight gate and spawn even if the toolchain looks incomplete." },
+      spec: { type: "string", description: "Run only this one spec (path/substring), e.g. packages/mobile/test/specs/byk.e2e.ts, to scope the run to a single app's suite." },
     }, ["target"]),
   },
   {
@@ -145,6 +146,7 @@ async function callTool(name, args) {
       record: Boolean(args.record),
       timeoutMs: Number(args.timeoutMs) || Number("0"),
       force: Boolean(args.force),
+      spec: typeof args.spec === "string" ? args.spec : undefined,
     });
     // Gate-skipped: return the preflight detail; there is no report to analyze.
     if (result.skipped) return textResult(result);

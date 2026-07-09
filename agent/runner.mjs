@@ -45,6 +45,8 @@ const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
 //   env        extra condition vars (BASE_URL, APP_IOS, PROBIERZ_LOCALE, ...)
 //   record     force video/trace/screenshot capture on (sets PROBIERZ_RECORD=1)
 //   timeoutMs  kill the run after this long (default 20 min)
+//   spec       run only this one spec (path/substring); scopes a run to e.g.
+//              a single app's suite instead of every spec in the package
 //   force      skip the preflight gate and spawn even if the toolchain looks
 //              incomplete (for when detection is wrong or deps are elsewhere)
 // Resolves to a structured result; a failing suite is NOT an error (the exit
@@ -86,12 +88,18 @@ export function runSurface(target, opts = {}) {
   const env = { ...process.env, ...(opts.env || {}), PROBIERZ_ARTIFACTS: artifactsDir };
   if (record) env.PROBIERZ_RECORD = "1";
 
-  const command = `npm run ${t.script}`;
+  // Optional single-spec filter, forwarded to the underlying tool via `npm -- `:
+  // Playwright takes a bare path/substring; WebdriverIO takes `--spec <path>`.
+  const specArgs = opts.spec
+    ? (t.tool === "playwright" ? ["--", opts.spec] : ["--", "--spec", opts.spec])
+    : [];
+  const runArgs = ["run", t.script, ...specArgs];
+  const command = `npm ${runArgs.join(" ")}`;
   const wanted = Number(opts.timeoutMs);
-  const timeoutMs = wanted > 0 ? wanted : DEFAULT_TIMEOUT_MS;
+  const timeoutMs = wanted > Number("0") ? wanted : DEFAULT_TIMEOUT_MS;
 
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", t.script], {
+    const child = spawn("npm", runArgs, {
       cwd: ROOT,
       env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -117,6 +125,7 @@ export function runSurface(target, opts = {}) {
         pkg: t.pkg,
         script: t.script,
         command,
+        spec: opts.spec || null,
         conditions: { record, ...(opts.env || {}) },
         exitCode,
         signal: signal || null,
