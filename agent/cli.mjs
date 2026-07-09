@@ -11,6 +11,7 @@
 //   probierz setup <target>       — install the parts probierz owns (browsers/drivers)
 //   probierz run <target> [opts]  — EXECUTE a target (preflight-gated), auto-analyze
 //   probierz analyze <report> [dir] — parse a report + inventory media
+//   probierz affected [ref]       — which targets a change touched (git diff, or --files)
 //
 // run options: --record  --force  --frames N  --timeout MS  --no-analyze  KEY=VALUE...
 // analyze options: [artifactsDir] --frames N --tool playwright|wdio
@@ -18,6 +19,7 @@ import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
 import { runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
+import { affectedFromGit, affectedTargets } from "./affected.mjs";
 
 function out(value) {
   process.stdout.write(JSON.stringify(value, null, Number("2")) + "\n");
@@ -35,6 +37,7 @@ function usage() {
       "  probierz setup <target>       install the parts probierz owns (browsers/appium drivers)",
       "  probierz run <target> [opts]  execute a target (preflight-gated), capture result, auto-analyze",
       "  probierz analyze <report> [dir]  parse a report + inventory media",
+      "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
       "",
       "run opts: --record  --force (skip preflight)  --frames N  --timeout MS  --no-analyze  KEY=VALUE...",
       "surfaces: web | electron | mobile | desktop-native",
@@ -139,6 +142,18 @@ async function main() {
     const toolIdx = rest.indexOf("--tool");
     const tool = toolIdx >= Number("0") ? rest[toolIdx + Number("1")] : undefined;
     out(analyzeRun({ reportPath, artifactsDir, tool, frames: opts.frames }));
+    return;
+  }
+  if (cmd === "affected") {
+    // probierz affected [ref] [--files a b c ...]
+    const fi = rest.indexOf("--files");
+    if (fi >= Number("0")) {
+      const files = rest.slice(fi + Number("1"));
+      out(affectedTargets(files));
+    } else {
+      const ref = rest[Number("0")] && !rest[Number("0")].startsWith("--") ? rest[Number("0")] : undefined;
+      out(affectedFromGit(ref));
+    }
     return;
   }
   usage();

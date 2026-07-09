@@ -12,6 +12,7 @@ import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
 import { runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
+import { affectedFromGit, affectedTargets } from "./affected.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -105,6 +106,14 @@ const TOOLS = [
       frames: { type: "number", description: "Extract this many frames per video (needs ffmpeg)." },
     }, ["reportPath"]),
   },
+  {
+    name: "probierz_affected",
+    description: "Given a change, report which run targets it could affect, so you re-run only what is relevant. Deterministic + structural (maps files to targets by package containment; agent/ or repo-root files are cross-cutting -> all targets). Provide `files` explicitly, or omit to diff the working tree against `ref` (default HEAD) via git. Read-only.",
+    inputSchema: objectSchema({
+      files: { type: "array", items: { type: "string" }, description: "Changed file paths (repo-relative). If given, git is not consulted." },
+      ref: { type: "string", description: "git ref to diff the working tree against when `files` is omitted (default HEAD)." },
+    }),
+  },
 ];
 
 function textResult(value) {
@@ -151,6 +160,10 @@ async function callTool(name, args) {
       tool: args.tool,
       frames: Number(args.frames) || Number("0"),
     }));
+  }
+  if (name === "probierz_affected") {
+    if (Array.isArray(args.files)) return textResult(affectedTargets(args.files));
+    return textResult(affectedFromGit(args.ref));
   }
   const err = new Error(`unknown tool: ${name}`);
   err.rpcCode = CODE_METHOD_NOT_FOUND;

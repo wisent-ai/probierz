@@ -32,7 +32,9 @@ env-var driven, with no hardcoded targets.
 Single sources of truth, imported by both the CLI and the MCP server:
 `agent/lib.mjs` (discovery - surfaces, specs, run-command strings),
 `agent/runner.mjs` (execution - spawns a suite), `agent/analyze.mjs` (analysis -
-parses the report + inventories media).
+parses the report + inventories media), `agent/preflight.mjs` (toolchain
+readiness + self-provisioning), `agent/affected.mjs` (change -> affected-target
+selection).
 
 ## CLI
 
@@ -47,7 +49,8 @@ probierz cmd <target>         # the exact shell command to run a target yourself
 probierz check <target>       # is the toolchain ready? what is missing + how to fix
 probierz setup <target>       # install the parts probierz owns (browsers / appium drivers)
 
-# execution + analysis
+# selection + execution + analysis
+probierz affected [ref]       # which targets a change touched (git diff vs ref, or --files a b c)
 probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture result, auto-analyze
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
 ```
@@ -90,6 +93,10 @@ response per request, diagnostics on stderr. Tools:
   `record`, `env` (condition vars), `timeoutMs`, `frames`, `analyze`, `force`.
 - `probierz_analyze` - parse a finished run's report + inventory its media. Args:
   `reportPath` (required), `artifactsDir`, `tool`, `frames`.
+- `probierz_affected` - which targets a change could affect, so you re-run only
+  what is relevant. Deterministic + structural (file -> target by package
+  containment; agent/ or repo-root files are cross-cutting -> all). Args: `files`
+  (explicit paths) or `ref` (git diff the working tree against it, default HEAD).
 
 ## Recording
 
