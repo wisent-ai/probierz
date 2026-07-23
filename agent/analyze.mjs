@@ -7,9 +7,11 @@
 // ffprobe, an optional frame montage via ffmpeg; both best-effort so a missing
 // binary never fails the analysis), and a raw inventory of every other file the
 // run left behind.
-import { readFileSync, existsSync, statSync, readdirSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { buildTimeline } from "./timeline.mjs";
+import { summarizeDiagnostics } from "./collect.mjs";
 
 const KB = 1024;
 const sizeKb = (file) => Math.round(statSync(file).size / KB);
@@ -136,30 +138,36 @@ function normalizePlaywright(report) {
 
 // WDIO probierz-<kind>-results.json: already the shape the confs emit. The
 // confs record the video path per test, so media kind is known structurally.
-function normalizeWdio(report) {
+function normalizeWdio(report, tool = "wdio") {
   const rows = report.tests || [];
-  const tests = rows.map((t) => ({
-    title: t.title,
-    passed: Boolean(t.passed),
-    status: t.passed ? "passed" : "failed",
-    durationMs: Number(t.duration || 0),
-    video: t.video,
-  }));
+  const tests = rows.map((row) => {
+    const status = row.status || (row.passed ? "passed" : "failed");
+    return {
+      title: row.title,
+      passed: status === "passed",
+      status,
+      durationMs: Number(row.duration || 0),
+      video: row.video,
+    };
+  });
   const failures = rows
-    .filter((t) => !t.passed)
-    .map((t) => ({ title: t.title, error: t.error || "failed" }));
-  const passed = tests.filter((t) => t.passed).length;
+    .filter((row) => (row.status || (row.passed ? "passed" : "failed")) === "failed")
+    .map((row) => ({ title: row.title, error: row.error || "failed" }));
+  const count = (status) => tests.filter((test) => test.status === status).length;
   return {
-    tool: "wdio",
-    total: Number(report.total || tests.length),
-    passed,
-    failed: tests.length - passed,
-    flaky: 0,
-    skipped: 0,
-    durationMs: tests.reduce((a, t) => a + t.durationMs, 0),
+    tool,
+    total: Number(report.total ?? tests.length),
+    passed: count("passed"),
+    failed: count("failed"),
+    flaky: Number(report.flaky || 0),
+    skipped: count("skipped"),
+    durationMs: tests.reduce((total, test) => total + test.durationMs, 0),
     tests,
     failures,
-    reportMedia: rows.filter((t) => t.video).map((t) => ({ file: t.video, kind: "video" })),
+    reportMedia: rows.flatMap((row) => [
+      ...(Array.isArray(row.media) ? row.media : []),
+      ...(row.video ? [{ file: row.video, kind: "video" }] : []),
+    ]),
   };
 }
 
@@ -168,16 +176,26 @@ function normalizeWdio(report) {
 //   artifactsDir dir to inventory for on-disk files (from runSurface result)
 //   tool         "playwright" | "wdio" (hint; inferred from report if omitted)
 //   frames       if >0, extract that many frames per video (needs ffmpeg)
+//   runId        expected run identity; mismatch is a hard integrity failure
 // Returns the normalized summary, a report-typed media list (size + recording
 // metadata), and a raw artifacts inventory. Throws only if the report is
 // missing/unreadable.
-export function analyzeRun({ reportPath, artifactsDir, tool, frames = 0 } = {}) {
+export function analyzeRun({ reportPath, artifactsDir, tool, frames = 0, runId } = {}) {
   if (!reportPath || !existsSync(reportPath)) {
     throw new Error(`report not found: ${reportPath} (did the run produce one?)`);
   }
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
-  const isPw = tool === "playwright" || Array.isArray(report.suites);
-  const summary = isPw ? normalizePlaywright(report) : normalizeWdio(report);
+  const reportRunId = report?.probierz?.runId || null;
+  if (runId && reportRunId !== runId) {
+    throw new Error(`report run ID mismatch: expected ${runId}, got ${reportRunId || "missing"}`);
+  }
+  const canonical = Boolean(report?.probierz) && Array.isArray(report.tests);
+  const isPw = Array.isArray(report.suites);
+  const summary = canonical
+    ? normalizeWdio(report, tool || "probierz")
+    : isPw
+      ? normalizePlaywright(report)
+      : normalizeWdio(report, tool || "wdio");
   const { reportMedia, ...rest } = summary;
 
   const want = Number(frames);
@@ -197,15 +215,56 @@ export function analyzeRun({ reportPath, artifactsDir, tool, frames = 0 } = {}) 
     }
     return entry;
   });
+  let timeline = null;
+  let timelinePath = null;
+  let diagnostics = null;
+  if (artifactsDir) {
+    const manifestPath = path.join(artifactsDir, "run-manifest.json");
+    const manifest = existsSync(manifestPath)
+      ? JSON.parse(readFileSync(manifestPath, "utf8"))
+      : {};
+    timeline = buildTimeline({
+      report,
+      summary: rest,
+      media,
+      artifactsDir,
+      stdoutPath: path.join(artifactsDir, "stdout.log"),
+      stderrPath: path.join(artifactsDir, "stderr.log"),
+      startedAt: manifest.startedAt,
+    });
+    timelinePath = path.join(artifactsDir, "timeline.json");
+    writeFileSync(timelinePath, `${JSON.stringify(timeline, null, 2)}\n`, { mode: 0o600 });
+    diagnostics = summarizeDiagnostics({ report, timeline, artifactsDir });
+  }
 
   // Everything else the run left on disk, sizes only -- no classification. The
   // report file itself is excluded by exact-path identity, not by name pattern.
-  const known = new Set(media.map((m) => m.file));
+  const known = new Set([
+    ...media.map((m) => m.file),
+    timelinePath,
+    diagnostics?.file,
+  ].filter(Boolean));
   const artifacts = artifactsDir
     ? walk(artifactsDir)
         .filter((f) => f !== reportPath && !known.has(f))
         .map((f) => ({ file: f, sizeKb: sizeKb(f) }))
     : [];
 
-  return { ...rest, reportPath, artifactsDir: artifactsDir || null, media, artifacts };
+  return {
+    ...rest,
+    runId: reportRunId,
+    reportPath,
+    artifactsDir: artifactsDir || null,
+    captureErrors: Array.isArray(report?.probierz?.captureErrors)
+      ? report.probierz.captureErrors
+      : [],
+    media,
+    artifacts,
+    timeline: timeline ? {
+      path: timelinePath,
+      counts: timeline.counts,
+      diagnostics: timeline.diagnostics,
+    } : null,
+    diagnostics,
+  };
 }

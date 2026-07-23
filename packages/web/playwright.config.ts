@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { join } from 'node:path';
 
 /**
  * Web E2E config. Set BASE_URL to point at the site under test.
@@ -9,14 +10,20 @@ const cs = process.env.PROBIERZ_COLOR_SCHEME;
 const colorScheme = cs === 'dark' ? 'dark' : cs === 'light' ? 'light' : undefined;
 // PROBIERZ_SPEC scopes the run to one spec (matched by basename anywhere).
 const testMatch = process.env.PROBIERZ_SPEC ? `**/${process.env.PROBIERZ_SPEC.split('/').pop()}` : undefined;
+const artifactsDir = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 
 export default defineConfig({
   testDir: './tests',
+  outputDir: join(artifactsDir, 'playwright'),
   testMatch,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'test-results/report.json' }]],
+  reporter: [
+    ['html', { open: 'never', outputFolder: join(artifactsDir, 'html-report') }],
+    ['list'],
+    ['../../agent/playwright-reporter.mjs'],
+  ],
   use: {
     baseURL: process.env.BASE_URL || 'https://playwright.dev',
     trace: record ? 'on' : 'on-first-retry',

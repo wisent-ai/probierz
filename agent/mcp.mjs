@@ -9,11 +9,19 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
-import { runSurface, targetList } from "./runner.mjs";
+import { appSourceIdentity, completeRun, runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
 import { affectedFromGit, affectedTargets } from "./affected.mjs";
 import { orchestrate } from "./orchestrate.mjs";
+import { compareRuns, lastGreen, runHistory } from "./history.mjs";
+import { startRun, runStatus, cancelRun, getResult, listArtifacts, getArtifact } from "./control.mjs";
+import { createReceipt, verifyReceipt } from "./receipt.mjs";
+import { dashboardProjection } from "./dashboard.mjs";
+import { planMatrix, runMatrix } from "./matrix.mjs";
+import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
+import { auditTrail, scanSecrets } from "./security.mjs";
+import { activateGate, enforceGate, evaluateGate, gateStatus } from "./gate.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -41,6 +49,18 @@ const objectSchema = (properties, required) => ({
   properties: properties || {},
   required: required || [],
 });
+
+const gateProperties = {
+  appId: { type: "string" },
+  mode: { type: "string", description: "pull-request or release" },
+  expectedHarnessSha: { type: "string" },
+  expectedSourceSha: { type: "string" },
+  runIds: { type: "array", items: { type: "string" } },
+  release: { type: "string", description: "Required for release mode." },
+  receiptFile: { type: "string", description: "Required signed evidence receipt for release mode." },
+  trustedPublicKeyFile: { type: "string" },
+  expectedFingerprint: { type: "string" },
+};
 
 const TOOLS = [
   {
@@ -90,8 +110,10 @@ const TOOLS = [
     inputSchema: objectSchema({
       target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
       record: { type: "boolean", description: "Force video + trace + screenshot capture on." },
+      appId: { type: "string", description: "Product identifier used in the run-scoped artifact path and manifest." },
       env: { type: "object", description: "Condition env vars, e.g. { BASE_URL, APP_IOS, PROBIERZ_LOCALE, PROBIERZ_COLOR_SCHEME }." },
       timeoutMs: { type: "number", description: "Kill the run after this many ms (default 20 min)." },
+      resourceWaitMs: { type: "number", description: "Wait this long for a busy device/port lease; 0 fails fast." },
       frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
       analyze: { type: "boolean", description: "Analyze the report after the run (default true)." },
       force: { type: "boolean", description: "Skip the preflight gate and spawn even if the toolchain looks incomplete." },
@@ -122,11 +144,206 @@ const TOOLS = [
     inputSchema: objectSchema({
       files: { type: "array", items: { type: "string" }, description: "Changed file paths (repo-relative). If given, git is not consulted." },
       ref: { type: "string", description: "git ref to diff the working tree against when `files` is omitted (default HEAD)." },
+      appId: { type: "string", description: "Product identifier for every selected run." },
+      env: { type: "object", description: "Conditions forwarded to every selected run." },
+      spec: { type: "string", description: "Optional spec filter forwarded to every selected target." },
       record: { type: "boolean", description: "Force video/trace/screenshot capture on for every run." },
       force: { type: "boolean", description: "Skip each target's preflight gate and spawn anyway." },
       frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
       timeoutMs: { type: "number", description: "Per-run timeout in ms." },
+      resourceWaitMs: { type: "number", description: "Wait per selected run for a busy device/port lease; default 10 min, 0 fails fast." },
     }),
+  },
+  {
+    name: "probierz_history",
+    description: "Read deterministic E5 stability history: pass rate, infrastructure failures, duration trend, flaky tests, journeys, latest run, and last green.",
+    inputSchema: objectSchema({
+      appId: { type: "string", description: "Product identifier (default probierz)." },
+      target: { type: "string", description: "Optional target filter." },
+      limit: { type: "number", description: "Maximum recent runs (default 50)." },
+    }),
+  },
+  {
+    name: "probierz_dashboard",
+    description: "Project evidence for product → version → journey → surface → device → result → artifact dashboard navigation.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      limit: { type: "number", description: "Maximum recent runs (default 500)." },
+    }, ["appId"]),
+  },
+  {
+    name: "probierz_matrix_plan",
+    description: "Read the deterministic nightly or release matrix without executing it.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      profile: { type: "string", description: "nightly or release" },
+    }, ["appId", "profile"]),
+  },
+  {
+    name: "probierz_run_matrix",
+    description: "HEAVY + SIDE-EFFECTING: execute every cell of a declared nightly or release matrix and return an E4 verdict.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      profile: { type: "string", description: "nightly or release" },
+      release: { type: "string", description: "Required for a release matrix." },
+      env: { type: "object", description: "Secrets and exact release artifact conditions; matrix axes cannot be overridden." },
+    }, ["appId", "profile"]),
+  },
+  {
+    name: "probierz_protect_run",
+    description: "SIDE-EFFECTING: encrypt a complete run into an authenticated AES-256-GCM evidence bundle; optionally remove plaintext artifacts.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      runId: { type: "string" },
+      kind: { type: "string" },
+      keyFile: { type: "string" },
+      removePlaintext: { type: "boolean" },
+    }, ["appId", "runId"]),
+  },
+  {
+    name: "probierz_restore_bundle",
+    description: "SIDE-EFFECTING: authenticate and restore an encrypted evidence bundle into an empty directory.",
+    inputSchema: objectSchema({
+      file: { type: "string" },
+      destination: { type: "string" },
+      keyFile: { type: "string" },
+    }, ["file", "destination"]),
+  },
+  {
+    name: "probierz_retention",
+    description: "Plan retention expiry; with apply=true, delete expired plaintext runs and encrypted bundles.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      at: { type: "string", description: "Optional ISO timestamp." },
+      apply: { type: "boolean" },
+    }, ["appId"]),
+  },
+  {
+    name: "probierz_secret_scan",
+    description: "Scan a plaintext artifact directory for high-confidence secrets without returning secret values.",
+    inputSchema: objectSchema({
+      directory: { type: "string" },
+    }, ["directory"]),
+  },
+  {
+    name: "probierz_audit",
+    description: "Read and integrity-check access audit records, optionally filtered by app, run, or action.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      runId: { type: "string" },
+      action: { type: "string" },
+      limit: { type: "number" },
+    }),
+  },
+  {
+    name: "probierz_source_identity",
+    description: "Compute exact path-independent harness and app source SHA-256 identities.",
+    inputSchema: objectSchema({ appId: { type: "string" } }, ["appId"]),
+  },
+  {
+    name: "probierz_gate_status",
+    description: "Read pull-request and release gate activation state.",
+    inputSchema: objectSchema({ appId: { type: "string" } }, ["appId"]),
+  },
+  {
+    name: "probierz_gate_evaluate",
+    description: "Evaluate exact build, E3 evidence, coverage, matrix, encryption, secret scan, and signed receipt eligibility; appends an audit record.",
+    inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
+  },
+  {
+    name: "probierz_gate_enforce",
+    description: "Enforce an activated gate against current evidence; pending-green gates fail closed.",
+    inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
+  },
+  {
+    name: "probierz_gate_activate",
+    description: "SIDE-EFFECTING: atomically activate a gate only after all green evidence requirements pass.",
+    inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
+  },
+  {
+    name: "probierz_compare_runs",
+    description: "Deterministically compare status, duration, tests, evidence, build identity, and artifact hashes between two run IDs.",
+    inputSchema: objectSchema({
+      appId: { type: "string", description: "Product identifier (default probierz)." },
+      leftRunId: { type: "string" },
+      rightRunId: { type: "string" },
+    }, ["leftRunId", "rightRunId"]),
+  },
+  {
+    name: "probierz_last_green",
+    description: "Return the newest passing run for a product, optional target, and optional journey.",
+    inputSchema: objectSchema({
+      appId: { type: "string", description: "Product identifier (default probierz)." },
+      target: { type: "string" },
+      journey: { type: "string" },
+    }),
+  },
+  {
+    name: "probierz_create_receipt",
+    description: "SIDE-EFFECTING: sign a release evidence receipt containing required journeys, run IDs, build identity, artifact hashes, and deterministic verdict.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      release: { type: "string" },
+      expectedHarnessSha: { type: "string" },
+      expectedSourceSha: { type: "string" },
+      runIds: { type: "array", items: { type: "string" } },
+      requiredJourneys: { type: "array", items: { type: "string" } },
+      minimumEvidence: { type: "string", description: "Default E3." },
+      privateKeyFile: { type: "string", description: "Defaults to PROBIERZ_RECEIPT_PRIVATE_KEY_FILE." },
+    }, ["appId", "release", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
+  },
+  {
+    name: "probierz_verify_receipt",
+    description: "Verify receipt payload hash and Ed25519 signature against an explicit trusted public key or fingerprint.",
+    inputSchema: objectSchema({
+      file: { type: "string" },
+      trustedPublicKeyFile: { type: "string" },
+      expectedFingerprint: { type: "string" },
+    }, ["file"]),
+  },
+  {
+    name: "probierz_start_run",
+    description: "HEAVY + SIDE-EFFECTING: start a real run asynchronously and return its runId immediately. Poll with probierz_run_status; cancel with probierz_cancel_run.",
+    inputSchema: objectSchema({
+      target: { type: "string" },
+      record: { type: "boolean" },
+      appId: { type: "string" },
+      env: { type: "object" },
+      timeoutMs: { type: "number" },
+      resourceWaitMs: { type: "number", description: "Wait this long for a busy device/port lease; 0 fails fast." },
+      frames: { type: "number" },
+      analyze: { type: "boolean" },
+      force: { type: "boolean" },
+      spec: { type: "string" },
+    }, ["target"]),
+  },
+  {
+    name: "probierz_run_status",
+    description: "Return queued/running/blocked/passed/failed/canceled state for an asynchronous run.",
+    inputSchema: objectSchema({ runId: { type: "string" } }, ["runId"]),
+  },
+  {
+    name: "probierz_cancel_run",
+    description: "Cancel an asynchronous run and terminate its complete spawned process tree.",
+    inputSchema: objectSchema({ runId: { type: "string" } }, ["runId"]),
+  },
+  {
+    name: "probierz_get_result",
+    description: "Return the completed normalized result and evidence for an asynchronous run.",
+    inputSchema: objectSchema({ runId: { type: "string" } }, ["runId"]),
+  },
+  {
+    name: "probierz_list_artifacts",
+    description: "List run-scoped evidence artifacts for a completed asynchronous run.",
+    inputSchema: objectSchema({ runId: { type: "string" } }, ["runId"]),
+  },
+  {
+    name: "probierz_get_artifact",
+    description: "Read one run-scoped artifact up to 5 MiB as base64; path traversal is rejected.",
+    inputSchema: objectSchema({
+      runId: { type: "string" },
+      file: { type: "string", description: "Run-relative artifact path." },
+    }, ["runId", "file"]),
   },
 ];
 
@@ -134,31 +351,173 @@ function textResult(value) {
   return { content: [{ type: "text", text: JSON.stringify(value, null, code("2")) }] };
 }
 
+function gateArgs(args) {
+  return {
+    appId: asString(args.appId, "appId"),
+    mode: asString(args.mode, "mode"),
+    expectedHarnessSha: asString(args.expectedHarnessSha, "expectedHarnessSha"),
+    expectedSourceSha: asString(args.expectedSourceSha, "expectedSourceSha"),
+    runIds: Array.isArray(args.runIds) ? args.runIds : [],
+    release: typeof args.release === "string" ? args.release : undefined,
+    receiptFile: typeof args.receiptFile === "string" ? args.receiptFile : undefined,
+    trustedPublicKeyFile: typeof args.trustedPublicKeyFile === "string" ? args.trustedPublicKeyFile : undefined,
+    expectedFingerprint: typeof args.expectedFingerprint === "string" ? args.expectedFingerprint : undefined,
+  };
+}
+
 async function callTool(name, args) {
   if (name === "probierz_list_surfaces") return textResult(SURFACES);
   if (name === "probierz_list_specs") return textResult(listSpecs(args.surface));
   if (name === "probierz_describe_spec") return textResult(describeSpec(args.spec));
   if (name === "probierz_run_command") return textResult(runCommand(args.target));
+  if (name === "probierz_source_identity") {
+    return textResult(appSourceIdentity(asString(args.appId, "appId")));
+  }
+  if (name === "probierz_history") {
+    return textResult(runHistory({
+      appId: typeof args.appId === "string" ? args.appId : "probierz",
+      target: typeof args.target === "string" ? args.target : undefined,
+      limit: Number(args.limit) || 50,
+    }));
+  }
+  if (name === "probierz_dashboard") {
+    return textResult(dashboardProjection({
+      appId: asString(args.appId, "appId"),
+      limit: Number(args.limit) || 500,
+    }));
+  }
+  if (name === "probierz_matrix_plan") {
+    return textResult(planMatrix({
+      appId: asString(args.appId, "appId"),
+      profile: asString(args.profile, "profile"),
+    }));
+  }
+  if (name === "probierz_run_matrix") {
+    return textResult(await runMatrix({
+      appId: asString(args.appId, "appId"),
+      profile: asString(args.profile, "profile"),
+      release: typeof args.release === "string" ? args.release : undefined,
+      env: args.env && typeof args.env === "object" ? args.env : {},
+    }));
+  }
+  if (name === "probierz_protect_run") {
+    return textResult(await protectRun({
+      appId: asString(args.appId, "appId"),
+      runId: asString(args.runId, "runId"),
+      kind: typeof args.kind === "string" ? args.kind : undefined,
+      keyFile: typeof args.keyFile === "string" ? args.keyFile : undefined,
+      removePlaintext: Boolean(args.removePlaintext),
+    }));
+  }
+  if (name === "probierz_restore_bundle") {
+    return textResult(await restoreBundle({
+      file: asString(args.file, "file"),
+      destination: asString(args.destination, "destination"),
+      keyFile: typeof args.keyFile === "string" ? args.keyFile : undefined,
+    }));
+  }
+  if (name === "probierz_retention") {
+    return textResult(enforceRetention({
+      appId: asString(args.appId, "appId"),
+      now: typeof args.at === "string" ? new Date(args.at) : new Date(),
+      apply: Boolean(args.apply),
+    }));
+  }
+  if (name === "probierz_secret_scan") {
+    return textResult(await scanSecrets(asString(args.directory, "directory")));
+  }
+  if (name === "probierz_audit") {
+    return textResult(auditTrail({
+      appId: typeof args.appId === "string" ? args.appId : undefined,
+      runId: typeof args.runId === "string" ? args.runId : undefined,
+      action: typeof args.action === "string" ? args.action : undefined,
+      limit: Number(args.limit) || 200,
+    }));
+  }
+  if (name === "probierz_gate_status") {
+    return textResult(gateStatus(asString(args.appId, "appId")));
+  }
+  if (name === "probierz_gate_evaluate") {
+    return textResult(await evaluateGate(gateArgs(args)));
+  }
+  if (name === "probierz_gate_enforce") {
+    return textResult(await enforceGate(gateArgs(args)));
+  }
+  if (name === "probierz_gate_activate") {
+    return textResult(await activateGate(gateArgs(args)));
+  }
+  if (name === "probierz_compare_runs") {
+    return textResult(compareRuns({
+      appId: typeof args.appId === "string" ? args.appId : "probierz",
+      leftRunId: asString(args.leftRunId, "leftRunId"),
+      rightRunId: asString(args.rightRunId, "rightRunId"),
+    }));
+  }
+  if (name === "probierz_last_green") {
+    return textResult(lastGreen({
+      appId: typeof args.appId === "string" ? args.appId : "probierz",
+      target: typeof args.target === "string" ? args.target : undefined,
+      journey: typeof args.journey === "string" ? args.journey : undefined,
+    }));
+  }
+  if (name === "probierz_create_receipt") {
+    return textResult(createReceipt({
+      appId: asString(args.appId, "appId"),
+      release: asString(args.release, "release"),
+      expectedHarnessSha: asString(args.expectedHarnessSha, "expectedHarnessSha"),
+      expectedSourceSha: asString(args.expectedSourceSha, "expectedSourceSha"),
+      runIds: Array.isArray(args.runIds) ? args.runIds : [],
+      requiredJourneys: Array.isArray(args.requiredJourneys) ? args.requiredJourneys : [],
+      minimumEvidence: typeof args.minimumEvidence === "string" ? args.minimumEvidence : "E3",
+      privateKeyFile: typeof args.privateKeyFile === "string" ? args.privateKeyFile : undefined,
+    }));
+  }
+  if (name === "probierz_verify_receipt") {
+    return textResult(verifyReceipt(asString(args.file, "file"), {
+      trustedPublicKeyFile: typeof args.trustedPublicKeyFile === "string" ? args.trustedPublicKeyFile : undefined,
+      expectedFingerprint: typeof args.expectedFingerprint === "string" ? args.expectedFingerprint : undefined,
+    }));
+  }
+  if (name === "probierz_start_run") return textResult(startRun(args));
+  if (name === "probierz_run_status") return textResult(runStatus(asString(args.runId, "runId")));
+  if (name === "probierz_cancel_run") return textResult(cancelRun(asString(args.runId, "runId")));
+  if (name === "probierz_get_result") return textResult(getResult(asString(args.runId, "runId")));
+  if (name === "probierz_list_artifacts") return textResult(listArtifacts(asString(args.runId, "runId")));
+  if (name === "probierz_get_artifact") {
+    return textResult(getArtifact(asString(args.runId, "runId"), asString(args.file, "file")));
+  }
   if (name === "probierz_run") {
     const target = asString(args.target, "target");
     const result = await runSurface(target, {
+      appId: typeof args.appId === "string" ? args.appId : undefined,
       env: args.env && typeof args.env === "object" ? args.env : {},
       record: Boolean(args.record),
       timeoutMs: Number(args.timeoutMs) || Number("0"),
+      resourceWaitMs: args.resourceWaitMs === undefined ? undefined : Number(args.resourceWaitMs),
       force: Boolean(args.force),
       spec: typeof args.spec === "string" ? args.spec : undefined,
     });
     // Gate-skipped: return the preflight detail; there is no report to analyze.
     if (result.skipped) return textResult(result);
     let analysis = null;
+    let completed = result;
     if (args.analyze !== false) {
+      let analysisError = null;
       try {
-        analysis = analyzeRun({ reportPath: result.reportPath, artifactsDir: result.artifactsDir, tool: result.tool, frames: Number(args.frames) || Number("0") });
-      } catch (e) {
-        analysis = { error: e instanceof Error ? e.message : String(e) };
+        analysis = analyzeRun({
+          reportPath: result.reportPath,
+          artifactsDir: result.artifactsDir,
+          tool: result.tool,
+          frames: Number(args.frames) || Number("0"),
+          runId: result.runId,
+        });
+      } catch (error) {
+        analysisError = error;
+        analysis = { error: error instanceof Error ? error.message : String(error) };
       }
+      completed = completeRun(result, analysisError ? null : analysis, analysisError);
     }
-    return textResult({ ...result, analysis });
+    return textResult({ ...completed, analysis });
   }
   if (name === "probierz_check") {
     return textResult(preflight(asString(args.target, "target")));
@@ -183,10 +542,14 @@ async function callTool(name, args) {
   if (name === "probierz_ci") {
     const input = Array.isArray(args.files) ? { files: args.files } : { ref: args.ref };
     return textResult(await orchestrate(input, {
+      appId: typeof args.appId === "string" ? args.appId : undefined,
+      env: args.env && typeof args.env === "object" ? args.env : {},
+      spec: typeof args.spec === "string" ? args.spec : undefined,
       record: Boolean(args.record),
       force: Boolean(args.force),
       frames: Number(args.frames) || Number("0"),
       timeoutMs: Number(args.timeoutMs) || Number("0"),
+      resourceWaitMs: args.resourceWaitMs === undefined ? undefined : Number(args.resourceWaitMs),
     }));
   }
   const err = new Error(`unknown tool: ${name}`);

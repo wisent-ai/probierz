@@ -2,6 +2,9 @@
   "name": "probierz",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native). Agent surface (CLI + stdio MCP) with a read-only discovery layer (surfaces/specs/run commands) and an execution layer that runs a target under chosen conditions, records video/trace/screenshots, and analyzes the result.",
   "bin": {
     "probierz": "agent/cli.mjs",
@@ -18,13 +21,19 @@
     "test:web": "npm --workspace packages/web run test",
     "test:electron": "npm --workspace packages/electron run test",
     "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
+    "test:mobile:ios:byk-auth": "node agent/byk-auth-runner.mjs",
+    "test:mobile:ios:byk-auth:remote": "node agent/byk-auth-runner.mjs",
+    "test:mobile:ios:byk-auth:local": "node agent/byk-auth-runner.mjs --local",
+    "probe:mobile:ios:byk-auth": "node agent/byk-auth-runner.mjs --probe-broker",
+    "seed:mobile:ios:byk-auth": "node agent/byk-auth-runner.mjs --seed-resend",
     "test:mobile:android": "npm --workspace packages/mobile run test:android",
     "test:desktop:mac": "npm --workspace packages/desktop-native run test:mac",
     "test:desktop:win": "npm --workspace packages/desktop-native run test:win",
     "appium": "appium"
   },
   "devDependencies": {
+    "@types/node": "^20.14.0",
     "typescript": "^5.5.4",
-    "@types/node": "^20.14.0"
+    "yaml": "^2.9.0"
   }
 }

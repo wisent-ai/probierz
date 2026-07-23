@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { TARGETS } from "./runner.mjs";
+import { affectedAppJourneys } from "./apps.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -47,8 +48,24 @@ export function affectedTargets(files) {
   const hit = new Set();
   let crossCutting = false;
   const classified = [];
+  const appMatches = affectedAppJourneys(files);
 
   for (const raw of files) {
+    const productMatches = appMatches.filter((match) => match.input === String(raw));
+    if (productMatches.length) {
+      const targets = [...new Set(productMatches.flatMap((match) => match.targets))].sort();
+      targets.forEach((target) => hit.add(target));
+      classified.push({
+        file: normalize(raw),
+        affects: targets,
+        apps: productMatches.map((match) => ({
+          appId: match.appId,
+          journeys: match.journeys,
+          repository: match.repository,
+        })),
+      });
+      continue;
+    }
     const file = normalize(raw);
     let pkgMatch = null;
     for (const [pkg, names] of byPkg) {
@@ -70,7 +87,12 @@ export function affectedTargets(files) {
   }
 
   const targets = crossCutting ? [...allTargets] : [...hit];
-  return { targets: targets.sort(), crossCutting, files: classified };
+  return {
+    targets: targets.sort(),
+    crossCutting,
+    files: classified,
+    apps: appMatches.map(({ input: _input, ...match }) => match),
+  };
 }
 
 // The files a change touched, from git. `ref` (default HEAD) is what the working

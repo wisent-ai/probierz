@@ -2,6 +2,11 @@ import type { Options } from '@wdio/types';
 import { driver } from '@wdio/globals';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+type RecordingDriver = typeof driver & {
+  startRecordingScreen(): Promise<void>;
+  stopRecordingScreen(): Promise<string>;
+};
+const recordingDriver = driver as RecordingDriver;
 
 // Pin APPIUM_HOME so the auto-started Appium server resolves its installed
 // drivers from the same location regardless of the working directory. Without
@@ -15,7 +20,19 @@ process.env.APPIUM_HOME = process.env.APPIUM_HOME || `${process.env.HOME}/.appiu
 // under PROBIERZ_ARTIFACTS so the analyzer can find them.
 const record = process.env.PROBIERZ_RECORD === '1' || process.env.PROBIERZ_RECORD === 'true';
 const artifactsDir = process.env.PROBIERZ_ARTIFACTS || join(process.cwd(), 'test-results');
-const results: Array<{ title: string; passed: boolean; duration: number; video?: string; error?: string }> = [];
+const reportPath = process.env.PROBIERZ_REPORT_PATH || join(artifactsDir, 'report.json');
+const runId = process.env.PROBIERZ_RUN_ID || null;
+const captureErrors: string[] = [];
+const results: Array<{
+  title: string;
+  passed: boolean;
+  duration: number;
+  startedAt: string;
+  completedAt: string;
+  video?: string;
+  error?: string;
+}> = [];
+const testStartedAt = new Map<string, string>();
 const slug = (s: string) => s.replace(/[^a-z\d]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
 // PROBIERZ_SPEC scopes the run to one spec. Accept a bare filename, a
 // package-relative path, or a repo-relative path -- match by basename anywhere
@@ -43,9 +60,14 @@ export const shared: Partial<Options.Testrunner> = {
   // Start a local Appium server automatically.
   services: [['appium', { args: { relaxedSecurity: true } }]],
   port: 4723,
-  beforeTest: async () => {
+  beforeTest: async (test: { title: string }) => {
+    testStartedAt.set(test.title, new Date().toISOString());
     if (!record) return;
-    try { await driver.startRecordingScreen(); } catch { /* driver lacks screen recording */ }
+    try {
+      await recordingDriver.startRecordingScreen();
+    } catch (error) {
+      captureErrors.push(`start recording: ${error instanceof Error ? error.message : String(error)}`);
+    }
   },
   afterTest: async (
     test: { title: string },
@@ -55,30 +77,38 @@ export const shared: Partial<Options.Testrunner> = {
     let video: string | undefined;
     if (record) {
       try {
-        const b64 = await driver.stopRecordingScreen();
+        const b64 = await recordingDriver.stopRecordingScreen();
         if (b64) {
           mkdirSync(artifactsDir, { recursive: true });
           video = join(artifactsDir, `${slug(test.title)}.mp4`);
           writeFileSync(video, Buffer.from(b64, 'base64'));
         }
-      } catch { /* driver lacks screen recording */ }
+      } catch (error) {
+        captureErrors.push(`stop recording for ${test.title}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
     results.push({
       title: test.title,
       passed: res.passed,
       duration: res.duration,
+      startedAt: testStartedAt.get(test.title) || new Date(Date.now() - res.duration).toISOString(),
+      completedAt: new Date().toISOString(),
       video,
       error: res.error ? String(res.error.message || res.error) : undefined,
     });
   },
   after: () => {
-    try {
-      mkdirSync(artifactsDir, { recursive: true });
-      const passed = results.filter((r) => r.passed).length;
-      writeFileSync(
-        join(artifactsDir, 'probierz-mobile-results.json'),
-        JSON.stringify({ total: results.length, passed, failed: results.length - passed, tests: results }, null, Number('2')),
-      );
-    } catch { /* best-effort */ }
+    mkdirSync(artifactsDir, { recursive: true });
+    const passed = results.filter((result) => result.passed).length;
+    writeFileSync(
+      reportPath,
+      JSON.stringify({
+        probierz: { runId, captureErrors },
+        total: results.length,
+        passed,
+        failed: results.length - passed,
+        tests: results,
+      }, null, Number('2')),
+    );
   },
 };
