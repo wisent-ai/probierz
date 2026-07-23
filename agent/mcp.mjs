@@ -22,6 +22,8 @@ import { planMatrix, runMatrix } from "./matrix.mjs";
 import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
 import { auditTrail, scanSecrets } from "./security.mjs";
 import { activateGate, enforceGate, evaluateGate, gateStatus } from "./gate.mjs";
+import { appStatus } from "./status.mjs";
+import { prepushGate } from "./prepush-gate.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -246,6 +248,25 @@ const TOOLS = [
     inputSchema: objectSchema({ appId: { type: "string" } }, ["appId"]),
   },
   {
+    name: "probierz_status",
+    description: "Journey coverage, evidence freshness vs HEAD, untested surfaces, and pull-request merge eligibility for an app.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      baseRef: { type: "string", description: "Default origin/main." },
+    }, ["appId"]),
+  },
+  {
+    name: "probierz_gate_prepush",
+    description: "Pre-push merge gate: select affected journeys from the push diff and evaluate the newest passing runs against the exact current HEAD identity (pull-request policy).",
+    inputSchema: objectSchema({
+      repo: { type: "string" },
+      appId: { type: "string", description: "Inferred from manifest repositories when omitted." },
+      base: { type: "string" },
+      head: { type: "string" },
+      runCi: { type: "boolean", description: "Run probierz ci <base> before evaluating." },
+    }, ["repo"]),
+  },
+  {
     name: "probierz_gate_evaluate",
     description: "Evaluate exact build, E3 evidence, coverage, matrix, encryption, secret scan, and signed receipt eligibility; appends an audit record.",
     inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
@@ -436,6 +457,21 @@ async function callTool(name, args) {
   }
   if (name === "probierz_gate_status") {
     return textResult(gateStatus(asString(args.appId, "appId")));
+  }
+  if (name === "probierz_status") {
+    return textResult(appStatus({
+      appId: asString(args.appId, "appId"),
+      baseRef: typeof args.baseRef === "string" ? args.baseRef : "origin/main",
+    }));
+  }
+  if (name === "probierz_gate_prepush") {
+    return textResult(await prepushGate({
+      repo: asString(args.repo, "repo"),
+      appId: typeof args.appId === "string" ? args.appId : null,
+      base: typeof args.base === "string" ? args.base : null,
+      head: typeof args.head === "string" ? args.head : null,
+      runCi: args.runCi === true,
+    }));
   }
   if (name === "probierz_gate_evaluate") {
     return textResult(await evaluateGate(gateArgs(args)));
