@@ -62,11 +62,30 @@ async function probeWeb(baseUrl) {
   }
 }
 
+function latestIosRuntimeVersion() {
+  const out = spawnSync("xcrun", ["simctl", "list", "runtimes", "-j"], { encoding: "utf8" });
+  if (out.status !== 0) return null;
+  try {
+    const runtimes = JSON.parse(out.stdout).runtimes || [];
+    const ios = runtimes.filter((runtime) => runtime.platform === "iOS" && runtime.version);
+    if (!ios.length) return null;
+    const match = ios[ios.length - 1].version.match(/^(\d+\.\d+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 async function probeNative(target, appPath) {
   const { remote } = await import("webdriverio");
   const capabilities = target === "desktop:mac"
     ? { platformName: "Mac", "appium:automationName": "Mac2", "appium:appPath": appPath, "appium:showServerLogs": false }
-    : { platformName: "iOS", "appium:automationName": "XCUITest", "appium:app": appPath };
+    : {
+      platformName: "iOS",
+      "appium:automationName": "XCUITest",
+      "appium:app": appPath,
+      ...(latestIosRuntimeVersion() ? { "appium:platformVersion": latestIosRuntimeVersion() } : {}),
+    };
   const driver = await remote({ hostname: "127.0.0.1", port: Number("4723"), capabilities, logLevel: "error" });
   try {
     const source = await driver.getPageSource();
@@ -133,7 +152,12 @@ function draftWithModel(model, brief, cwd) {
 function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
   const env = { ...process.env };
   if (baseUrl) env.BASE_URL = baseUrl;
-  if (appPath) env.MAC_APP_PATH = appPath;
+  if (appPath && target.startsWith("mobile:")) {
+    env.APP_IOS = appPath;
+    if (!env.IOS_VERSION && latestIosRuntimeVersion()) env.IOS_VERSION = latestIosRuntimeVersion();
+  } else if (appPath) {
+    env.MAC_APP_PATH = appPath;
+  }
   const run = spawnSync(process.execPath, [CLI, "run", target, "--app", appId, "--spec", stagedPath, "PROBIERZ_RUN_KIND=pull-request"], {
     encoding: "utf8",
     env,
