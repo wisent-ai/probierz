@@ -33,6 +33,8 @@ function specExtension(target) {
   return target === "web" || target === "electron" ? ".spec.ts" : ".e2e.ts";
 }
 
+export { probeWeb, probeNative, draftWithModel };
+
 async function probeWeb(baseUrl) {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch();

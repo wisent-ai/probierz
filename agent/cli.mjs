@@ -34,6 +34,7 @@ import { activateGate, enforceGate, evaluateGate, gateStatus } from "./gate.mjs"
 import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
+import { authorManifest } from "./author-manifest.mjs";
 import { existsSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,6 +59,7 @@ function usage() {
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
       "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--model codex|kimi] [--rounds N] [--dry-run]  autonomously draft a journey spec, verify it with a real run, keep it green",
+      "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--model codex|kimi] [--specs] [--dry-run]  autonomously draft the app journey manifest, then optionally cover every journey with author-spec",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -264,6 +266,41 @@ async function main() {
     if (json) out(result);
     else process.stdout.write(`${renderAppStatus(result)}\n`);
     if (!result.mergeEligibility.eligible) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "author-manifest") {
+    const appId = rest[0];
+    if (!appId || appId.startsWith("--")) throw configError("author-manifest needs an app ID");
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= 0 ? rest[index + 1] : undefined;
+    };
+    const desc = value("--desc");
+    if (!desc) throw configError("author-manifest needs --desc <what the app does>");
+    const target = value("--target");
+    if (!target) throw configError("author-manifest needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win>");
+    const repositories = [];
+    for (let index = 0; index < rest.length; index += 1) {
+      if (rest[index] === "--repo" && rest[index + 1]) {
+        repositories.push(rest[index + 1]);
+        index += 1;
+      }
+    }
+    if (!repositories.length) throw configError("author-manifest needs at least one --repo <path>");
+    const result = await authorManifest({
+      appId,
+      desc,
+      owner: value("--owner") || null,
+      repositories,
+      target,
+      baseUrl: value("--base-url") || null,
+      appPath: value("--app-path") || null,
+      model: value("--model") || "codex",
+      dryRun: rest.includes("--dry-run"),
+      withSpecs: rest.includes("--specs"),
+    });
+    out(result);
+    if (!result.ok) process.exitCode = Number("1");
     return;
   }
   if (cmd === "author-spec") {
