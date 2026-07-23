@@ -27,13 +27,16 @@ const TARGET_SPEC_DIRS = {
   "mobile:android": path.join(ROOT, "packages", "mobile", "test", "specs"),
   "desktop:mac": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
   "desktop:win": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
+  tui: path.join(ROOT, "packages", "tui", "specs"),
 };
 
 function specExtension(target) {
-  return target === "web" || target === "electron" ? ".spec.ts" : ".e2e.ts";
+  if (target === "web" || target === "electron") return ".spec.ts";
+  if (target === "tui") return ".spec.mjs";
+  return ".e2e.ts";
 }
 
-export { probeWeb, probeNative, draftWithModel };
+export { probeWeb, probeNative, probeTui, draftWithModel };
 
 async function probeWeb(baseUrl) {
   const { chromium } = await import("playwright");
@@ -97,6 +100,18 @@ async function probeNative(target, appPath) {
   }
 }
 
+async function probeTui(command) {
+  const { spawnTui } = await import("../packages/tui/pty.mjs");
+  const session = spawnTui(command, [], {});
+  await session.sleep(Number("3000"));
+  try {
+    const screen = session.screen();
+    return [`kind: tui`, `command: ${command}`, "initial screen (pty frame, ANSI stripped):", screen].join("\n").slice(0, PROBE_CHARS);
+  } finally {
+    await session.close();
+  }
+}
+
 function styleGuide(target) {
   if (target === "web" || target === "electron") {
     return [
@@ -104,6 +119,23 @@ function styleGuide(target) {
       "  import { test, expect } from '@playwright/test';",
       "  test('<journey name>', async ({ page }) => { await page.goto('/'); ... });",
       "The harness provides BASE_URL; navigate with page.goto('/'). Prefer role/text selectors from the probe dump.",
+    ].join("\n");
+  }
+  if (target === "tui") {
+    return [
+      "Spec style: plain node script (.mjs) driving the real binary through the TUI PTY driver.",
+      "  import assert from 'node:assert/strict';",
+      "  import { spawnTui } from '../pty.mjs';",
+      "  const app = spawnTui(process.env.TUI_CMD || '<command>');",
+      "  await app.waitFor('<text from the probe>');",
+      "  app.send('/some-input'); app.key('enter');",
+      "  await app.waitFor('<expected text>');",
+      "  await app.close();",
+      "Assertions use node:assert. Drive only via app.send/app.key; read state via app.screen() (current",
+      "frame) or app.fullLog() (whole session). Keys: enter, tab, esc, backspace, ctrl-c, ctrl-d, arrows.",
+      "The journey must reach real app UI states from the probe. NEVER assert on driver/harness errors,",
+      "launch failures, or nonzero exits as the outcome — if the app fails to launch or the journey",
+      "cannot be completed, the spec must throw (fail), not pass.",
     ].join("\n");
   }
   return [
@@ -157,6 +189,8 @@ function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
   if (appPath && target.startsWith("mobile:")) {
     env.APP_IOS = appPath;
     if (!env.IOS_VERSION && latestIosRuntimeVersion()) env.IOS_VERSION = latestIosRuntimeVersion();
+  } else if (appPath && target === "tui") {
+    env.TUI_CMD = appPath;
   } else if (appPath) {
     env.MAC_APP_PATH = appPath;
   }
@@ -202,7 +236,9 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
   if (!manifest.surfaces[target]) throw new Error(`app ${appId} has no ${target} surface`);
   if (target === "web" && !baseUrl) throw new Error("web authoring needs --base-url");
   if (target !== "web" && target !== "electron" && !appPath) throw new Error(`${target} authoring needs --app-path`);
-  const probe = target === "web" || target === "electron" ? await probeWeb(baseUrl) : await probeNative(target, appPath);
+  const probe = target === "web" || target === "electron"
+    ? await probeWeb(baseUrl)
+    : (target === "tui" ? await probeTui(appPath) : await probeNative(target, appPath));
   const stagedPath = path.join(TARGET_SPEC_DIRS[target], `.author-staging-${journey}${specExtension(target)}`);
   mkdirSync(path.dirname(stagedPath), { recursive: true });
   let previousSpec = null;

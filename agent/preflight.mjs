@@ -193,6 +193,12 @@ function checksFor(target, env = process.env) {
       { name: "WinAppDriver", ok: hasBinary("WinAppDriver.exe", ["--help"]), own: false, hint: "install WinAppDriver from github.com/microsoft/WinAppDriver/releases" },
     ];
   }
+  if (target === "tui") {
+    return [
+      { name: "python3 pty.spawn shim", ok: hasBinary("python3", ["--version"]), own: false, hint: "python3 stdlib provides the pty.spawn shim the TUI driver uses" },
+      { name: "node runtime", ok: hasBinary(process.execPath, ["--version"]), own: false, hint: "node is required for the TUI spec runner" },
+    ];
+  }
   return null;
 }
 
@@ -202,7 +208,7 @@ function checksFor(target, env = process.env) {
 export function preflight(target, env = process.env) {
   const checks = checksFor(target, env);
   if (!checks) {
-    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win)`);
+    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui)`);
   }
   const missing = checks.filter((c) => !c.ok);
   const remediation = [...new Set(missing.map((c) => c.hint))];
@@ -246,10 +252,11 @@ export function setupSteps(target) {
     "mobile:android": [npmInstall, driverInstall("uiautomator2")],
     "desktop:mac": [npmInstall, driverInstall("mac2", "1.20.5"), nativeCaptureBuild],
     "desktop:win": [npmInstall, driverInstall("windows")],
+    tui: [npmInstall],
   };
   const steps = table[target];
   if (!steps) {
-    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win)`);
+    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui)`);
   }
   return steps;
 }
