@@ -1,0 +1,201 @@
+// Autonomous journey spec authoring: probe the real app, draft a candidate
+// spec with a headless model, verify it with an actual probierz run, and
+// iterate with failure feedback until the run is green (or rounds run out).
+// A green spec moves into the target package's specs directory and the
+// journey is registered in the app manifest. Every candidate must drive the
+// real product: no mocks, no fake selectors, no stubbing the app under test.
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { loadAppManifest } from "./apps.mjs";
+import { runHistory } from "./history.mjs";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, "..");
+const CLI = path.join(HERE, "cli.mjs");
+const MODELS = new Set(["codex", "kimi"]);
+const MODEL_BUDGET_MS = Number("3600000");
+const PROBE_CHARS = Number("9000");
+const BODY_CHARS = Number("1500");
+
+const TARGET_SPEC_DIRS = {
+  web: path.join(ROOT, "packages", "web", "tests"),
+  electron: path.join(ROOT, "packages", "electron", "tests"),
+  "mobile:ios": path.join(ROOT, "packages", "mobile", "test", "specs"),
+  "mobile:android": path.join(ROOT, "packages", "mobile", "test", "specs"),
+  "desktop:mac": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
+  "desktop:win": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
+};
+
+function specExtension(target) {
+  return target === "web" || target === "electron" ? ".spec.ts" : ".e2e.ts";
+}
+
+async function probeWeb(baseUrl) {
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(baseUrl, { waitUntil: "load" });
+    const title = await page.title();
+    const snapshot = await page.evaluate(() => {
+      const items = [];
+      const textOf = (el) => (el.innerText || el.value || el.getAttribute("aria-label") || el.getAttribute("placeholder") || "")
+        .trim().replace(/\s+/g, " ");
+      for (const el of document.querySelectorAll("h1,h2,h3")) {
+        const text = textOf(el);
+        if (text) items.push(`${el.tagName.toLowerCase()}: ${text.slice(0, 80)}`);
+      }
+      for (const el of document.querySelectorAll("button,[role='button'],a,input,select,textarea,[aria-label],[data-testid]")) {
+        const text = textOf(el);
+        const id = el.id ? `#${el.id}` : (el.getAttribute("data-testid") ? `[data-testid=${el.getAttribute("data-testid")}]` : el.tagName.toLowerCase());
+        if (text || id) items.push(`${id}: ${text.slice(0, 80)}`);
+      }
+      return items.slice(0, Number("120")).join("\n");
+    });
+    const body = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, BODY_CHARS);
+    return [`kind: web`, `url: ${baseUrl}`, `title: ${title}`, `body text: ${body}`, "interactive/headings:", snapshot].join("\n").slice(0, PROBE_CHARS);
+  } finally {
+    await browser.close();
+  }
+}
+
+async function probeNative(target, appPath) {
+  const { remote } = await import("webdriverio");
+  const capabilities = target === "desktop:mac"
+    ? { platformName: "Mac", "appium:automationName": "Mac2", "appium:appPath": appPath, "appium:showServerLogs": false }
+    : { platformName: "iOS", "appium:automationName": "XCUITest", "appium:app": appPath };
+  const driver = await remote({ hostname: "127.0.0.1", port: Number("4723"), capabilities, logLevel: "error" });
+  try {
+    const source = await driver.getPageSource();
+    return [`kind: ${target}`, `app: ${appPath}`, "accessibility tree (truncated):", source].join("\n").slice(0, PROBE_CHARS);
+  } finally {
+    await driver.deleteSession().catch(() => {});
+  }
+}
+
+function styleGuide(target) {
+  if (target === "web" || target === "electron") {
+    return [
+      "Spec style: Playwright with @playwright/test.",
+      "  import { test, expect } from '@playwright/test';",
+      "  test('<journey name>', async ({ page }) => { await page.goto('/'); ... });",
+      "The harness provides BASE_URL; navigate with page.goto('/'). Prefer role/text selectors from the probe dump.",
+    ].join("\n");
+  }
+  return [
+    "Spec style: WebdriverIO with @wdio/globals.",
+    "  import { $, $$, browser } from '@wdio/globals';",
+    "Use accessibility-id selectors (`~identifier`) or XPath by visible text from the probe dump. The harness",
+    "launches the real app; do not launch it yourself.",
+  ].join("\n");
+}
+
+function buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath }) {
+  const lines = [
+    `Write an e2e journey spec for the app "${appId}" (target ${target}), journey "${journey}".`,
+    `Journey goal: ${desc}`,
+    "",
+    `Create EXACTLY ONE file at this path and nothing else: ${stagedPath}`,
+    "Use your file-writing capability (apply_patch/shell) to create it on disk; do not print the spec as chat output.",
+    "",
+    "Probe of the real app (use these selectors; anything else must be discovered by the spec itself):",
+    probe,
+    "",
+    styleGuide(target),
+    "",
+    "Hard rules:",
+    "- Drive the real app only: no mocks, no fake selectors, no stubbing, no screenshots-only assertions.",
+    "- One focused journey; readable, deterministic, no sleeps beyond explicit waits for real conditions.",
+    "- The file must be self-contained and pass on the first run.",
+  ];
+  if (previousSpec && failures.length) {
+    lines.push("", `Round ${round} of ${rounds}: your previous spec FAILED. Fix it based on the run failures.`);
+    lines.push("--- PREVIOUS SPEC ---", previousSpec, "--- RUN FAILURES ---", ...failures);
+  } else {
+    lines.push("", `Round ${round} of ${rounds}.`);
+  }
+  lines.push("", "Write only that one file, then stop.");
+  return lines.join("\n");
+}
+
+function draftWithModel(model, brief, cwd) {
+  if (model === "kimi") {
+    return spawnSync("kimi", ["-p", brief, "--yolo"], { cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216") });
+  }
+  return spawnSync("codex", ["exec", "--skip-git-repo-check", "--sandbox", "workspace-write", brief], {
+    cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216"),
+  });
+}
+
+function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
+  const env = { ...process.env };
+  if (baseUrl) env.BASE_URL = baseUrl;
+  if (appPath) env.MAC_APP_PATH = appPath;
+  const run = spawnSync(process.execPath, [CLI, "run", target, "--app", appId, "--spec", stagedPath, "PROBIERZ_RUN_KIND=pull-request"], {
+    encoding: "utf8",
+    env,
+    maxBuffer: Number("33554432"),
+  });
+  const history = runHistory({ appId, limit: Number("5") });
+  const latest = history.runs[0] || null;
+  const result = { exit: run.status, runId: latest?.runId || null, status: latest?.status || "unknown", failures: [] };
+  if (latest?.manifestPath) {
+    const analysisFile = path.join(path.dirname(latest.manifestPath), "analysis.json");
+    if (existsSync(analysisFile)) {
+      try {
+        const analysis = JSON.parse(readFileSync(analysisFile, "utf8"));
+        result.failures = (analysis.failures || []).map((failure) => String(failure.error || failure.message || "").slice(0, Number("400"))).filter(Boolean).slice(0, Number("6"));
+      } catch { result.failures = []; }
+    }
+  }
+  return result;
+}
+
+function acceptSpec({ appId, journey, target, stagedPath, mappingPaths }) {
+  const finalPath = path.join(TARGET_SPEC_DIRS[target], `${appId}-${journey}${specExtension(target)}`);
+  renameSync(stagedPath, finalPath);
+  const manifest = loadAppManifest(appId);
+  const document = parseYaml(readFileSync(manifest.file, "utf8"));
+  document.journeys[journey] = document.journeys[journey] || { owner: document.owner || "probierz", timeoutMs: Number("300000") };
+  const surface = document.surfaces[target];
+  surface.journeys = [...new Set([...(surface.journeys || []), journey])].sort();
+  if (mappingPaths.length) {
+    document.repositories[0].mappings = [...(document.repositories[0].mappings || []), { paths: mappingPaths, journeys: [journey] }];
+  }
+  writeFileSync(manifest.file, stringifyYaml(document));
+  return { spec: finalPath, manifest: manifest.file };
+}
+
+export async function authorSpec({ appId, journey, target, desc, baseUrl = null, appPath = null, mappingPaths = [], model = "codex", rounds = Number("3"), dryRun = false }) {
+  if (!MODELS.has(model)) throw new Error(`unsupported model: ${model}`);
+  if (!TARGET_SPEC_DIRS[target]) throw new Error(`unsupported target: ${target}`);
+  const manifest = loadAppManifest(appId);
+  if (!manifest.surfaces[target]) throw new Error(`app ${appId} has no ${target} surface`);
+  if (target === "web" && !baseUrl) throw new Error("web authoring needs --base-url");
+  if (target !== "web" && target !== "electron" && !appPath) throw new Error(`${target} authoring needs --app-path`);
+  const probe = target === "web" || target === "electron" ? await probeWeb(baseUrl) : await probeNative(target, appPath);
+  const stagedPath = path.join(TARGET_SPEC_DIRS[target], `.author-staging-${journey}${specExtension(target)}`);
+  mkdirSync(path.dirname(stagedPath), { recursive: true });
+  let previousSpec = null;
+  let failures = [];
+  for (let round = 1; round <= rounds; round += 1) {
+    const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath });
+    if (dryRun) return { ok: true, dryRun: true, brief, stagedPath };
+    const drafted = draftWithModel(model, brief, path.dirname(stagedPath));
+    if (!existsSync(stagedPath)) {
+      return { ok: false, reason: "model did not write the staged spec", agentExit: drafted.status, agentStderr: String(drafted.stderr || "").slice(0, Number("600")) };
+    }
+    const run = runStagedSpec({ appId, target, stagedPath, baseUrl, appPath });
+    if (run.status === "passed") {
+      const accepted = acceptSpec({ appId, journey, target, stagedPath, mappingPaths });
+      return { ok: true, journey, target, spec: accepted.spec, manifest: accepted.manifest, runId: run.runId, rounds: round };
+    }
+    previousSpec = readFileSync(stagedPath, "utf8");
+    failures = run.failures;
+  }
+  rmSync(stagedPath, { force: true });
+  return { ok: false, reason: `authoring did not converge in ${rounds} rounds`, lastFailures: failures };
+}

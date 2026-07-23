@@ -33,6 +33,7 @@ import { auditTrail, scanSecrets } from "./security.mjs";
 import { activateGate, enforceGate, evaluateGate, gateStatus } from "./gate.mjs";
 import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
+import { authorSpec } from "./author-spec.mjs";
 import { existsSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,6 +57,7 @@ function usage() {
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
+      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--model codex|kimi] [--rounds N] [--dry-run]  autonomously draft a journey spec, verify it with a real run, keep it green",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -262,6 +264,43 @@ async function main() {
     if (json) out(result);
     else process.stdout.write(`${renderAppStatus(result)}\n`);
     if (!result.mergeEligibility.eligible) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "author-spec") {
+    const appId = rest[0];
+    const journey = rest[1];
+    if (!appId || appId.startsWith("--") || !journey || journey.startsWith("--")) {
+      throw configError("author-spec needs an app ID and a journey name");
+    }
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= 0 ? rest[index + 1] : undefined;
+    };
+    const desc = value("--desc");
+    if (!desc) throw configError("author-spec needs --desc <journey goal>");
+    const target = value("--target");
+    if (!target) throw configError("author-spec needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win>");
+    const mappingPaths = [];
+    for (let index = 0; index < rest.length; index += 1) {
+      if (rest[index] === "--paths" && rest[index + 1]) {
+        mappingPaths.push(rest[index + 1]);
+        index += 1;
+      }
+    }
+    const result = await authorSpec({
+      appId,
+      journey,
+      target,
+      desc,
+      baseUrl: value("--base-url") || null,
+      appPath: value("--app-path") || null,
+      mappingPaths,
+      model: value("--model") || "codex",
+      rounds: Number(value("--rounds")) || Number("3"),
+      dryRun: rest.includes("--dry-run"),
+    });
+    out(result);
+    if (!result.ok) process.exitCode = Number("1");
     return;
   }
   if (cmd === "gate-status") {
