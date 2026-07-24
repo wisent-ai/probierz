@@ -36,6 +36,7 @@ import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun } from "./stado.mjs";
+import { overview, renderOverview } from "./overview.mjs";
 import { existsSync, lstatSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,6 +63,7 @@ function usage() {
       "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--model codex|kimi] [--rounds N] [--dry-run]  autonomously draft a journey spec, verify it with a real run, keep it green",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--model codex|kimi] [--specs] [--dry-run]  autonomously draft the app journey manifest, then optionally cover every journey with author-spec",
       "  probierz hosts              run hosts: local and stado providers",
+      "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
       "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
@@ -273,6 +275,13 @@ async function main() {
   }
   if (cmd === "hosts") {
     out(listHosts());
+    return;
+  }
+  if (cmd === "overview") {
+    const appIds = rest.filter((arg) => !arg.startsWith("--"));
+    const report = await overview({ appIds: appIds.length ? appIds : null });
+    if (rest.includes("--text")) process.stdout.write(`${renderOverview(report)}\n`);
+    else out(report);
     return;
   }
   if (cmd === "stado") {
