@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFile
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { APPS_ROOT, loadAppManifest } from "./apps.mjs";
-import { authorSpec, draftWithModel, probeNative, probeWeb } from "./author-spec.mjs";
+import { authorSpec, draftWithModel, probeNative, probeTui, probeWeb } from "./author-spec.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -78,7 +78,9 @@ export async function authorManifest({ appId, desc, owner = null, repositories, 
   if (target !== "web" && target !== "electron" && !appPath) throw new Error(`${target} needs --app-path`);
   if ((target === "web" || target === "electron") && !baseUrl) throw new Error(`${target} needs --base-url`);
   const resolvedOwner = owner || `${appId} maintainers`;
-  const probe = target === "web" || target === "electron" ? await probeWeb(baseUrl) : await probeNative(target, appPath);
+  const probe = target === "web" || target === "electron"
+    ? await probeWeb(baseUrl)
+    : (target === "tui" ? await probeTui(appPath) : await probeNative(target, appPath));
   const trees = Object.fromEntries(repositories.map((repo) => [repo, repoTree(repo)]));
   const stagedDir = path.join(ROOT, "test-results", ".author-manifest");
   mkdirSync(stagedDir, { recursive: true });
