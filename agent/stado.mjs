@@ -28,6 +28,8 @@ export function listHosts() {
     { host: "stado:aws", kind: "stado", submit: ["--provider", "aws", "--pin-provider"], description: "stado queue, AWS consumers only" },
     { host: "stado:any", kind: "stado", submit: ["--any-provider"], description: "stado queue, any consumer with capacity" },
     { host: "stado:spot", kind: "stado", submit: ["--spot"], description: "stado queue, cheapest preemptible capacity" },
+    { host: "stado:local", kind: "stado", submit: ["--provider", "local", "--pin-provider"], description: "stado queue, local-kind consumers only" },
+    { host: "stado:t4", kind: "stado", submit: ["--gpu-type", "nvidia-tesla-t4"], description: "stado queue, pinned to nvidia-tesla-t4 slots (GCP)" },
   ];
 }
 

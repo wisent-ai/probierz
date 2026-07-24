@@ -36,7 +36,7 @@ import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun } from "./stado.mjs";
-import { existsSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, lstatSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -415,14 +415,19 @@ async function main() {
     if (!existsSync(hooksDir)) throw configError(`not a git working tree: ${repo}`);
     const target = path.join(hooksDir, "pre-push");
     const backup = path.join(hooksDir, "pre-push.before-probierz-gate");
-    if (existsSync(target) && !existsSync(backup)) renameSync(target, backup);
+    const present = (file) => {
+      try { lstatSync(file); return true; } catch { return false; }
+    };
+    if (present(target) && !present(backup)) renameSync(target, backup);
     const script = [
       "#!/bin/sh",
       'HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)',
       'if [ -f "$HOOK_DIR/pre-push.before-probierz-gate" ]; then',
       '  "$HOOK_DIR/pre-push.before-probierz-gate" "$@" || exit $?',
       "fi",
-      `exec node ${path.join(AGENT_DIR, "prepush-gate.mjs")} --hook --app ${appId}`,
+      'GATE_CI="--ci"',
+      'if [ "${PROBIERZ_GATE_NO_CI:-}" = "1" ]; then GATE_CI=""; fi',
+      `exec node ${path.join(AGENT_DIR, "prepush-gate.mjs")} --hook --app ${appId} $GATE_CI`,
       "",
     ].join("\n");
     mkdirSync(hooksDir, { recursive: true });
