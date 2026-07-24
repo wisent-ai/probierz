@@ -161,6 +161,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
   }
   lines.push(
     "npm install --no-audit --no-fund --loglevel=error",
+    // Fresh worker: provision the target's host-level deps (appium drivers,
+    // native helpers) exactly as a local `probierz setup <target>` would.
+    `node agent/cli.mjs setup ${target}`,
     `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
     "tar -czf /tmp/results.tar.gz test-results",
     `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
