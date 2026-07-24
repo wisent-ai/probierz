@@ -12,10 +12,13 @@ const SPECS_DIR = path.join(HERE, "specs");
 const artifacts = process.env.PROBIERZ_ARTIFACTS || "test-results";
 const reportPath = process.env.PROBIERZ_REPORT_PATH || path.join(artifacts, "report.json");
 const filter = process.env.PROBIERZ_SPEC ? path.basename(process.env.PROBIERZ_SPEC) : null;
+// Manifests may pin one exact file or a glob ("skarbiec-*.spec.mjs") for
+// apps whose journeys author one spec per journey.
+const globPrefix = filter?.includes("*") ? filter.slice(0, filter.indexOf("*")) : null;
 
 const files = readdirSync(SPECS_DIR)
   .filter((name) => name.endsWith(".spec.mjs"))
-  .filter((name) => !filter || name === filter)
+  .filter((name) => !filter || (globPrefix !== null ? name.startsWith(globPrefix) : name === filter))
   .sort();
 
 const rows = [];
