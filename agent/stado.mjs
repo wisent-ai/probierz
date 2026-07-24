@@ -84,6 +84,16 @@ function packAppSource(appId, repoRoot) {
   return { file, hash };
 }
 
+function packAppBundle(appId, bundlePath) {
+  const bundleName = path.basename(bundlePath);
+  const hash = createHash("sha256").update(`${appId}-app-${Date.now()}`).digest("hex").slice(0, Number("12"));
+  const file = path.join(tmpdir(), `${appId}-app-${hash}.tar.gz`);
+  // -C into the bundle's parent so the tarball root is <Bundle>.app itself.
+  const packed = sh("tar", ["-czf", file, "-C", path.dirname(bundlePath), bundleName]);
+  if (packed.status !== 0) throw new Error(`pack ${appId} bundle failed: ${packed.stderr}`);
+  return { file, hash, bundleName };
+}
+
 function upload(localFile, name) {
   const dest = `${stateUri("inputs")}/${name}`;
   const out = sh("gcloud", ["storage", "cp", localFile, dest]);
@@ -94,10 +104,12 @@ function upload(localFile, name) {
 function runScript({ target, appId, spec, provision, hash, platform = "linux" }) {
   const lines = ["set -euxo pipefail"];
   if (platform === "darwin") {
-    // macOS runner: use the node already on the box when present (homebrew
-    // on the mini), else fetch the darwin-arm64 tarball. gcloud is expected
-    // at /opt/homebrew/bin and runs under the worker's normal PATH.
+    // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
+    // so put homebrew on PATH first (gcloud, node live there on the mini).
+    // Then use the node already on the box when present, else fetch the
+    // darwin-arm64 tarball.
     lines.push(
+      "export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
     );
   } else {
@@ -119,6 +131,13 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       `cargo build --release --manifest-path /tmp/w/${provision.appId}/Cargo.toml`,
       `export TUI_CMD=/tmp/w/${provision.appId}/target/release/${provision.binary || provision.appId}`,
+    );
+  }
+  if (provision?.kind === "app-bundle") {
+    lines.push(
+      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}-app.tar.gz /tmp/`,
+      `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}-app.tar.gz -C /tmp/w/${provision.appId}`,
+      `export MAC_APP_PATH=/tmp/w/${provision.appId}/${provision.bundleName}`,
     );
   }
   lines.push(
@@ -159,6 +178,12 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   if (provision?.kind === "cargo-release") {
     if (!appRepo) throw new Error("cargo-release provisioning needs the app source repository");
     upload(packAppSource(appId, appRepo).file, `${appId}.tar.gz`);
+  }
+  if (provision?.kind === "app-bundle") {
+    if (!provision.bundlePath || !existsSync(provision.bundlePath)) throw new Error(`app-bundle path missing: ${provision.bundlePath}`);
+    const bundle = packAppBundle(appId, provision.bundlePath);
+    provision.bundleName = bundle.bundleName;
+    upload(bundle.file, `${appId}-app.tar.gz`);
   }
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
