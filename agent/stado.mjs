@@ -164,9 +164,16 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
     // Fresh worker: provision the target's host-level deps (appium drivers,
     // native helpers) exactly as a local `probierz setup <target>` would.
     `node agent/cli.mjs setup ${target}`,
+    // Evidence must survive a failing run: capture the exit code, tar and
+    // upload whatever test-results exist, then re-emit the run's status so
+    // the job's success/failure still reflects the tests.
+    "set +e",
     `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
+    "PROBIERZ_RUN_RC=$?",
+    "set -e",
     "tar -czf /tmp/results.tar.gz test-results",
     `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
+    "exit $PROBIERZ_RUN_RC",
   );
   return lines.join("\n");
 }
