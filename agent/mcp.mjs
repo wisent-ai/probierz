@@ -24,6 +24,9 @@ import { auditTrail, scanSecrets } from "./security.mjs";
 import { activateGate, enforceGate, evaluateGate, gateStatus } from "./gate.mjs";
 import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
+import { authorSpec } from "./author-spec.mjs";
+import { authorManifest } from "./author-manifest.mjs";
+import { submitRemoteRun } from "./stado.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -267,6 +270,47 @@ const TOOLS = [
     }, ["repo"]),
   },
   {
+    name: "probierz_author_spec",
+    description: "SIDE-EFFECTING: autonomously draft one journey spec from a probe of the real app, verify it with an actual run, and keep it on green (registers the journey in the app manifest).",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      journey: { type: "string" },
+      target: { type: "string", description: "web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui" },
+      desc: { type: "string", description: "Journey goal in one or two sentences." },
+      baseUrl: { type: "string" },
+      appPath: { type: "string" },
+      model: { type: "string", description: "codex (default) or kimi" },
+      rounds: { type: "number" },
+    }, ["appId", "journey", "target", "desc"]),
+  },
+  {
+    name: "probierz_author_manifest",
+    description: "SIDE-EFFECTING: autonomously draft the whole app journey manifest from a probe and repository layout, validate it, and optionally cover every journey with author-spec.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      desc: { type: "string", description: "What the app does, in one or two sentences." },
+      repositories: { type: "array", items: { type: "string" } },
+      target: { type: "string" },
+      baseUrl: { type: "string" },
+      appPath: { type: "string" },
+      model: { type: "string" },
+      withSpecs: { type: "boolean" },
+    }, ["appId", "desc", "repositories", "target"]),
+  },
+  {
+    name: "probierz_stado_run",
+    description: "SIDE-EFFECTING: run a target on a chosen stado host (provider/pin/spot/GPU); evidence lands back in test-results.",
+    inputSchema: objectSchema({
+      target: { type: "string" },
+      appId: { type: "string" },
+      spec: { type: "string" },
+      host: { type: "string", description: "stado:gcp|azure|aws|any|spot|local|t4" },
+      cargoRelease: { type: "boolean", description: "Build the app binary on the worker with cargo (needs appRepo)." },
+      appRepo: { type: "string" },
+      watch: { type: "boolean", description: "Default true; waits for completion and fetches results." },
+    }, ["target", "appId"]),
+  },
+  {
     name: "probierz_gate_evaluate",
     description: "Evaluate exact build, E3 evidence, coverage, matrix, encryption, secret scan, and signed receipt eligibility; appends an audit record.",
     inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
@@ -471,6 +515,44 @@ async function callTool(name, args) {
       base: typeof args.base === "string" ? args.base : null,
       head: typeof args.head === "string" ? args.head : null,
       runCi: args.runCi === true,
+    }));
+  }
+  if (name === "probierz_author_spec") {
+    return textResult(await authorSpec({
+      appId: asString(args.appId, "appId"),
+      journey: asString(args.journey, "journey"),
+      target: asString(args.target, "target"),
+      desc: asString(args.desc, "desc"),
+      baseUrl: typeof args.baseUrl === "string" ? args.baseUrl : null,
+      appPath: typeof args.appPath === "string" ? args.appPath : null,
+      model: typeof args.model === "string" ? args.model : "codex",
+      rounds: typeof args.rounds === "number" ? args.rounds : Number("3"),
+    }));
+  }
+  if (name === "probierz_author_manifest") {
+    if (!Array.isArray(args.repositories) || !args.repositories.length) throw new Error("repositories must be a non-empty array");
+    return textResult(await authorManifest({
+      appId: asString(args.appId, "appId"),
+      desc: asString(args.desc, "desc"),
+      repositories: args.repositories,
+      target: asString(args.target, "target"),
+      baseUrl: typeof args.baseUrl === "string" ? args.baseUrl : null,
+      appPath: typeof args.appPath === "string" ? args.appPath : null,
+      model: typeof args.model === "string" ? args.model : "codex",
+      withSpecs: args.withSpecs === true,
+    }));
+  }
+  if (name === "probierz_stado_run") {
+    return textResult(await submitRemoteRun({
+      target: asString(args.target, "target"),
+      appId: asString(args.appId, "appId"),
+      spec: typeof args.spec === "string" ? args.spec : null,
+      host: typeof args.host === "string" ? args.host : "stado:gcp",
+      provision: args.cargoRelease === true
+        ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId") }
+        : null,
+      appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
+      watch: args.watch !== false,
     }));
   }
   if (name === "probierz_gate_evaluate") {
