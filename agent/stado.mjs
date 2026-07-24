@@ -180,9 +180,11 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
 }
 
 function parseJobId(text) {
-  const match = String(text).match(/[Bb]atch:\s*([a-z0-9][a-z0-9-]{4,})/)
-    || String(text).match(/job[_\s-]?id["'\s:=]+([a-z0-9][a-z0-9-]{6,})/i)
-    || String(text).match(/\b([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\b/);
+  // Prefer an explicit job id over the batch id: wc echoes "Job ID: <id>"
+  // for single-job submits; only batch submissions lack one.
+  const match = String(text).match(/job[_\s-]?id["'\s:=]+([a-z0-9][a-z0-9-]{6,})/i)
+    || String(text).match(/\b([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\b/)
+    || String(text).match(/[Bb]atch:\s*([a-z0-9][a-z0-9-]{4,})/);
   return match ? match[1] : null;
 }
 
