@@ -94,6 +94,13 @@ function packAppBundle(appId, bundlePath) {
   return { file, hash, bundleName };
 }
 
+function manifestRepoRoot(appId) {
+  const manifest = path.join(ROOT, "apps", appId, "probierz.yaml");
+  if (!existsSync(manifest)) return null;
+  const match = readFileSync(manifest, "utf8").match(/^\s*- root:\s*(\S.+)$/m);
+  return match ? match[1].trim() : null;
+}
+
 function upload(localFile, name) {
   const dest = `${stateUri("inputs")}/${name}`;
   const out = sh("gcloud", ["storage", "cp", localFile, dest]);
@@ -138,10 +145,21 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
       `gcloud storage cp ${stateUri("inputs")}/${provision.appId}-app.tar.gz /tmp/`,
       `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}-app.tar.gz -C /tmp/w/${provision.appId}`,
       `export MAC_APP_PATH=/tmp/w/${provision.appId}/${provision.bundleName}`,
+      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
+      `mkdir -p /tmp/w/${provision.appId}-src && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}-src`,
     );
   }
   lines.push(
     "cd /tmp/w/probierz",
+  );
+  if (provision?.kind === "app-bundle") {
+    // The manifest ships the submitter's absolute repo root; on the worker
+    // the sources live in /tmp/w/<appId>-src, so rewrite it before the run.
+    lines.push(
+      `perl -pi -e 's|^  - root: .*|  - root: /tmp/w/${provision.appId}-src|' apps/${appId}/probierz.yaml`,
+    );
+  }
+  lines.push(
     "npm install --no-audit --no-fund --loglevel=error",
     `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
     "tar -czf /tmp/results.tar.gz test-results",
@@ -184,6 +202,12 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     const bundle = packAppBundle(appId, provision.bundlePath);
     provision.bundleName = bundle.bundleName;
     upload(bundle.file, `${appId}-app.tar.gz`);
+    // The runner recomputes the source inventory on the worker, so the app
+    // source (with .git) must travel too; the manifest's absolute repo root
+    // is rewritten on the worker to the extracted copy.
+    const sourceRepo = appRepo || manifestRepoRoot(appId);
+    if (!sourceRepo) throw new Error(`app-bundle needs the app source repo (--app-repo or a repositories[0].root in apps/${appId}/probierz.yaml)`);
+    upload(packAppSource(appId, sourceRepo).file, `${appId}.tar.gz`);
   }
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
