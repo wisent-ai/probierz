@@ -52,6 +52,7 @@ export function listHosts() {
     { host: "stado:any", kind: "stado", submit: ["--any-provider"], description: "stado queue, any consumer with capacity" },
     { host: "stado:spot", kind: "stado", submit: ["--spot"], description: "stado queue, cheapest preemptible capacity" },
     { host: "stado:local", kind: "stado", submit: ["--provider", "local", "--pin-provider"], description: "stado queue, local-kind consumers only" },
+    { host: "stado:mini", kind: "stado", platform: "darwin", submit: ["--provider", "local", "--pin-provider", "--pinned-host", "charless-mac-mini"], description: "stado queue, pinned to charless-mac-mini (macOS runner)" },
     { host: "stado:t4", kind: "stado", submit: ["--gpu-type", "nvidia-tesla-t4"], description: "stado queue, pinned to nvidia-tesla-t4 slots (GCP)" },
   ];
 }
@@ -90,15 +91,26 @@ function upload(localFile, name) {
   return dest;
 }
 
-function runScript({ target, appId, spec, provision, hash }) {
-  const lines = [
-    "set -euxo pipefail",
-    `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz`,
-    "tar -xJf /tmp/node.tar.xz -C /tmp",
-    `export PATH=/tmp/node-${NODE_VERSION}-linux-x64/bin:$PATH`,
+function runScript({ target, appId, spec, provision, hash, platform = "linux" }) {
+  const lines = ["set -euxo pipefail"];
+  if (platform === "darwin") {
+    // macOS runner: use the node already on the box when present (homebrew
+    // on the mini), else fetch the darwin-arm64 tarball. gcloud is expected
+    // at /opt/homebrew/bin and runs under the worker's normal PATH.
+    lines.push(
+      `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
+    );
+  } else {
+    lines.push(
+      `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz`,
+      "tar -xJf /tmp/node.tar.xz -C /tmp",
+      `export PATH=/tmp/node-${NODE_VERSION}-linux-x64/bin:$PATH`,
+    );
+  }
+  lines.push(
     `gcloud storage cp ${stateUri("inputs")}/probierz.tar.gz /tmp/`,
     "mkdir -p /tmp/w/probierz && tar -xzf /tmp/probierz.tar.gz -C /tmp/w/probierz",
-  ];
+  );
   if (provision?.kind === "cargo-release") {
     lines.push(
       `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
@@ -148,7 +160,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     if (!appRepo) throw new Error("cargo-release provisioning needs the app source repository");
     upload(packAppSource(appId, appRepo).file, `${appId}.tar.gz`);
   }
-  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash });
+  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   upload(scriptFile, `run-${packedRepo.hash}.sh`);
