@@ -35,6 +35,7 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
+import { listHosts, submitRemoteRun } from "./stado.mjs";
 import { existsSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,6 +61,8 @@ function usage() {
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
       "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--model codex|kimi] [--rounds N] [--dry-run]  autonomously draft a journey spec, verify it with a real run, keep it green",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--model codex|kimi] [--specs] [--dry-run]  autonomously draft the app journey manifest, then optionally cover every journey with author-spec",
+      "  probierz hosts              run hosts: local and stado providers",
+      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -266,6 +269,37 @@ async function main() {
     if (json) out(result);
     else process.stdout.write(`${renderAppStatus(result)}\n`);
     if (!result.mergeEligibility.eligible) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "hosts") {
+    out(listHosts());
+    return;
+  }
+  if (cmd === "stado") {
+    const sub = rest[0];
+    if (sub !== "run") throw configError("usage: probierz stado run <target> --app <id> [--spec f] [--host h] [--app-repo p] [--no-watch]");
+    const target = rest[1];
+    if (!target) throw configError("stado run needs a target (e.g. tui)");
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= 0 ? rest[index + 1] : undefined;
+    };
+    const appId = value("--app");
+    if (!appId) throw configError("stado run needs --app <appId>");
+    const provision = rest.includes("--cargo-release")
+      ? { kind: "cargo-release", appId, binary: value("--binary") || appId }
+      : null;
+    const result = await submitRemoteRun({
+      target,
+      appId,
+      spec: value("--spec") || null,
+      host: value("--host") || "stado:gcp",
+      provision,
+      appRepo: value("--app-repo") || null,
+      watch: !rest.includes("--no-watch"),
+    });
+    out(result);
+    if (result.state !== "completed") process.exitCode = Number("1");
     return;
   }
   if (cmd === "author-manifest") {
