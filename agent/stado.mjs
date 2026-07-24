@@ -152,11 +152,12 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
   lines.push(
     "cd /tmp/w/probierz",
   );
-  if (provision?.kind === "app-bundle") {
+  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release") {
     // The manifest ships the submitter's absolute repo root; on the worker
-    // the sources live in /tmp/w/<appId>-src, so rewrite it before the run.
+    // the sources live under /tmp/w, so rewrite it before the run.
+    const srcDir = provision.kind === "app-bundle" ? `/tmp/w/${provision.appId}-src` : `/tmp/w/${provision.appId}`;
     lines.push(
-      `perl -pi -e 's|^  - root: .*|  - root: /tmp/w/${provision.appId}-src|' apps/${appId}/probierz.yaml`,
+      `perl -pi -e 's|^  - root: .*|  - root: ${srcDir}|' apps/${appId}/probierz.yaml`,
     );
   }
   lines.push(
