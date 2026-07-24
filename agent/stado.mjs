@@ -14,11 +14,34 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const WC_BIN = "wc";
-const GCS_INPUTS = "gs://stado/probierz-inputs";
-const GCS_RESULTS = "gs://stado/probierz-results";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+
+// State backend for the bridge: env PROBIERZ_STADO_BUCKET wins, then
+// stado.config.json (storage.gcs.bucket), then the fleet default.
+function stateBucket() {
+  if (process.env.PROBIERZ_STADO_BUCKET) return process.env.PROBIERZ_STADO_BUCKET;
+  const candidates = [
+    path.join(ROOT, "..", "wisent-compute", "stado.config.json"),
+    path.join(process.env.HOME || "", ".config", "stado", "config.json"),
+    path.join(process.env.HOME || "", ".stado", "config.json"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      try {
+        const data = JSON.parse(readFileSync(candidate, "utf8"));
+        const bucket = data?.storage?.gcs?.bucket;
+        if (typeof bucket === "string" && bucket) return bucket;
+      } catch { /* unreadable config: fall through to the default */ }
+    }
+  }
+  return "stado";
+}
+
+function stateUri(kind) {
+  return `gs://${stateBucket()}/probierz-${kind}`;
+}
 
 export function listHosts() {
   return [
@@ -61,7 +84,7 @@ function packAppSource(appId, repoRoot) {
 }
 
 function upload(localFile, name) {
-  const dest = `${GCS_INPUTS}/${name}`;
+  const dest = `${stateUri("inputs")}/${name}`;
   const out = sh("gcloud", ["storage", "cp", localFile, dest]);
   if (out.status !== 0) throw new Error(`upload ${localFile} failed: ${out.stderr}`);
   return dest;
@@ -73,12 +96,12 @@ function runScript({ target, appId, spec, provision, hash }) {
     `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz`,
     "tar -xJf /tmp/node.tar.xz -C /tmp",
     `export PATH=/tmp/node-${NODE_VERSION}-linux-x64/bin:$PATH`,
-    `gcloud storage cp ${GCS_INPUTS}/probierz.tar.gz /tmp/`,
+    `gcloud storage cp ${stateUri("inputs")}/probierz.tar.gz /tmp/`,
     "mkdir -p /tmp/w/probierz && tar -xzf /tmp/probierz.tar.gz -C /tmp/w/probierz",
   ];
   if (provision?.kind === "cargo-release") {
     lines.push(
-      `gcloud storage cp ${GCS_INPUTS}/${provision.appId}.tar.gz /tmp/`,
+      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
       `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
@@ -91,7 +114,7 @@ function runScript({ target, appId, spec, provision, hash }) {
     "npm install --no-audit --no-fund --loglevel=error",
     `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
     "tar -czf /tmp/results.tar.gz test-results",
-    `gcloud storage cp /tmp/results.tar.gz ${GCS_RESULTS}/probierz-run-${hash}.tar.gz`,
+    `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
   );
   return lines.join("\n");
 }
@@ -131,7 +154,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   upload(scriptFile, `run-${packedRepo.hash}.sh`);
   const submit = sh(WC_BIN, [
     "submit",
-    `gcloud storage cp ${GCS_INPUTS}/run-${packedRepo.hash}.sh /tmp/run.sh && bash /tmp/run.sh`,
+    `gcloud storage cp ${stateUri("inputs")}/run-${packedRepo.hash}.sh /tmp/run.sh && bash /tmp/run.sh`,
     ...hostDef.submit,
   ]);
   const jobId = parseJobId(`${submit.stdout}\n${submit.stderr}`);
@@ -152,7 +175,7 @@ export function fetchResults(hash, appId, jobId) {
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
   const tarball = path.join(destDir, "results.tar.gz");
-  const down = sh("gcloud", ["storage", "cp", `${GCS_RESULTS}/probierz-run-${hash}.tar.gz`, tarball]);
+  const down = sh("gcloud", ["storage", "cp", `${stateUri("results")}/probierz-run-${hash}.tar.gz`, tarball]);
   if (down.status !== 0) throw new Error(`download results for ${jobId} failed: ${down.stderr}`);
   const untar = sh("tar", ["-xzf", tarball, "-C", path.join(ROOT, "test-results")], { cwd: ROOT });
   if (untar.status !== 0) throw new Error(`extract results for ${jobId} failed: ${untar.stderr}`);
