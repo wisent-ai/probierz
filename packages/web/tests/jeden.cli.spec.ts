@@ -99,6 +99,45 @@ test.describe('jeden cli (hermetic)', () => {
     expect(out).toContain('secrets.minLength: set value [INPUT]');
   });
 
+  test('/settings text export groups rows into tab sections', () => {
+    const out = runJeden([], { cwd: tmpCwd(), input: '/settings\n' });
+    expect(out).toContain('── context (');
+    expect(out).toContain('── ui (');
+  });
+
+  test('stats --summary prints the one-line snapshot', () => {
+    const out = runJeden(['stats', '--summary'], { cwd: tmpCwd() });
+    expect(/\d+ events · \d+ tokens · cost \d+ · sessions \d+/.test(out)).toBe(true);
+  });
+
+  test('stats --json prints a parseable snapshot', () => {
+    const out = runJeden(['stats', '--json'], { cwd: tmpCwd() });
+    const stats = JSON.parse(out);
+    expect(stats).toHaveProperty('version');
+    expect(stats).toHaveProperty('usage.project');
+    expect(stats).toHaveProperty('quota');
+    expect(stats).toHaveProperty('sessions');
+  });
+
+  test('gallery renders fixtures for one theme', () => {
+    const out = runJeden(['gallery', '--theme', 'nord'], { cwd: tmpCwd() });
+    expect(out).toContain('── theme: nord ──');
+    expect(out).toContain('Select model route');
+    expect(out).toContain('[All]');
+    expect(out).toContain('Confirm destructive action');
+  });
+
+  test('gallery --all sweeps every bundled theme', () => {
+    const out = runJeden(['gallery', '--all'], { cwd: tmpCwd() });
+    for (const theme of ['graphite-dark', 'paper-light', 'titanium', 'nord', 'color-blind']) {
+      expect(out).toContain(`── theme: ${theme} ──`);
+    }
+  });
+
+  test('gallery rejects an unknown theme', () => {
+    expect(() => runJeden(['gallery', '--theme', 'bogus'], { cwd: tmpCwd() })).toThrow();
+  });
+
   test('/collab start on an http relay prints QR codes for share URLs', async () => {
     // The relay stub must live in a worker thread: execFileSync blocks the
     // main event loop, so an in-process server would deadlock the exchange.
@@ -165,6 +204,24 @@ test.describe('jeden cli (network)', () => {
     const out = runJeden([], { cwd: tmpCwd(), input: '/model\n' });
     expect(/● .+ — \d+ models? · your subscription/.test(out)).toBe(true);
     expect(/○ catalog \[○\] — \d+ models? · no credentials/.test(out)).toBe(true);
+  });
+
+  test('token redacts by default and reveals on demand', () => {
+    const redacted = runJeden(['token'], { cwd: tmpCwd() });
+    expect(redacted).toContain('…');
+    expect(redacted).not.toContain(process.env.WISENT_APP_AGENT_AUTH_SECRET ?? '\u0000');
+    const revealed = runJeden(['token', '--reveal'], { cwd: tmpCwd() }).trim();
+    expect(revealed.length).toBeGreaterThan(16);
+    expect(revealed).not.toContain('\n');
+  });
+
+  test('/token slash never reveals the secret', () => {
+    const out = runJeden([], { cwd: tmpCwd(), input: '/token\n' });
+    expect(out).toContain('redacted');
+    const secret = process.env.WISENT_APP_AGENT_AUTH_SECRET;
+    if (secret) {
+      expect(out).not.toContain(secret);
+    }
   });
 
   test('/usage shows provider usage', () => {
