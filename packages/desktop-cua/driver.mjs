@@ -64,7 +64,7 @@ export function waitForText(pid, windowId, needle, timeoutMs = Number("10000")) 
     if (last.includes(needle)) return last;
     sleep(POLL_MS);
   }
-  throw new Error(`timed out waiting for ${JSON.stringify(needle)}; last tree:\n${last.slice(-2000)}`);
+  throw new Error(`timed out waiting for ${JSON.stringify(needle)}; last tree (tail): ${last.slice(-600)}`);
 }
 
 // First [element_index N] whose tree line contains the needle. The index is

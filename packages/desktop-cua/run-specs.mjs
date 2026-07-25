@@ -21,6 +21,15 @@ const files = readdirSync(SPECS_DIR)
   .filter((name) => !filter || (globPrefix !== null ? name.startsWith(globPrefix) : name === filter))
   .sort();
 
+// Row errors keep the failure headline AND the state dump: head for the
+// "what was expected" line, tail for the final app state, so a long tree
+// never drowns the actual reason.
+function clipRowError(text) {
+  const limit = Number("2000");
+  if (text.length <= limit) return text;
+  return `${text.slice(0, Number("600"))}\n…\n${text.slice(-Number("1400"))}`;
+}
+
 const rows = [];
 for (const file of files) {
   const startedAt = new Date().toISOString();
@@ -41,7 +50,7 @@ for (const file of files) {
     duration,
     startedAt,
     completedAt: new Date(started + duration).toISOString(),
-    error: status === "failed" ? String(child.stderr || child.stdout || "").slice(-Number("2000")) : null,
+    error: status === "failed" ? clipRowError(String(child.stderr || child.stdout || "")) : null,
     media: [],
   });
 }
