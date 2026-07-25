@@ -178,6 +178,15 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // native helpers) exactly as a local `probierz setup <target>` would.
     `node agent/cli.mjs setup ${target}`,
   );
+  if (platform === "darwin" && target === "desktop:cua") {
+    // The cua-driver's AX grant lives on the CuaDriver.app bundle, not on
+    // whatever process spawns the CLI — jobs under launchd fail AX without
+    // the app-context daemon. Idempotent background start.
+    lines.push(
+      "open -g -a CuaDriver --args serve || true",
+      "sleep 3",
+    );
+  }
   if (mode === "author") {
     // Remote authoring: the probe needs a live Appium before author-spec
     // starts; evidence (run artifacts + the accepted spec + manifest with

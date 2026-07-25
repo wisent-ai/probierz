@@ -277,7 +277,12 @@ export function setupSteps(target) {
     "mobile:android": [npmInstall, driverInstall("uiautomator2")],
     "desktop:mac": [npmInstall, driverInstall("mac2", "1.20.5"), nativeCaptureBuild],
     "desktop:win": [npmInstall, driverInstall("windows")],
-    "desktop:cua": [npmInstall],
+    "desktop:cua": [npmInstall, {
+      name: "cua-driver daemon",
+      command: "open",
+      args: ["-g", "-a", "CuaDriver", "--args", "serve"],
+      cwd: ROOT,
+    }],
     tui: [npmInstall],
   };
   const steps = table[target];
