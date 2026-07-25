@@ -93,6 +93,40 @@ test.describe('jeden cli (hermetic)', () => {
     expect(out).toContain('── secrets (');
   });
 
+  test('/settings exposes scalar keys as INPUT prefill rows', () => {
+    const out = runJeden([], { cwd: tmpCwd(), input: '/settings\n' });
+    expect(out).toContain('context.maxBytes: set value [INPUT]');
+    expect(out).toContain('secrets.minLength: set value [INPUT]');
+  });
+
+  test('/collab start on an http relay prints QR codes for share URLs', async () => {
+    // The relay stub must live in a worker thread: execFileSync blocks the
+    // main event loop, so an in-process server would deadlock the exchange.
+    const { Worker } = await import('node:worker_threads');
+    const worker = new Worker(
+      `const { parentPort } = require('node:worker_threads');
+       const { createServer } = require('node:http');
+       const server = createServer((req, res) => {
+         res.setHeader('Content-Type', 'application/json');
+         res.end(req.method === 'POST' ? '{"seq":1}' : '{"events":[],"cursor":0}');
+       });
+       server.listen(0, '127.0.0.1', () => parentPort.postMessage(server.address().port));`,
+      { eval: true },
+    );
+    const port = await new Promise<number>((resolve) => worker.once('message', resolve));
+    try {
+      const out = runJeden([], {
+        cwd: tmpCwd(),
+        input: `/collab start http://127.0.0.1:${port}\n/collab stop\n`,
+      });
+      expect(out).toContain('View URL:');
+      expect(out).toContain('Full write URL:');
+      expect(out).toContain('█');
+    } finally {
+      await worker.terminate();
+    }
+  });
+
   test('/roles shows model role rows', () => {
     const out = runJeden([], { cwd: tmpCwd(), input: '/roles\n' });
     expect(out).toContain('default model');
@@ -125,6 +159,12 @@ test.describe('jeden cli (network)', () => {
     expect(out).toContain('- any [AUTO]');
     expect(/\[AVAILABLE\]|\[ACTIVE\]/.test(out)).toBe(true);
     expect(out).toContain('Show all');
+  });
+
+  test('/model shows provider summary rows', () => {
+    const out = runJeden([], { cwd: tmpCwd(), input: '/model\n' });
+    expect(/● .+ — \d+ models? · your subscription/.test(out)).toBe(true);
+    expect(/○ catalog \[○\] — \d+ models? · no credentials/.test(out)).toBe(true);
   });
 
   test('/usage shows provider usage', () => {
