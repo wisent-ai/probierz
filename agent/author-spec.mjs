@@ -161,13 +161,15 @@ function styleGuide(target) {
       "  await waitForText(app.pid, app.windowId, '<expected text>');",
       "  quitApp(app.pid);",
       "element_index values are valid ONLY for the snapshot they came from: re-snapshot (snapshotTree or",
-      "waitForText) after every click/key before using another index. Assertions use node:assert against",
-      "the AX tree text. Typing: pass the field's element_index to typeText (it focuses before writing);",
-      "AX does not always expose a field's typed value, so prefer asserting a STATE CHANGE (button",
-      "enabled, new screen, new tree text) over reading field contents back. The journey must reach real",
-      "app UI states from the probe. NEVER assert on driver/harness errors or launch failures as the",
-      "outcome — if the app fails to launch or the journey cannot be completed, the spec must throw",
-      "(fail), not pass.",
+      "waitForText) after every click/key before using another index. SwiftUI renders progressively:",
+      "before touching an interactive element, waitForText for THAT element's own role/label (e.g.",
+      "'AXTextField', 'AXButton (Send') — a static title appearing first does not mean inputs exist yet.",
+      "Assertions use node:assert against the AX tree text. Typing: pass the field's element_index to",
+      "typeText (it focuses before writing); AX does not always expose a field's typed value, so prefer",
+      "asserting a STATE CHANGE (button enabled, new screen, new tree text) over reading field contents",
+      "back. The journey must reach real app UI states from the probe. NEVER assert on driver/harness",
+      "errors or launch failures as the outcome — if the app fails to launch or the journey cannot be",
+      "completed, the spec must throw (fail), not pass.",
     ].join("\n");
   }
   return [
