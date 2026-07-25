@@ -17,6 +17,17 @@ const WC_BIN = "wc";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+// Worker-relative spec dirs per target (mirror of TARGET_SPEC_DIRS in
+// author-spec.mjs) so author-mode evidence tarballs include the new spec.
+const TARGET_SPEC_DIRS_REL = {
+  web: "packages/web/tests",
+  electron: "packages/electron/tests",
+  "mobile:ios": "packages/mobile/test/specs",
+  "mobile:android": "packages/mobile/test/specs",
+  "desktop:mac": "packages/desktop-native/test/specs",
+  "desktop:win": "packages/desktop-native/test/specs",
+  tui: "packages/tui/specs",
+};
 
 // State backend for the bridge: env PROBIERZ_STADO_BUCKET wins, then
 // stado.config.json (storage.gcs.bucket), then the fleet default.
@@ -108,7 +119,7 @@ function upload(localFile, name) {
   return dest;
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux" }) {
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null }) {
   const lines = ["set -euxo pipefail"];
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
@@ -165,6 +176,27 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux" })
     // Fresh worker: provision the target's host-level deps (appium drivers,
     // native helpers) exactly as a local `probierz setup <target>` would.
     `node agent/cli.mjs setup ${target}`,
+  );
+  if (mode === "author") {
+    // Remote authoring: the probe needs a live Appium before author-spec
+    // starts; evidence (run artifacts + the accepted spec + manifest with
+    // the submitter-local repo root restored) always comes back.
+    lines.push(
+      "nohup npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
+      "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done",
+      "set +e",
+      `node agent/cli.mjs author-spec ${appId} ${author.journey} --target ${target} --desc ${JSON.stringify(author.desc)} --app-path "$MAC_APP_PATH" --model ${author.model}`,
+      "PROBIERZ_RC=$?",
+      "set -e",
+      "mkdir -p test-results",
+      `perl -pi -e 's|^  - root: .*|  - root: ${(sourceRoot || "").replace(/\//g, "\\/")}|' apps/${appId}/probierz.yaml`,
+      `tar -czf /tmp/results.tar.gz test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
+      `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-author-${hash}.tar.gz`,
+      "exit $PROBIERZ_RC",
+    );
+    return lines.join("\n");
+  }
+  lines.push(
     // Evidence must survive a failing run: capture the exit code, tar and
     // upload whatever test-results exist, then re-emit the run's status so
     // the job's success/failure still reflects the tests.
@@ -201,14 +233,11 @@ async function watchJob(jobId) {
   return { state: "watch-timeout", detail: `job ${jobId} did not finish within ${WATCH_BUDGET_MS}ms` };
 }
 
-export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
-  const hostDef = listHosts().find((entry) => entry.host === host);
-  if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
-  const packedRepo = packRepo([appId]);
-  upload(packedRepo.file, "probierz.tar.gz");
+function provisionInputs({ appId, provision, appRepo }) {
   if (provision?.kind === "cargo-release") {
     if (!appRepo) throw new Error("cargo-release provisioning needs the app source repository");
     upload(packAppSource(appId, appRepo).file, `${appId}.tar.gz`);
+    return appRepo;
   }
   if (provision?.kind === "app-bundle") {
     if (!provision.bundlePath || !existsSync(provision.bundlePath)) throw new Error(`app-bundle path missing: ${provision.bundlePath}`);
@@ -221,7 +250,17 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     const sourceRepo = appRepo || manifestRepoRoot(appId);
     if (!sourceRepo) throw new Error(`app-bundle needs the app source repo (--app-repo or a repositories[0].root in apps/${appId}/probierz.yaml)`);
     upload(packAppSource(appId, sourceRepo).file, `${appId}.tar.gz`);
+    return sourceRepo;
   }
+  return null;
+}
+
+export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+  const hostDef = listHosts().find((entry) => entry.host === host);
+  if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
+  const packedRepo = packRepo([appId]);
+  upload(packedRepo.file, "probierz.tar.gz");
+  provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
@@ -244,14 +283,50 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   return result;
 }
 
-export function fetchResults(hash, appId, jobId) {
+export async function submitRemoteAuthor({ appId, journey, target, desc, model = "codex", host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+  const hostDef = listHosts().find((entry) => entry.host === host);
+  if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
+  const packedRepo = packRepo([appId]);
+  upload(packedRepo.file, "probierz.tar.gz");
+  const sourceRoot = provisionInputs({ appId, provision, appRepo });
+  const script = runScript({
+    target, appId, spec: null, provision, hash: packedRepo.hash,
+    platform: hostDef.platform, mode: "author",
+    author: { journey, desc, model }, sourceRoot,
+  });
+  const scriptFile = path.join(tmpdir(), `probierz-author-${packedRepo.hash}.sh`);
+  writeFileSync(scriptFile, script);
+  upload(scriptFile, `author-${packedRepo.hash}.sh`);
+  const submit = sh(WC_BIN, [
+    "submit",
+    `gcloud storage cp ${stateUri("inputs")}/author-${packedRepo.hash}.sh /tmp/run.sh && bash /tmp/run.sh`,
+    ...hostDef.submit,
+  ]);
+  const jobId = parseJobId(`${submit.stdout}\n${submit.stderr}`);
+  const result = { host, jobId, target, appId, journey, submitted: submit.status === 0, submitText: `${submit.stdout}${submit.stderr}`.slice(-Number("800")) };
+  if (!jobId) return { ...result, state: "submit-failed" };
+  if (!watch) return { ...result, state: "queued" };
+  const watched = await watchJob(jobId);
+  result.state = watched.state;
+  result.detail = watched.detail;
+  if (watched.state === "completed") {
+    result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "author");
+    result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
+  }
+  return result;
+}
+
+export function fetchResults(hash, appId, jobId, kind = "run") {
   const destDir = path.join(ROOT, "test-results", ".remote", jobId);
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
   const tarball = path.join(destDir, "results.tar.gz");
-  const down = sh("gcloud", ["storage", "cp", `${stateUri("results")}/probierz-run-${hash}.tar.gz`, tarball]);
+  const down = sh("gcloud", ["storage", "cp", `${stateUri("results")}/probierz-${kind}-${hash}.tar.gz`, tarball]);
   if (down.status !== 0) throw new Error(`download results for ${jobId} failed: ${down.stderr}`);
-  const untar = sh("tar", ["-xzf", tarball, "-C", path.join(ROOT, "test-results")], { cwd: ROOT });
+  // Author tarballs carry the accepted spec + manifest next to test-results,
+  // so they extract at the repo root; run evidence extracts as before.
+  const untarCwd = kind === "author" ? ROOT : path.join(ROOT, "test-results");
+  const untar = sh("tar", ["-xzf", tarball, "-C", untarCwd], { cwd: ROOT });
   if (untar.status !== 0) throw new Error(`extract results for ${jobId} failed: ${untar.stderr}`);
   return destDir;
 }
