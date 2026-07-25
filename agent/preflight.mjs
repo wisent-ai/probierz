@@ -41,6 +41,17 @@ function appiumDriverInstalled(name, env = process.env) {
   return existsSync(path.join(home, "node_modules", `appium-${name}-driver`));
 }
 
+// The cua-driver reports its own TCC state ("✅ Accessibility: granted");
+// anything else means the host has not granted the binary yet.
+function cuaAccessibilityGranted() {
+  try {
+    const out = spawnSync("cua-driver", ["call", "check_permissions"], { encoding: "utf8", timeout: PROBE_MS });
+    return `${out.stdout}${out.stderr}`.includes("Accessibility: granted");
+  } catch {
+    return false;
+  }
+}
+
 // Check the exact browser revisions required by the installed Playwright
 // package. A non-empty shared cache can contain only stale revisions.
 function playwrightBrowsersInstalled() {
@@ -199,6 +210,13 @@ function checksFor(target, env = process.env) {
       { name: "node runtime", ok: hasBinary(process.execPath, ["--version"]), own: false, hint: "node is required for the TUI spec runner" },
     ];
   }
+  if (target === "desktop:cua") {
+    return [
+      { name: "macOS host", ok: os.platform() === "darwin", own: false, hint: "the cua-driver drives the macOS Accessibility API" },
+      { name: "cua-driver binary", ok: hasBinary("cua-driver", ["--version"]), own: false, hint: "install cua-driver (macOS Accessibility driver)" },
+      { name: "cua-driver accessibility", ok: cuaAccessibilityGranted(), own: true, hint: "grant cua-driver in System Settings > Privacy & Security > Accessibility (once per host)" },
+    ];
+  }
   return null;
 }
 
@@ -253,6 +271,7 @@ export function setupSteps(target) {
     "mobile:android": [npmInstall, driverInstall("uiautomator2")],
     "desktop:mac": [npmInstall, driverInstall("mac2", "1.20.5"), nativeCaptureBuild],
     "desktop:win": [npmInstall, driverInstall("windows")],
+    "desktop:cua": [npmInstall],
     tui: [npmInstall],
   };
   const steps = table[target];

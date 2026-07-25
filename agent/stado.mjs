@@ -64,6 +64,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", submit: ["--spot"], description: "stado queue, cheapest preemptible capacity" },
     { host: "stado:local", kind: "stado", submit: ["--provider", "local", "--pin-provider"], description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", submit: ["--provider", "local", "--pin-provider", "--pinned-host", "charless-mac-mini"], description: "stado queue, pinned to charless-mac-mini (macOS runner)" },
+    { host: "stado:macbook", kind: "stado", platform: "darwin", submit: ["--provider", "local", "--pin-provider", "--pinned-host", "lukasz-macbook"], description: "stado queue, pinned to lukasz-macbook (macOS runner, live GUI session)" },
     { host: "stado:t4", kind: "stado", submit: ["--gpu-type", "nvidia-tesla-t4"], description: "stado queue, pinned to nvidia-tesla-t4 slots (GCP)" },
   ];
 }
@@ -127,7 +128,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // Then use the node already on the box when present, else fetch the
     // darwin-arm64 tarball.
     lines.push(
-      "export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH",
+      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
     );
   } else {

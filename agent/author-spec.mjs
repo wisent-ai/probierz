@@ -27,16 +27,17 @@ const TARGET_SPEC_DIRS = {
   "mobile:android": path.join(ROOT, "packages", "mobile", "test", "specs"),
   "desktop:mac": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
   "desktop:win": path.join(ROOT, "packages", "desktop-native", "test", "specs"),
+  "desktop:cua": path.join(ROOT, "packages", "desktop-cua", "specs"),
   tui: path.join(ROOT, "packages", "tui", "specs"),
 };
 
 function specExtension(target) {
   if (target === "web" || target === "electron") return ".spec.ts";
-  if (target === "tui") return ".spec.mjs";
+  if (target === "tui" || target === "desktop:cua") return ".spec.mjs";
   return ".e2e.ts";
 }
 
-export { probeWeb, probeNative, probeTui, draftWithModel };
+export { probeWeb, probeNative, probeTui, probeCua, draftWithModel };
 
 async function probeWeb(baseUrl) {
   const { chromium } = await import("playwright");
@@ -112,6 +113,17 @@ async function probeTui(command) {
   }
 }
 
+async function probeCua(bundleId) {
+  const { launchCuaApp, snapshotTree, quitApp } = await import("../packages/desktop-cua/driver.mjs");
+  const app = launchCuaApp({ bundleId });
+  try {
+    const tree = snapshotTree(app.pid, app.windowId);
+    return [`kind: desktop:cua`, `bundle: ${bundleId}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
+  } finally {
+    quitApp(app.pid);
+  }
+}
+
 function styleGuide(target) {
   if (target === "web" || target === "electron") {
     return [
@@ -136,6 +148,23 @@ function styleGuide(target) {
       "The journey must reach real app UI states from the probe. NEVER assert on driver/harness errors,",
       "launch failures, or nonzero exits as the outcome — if the app fails to launch or the journey",
       "cannot be completed, the spec must throw (fail), not pass.",
+    ].join("\n");
+  }
+  if (target === "desktop:cua") {
+    return [
+      "Spec style: plain node script (.mjs) driving the real macOS app through the cua-driver.",
+      "  import assert from 'node:assert/strict';",
+      "  import { launchCuaApp, snapshotTree, waitForText, elementIndexOf, clickElement, typeText, pressKey, quitApp } from '../driver.mjs';",
+      "  const app = launchCuaApp({ bundleId: process.env.CUA_BUNDLE_ID || '<bundle id>' });",
+      "  const tree = waitForText(app.pid, app.windowId, '<text from the probe>');",
+      "  clickElement(app.pid, app.windowId, elementIndexOf(tree, '<button>'));",
+      "  await waitForText(app.pid, app.windowId, '<expected text>');",
+      "  quitApp(app.pid);",
+      "element_index values are valid ONLY for the snapshot they came from: re-snapshot (snapshotTree or",
+      "waitForText) after every click/key before using another index. Assertions use node:assert against",
+      "the AX tree text. The journey must reach real app UI states from the probe. NEVER assert on",
+      "driver/harness errors or launch failures as the outcome — if the app fails to launch or the",
+      "journey cannot be completed, the spec must throw (fail), not pass.",
     ].join("\n");
   }
   return [
@@ -191,6 +220,8 @@ function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
     if (!env.IOS_VERSION && latestIosRuntimeVersion()) env.IOS_VERSION = latestIosRuntimeVersion();
   } else if (appPath && target === "tui") {
     env.TUI_CMD = appPath;
+  } else if (appPath && target === "desktop:cua") {
+    env.CUA_BUNDLE_ID = appPath;
   } else if (appPath) {
     env.MAC_APP_PATH = appPath;
   }
@@ -238,7 +269,7 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
   if (target !== "web" && target !== "electron" && !appPath) throw new Error(`${target} authoring needs --app-path`);
   const probe = target === "web" || target === "electron"
     ? await probeWeb(baseUrl)
-    : (target === "tui" ? await probeTui(appPath) : await probeNative(target, appPath));
+    : (target === "tui" ? await probeTui(appPath) : (target === "desktop:cua" ? await probeCua(appPath) : await probeNative(target, appPath)));
   const stagedPath = path.join(TARGET_SPEC_DIRS[target], `.author-staging-${journey}${specExtension(target)}`);
   mkdirSync(path.dirname(stagedPath), { recursive: true });
   let previousSpec = null;

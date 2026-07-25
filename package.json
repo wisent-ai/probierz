@@ -22,6 +22,7 @@
     "test:web": "npm --workspace packages/web run test",
     "test:jeden": "npm --workspace packages/web exec playwright test tests/jeden.cli.spec.ts",
     "test:tui": "npm --workspace packages/tui run test",
+    "test:desktop:cua": "npm --workspace packages/desktop-cua run test",
     "test:electron": "npm --workspace packages/electron run test",
     "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
     "test:mobile:ios:byk-auth": "node agent/byk-auth-runner.mjs",
