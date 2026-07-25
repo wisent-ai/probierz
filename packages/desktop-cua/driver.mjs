@@ -42,13 +42,36 @@ export function launchCuaApp({ bundleId = process.env.CUA_BUNDLE_ID, name = proc
   if (!pid) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
   const ownWindow = (launched?.windows || []).find((win) => win.window_id);
   if (ownWindow) return { pid, windowId: ownWindow.window_id };
+  return waitForWindow(pid);
+}
+
+// Launch an app by executing its binary directly with a custom environment
+// (e.g. TAMA_TEST_IDENTITY=1 to bypass a sign-in gate in a debug build).
+// cua-driver's launch_app has no env support, so specs spawn the process
+// themselves and then drive it by pid like any launch_app-launched app.
+export function launchCuaProcess({
+  executable = process.env.CUA_APP_EXECUTABLE,
+  env = {},
+  args = [],
+} = {}) {
+  if (!executable) throw new Error("launchCuaProcess needs CUA_APP_EXECUTABLE or an executable path");
+  const child = spawnSync("sh", ["-c", `nohup "$0" "$@" > /dev/null 2>&1 & echo $!`, executable, ...args], {
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
+  const pid = Number(String(child.stdout || "").trim());
+  if (!pid) throw new Error(`failed to spawn ${executable}: ${String(child.stderr || "").slice(-300)}`);
+  return waitForWindow(pid);
+}
+
+function waitForWindow(pid) {
   const deadline = Date.now() + LAUNCH_WAIT_MS;
   while (Date.now() < deadline) {
     const win = findWindow(pid);
     if (win) return { pid, windowId: win.window_id };
     sleep(POLL_MS);
   }
-  throw new Error(`app ${bundleId || name} produced no window within ${LAUNCH_WAIT_MS}ms`);
+  throw new Error(`pid ${pid} produced no window within ${LAUNCH_WAIT_MS}ms`);
 }
 
 export function snapshotTree(pid, windowId) {

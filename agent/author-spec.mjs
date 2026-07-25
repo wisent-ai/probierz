@@ -114,11 +114,13 @@ async function probeTui(command) {
 }
 
 async function probeCua(bundleId) {
-  const { launchCuaApp, snapshotTree, quitApp } = await import("../packages/desktop-cua/driver.mjs");
-  const app = launchCuaApp({ bundleId });
+  const { launchCuaApp, launchCuaProcess, snapshotTree, quitApp } = await import("../packages/desktop-cua/driver.mjs");
+  // CUA_APP_EXECUTABLE switches the probe to a direct-process launch with the
+  // author's environment (e.g. TAMA_TEST_IDENTITY=1 for gated debug builds).
+  const app = process.env.CUA_APP_EXECUTABLE ? launchCuaProcess({}) : launchCuaApp({ bundleId });
   try {
     const tree = snapshotTree(app.pid, app.windowId);
-    return [`kind: desktop:cua`, `bundle: ${bundleId}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
+    return [`kind: desktop:cua`, `app: ${process.env.CUA_APP_EXECUTABLE || bundleId}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
   } finally {
     quitApp(app.pid);
   }
@@ -164,8 +166,10 @@ function styleGuide(target) {
       "waitForText) after every click/key before using another index. SwiftUI renders progressively:",
       "before touching an interactive element, waitForText for THAT element's own role/label (e.g.",
       "'AXTextField', 'AXButton (Send') — a static title appearing first does not mean inputs exist yet.",
-      "Assertions use node:assert against the AX tree text. Typing: pass the field's element_index to",
-      "typeText (it focuses before writing); AX does not always expose a field's typed value, so prefer",
+      "When the run sets CUA_APP_EXECUTABLE (debug builds, sign-in test seams), launch via",
+      "launchCuaProcess({}) — it spawns the binary with the inherited environment (e.g.",
+      "TAMA_TEST_IDENTITY) and drives it by pid exactly like launchCuaApp. Typing: pass the field's",
+      "element_index to typeText (it focuses before writing); AX does not always expose a field's typed value, so prefer",
       "asserting a STATE CHANGE (button enabled, new screen, new tree text) over reading field contents",
       "back. The journey must reach real app UI states from the probe. NEVER assert on driver/harness",
       "errors or launch failures as the outcome — if the app fails to launch or the journey cannot be",
