@@ -15,7 +15,8 @@
     "packages/electron",
     "packages/mobile",
     "packages/desktop-native",
-    "packages/tui"
+    "packages/tui",
+    "packages/desktop-cua"
   ],
   "scripts": {
     "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps && npm --workspace packages/electron exec playwright install",
