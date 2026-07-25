@@ -32,7 +32,15 @@ export function cuaCall(tool, args = {}) {
 
 function findWindow(pid) {
   const listed = cuaCall("list_windows") || {};
-  return (listed.windows || []).find((win) => win.pid === pid && win.layer === 0) || null;
+  // Apps spawn untitled utility windows (menus, status items) next to the
+  // real content window; prefer titled, then largest area.
+  const candidates = (listed.windows || []).filter((win) => win.pid === pid && win.layer === 0);
+  candidates.sort((a, b) => {
+    const titleDelta = Number(Boolean(b.title)) - Number(Boolean(a.title));
+    if (titleDelta !== 0) return titleDelta;
+    return ((b.bounds?.width || 0) * (b.bounds?.height || 0)) - ((a.bounds?.width || 0) * (a.bounds?.height || 0));
+  });
+  return candidates[0] || null;
 }
 
 export function launchCuaApp({ bundleId = process.env.CUA_BUNDLE_ID, name = process.env.CUA_APP_NAME } = {}) {
@@ -122,4 +130,27 @@ export function pressKey(pid, key, { windowId } = {}) {
 
 export function quitApp(pid) {
   spawnSync("kill", [String(pid)]);
+}
+
+export function windowBounds(pid, windowId) {
+  const listed = cuaCall("list_windows") || {};
+  const win = (listed.windows || []).find((w) => w.window_id === windowId);
+  if (!win?.bounds) throw new Error(`window ${windowId} not found for pid ${pid}`);
+  return win.bounds;
+}
+
+// SwiftUI outline rows reject AX actions (-25206/-25200). The reliable path
+// into a sidebar is a coordinate click into its band (focus), then keyboard.
+export function focusSidebar(pid, windowId, { fraction = Number("0.12") } = {}) {
+  const b = windowBounds(pid, windowId);
+  cuaCall("click", { pid, x: Math.round(b.x + b.width * fraction), y: Math.round(b.y + b.height * Number("0.5")) });
+}
+
+// Select the Nth sidebar row (0-based, in the probe's outline order): focus,
+// clamp the selection to the first row with up-spam, walk down, confirm.
+export function selectSidebarRow(pid, windowId, rowIndex) {
+  focusSidebar(pid, windowId);
+  for (let i = 0; i < Number("20"); i += 1) pressKey(pid, "up", { windowId });
+  for (let i = 0; i < rowIndex; i += 1) pressKey(pid, "down", { windowId });
+  pressKey(pid, "return", { windowId });
 }
