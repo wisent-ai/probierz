@@ -237,6 +237,7 @@ export function setupSteps(target) {
     command: "npx",
     args: ["--no-install", "appium", "driver", "install", version ? `${driver}@${version}` : driver],
     cwd: ROOT,
+    skipWhen: () => appiumDriverInstalled(driver),
   });
   const nativeCaptureBuild = {
     name: "ScreenCaptureKit recorder",
@@ -268,6 +269,14 @@ export function runSetup(target, opts = {}) {
   const steps = setupSteps(target);
   const done = [];
   for (const step of steps) {
+    // Idempotent re-runs: a step whose skipWhen holds (e.g. the Appium
+    // driver is already in APPIUM_HOME) reports ok without re-executing —
+    // `appium driver install` exits 1 when the driver exists, which made
+    // every second `setup` on a warm host fail.
+    if (step.skipWhen?.()) {
+      done.push({ step: step.name, command: `${step.command} ${step.args.join(" ")}`, ok: true, skipped: true });
+      continue;
+    }
     if (step.outputDir) mkdirSync(step.outputDir, { recursive: true });
     const r = spawnSync(step.command, step.args, {
       cwd: step.cwd,
