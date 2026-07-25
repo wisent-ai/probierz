@@ -41,12 +41,18 @@ function appiumDriverInstalled(name, env = process.env) {
   return existsSync(path.join(home, "node_modules", `appium-${name}-driver`));
 }
 
-// The cua-driver reports its own TCC state ("✅ Accessibility: granted");
-// anything else means the host has not granted the binary yet.
+// The cua-driver's own check_permissions reads the CALLING process's TCC
+// state (by design: "results may be inaccurate"), which misreports under
+// launchd/stado parents. What a desktop:cua run actually needs is the
+// daemon driving a live window: enumerate one and walk its AX tree.
 function cuaAccessibilityGranted() {
   try {
-    const out = spawnSync("cua-driver", ["call", "check_permissions"], { encoding: "utf8", timeout: PROBE_MS });
-    return `${out.stdout}${out.stderr}`.includes("Accessibility: granted");
+    const listed = spawnSync("cua-driver", ["call", "list_windows"], { encoding: "utf8", timeout: PROBE_MS });
+    const data = JSON.parse(String(listed.stdout || "{}"));
+    const win = (data.windows || []).find((w) => w && w.pid && w.window_id);
+    if (!win) return false;
+    const state = spawnSync("cua-driver", ["call", "get_window_state", JSON.stringify({ pid: win.pid, window_id: win.window_id })], { encoding: "utf8", timeout: PROBE_MS });
+    return String(state.stdout || "").includes("AXApplication");
   } catch {
     return false;
   }
