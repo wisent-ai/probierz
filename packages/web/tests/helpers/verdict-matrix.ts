@@ -20,6 +20,9 @@ export const CHECK_IDS = {
   'golden.stable': 'step renders identically to its golden PNG',
   'replay.hang': '/model opens within 30s (the ^C report)',
   'replay.identity': 'agent identifies as jeden',
+  'scan.no-silent-commands': 'every advertised slash command paints something',
+  'scan.no-panics': 'no advertised slash command panics',
+  'scan.no-unrouted-commands': 'every advertised slash command is routed by the dispatcher',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -35,6 +38,7 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   // command REPLACES the screen, in jeden each one appends another frame to
   // the session. Without this row the transcript check graded nothing.
   { view: 'Shell / view lifecycle', verdict: 'parity', checks: ['screen.replacement', 'screen.transcript-budget'] },
+  { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands'] },
   { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },

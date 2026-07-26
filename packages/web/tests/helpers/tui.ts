@@ -55,6 +55,19 @@ export function tmpCwd(): string {
   return mkdtempSync(join(tmpdir(), 'probierz-tui-cwd-'));
 }
 
+/** Every slash command the binary itself advertises. Asking the app beats a
+ * hand-written list: a command added tomorrow is scanned tomorrow, and one
+ * that disappears stops being scanned instead of failing forever. */
+export function slashCommands(): string[] {
+  const help = execFileSync(JEDEN, ['--cwd', tmpCwd()], {
+    input: '/help\n',
+    encoding: 'utf8',
+    timeout: TIMEOUTS.ready,
+    maxBuffer: MAX_OUTPUT_BYTES,
+  });
+  return [...help.matchAll(/^(\/[a-z-]+)\s\s+\S/gm)].map((match) => match[HELP_COMMAND_GROUP]);
+}
+
 /** Fresh HOME carrying only the jeden credentials and config. With
  * `warmCache` the brama catalog cache comes along too: structural contracts
  * (geometry, panes, transcript) must not pay a cold 5 700-model fetch, while
@@ -241,7 +254,33 @@ const TYPE_ATTEMPTS = Array.from({ length: Number(process.env.PROBIERZ_TYPE_ATTE
 const TAIL_LINES = Number(process.env.PROBIERZ_TAIL_LINES ?? '12');
 /** How long a typed command may take to show up in the prompt. */
 const ECHO_TIMEOUT_MS = Number(process.env.PROBIERZ_ECHO_TIMEOUT_MS ?? '5000');
+const MAX_OUTPUT_BYTES = Number(process.env.PROBIERZ_MAX_OUTPUT_BYTES ?? '8388608');
+/** `/help` prints `<command><spaces><description>`; capture group one. */
+const HELP_COMMAND_GROUP = Number(process.env.PROBIERZ_HELP_GROUP ?? '1');
+/** Per-command budget in the command-surface scan: any paint at all — a
+ * spinner counts — must land inside it. */
+export const SCAN_PAINT_MS = Number(process.env.PROBIERZ_SCAN_PAINT_MS ?? '15000');
+/** Polling step while waiting for a painted view to stop changing. */
+export const SCAN_SETTLE_MS = Number(process.env.PROBIERZ_SCAN_SETTLE_MS ?? '400');
+/** Commands per session; a fresh session bounds mode/state bleed without
+ * paying app startup for all ~70 commands. */
+export const SCAN_CHUNK = Number(process.env.PROBIERZ_SCAN_CHUNK ?? '12');
+export const SCAN_TIMEOUT_MS = Number(process.env.PROBIERZ_SCAN_TIMEOUT_MS ?? '900000');
 
+/** Capture once the screen stops moving. Classifying a mid-paint frame flips
+ * pickers into "text" and misses error boxes that arrive a beat late — two
+ * scan runs disagreed by three commands before this existed. */
+export async function settledCapture(session: TuiSession, budgetMs = SCAN_PAINT_MS): Promise<string> {
+  const started = Date.now();
+  let previous = session.capture();
+  while (Date.now() - started < budgetMs) {
+    await delay(SCAN_SETTLE_MS);
+    const next = session.capture();
+    if (next === previous) return next;
+    previous = next;
+  }
+  return previous;
+}
 /** Last non-blank pane lines, for failure messages. "The view never opened"
  * is undiagnosable without the screen that was actually on it. */
 export function paneTail(capture: string): string {
