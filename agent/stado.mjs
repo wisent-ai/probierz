@@ -161,10 +161,29 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `mkdir -p /tmp/w/${provision.appId}-src && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}-src`,
     );
   }
+  if (provision?.kind === "node-source") {
+    // Generic JS app source (e.g. game_asset_creator): sources land in
+    // /tmp/w/<appId>, the caller's env map is exported, and an optional
+    // submit-time-resolved config file (secrets resolved LOCALLY by the
+    // submitter's vault, mode 0600) travels alongside.
+    lines.push(
+      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
+      `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}`,
+    );
+    if (provision.configFile) {
+      lines.push(
+        `gcloud storage cp ${stateUri("inputs")}/${provision.appId}-resolved-config.json /tmp/`,
+        `chmod 600 /tmp/${provision.appId}-resolved-config.json`,
+      );
+    }
+    for (const [key, value] of Object.entries(provision.env ?? {})) {
+      lines.push(`export ${key}=${JSON.stringify(String(value))}`);
+    }
+  }
   lines.push(
     "cd /tmp/w/probierz",
   );
-  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release") {
+  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source") {
     // The manifest ships the submitter's absolute repo root; on the worker
     // the sources live under /tmp/w, so rewrite it before the run.
     const srcDir = provision.kind === "app-bundle" ? `/tmp/w/${provision.appId}-src` : `/tmp/w/${provision.appId}`;
@@ -187,8 +206,23 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       "sleep 3",
     );
   }
-  if (mode === "author") {
-    // Remote authoring: the probe needs a live Appium before author-spec
+  if (mode === "script") {
+    // Custom app job (e.g. game_asset_creator sculpt/eval): run an app-owned
+    // script from the probierz checkout after provisioning. The script writes
+    // its artifacts into test-results/, which always comes back.
+    lines.push(
+      "mkdir -p test-results",
+      "set +e",
+      `bash apps/${appId}/${provision.script}`,
+      "PROBIERZ_RUN_RC=$?",
+      "set -e",
+      "tar -czf /tmp/results.tar.gz test-results",
+      `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
+      "exit $PROBIERZ_RUN_RC",
+    );
+    return lines.join("\n");
+  }
+  if (mode === "author") {    // Remote authoring: the probe needs a live Appium before author-spec
     // starts; evidence (run artifacts + the accepted spec + manifest with
     // the submitter-local repo root restored) always comes back.
     lines.push(
@@ -244,9 +278,13 @@ async function watchJob(jobId) {
 }
 
 function provisionInputs({ appId, provision, appRepo }) {
-  if (provision?.kind === "cargo-release") {
-    if (!appRepo) throw new Error("cargo-release provisioning needs the app source repository");
+  if (provision?.kind === "cargo-release" || provision?.kind === "node-source") {
+    if (!appRepo) throw new Error(`${provision.kind} provisioning needs the app source repository`);
     upload(packAppSource(appId, appRepo).file, `${appId}.tar.gz`);
+    if (provision.kind === "node-source" && provision.configFile) {
+      if (!existsSync(provision.configFile)) throw new Error(`resolved config file missing: ${provision.configFile}`);
+      upload(provision.configFile, `${appId}-resolved-config.json`);
+    }
     return appRepo;
   }
   if (provision?.kind === "app-bundle") {
@@ -265,13 +303,13 @@ function provisionInputs({ appId, provision, appRepo }) {
   return null;
 }
 
-export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run" }) {
   const hostDef = listHosts().find((entry) => entry.host === host);
   if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
   const packedRepo = packRepo([appId]);
   upload(packedRepo.file, "probierz.tar.gz");
   provisionInputs({ appId, provision, appRepo });
-  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform });
+  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   upload(scriptFile, `run-${packedRepo.hash}.sh`);

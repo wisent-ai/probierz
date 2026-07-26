@@ -64,7 +64,7 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--model codex|kimi] [--specs] [--dry-run]  autonomously draft the app journey manifest, then optionally cover every journey with author-spec",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--node-source --app-repo p [--env K=V ...] [--config-file f] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--model codex|kimi] [--host h] [--app-bundle-path p] [--app-repo r] [--no-watch]  author a journey spec on a chosen stado host; the accepted spec + manifest land back in this checkout",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
@@ -324,11 +324,28 @@ async function main() {
     if (!target) throw configError("stado run needs a target (e.g. tui)");
     const appId = value("--app");
     if (!appId) throw configError("stado run needs --app <appId>");
+    const envFlags = {};
+    for (const flag of rest.filter((entry) => entry.startsWith("--env="))) {
+      const [key, val] = flag.slice("--env=".length).split("=", 2);
+      if (key && val !== undefined) envFlags[key] = val;
+    }
+    const scriptPath = value("--script") || null;
     const provision = rest.includes("--cargo-release")
       ? { kind: "cargo-release", appId, binary: value("--binary") || appId }
       : value("--app-bundle-path")
         ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-        : null;
+        : rest.includes("--node-source")
+          ? {
+              kind: "node-source",
+              appId,
+              env: envFlags,
+              configFile: value("--config-file") || null,
+              script: scriptPath,
+            }
+          : null;
+    if (scriptPath && provision?.kind !== "node-source") {
+      throw configError("--script requires --node-source (custom app jobs run from app sources)");
+    }
     const result = await submitRemoteRun({
       target,
       appId,
@@ -337,6 +354,7 @@ async function main() {
       provision,
       appRepo: value("--app-repo") || null,
       watch: !rest.includes("--no-watch"),
+      mode: scriptPath ? "script" : "run",
     });
     out(result);
     if (result.state !== "completed") process.exitCode = Number("1");
