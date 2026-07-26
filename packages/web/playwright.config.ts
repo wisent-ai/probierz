@@ -52,6 +52,9 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: JEDEN_SPECS,
       testIgnore: JEDEN_MATRIX,
+      // Retries are for flakes; these contracts are deterministic, and a
+      // failing 5-minute scan replayed twice buys nothing but ten minutes.
+      retries: Number(process.env.PROBIERZ_JEDEN_RETRIES ?? '0'),
       // Each test drives a real app instance against one control plane, so
       // tests inside a file run one at a time (files still run in parallel).
       fullyParallel: false,

@@ -130,6 +130,11 @@ export class TuiSession {
     tmux(['send-keys', '-t', this.name, name]);
   }
 
+  /** Literal keystrokes with no Enter — for typing into a picker's search. */
+  type(text: string): void {
+    tmux(['send-keys', '-t', this.name, '-l', text]);
+  }
+
   alive(): boolean {
     try {
       tmux(['has-session', '-t', this.name]);
@@ -262,6 +267,8 @@ const HELP_COMMAND_GROUP = Number(process.env.PROBIERZ_HELP_GROUP ?? '1');
 export const SCAN_PAINT_MS = Number(process.env.PROBIERZ_SCAN_PAINT_MS ?? '15000');
 /** Polling step while waiting for a painted view to stop changing. */
 export const SCAN_SETTLE_MS = Number(process.env.PROBIERZ_SCAN_SETTLE_MS ?? '400');
+/** Typed into a picker's search to prove it filters: no row can match it. */
+export const UNMATCHABLE_QUERY = process.env.PROBIERZ_UNMATCHABLE_QUERY ?? 'qzxwvj';
 /** Commands per session; a fresh session bounds mode/state bleed without
  * paying app startup for all ~70 commands. */
 export const SCAN_CHUNK = Number(process.env.PROBIERZ_SCAN_CHUNK ?? '12');

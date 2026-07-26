@@ -23,6 +23,13 @@ export const CHECK_IDS = {
   'scan.no-silent-commands': 'every advertised slash command paints something',
   'scan.no-panics': 'no advertised slash command panics',
   'scan.no-unrouted-commands': 'every advertised slash command is routed by the dispatcher',
+  'ui.frame-fits': 'every painted view opens and closes inside the viewport',
+  'ui.picker-navigation': 'arrow keys move the cursor in every picker',
+  'ui.picker-search': 'typing filters rows in every picker',
+  'ui.picker-close': 'Esc closes every picker',
+  'fn.todo-roundtrip': 'a todo added through the TUI survives reopening the view',
+  'fn.branch-roundtrip': 'a branch created through the TUI shows up in the tree',
+  'fn.token-redacted': '/token never prints the raw secret',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -38,7 +45,9 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   // command REPLACES the screen, in jeden each one appends another frame to
   // the session. Without this row the transcript check graded nothing.
   { view: 'Shell / view lifecycle', verdict: 'parity', checks: ['screen.replacement', 'screen.transcript-budget'] },
-  { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands'] },
+  { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
+  { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close'] },
+  { view: 'Command behaviour', verdict: 'parity', checks: ['fn.todo-roundtrip', 'fn.branch-roundtrip', 'fn.token-redacted'] },
   { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
