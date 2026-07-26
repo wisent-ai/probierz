@@ -8,6 +8,7 @@ import {
   HAS_TMUX,
   SCAN_CHUNK,
   SCAN_PAINT_MS,
+  PICKER_CHROME,
   SCAN_TIMEOUT_MS,
   TIMEOUTS,
   UNMATCHABLE_QUERY,
@@ -277,7 +278,6 @@ function harvestSubcommands(screen: string, advertised: Set<string>, into: Set<s
 }
 
 const ERROR_BOX = /╭ error|panicked|internal error/i;
-const PICKER_CHROME = /Esc close|Type to search/;
 
 /** Only what THIS command painted. jeden keeps earlier frames on screen, so
  * classifying the whole pane makes one error box mark every later command as

@@ -24,6 +24,7 @@
     "test:jeden": "npm --workspace packages/web exec playwright test jeden",
     "test:jeden:matrix": "npm --workspace packages/web exec -- playwright test jeden.matrix --project=jeden-matrix --no-deps",
     "test:jeden:scan": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"command surface\"",
+    "test:jeden:behaviour": "npm --workspace packages/web exec -- playwright test jeden.replay --project=jeden",
     "test:tui": "npm --workspace packages/tui run test",
     "test:desktop:cua": "npm --workspace packages/desktop-cua run test",
     "test:electron": "npm --workspace packages/electron run test",

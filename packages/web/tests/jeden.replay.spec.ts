@@ -2,7 +2,16 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { HAS_TMUX, TIMEOUTS, TuiSession, checked, settledCapture, watchFor } from './helpers/tui';
+import {
+  HAS_TMUX,
+  TIMEOUTS,
+  TuiSession,
+  checked,
+  flattened,
+  paneTail,
+  settledCapture,
+  watchFor,
+} from './helpers/tui';
 
 /**
  * Named replays of user-reported flows. Each scenario encodes an actual bug
@@ -49,6 +58,19 @@ test.describe('jeden replays of user-reported flows', () => {
 
   test('replay: /login then /model opens the picker instead of hanging (the ^C report)', async () => {
     if (!bramaConfigured()) test.skip(true, 'brama not configured');
+    // Baseline first, in its own cold session: without it a red result cannot
+    // distinguish "the catalog is slow" from "the second view waits for the
+    // first" — and the original report was the second one.
+    const alone = TuiSession.jeden({ warmCache: false });
+    let standaloneMs = TIMEOUTS.ready;
+    try {
+      expect((await watchFor(() => alone.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+      await alone.command('/model', { escapeFirst: false });
+      standaloneMs = (await watchFor(() => alone.capture(), /Select model route/, TIMEOUTS.ready)).ms;
+    } finally {
+      alone.kill();
+    }
+
     await session.command('/login', { escapeFirst: false });
     expect((await watchFor(() => session.capture(), /authentication status/i, TIMEOUTS.ready)).found).toBe(true);
     await session.command('/model');
@@ -56,9 +78,11 @@ test.describe('jeden replays of user-reported flows', () => {
     // background-turn spinner and the disk cache the picker must appear well
     // inside the ready budget even on a cold catalog (isolated HOME).
     const opened = await watchFor(() => session.capture(), /Select model route/, TIMEOUTS.ready);
+    const detail = `${opened.ms}ms after /login, ${standaloneMs}ms standalone`;
+    console.log(`[replay.hang] ${detail}`);
     expect(
-      checked('replay.hang', 'jeden', opened.found, `${opened.ms}ms`),
-      `model picker did not open within ${TIMEOUTS.ready}ms of submit`,
+      checked('replay.hang', 'jeden', opened.found, detail),
+      `model picker did not open within ${TIMEOUTS.ready}ms of submit (${detail}) — a network view queued behind the previous one`,
     ).toBe(true);
   });
 
@@ -74,10 +98,12 @@ test.describe('jeden replays of user-reported flows', () => {
 
 /**
  * Functional contracts: what a command DOES, not what it paints. The command
- * scan proves every command renders something; these prove a handful of them
- * actually work end to end. Commands whose effect is unobservable without
- * side effects on the operator's machine stay out — and stay marked as
- * behaviourally uncovered in the verdict matrix rather than assumed good.
+ * scan proves every command renders something; these prove the commands with
+ * an observable effect actually work — mode toggles read back, config writes
+ * reach disk, renames stick, checkpoints exist afterwards — and that every
+ * read-only view contains its own subject matter instead of an empty box.
+ * Every session runs in an isolated HOME and a scratch cwd, so "destructive"
+ * commands are safe to exercise for real.
  */
 test.describe('functional contracts — jeden', () => {
   let session: TuiSession;
@@ -134,5 +160,144 @@ test.describe('functional contracts — jeden', () => {
       checked('fn.token-redacted', 'jeden', !leaked),
       '/token printed the raw agent secret into the transcript the model reads',
     ).toBe(true);
+  });
+
+  test('/plan on is still on when /plan status is asked afterwards', async () => {
+    await session.command('/plan on', { escapeFirst: false });
+    const enabled = await watchFor(() => session.capture(), /plan mode enabled/i, TIMEOUTS.settle);
+    expect(enabled.found, '/plan on did not report the mode as enabled').toBe(true);
+    await session.command('/plan status');
+    const persisted = await watchFor(() => session.capture(), /enabled/i, TIMEOUTS.settle);
+    expect(
+      checked('fn.mode-roundtrip', 'jeden', persisted.found),
+      '/plan on reported success but /plan status does not report the mode as enabled',
+    ).toBe(true);
+  });
+
+  test('/settings set writes the value through to config.yml on disk', async () => {
+    await session.command('/settings set tools.approvalMode always-ask', { escapeFirst: false });
+    const acknowledged = await watchFor(() => flattened(session.capture()), /config\.ya?ml/i, TIMEOUTS.settle);
+    expect(
+      acknowledged.found,
+      `/settings set did not name the file it wrote:\n${paneTail(session.capture())}`,
+    ).toBe(true);
+    const configPath = join(session.home, '.jeden', 'config.yml');
+    const written = existsSync(configPath) && readFileSync(configPath, 'utf8').includes('always-ask');
+    expect(
+      checked('fn.settings-write-through', 'jeden', written, configPath),
+      `/settings set reported success but ${configPath} does not carry the value`,
+    ).toBe(true);
+  });
+
+  test('/rename sticks: the session view reports the new name', async () => {
+    const marker = `probe-${Date.now().toString(36)}`;
+    await session.command(`/rename ${marker}`, { escapeFirst: false });
+    expect((await watchFor(() => session.capture(), /renamed/i, TIMEOUTS.settle)).found).toBe(true);
+    await session.command('/session');
+    const shown = await watchFor(() => session.capture(), new RegExp(marker), TIMEOUTS.settle);
+    expect(
+      checked('fn.rename-roundtrip', 'jeden', shown.found, marker),
+      `/rename ${marker} reported success but /session does not show the name`,
+    ).toBe(true);
+  });
+
+  test('/checkpoint creates a checkpoint that is still there afterwards', async () => {
+    await session.command('/checkpoint', { escapeFirst: false });
+    const created = await watchFor(() => session.capture(), /checkpoint .* created/i, TIMEOUTS.settle);
+    expect(created.found, '/checkpoint did not report creating one').toBe(true);
+    const [, id] = session.capture().match(/Checkpoint (\S+) created/i) ?? [];
+    await session.command('/checkpoint');
+    const listed = id
+      ? await watchFor(() => session.capture(), new RegExp(id), TIMEOUTS.settle)
+      : { found: false, ms: TIMEOUTS.settle };
+    expect(
+      checked('fn.checkpoint-roundtrip', 'jeden', listed.found, id ?? 'no id parsed'),
+      `checkpoint ${id} was created but running /checkpoint again does not mention it`,
+    ).toBe(true);
+  });
+
+  test('/omfg names a rules file and writing a rule creates it', async () => {
+    const marker = `probe rule ${Date.now().toString(36)}`;
+    await session.command(`/omfg ${marker}`, { escapeFirst: false });
+    await settledCapture(session);
+    const rulesPath = join(session.cwd, '.jeden', 'rules.jsonl');
+    const stored = existsSync(rulesPath) && readFileSync(rulesPath, 'utf8').includes(marker);
+    expect(
+      checked('fn.omfg-persists', 'jeden', stored, rulesPath),
+      `/omfg accepted the rule but ${rulesPath} does not contain it`,
+    ).toBe(true);
+  });
+});
+
+/**
+ * Read-only views must contain their own subject matter. Weak individually,
+ * strong together: paired with the command scan (renders, no error, fits,
+ * navigable) it is the difference between "a box appeared" and "the box is
+ * about the thing the command promises".
+ */
+const CONTENT_CONTRACTS: [command: string, expected: RegExp][] = [
+  ['/help', /\/model/],
+  ['/hotkeys', /Enter|Esc/],
+  ['/context', /token/i],
+  ['/status', /capabilit|health|allow|ask/i],
+  ['/tools', /read|write|command|search/i],
+  ['/prompt', /[Jj]eden/],
+  ['/login', /account|Weles|authentication/i],
+  ['/usage', /usage|quota|token|event/i],
+  ['/roles', /default|fast|advisor|role/i],
+  ['/agents', /agent/i],
+  ['/jobs', /job/i],
+  ['/session', /session/i],
+  ['/memory', /memory|queue|index/i],
+  ['/hooks', /hook/i],
+  ['/extensions', /extension|plugin|discover/i],
+  ['/plugins', /plugin/i],
+  ['/marketplace', /marketplace|catalog|plugin/i],
+  ['/mcp', /mcp|server/i],
+  ['/ssh', /ssh|host/i],
+  ['/browser', /browser|runtime|chrom/i],
+  ['/changelog', /\d|release|change/i],
+  ['/settings', /tools\.|ui\.|context\.|secrets\./],
+  ['/model', /claude|codex|kimi|catalog|model/i],
+  ['/approval', /approval|ask|allow|deny/i],
+  ['/collab status', /collab|host|guest|relay/i],
+  ['/fast status', /fast mode/i],
+  ['/plan status', /plan/i],
+  ['/stats', /stat|usage|dashboard|report/i],
+];
+
+test.describe('content contracts — jeden', () => {
+  let session: TuiSession;
+
+  test.beforeAll(() => {
+    if (!HAS_TMUX) test.skip(true, 'tmux not installed');
+  });
+
+  test.beforeEach(async () => {
+    test.setTimeout(TIMEOUTS.test);
+    session = TuiSession.jeden();
+    expect((await watchFor(() => session.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+  });
+
+  test.afterEach(() => {
+    session?.kill();
+  });
+
+  test('every read-only view contains its own subject matter', async () => {
+    const missing: string[] = [];
+    for (const [command, expected] of CONTENT_CONTRACTS) {
+      await session.command(command);
+      // Matched against de-wrapped text: content that hits the frame edge
+      // continues on the next row, and a raw match would call it absent.
+      const seen = await watchFor(() => flattened(session.capture()), expected, TIMEOUTS.settle);
+      if (!seen.found) {
+        missing.push(`${command} (no ${expected})`);
+        console.log(`[content-contract] ${command} missed ${expected}:\n${paneTail(session.capture())}`);
+      }
+    }
+    expect(
+      checked('fn.view-content', 'jeden', !missing.length, missing.join('; ')),
+      `these views rendered without their own subject matter: ${missing.join(', ')}`,
+    ).toEqual(true);
   });
 });

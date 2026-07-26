@@ -85,8 +85,28 @@ export function isolatedHome(warmCache: boolean): string {
   if (warmCache && existsSync(cache)) {
     cpSync(cache, join(home, '.jeden', 'cache'), { recursive: true });
   }
+  // Pin the UI language in the sandbox. Every assertion here is written
+  // against the English strings, so inheriting the operator's `ui.language`
+  // turns the whole suite red for a reason that has nothing to do with the
+  // app — which is exactly what one stray `/settings set` did.
+  const configPath = join(home, '.jeden', 'config.yml');
+  if (existsSync(configPath)) {
+    try {
+      const config = JSON.parse(readFileSync(configPath, 'utf8')) as { ui?: Record<string, unknown> };
+      config.ui = { ...config.ui, language: SANDBOX_LANGUAGE };
+      writeFileSync(configPath, JSON.stringify(config));
+    } catch {
+      // Not JSON — leave the operator's file shape untouched.
+    }
+  }
   return home;
 }
+
+const SANDBOX_LANGUAGE = process.env.PROBIERZ_SANDBOX_LANGUAGE ?? 'en';
+
+/** Chrome only an open picker paints — the marker for "a view owns the
+ * keyboard right now". */
+export const PICKER_CHROME = /Esc close|Type to search/;
 
 export interface TuiLaunchOptions {
   /** Shell command executed inside the tmux session. */
@@ -99,22 +119,30 @@ export interface TuiLaunchOptions {
 
 export class TuiSession {
   readonly name = `probierz-cmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+  /** Sandbox the app runs in — behavioural contracts assert against the files
+   * it writes there, and a sandbox nobody can name cannot be asserted on. */
+  home = '';
+  cwd = '';
 
   static launch(options: TuiLaunchOptions): TuiSession {
     const session = new TuiSession();
     const width = options.width ?? PANE_WIDTH;
     const height = options.height ?? PANE_HEIGHT;
     const command = options.home ? `env HOME=${options.home} ${options.command}` : options.command;
+    session.home = options.home ?? homedir();
     tmux(['new-session', '-d', '-s', session.name, '-x', String(width), '-y', String(height), command]);
     return session;
   }
 
   static jeden(options: { args?: string; isolateHome?: boolean; warmCache?: boolean } = {}): TuiSession {
     const isolate = options.isolateHome ?? true;
-    return TuiSession.launch({
-      command: `${JEDEN} ${options.args ?? `--cwd ${tmpCwd()}`}`,
+    const cwd = tmpCwd();
+    const session = TuiSession.launch({
+      command: `${JEDEN} ${options.args ?? `--cwd ${cwd}`}`,
       home: isolate ? isolatedHome(options.warmCache ?? true) : undefined,
     });
+    session.cwd = cwd;
+    return session;
   }
 
   static omp(options: { args?: string } = {}): TuiSession {
@@ -177,7 +205,23 @@ export class TuiSession {
    * to be observed. */
   async command(text: string, options: { escapeFirst?: boolean } = {}): Promise<void> {
     if (options.escapeFirst ?? true) {
-      this.key('Escape');
+      // Settle first: an Esc sent while the PREVIOUS view is still painting
+      // hits a screen with no picker yet, reads as "nothing to close", and
+      // the command that follows lands in that view's search box — which is
+      // how `/settings` once read as "no matching items" in the changelog.
+      await settledCapture(this, ECHO_TIMEOUT_MS);
+      // Escape is verified, not assumed. A view that has painted but not yet
+      // mounted its key handler swallows the first Esc.
+      for (const _attempt of TYPE_ATTEMPTS) {
+        this.key('Escape');
+        const closed = await watchFor(
+          () => (PICKER_CHROME.test(this.capture()) ? '' : 'closed'),
+          /closed/,
+          ECHO_TIMEOUT_MS,
+          TYPE_SETTLE_MS,
+        );
+        if (closed.found) break;
+      }
       await delay(ESC_FLUSH_MS);
     }
     const echo = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -288,6 +332,17 @@ export async function settledCapture(session: TuiSession, budgetMs = SCAN_PAINT_
   }
   return previous;
 }
+
+/** The pane with box borders stripped, in both join shapes a terminal can
+ * produce: rows glued (a path or word split at the frame edge) and rows
+ * space-joined (a sentence split across rows). Matching the raw capture
+ * reports "not there" for text plainly on screen — that is how a working
+ * `/settings set` looked broken. */
+export function flattened(capture: string): string {
+  const rows = capture.split('\n').map((line) => line.replace(/[│╭╮╯╰─]/g, '').trim());
+  return `${rows.join('')}\n${rows.join(' ')}`;
+}
+
 /** Last non-blank pane lines, for failure messages. "The view never opened"
  * is undiagnosable without the screen that was actually on it. */
 export function paneTail(capture: string): string {
