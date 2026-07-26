@@ -21,7 +21,7 @@
   "scripts": {
     "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps && npm --workspace packages/electron exec playwright install",
     "test:web": "npm --workspace packages/web run test",
-    "test:jeden": "npm --workspace packages/web exec playwright test tests/jeden.cli.spec.ts",
+    "test:jeden": "npm --workspace packages/web exec playwright test jeden",
     "test:tui": "npm --workspace packages/tui run test",
     "test:desktop:cua": "npm --workspace packages/desktop-cua run test",
     "test:electron": "npm --workspace packages/electron run test",
