@@ -1,0 +1,83 @@
+schemaVersion: 1
+appId: game-asset-creator
+owner: game_asset_creator maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/work/game_asset_creator
+    mappings:
+      - paths:
+          - pipeline/**
+        journeys: [cli, verify, visual-eval]
+      - paths:
+          - src/**
+          - assets/**
+        journeys: [verify]
+      - paths:
+          - package.json
+          - pipeline.config.example.json
+          - SKILL.md
+        journeys: [cli, verify, visual-eval]
+  - root: /Users/lukaszbartoszcze/work/simple-rts-unity
+    mappings:
+      - paths:
+          - web/game_asset_creator/**
+          - web/units.js
+          - web/lib/cards.js
+        journeys: [verify]
+
+surfaces:
+  tui:
+    spec: game-asset-creator-cli.spec.mjs
+    journeys: [cli, verify]
+  eval:
+    runner: apps/game-asset-creator/evals/visual-eval.mjs
+    journeys: [visual-eval]
+
+journeys:
+  cli:
+    owner: game_asset_creator maintainers
+    timeoutMs: 120000
+    value: The pipeline CLI (check-config / verify / MCP surface / blender-health) works against vault-backed config with no real secrets.
+  verify:
+    owner: game_asset_creator maintainers
+    timeoutMs: 120000
+    value: The GLB quality gate accepts on-budget models and rejects corrupt or over-budget ones, from the CLI and in flow.
+  visual-eval:
+    owner: game_asset_creator maintainers
+    timeoutMs: 600000
+    value: Generated models render through Blender MCP and pass a Brama-vision rubric (proportions, silhouette, race palette, artifacts) above threshold.
+
+secretRefs:
+  GAC_BRAMA_KEY: skarbiec://BRAMA/agent_auth_secret
+  PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE: vault://wisent/probierz/artifact-encryption-key-file
+
+data:
+  fixtures:
+    command: node
+    args: [apps/game-asset-creator/fixtures.mjs]
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+matrix:
+  nightly:
+    targets: [tui, eval]
+    record: false
+    timeoutMs: 900000
+    maximumParallel: 1
+    minimumCellEvidence: E2
+    dimensions:
+      PROBIERZ_EVAL_RUBRIC: [rts-character]
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: false
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [cli, verify]
+  requiredTargets: [tui]
+  requireSecretScan: true
