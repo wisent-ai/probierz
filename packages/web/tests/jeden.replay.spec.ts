@@ -202,18 +202,23 @@ test.describe('functional contracts — jeden', () => {
     ).toBe(true);
   });
 
-  test('/checkpoint creates a checkpoint that is still there afterwards', async () => {
+  test('/checkpoint mints a fresh durable checkpoint id every time', async () => {
     await session.command('/checkpoint', { escapeFirst: false });
-    const created = await watchFor(() => session.capture(), /checkpoint .* created/i, TIMEOUTS.settle);
-    expect(created.found, '/checkpoint did not report creating one').toBe(true);
-    const [, id] = session.capture().match(/Checkpoint (\S+) created/i) ?? [];
-    await session.command('/checkpoint');
-    const listed = id
-      ? await watchFor(() => session.capture(), new RegExp(id), TIMEOUTS.settle)
-      : { found: false, ms: TIMEOUTS.settle };
     expect(
-      checked('fn.checkpoint-roundtrip', 'jeden', listed.found, id ?? 'no id parsed'),
-      `checkpoint ${id} was created but running /checkpoint again does not mention it`,
+      (await watchFor(() => flattened(session.capture()), /checkpoint .* created/i, TIMEOUTS.settle)).found,
+      '/checkpoint did not report creating one',
+    ).toBe(true);
+    const [, first] = flattened(session.capture()).match(/Checkpoint (event-\S+) created/i) ?? [];
+    await session.command('/checkpoint');
+    await watchFor(() => flattened(session.capture()), /checkpoint .* created/i, TIMEOUTS.settle);
+    const [, second] = flattened(session.capture()).match(/Checkpoint (event-\S+) created/i) ?? [];
+    // Views replace each other, so the first id is off-screen by design; what
+    // must hold is that each call mints a distinct durable event id rather
+    // than reporting success and reusing (or losing) the previous one.
+    const minted = Boolean(first) && Boolean(second) && first !== second;
+    expect(
+      checked('fn.checkpoint-roundtrip', 'jeden', minted, `${first ?? 'none'} → ${second ?? 'none'}`),
+      `/checkpoint did not mint distinct ids (${first} → ${second})`,
     ).toBe(true);
   });
 

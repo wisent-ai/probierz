@@ -356,10 +356,12 @@ test.describe('command surface scan — jeden', () => {
       let closes = '—';
       if (status === 'picker') {
         const multiRow = pickerRows(screen) > ONE_ROW;
-        const cursorBefore = screen.split('\n').find((line) => /[›❯]/.test(line)) ?? '';
+        // `›` is the ITEM cursor; `❯` marks the active category in the left
+        // pane and does not move when ↑↓ walks the items.
+        const cursorBefore = screen.split('\n').find((line) => line.includes('›')) ?? '';
         session.key('Down');
         const moved = await settledCapture(session);
-        const cursorAfter = moved.split('\n').find((line) => /[›❯]/.test(line)) ?? '';
+        const cursorAfter = moved.split('\n').find((line) => line.includes('›')) ?? '';
         navigates = multiRow ? (cursorBefore && cursorAfter !== cursorBefore ? 'yes' : 'NO') : 'n/a';
         const rowsBefore = contentLines(moved);
         session.type(UNMATCHABLE_QUERY);

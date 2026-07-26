@@ -123,7 +123,10 @@ test.describe('jeden cli (hermetic)', () => {
     const out = runJeden(['gallery', '--theme', 'nord'], { cwd: tmpCwd() });
     expect(out).toContain('── theme: nord ──');
     expect(out).toContain('Select model route');
-    expect(out).toContain('[All]');
+    // The categories moved from a tab bar into the left pane of the picker,
+    // so the fixture now shows the brands column and its divider.
+    expect(out).toContain('● All');
+    expect(out).toContain('│');
     expect(out).toContain('Confirm destructive action');
   });
 

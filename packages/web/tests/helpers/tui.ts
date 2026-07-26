@@ -471,7 +471,7 @@ export interface GoldenResult {
 }
 
 /** Compare a capture against its golden PNG; regenerate when
- * PROBIERZ_UPDATE_GOLDEN=1 or when no golden exists yet. */
+ * PROBIERZ_UPDATE_GOLDEN is set or when no golden exists yet. */
 export async function compareToGolden(
   page: Page,
   name: string,
@@ -481,7 +481,7 @@ export async function compareToGolden(
   mkdirSync(GOLDEN_DIR, { recursive: true });
   const goldenPath = join(GOLDEN_DIR, `${name}.png`);
   const actualPng = await renderTextToPng(page, normalizeForGolden(capture));
-  if (process.env.PROBIERZ_UPDATE_GOLDEN === '1' || !existsSync(goldenPath)) {
+  if (process.env.PROBIERZ_UPDATE_GOLDEN || !existsSync(goldenPath)) {
     writeFileSync(goldenPath, actualPng);
     return { match: true, diffPixels: 0, totalPixels: 0, goldenPath, wroteGolden: true };
   }
