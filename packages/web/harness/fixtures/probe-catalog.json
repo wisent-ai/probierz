@@ -1,0 +1,12 @@
+{
+  "name": "probe-market",
+  "description": "Local marketplace catalog fixture for the probierz marketplace contract.",
+  "plugins": [
+    {
+      "name": "probe-plugin",
+      "version": "fixture",
+      "description": "Fixture plugin entry; the contract lists it, never installs it.",
+      "source": "./probe-plugin"
+    }
+  ]
+}

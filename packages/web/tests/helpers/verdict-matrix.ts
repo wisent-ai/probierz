@@ -36,6 +36,11 @@ export const CHECK_IDS = {
   'fn.checkpoint-roundtrip': 'a created checkpoint is still listed afterwards',
   'fn.omfg-persists': 'a forged rule lands in the rules file',
   'fn.view-content': 'every read-only view contains its own subject matter',
+  'fn.collab-relay': '/collab start opens a relay and /collab stop closes it',
+  'fn.marketplace-source': '/marketplace add registers a catalog and lists its plugins',
+  'fn.extension-discovery': '/extensions discovers a module planted in the workspace',
+  'fn.agent-discovery': '/agents lists and shows a custom agent definition',
+  'fn.setup-checklist': '/setup distinguishes a bare home from a configured one',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -55,14 +60,14 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close'] },
   { view: 'Command behaviour', verdict: 'parity', checks: ['fn.todo-roundtrip', 'fn.branch-roundtrip', 'fn.token-redacted', 'fn.mode-roundtrip', 'fn.settings-write-through', 'fn.rename-roundtrip', 'fn.checkpoint-roundtrip', 'fn.omfg-persists', 'fn.view-content'] },
   { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
+  { view: 'Collab', verdict: 'parity', checks: ['fn.collab-relay'] },
+  { view: 'Marketplace', verdict: 'parity', checks: ['fn.marketplace-source'] },
+  { view: 'Extensions', verdict: 'parity', checks: ['fn.extension-discovery'] },
+  { view: 'Agents', verdict: 'parity', checks: ['fn.agent-discovery'] },
+  { view: 'Setup', verdict: 'parity', checks: ['fn.setup-checklist'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
   { view: 'Login / auth', verdict: 'parity', checks: ['replay.hang', 'replay.identity'] },
-  { view: 'Collab', verdict: 'parity', checks: [] },
-  { view: 'Marketplace', verdict: 'parity', checks: [] },
-  { view: 'Extensions', verdict: 'parity', checks: [] },
-  { view: 'Agents', verdict: 'parity', checks: [] },
-  { view: 'Setup', verdict: 'parity', checks: [] },
 ];
 
 export interface BrokenVerdict {

@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  FIXTURES,
   HAS_TMUX,
   TIMEOUTS,
   TuiSession,
@@ -225,6 +226,136 @@ test.describe('functional contracts — jeden', () => {
     expect(
       checked('fn.omfg-persists', 'jeden', stored, rulesPath),
       `/omfg accepted the rule but ${rulesPath} does not contain it`,
+    ).toBe(true);
+  });
+
+  test('/collab start opens a durable relay and /collab stop closes it', async () => {
+    await session.command('/collab start', { escapeFirst: false });
+    const started = await watchFor(() => flattened(session.capture()), /collab-relay\.jsonl/i, TIMEOUTS.settle);
+    expect(started.found, '/collab start named no relay').toBe(true);
+    const relay = join(session.cwd, '.jeden', 'collab-relay.jsonl');
+    // The relay is a file, so the contract reads it: a host that "started"
+    // without writing its own start event started nothing.
+    const hostStart = existsSync(relay) && readFileSync(relay, 'utf8').includes('host-start');
+    await session.command('/collab status');
+    const hosting = await watchFor(() => flattened(session.capture()), /collab host:/i, TIMEOUTS.settle);
+    await session.command('/collab stop');
+    const stopped = await watchFor(() => flattened(session.capture()), /hosting stopped/i, TIMEOUTS.settle);
+    await session.command('/collab status');
+    const off = await watchFor(() => flattened(session.capture()), /collab off/i, TIMEOUTS.settle);
+    const ok = hostStart && hosting.found && stopped.found && off.found;
+    expect(
+      checked(
+        'fn.collab-relay',
+        'jeden',
+        ok,
+        `host-start ${hostStart}, hosting ${hosting.found}, stopped ${stopped.found}, off ${off.found}`,
+      ),
+      `/collab start → status → stop → status did not complete against ${relay}`,
+    ).toBe(true);
+  });
+
+  test('/marketplace add registers a local catalog and lists its plugins', async () => {
+    const source = join(session.cwd, 'probe-market');
+    cpSync(join(FIXTURES, 'probe-market'), source, { recursive: true });
+    await session.command(`/marketplace add ${source}`, { escapeFirst: false });
+    const added = await watchFor(() => flattened(session.capture()), /added marketplace source/i, TIMEOUTS.settle);
+    expect(added.found, `/marketplace add did not accept ${source}`).toBe(true);
+    await session.command('/marketplace');
+    const listed = await watchFor(() => flattened(session.capture()), /probe-plugin/, TIMEOUTS.settle);
+    expect(
+      checked('fn.marketplace-source', 'jeden', listed.found, source),
+      '/marketplace registered the source but its plugin is not offered in the view',
+    ).toBe(true);
+  });
+});
+
+test.describe('discovery contracts — jeden', () => {
+  test.beforeAll(() => {
+    if (!HAS_TMUX) test.skip(true, 'tmux not installed');
+  });
+
+  test('/extensions lists an extension module planted in the workspace', async () => {
+    test.setTimeout(TIMEOUTS.test);
+    const cwd = mkdtempSync(join(tmpdir(), 'probierz-ext-'));
+    mkdirSync(join(cwd, '.jeden', 'extensions'), { recursive: true });
+    cpSync(join(FIXTURES, 'probe-ext.mjs'), join(cwd, '.jeden', 'extensions', 'probe-ext.mjs'));
+    const session = TuiSession.jeden({ cwd });
+    try {
+      expect((await watchFor(() => session.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+      await session.command('/extensions', { escapeFirst: false });
+      // The row carries the absolute path, which the frame truncates with an
+      // ellipsis — matching the fixture's file name would test the pane
+      // width, not discovery. The kind and root survive truncation.
+      const listed = await watchFor(
+        () => flattened(session.capture()),
+        /Native extension.*\.jeden\/extensions/,
+        TIMEOUTS.settle,
+      );
+      expect(
+        checked('fn.extension-discovery', 'jeden', listed.found, cwd),
+        'an extension module in .jeden/extensions is not discovered by /extensions',
+      ).toBe(true);
+    } finally {
+      session.kill();
+    }
+  });
+
+  test('/agents lists and shows a custom agent planted in the workspace', async () => {
+    test.setTimeout(TIMEOUTS.test);
+    const cwd = mkdtempSync(join(tmpdir(), 'probierz-agents-'));
+    mkdirSync(join(cwd, '.jeden', 'agents'), { recursive: true });
+    cpSync(join(FIXTURES, 'probe-agent.json'), join(cwd, '.jeden', 'agents', 'probe-agent.json'));
+    const session = TuiSession.jeden({ cwd });
+    try {
+      expect((await watchFor(() => session.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+      await session.command('/agents', { escapeFirst: false });
+      const listed = await watchFor(() => flattened(session.capture()), /probe-agent/, TIMEOUTS.settle);
+      await session.command('/agents show probe-agent');
+      const shown = await watchFor(() => flattened(session.capture()), /probe agent for tests/i, TIMEOUTS.settle);
+      expect(
+        checked('fn.agent-discovery', 'jeden', listed.found && shown.found, `${listed.found}/${shown.found}`),
+        'a custom agent in .jeden/agents is not listed and shown by /agents',
+      ).toBe(true);
+    } finally {
+      session.kill();
+    }
+  });
+
+  test('/setup marks the router configured only when the credentials exist', async () => {
+    test.setTimeout(TIMEOUTS.test);
+    // The TUI opens the wizard, not the piped checklist: a bare home offers
+    // "Set BRAMA_URL [INPUT]", a configured one reports it "[OK]".
+    const bare = TuiSession.jeden({ credentials: false });
+    let promptsForCredentials = false;
+    try {
+      expect((await watchFor(() => bare.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+      await bare.command('/setup', { escapeFirst: false });
+      promptsForCredentials = (
+        await watchFor(() => flattened(bare.capture()), /Set BRAMA_URL.*\[INPUT\]/i, TIMEOUTS.view)
+      ).found;
+    } finally {
+      bare.kill();
+    }
+    const configured = TuiSession.jeden();
+    let reportsConfigured = false;
+    try {
+      expect((await watchFor(() => configured.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
+      await configured.command('/setup', { escapeFirst: false });
+      reportsConfigured = (
+        await watchFor(() => flattened(configured.capture()), /BRAMA_URL configured.*\[OK\]/i, TIMEOUTS.view)
+      ).found;
+    } finally {
+      configured.kill();
+    }
+    expect(
+      checked(
+        'fn.setup-checklist',
+        'jeden',
+        promptsForCredentials && reportsConfigured,
+        `bare-prompts ${promptsForCredentials}, configured-ok ${reportsConfigured}`,
+      ),
+      '/setup does not distinguish a credential-less home from a configured one',
     ).toBe(true);
   });
 });

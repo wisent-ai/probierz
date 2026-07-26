@@ -68,14 +68,16 @@ export function slashCommands(): string[] {
   return [...help.matchAll(/^(\/[a-z-]+)\s\s+\S/gm)].map((match) => match[HELP_COMMAND_GROUP]);
 }
 
-/** Fresh HOME carrying only the jeden credentials and config. With
- * `warmCache` the brama catalog cache comes along too: structural contracts
- * (geometry, panes, transcript) must not pay a cold 5 700-model fetch, while
- * latency contracts deliberately keep the cache cold. */
-export function isolatedHome(warmCache: boolean): string {
+/** Fresh HOME for one session. `warmCache` brings the brama catalog cache
+ * along (structural contracts must not pay a cold 5 700-model fetch; latency
+ * contracts deliberately keep it cold), `credentials` decides whether the
+ * operator's `.env` comes with it — the setup checklist can only be verified
+ * against a home that has none. */
+export function isolatedHome(warmCache: boolean, credentials = true): string {
   const home = mkdtempSync(join(tmpdir(), 'probierz-tui-home-'));
   mkdirSync(join(home, '.jeden'), { recursive: true });
-  for (const file of ['.env', 'config.yml']) {
+  const files = credentials ? ['.env', 'config.yml'] : ['config.yml'];
+  for (const file of files) {
     const source = join(homedir(), '.jeden', file);
     if (existsSync(source)) {
       copyFileSync(source, join(home, '.jeden', file));
@@ -103,6 +105,9 @@ export function isolatedHome(warmCache: boolean): string {
 }
 
 const SANDBOX_LANGUAGE = process.env.PROBIERZ_SANDBOX_LANGUAGE ?? 'en';
+
+/** Fixtures seeded into sandboxes so views have something real to discover. */
+export const FIXTURES = join(process.cwd(), 'harness', 'fixtures');
 
 /** Chrome only an open picker paints — the marker for "a view owns the
  * keyboard right now". */
@@ -134,12 +139,22 @@ export class TuiSession {
     return session;
   }
 
-  static jeden(options: { args?: string; isolateHome?: boolean; warmCache?: boolean } = {}): TuiSession {
+  static jeden(
+    options: {
+      args?: string;
+      /** Pre-seeded working directory — discovery contracts plant fixtures
+       * there before the app starts. */
+      cwd?: string;
+      isolateHome?: boolean;
+      warmCache?: boolean;
+      credentials?: boolean;
+    } = {},
+  ): TuiSession {
     const isolate = options.isolateHome ?? true;
-    const cwd = tmpCwd();
+    const cwd = options.cwd ?? tmpCwd();
     const session = TuiSession.launch({
       command: `${JEDEN} ${options.args ?? `--cwd ${cwd}`}`,
-      home: isolate ? isolatedHome(options.warmCache ?? true) : undefined,
+      home: isolate ? isolatedHome(options.warmCache ?? true, options.credentials ?? true) : undefined,
     });
     session.cwd = cwd;
     return session;
