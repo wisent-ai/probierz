@@ -12,6 +12,13 @@ const colorScheme = cs === 'dark' ? 'dark' : cs === 'light' ? 'light' : undefine
 const testMatch = process.env.PROBIERZ_SPEC ? `**/${process.env.PROBIERZ_SPEC.split('/').pop()}` : undefined;
 const artifactsDir = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 
+// jeden/omp comparison specs drive real TUIs through tmux; the browser is
+// only a deterministic monospace renderer for golden PNGs. Running them once
+// instead of once per engine keeps five live app instances (and five
+// concurrent control-plane logins) off the machine.
+const JEDEN_SPECS = /jeden\.[a-z-]+\.spec\.ts$/;
+const JEDEN_MATRIX = /jeden\.matrix\.spec\.ts$/;
+
 export default defineConfig({
   testDir: './tests',
   outputDir: join(artifactsDir, 'playwright'),
@@ -32,11 +39,30 @@ export default defineConfig({
     locale: process.env.PROBIERZ_LOCALE || undefined,
     colorScheme,
   },
+  globalSetup: './harness/reset-checks.ts',
+  globalTeardown: './harness/verdict-report.ts',
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: JEDEN_SPECS },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: JEDEN_SPECS },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: JEDEN_SPECS },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, testIgnore: JEDEN_SPECS },
+    { name: 'mobile-safari', use: { ...devices['iPhone 14'] }, testIgnore: JEDEN_SPECS },
+    {
+      name: 'jeden',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: JEDEN_SPECS,
+      testIgnore: JEDEN_MATRIX,
+      // Each test drives a real app instance against one control plane, so
+      // tests inside a file run one at a time (files still run in parallel).
+      fullyParallel: false,
+    },
+    // The matrix reads the check ledger the specs above write, so it must
+    // observe a finished run — hence the project dependency, not file order.
+    {
+      name: 'jeden-matrix',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: JEDEN_MATRIX,
+      dependencies: ['jeden'],
+    },
   ],
 });

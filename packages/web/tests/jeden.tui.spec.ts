@@ -1,91 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { HAS_TMUX, SLOW_POLL_MS, TIMEOUTS, TuiSession, checked, watchFor } from './helpers/tui';
 
 /**
- * jeden TUI loading states, driven through tmux (same technique as
- * reference/ui-peek.sh). Verifies that network-bound views show the
+ * jeden TUI loading states. Verifies that network-bound views show the
  * background-turn spinner BEFORE their content renders, and that a model
  * turn shows the busy spinner before the answer streams in. Requires tmux
  * and a reachable brama control plane; skips cleanly otherwise.
  */
-const JEDEN = process.env.JEDEN_BIN || 'jeden';
-const TEST_TIMEOUT_MS = 180_000;
-
-const HAS_TMUX = (() => {
-  try {
-    execFileSync('tmux', ['-V'], { encoding: 'utf8' });
-    return true;
-  } catch {
-    return false;
-  }
-})();
-
-function tmux(args: string[]): string {
-  return execFileSync('tmux', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
-}
-
-function tmpCwd(): string {
-  return mkdtempSync(join(tmpdir(), 'jeden-tui-'));
-}
-
-class TuiSession {
-  readonly name = `probierz-tui-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
-  private home = '';
-
-  start(): void {
-    // Isolated HOME per session: the brama catalog disk cache lives in
-    // ~/.jeden/cache, and a warm cache makes the picker open instantly — no
-    // spinner to observe. A fresh HOME (with just the credentials and config
-    // copied over) guarantees the cold-fetch loading state this spec asserts.
-    this.home = mkdtempSync(join(tmpdir(), 'jeden-tui-home-'));
-    mkdirSync(join(this.home, '.jeden'), { recursive: true });
-    for (const file of ['.env', 'config.yml']) {
-      const source = join(homedir(), '.jeden', file);
-      if (existsSync(source)) {
-        copyFileSync(source, join(this.home, '.jeden', file));
-      }
-    }
-    tmux([
-      'new-session', '-d', '-s', this.name, '-x', '200', '-y', '50',
-      `env HOME=${this.home} ${JEDEN} --cwd ${tmpCwd()}`,
-    ]);
-  }
-
-  submit(text: string): void {
-    tmux(['send-keys', '-t', this.name, '-l', text]);
-    tmux(['send-keys', '-t', this.name, 'Enter']);
-  }
-
-  capture(): string {
-    return tmux(['capture-pane', '-t', this.name, '-p']);
-  }
-
-  kill(): void {
-    try {
-      tmux(['kill-session', '-t', this.name]);
-    } catch {
-      // already gone
-    }
-  }
-}
-
-/** Milliseconds until `pattern` first appears in the pane, or -1 on timeout. */
-async function waitFor(
-  capture: () => string,
-  pattern: RegExp,
-  timeoutMs: number,
-  intervalMs = 200,
-): Promise<number> {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    if (pattern.test(capture())) return Date.now() - started;
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  return -1;
-}
+const LOADING_TIMEOUT_MS = TIMEOUTS.test;
 
 const SPINNER = /working…|esc to cancel/;
 // Footer chrome is bottom-anchored (always visible); the prompt line scrolls
@@ -120,9 +45,7 @@ test.describe('jeden tui loading states', () => {
   let session: TuiSession;
 
   test.beforeAll(async () => {
-    if (!HAS_TMUX) {
-      test.skip(true, 'tmux not installed');
-    }
+    if (!HAS_TMUX) test.skip(true, 'tmux not installed');
     const url = bramaUrl();
     if (!url || !(await bramaReachable(url))) {
       test.skip(true, 'brama unreachable: BRAMA_URL missing or /health probe failed');
@@ -130,11 +53,12 @@ test.describe('jeden tui loading states', () => {
   });
 
   test.beforeEach(async () => {
-    test.setTimeout(TEST_TIMEOUT_MS);
-    session = new TuiSession();
-    session.start();
-    const ready = await waitFor(() => session.capture(), /Tips|Welcome back/, 30_000);
-    expect(ready, 'jeden TUI did not reach the welcome screen').toBeGreaterThanOrEqual(0);
+    test.setTimeout(LOADING_TIMEOUT_MS);
+    // Cold cache on purpose: a warm catalog opens instantly and there is no
+    // loading state left to observe.
+    session = TuiSession.jeden({ warmCache: false });
+    const ready = await watchFor(() => session.capture(), /Tips|Welcome back/, TIMEOUTS.ready);
+    expect(ready.found, 'jeden TUI did not reach the welcome screen').toBe(true);
   });
 
   test.afterEach(() => {
@@ -142,31 +66,35 @@ test.describe('jeden tui loading states', () => {
   });
 
   test('/model shows a loading state before the picker opens', async () => {
-    session.submit('/model --all');
-    const spinnerMs = await waitFor(() => session.capture(), SPINNER, 20_000);
-    const pickerMs = await waitFor(() => session.capture(), PICKER_CHROME, 40_000);
-    expect(spinnerMs, 'no spinner/loading state while the catalog was loading').toBeGreaterThanOrEqual(0);
-    expect(pickerMs, 'model picker never opened').toBeGreaterThanOrEqual(0);
-    expect(spinnerMs, 'loading state must precede the picker').toBeLessThanOrEqual(pickerMs);
+    await session.command('/model --all', { escapeFirst: false });
+    const spinner = await watchFor(() => session.capture(), SPINNER, TIMEOUTS.spinner);
+    const picker = await watchFor(() => session.capture(), PICKER_CHROME, TIMEOUTS.view);
+    const ordered = spinner.found && picker.found && spinner.ms <= picker.ms;
+    expect(spinner.found, 'no spinner/loading state while the catalog was loading').toBe(true);
+    expect(picker.found, 'model picker never opened').toBe(true);
+    expect(
+      checked('screen.loading-state', 'jeden', ordered, `spinner ${spinner.ms}ms, picker ${picker.ms}ms`),
+      'loading state must precede the picker',
+    ).toBe(true);
   });
 
   test('/usage shows a loading state before quota rows render', async () => {
-    session.submit('/usage');
-    const spinnerMs = await waitFor(() => session.capture(), SPINNER, 20_000);
-    const viewMs = await waitFor(() => session.capture(), /Provider usage|quota/, 40_000);
-    expect(spinnerMs, 'no spinner/loading state while quota was loading').toBeGreaterThanOrEqual(0);
-    expect(viewMs, 'usage view never rendered').toBeGreaterThanOrEqual(0);
-    expect(spinnerMs).toBeLessThanOrEqual(viewMs);
+    await session.command('/usage', { escapeFirst: false });
+    const spinner = await watchFor(() => session.capture(), SPINNER, TIMEOUTS.spinner);
+    const view = await watchFor(() => session.capture(), /Provider usage|quota/, TIMEOUTS.view);
+    expect(spinner.found, 'no spinner/loading state while quota was loading').toBe(true);
+    expect(view.found, 'usage view never rendered').toBe(true);
+    expect(spinner.ms, 'loading state must precede the quota rows').toBeLessThanOrEqual(view.ms);
   });
 
   test('a model turn shows the busy spinner before the answer', async () => {
     // The answer (Paris) must not appear in the prompt or anywhere in the
     // startup chrome (status line numbers can collide with numeric answers).
     session.submit('Name the capital of France, one word only.');
-    const spinnerMs = await waitFor(() => session.capture(), SPINNER, 20_000);
-    const answerMs = await waitFor(() => session.capture(), /Paris/, 90_000, 500);
-    expect(spinnerMs, 'no busy spinner during the model turn').toBeGreaterThanOrEqual(0);
-    expect(answerMs, 'model answer never arrived').toBeGreaterThanOrEqual(0);
-    expect(spinnerMs).toBeLessThanOrEqual(answerMs);
+    const spinner = await watchFor(() => session.capture(), SPINNER, TIMEOUTS.spinner);
+    const answer = await watchFor(() => session.capture(), /Paris/, TIMEOUTS.turn, SLOW_POLL_MS);
+    expect(spinner.found, 'no busy spinner during the model turn').toBe(true);
+    expect(answer.found, 'model answer never arrived').toBe(true);
+    expect(spinner.ms, 'busy spinner must precede the answer').toBeLessThanOrEqual(answer.ms);
   });
 });

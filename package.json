@@ -22,6 +22,7 @@
     "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps && npm --workspace packages/electron exec playwright install",
     "test:web": "npm --workspace packages/web run test",
     "test:jeden": "npm --workspace packages/web exec playwright test jeden",
+    "test:jeden:matrix": "npm --workspace packages/web exec -- playwright test jeden.matrix --project=jeden-matrix --no-deps",
     "test:tui": "npm --workspace packages/tui run test",
     "test:desktop:cua": "npm --workspace packages/desktop-cua run test",
     "test:electron": "npm --workspace packages/electron run test",
@@ -38,6 +39,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "typescript": "^5.5.4",
     "yaml": "^2.9.0"
   }
