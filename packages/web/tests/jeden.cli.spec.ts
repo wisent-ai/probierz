@@ -203,7 +203,7 @@ test.describe('jeden cli (network)', () => {
   test('/model shows provider summary rows', () => {
     const out = runJeden([], { cwd: tmpCwd(), input: '/model\n' });
     expect(/● .+ — \d+ models? · your subscription/.test(out)).toBe(true);
-    expect(/○ catalog \[○\] — \d+ models? · no credentials/.test(out)).toBe(true);
+    expect(/○ catalog — \d+ models? · no credentials/.test(out)).toBe(true);
   });
 
   test('token redacts by default and reveals on demand', () => {

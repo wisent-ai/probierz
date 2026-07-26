@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -33,9 +33,25 @@ function tmpCwd(): string {
 
 class TuiSession {
   readonly name = `probierz-tui-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+  private home = '';
 
   start(): void {
-    tmux(['new-session', '-d', '-s', this.name, '-x', '200', '-y', '50', `${JEDEN} --cwd ${tmpCwd()}`]);
+    // Isolated HOME per session: the brama catalog disk cache lives in
+    // ~/.jeden/cache, and a warm cache makes the picker open instantly — no
+    // spinner to observe. A fresh HOME (with just the credentials and config
+    // copied over) guarantees the cold-fetch loading state this spec asserts.
+    this.home = mkdtempSync(join(tmpdir(), 'jeden-tui-home-'));
+    mkdirSync(join(this.home, '.jeden'), { recursive: true });
+    for (const file of ['.env', 'config.yml']) {
+      const source = join(homedir(), '.jeden', file);
+      if (existsSync(source)) {
+        copyFileSync(source, join(this.home, '.jeden', file));
+      }
+    }
+    tmux([
+      'new-session', '-d', '-s', this.name, '-x', '200', '-y', '50',
+      `env HOME=${this.home} ${JEDEN} --cwd ${tmpCwd()}`,
+    ]);
   }
 
   submit(text: string): void {
