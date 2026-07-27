@@ -289,16 +289,17 @@ test.describe('discovery contracts — jeden', () => {
     try {
       expect((await watchFor(() => session.capture(), /Tips|Welcome back/, TIMEOUTS.ready)).found).toBe(true);
       await session.command('/extensions', { escapeFirst: false });
-      // The row carries the absolute path, which the frame truncates with an
-      // ellipsis — matching the fixture's file name would test the pane
-      // width, not discovery. The kind and root survive truncation.
+      // The row carries an absolute path that the frame truncates, so the
+      // assertion is the kind of row plus the absence of the empty state —
+      // matching the fixture's file name would test the pane width instead.
       const listed = await watchFor(
         () => flattened(session.capture()),
-        /Native extension.*\.jeden\/extensions/,
+        /Native extension/,
         TIMEOUTS.settle,
       );
+      const empty = /No extensions or plugins found/.test(session.capture());
       expect(
-        checked('fn.extension-discovery', 'jeden', listed.found, cwd),
+        checked('fn.extension-discovery', 'jeden', listed.found && !empty, cwd),
         'an extension module in .jeden/extensions is not discovered by /extensions',
       ).toBe(true);
     } finally {

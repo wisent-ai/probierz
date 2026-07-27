@@ -6,19 +6,19 @@ import {
   ARTIFACTS,
   HAS_OMP,
   HAS_TMUX,
+  PICKER_CHROME,
   SCAN_CHUNK,
   SCAN_PAINT_MS,
-  PICKER_CHROME,
   SCAN_TIMEOUT_MS,
   TIMEOUTS,
-  UNMATCHABLE_QUERY,
   TuiSession,
+  UNMATCHABLE_QUERY,
   boxFrameCount,
   checked,
+  paneGeometry,
   paneTail,
   settledCapture,
   slashCommands,
-  twoPaneDividerRows,
   watchFor,
 } from './helpers/tui';
 
@@ -163,11 +163,22 @@ for (const app of PROFILES) {
         (await watchFor(() => session.capture(), app.modelTitle, TIMEOUTS.view)).found,
         `${app.name} model view never opened;\n${paneTail(session.capture())}`,
       ).toBe(true);
-      const dividerRows = twoPaneDividerRows(session.capture());
-      const split = dividerRows >= MIN_TWO_PANE_ROWS;
+      // Four independent properties, because "a dot and a bar somewhere" is
+      // what the flat list already had: the divider must be part of the frame
+      // (┬…┴), hold one column across the rows, the brands column must carry
+      // state dots, and the figures must end at a shared right edge.
+      const geometry = paneGeometry(session.capture());
+      const detail =
+        `joined ${geometry.joined}, ${geometry.alignedRows} aligned rows, ` +
+        `${geometry.dots} brand dots, ${geometry.alignedMetrics} aligned metric rows`;
+      const split =
+        geometry.joined &&
+        geometry.alignedRows >= MIN_TWO_PANE_ROWS &&
+        geometry.dots >= MIN_TWO_PANE_ROWS &&
+        geometry.alignedMetrics >= MIN_TWO_PANE_ROWS;
       expect(
-        checked('screen.two-pane', app.name, split, `${dividerRows} divider rows`),
-        `${app.name}: ${dividerRows} two-pane divider rows found (need ≥ ${MIN_TWO_PANE_ROWS}) — the model view is a flat list, not a brands/models split`,
+        checked('screen.two-pane', app.name, split, detail),
+        `${app.name}: model view is not a brands/models split (${detail})`,
       ).toBe(true);
     });
   });
@@ -359,17 +370,30 @@ test.describe('command surface scan — jeden', () => {
       let closes = '—';
       if (status === 'picker') {
         const multiRow = pickerRows(screen) > ONE_ROW;
-        // `›` is the ITEM cursor; `❯` marks the active category in the left
-        // pane and does not move when ↑↓ walks the items.
-        const cursorBefore = screen.split('\n').find((line) => line.includes('›')) ?? '';
+        // A two-pane picker opens on the brands column, so step right first:
+        // otherwise ↓ walks the brands and the item cursor never moves — the
+        // interaction the footer promises is the one to measure.
+        if (paneGeometry(screen).joined) {
+          session.key('Right');
+          await settledCapture(session);
+        }
+        const cursorLine = (frame: string) =>
+          frame.split('\n').find((line) => line.includes('›')) ?? '';
+        const cursorBefore = cursorLine(session.capture());
         session.key('Down');
         const moved = await settledCapture(session);
-        const cursorAfter = moved.split('\n').find((line) => line.includes('›')) ?? '';
-        navigates = multiRow ? (cursorBefore && cursorAfter !== cursorBefore ? 'yes' : 'NO') : 'n/a';
-        const rowsBefore = contentLines(moved);
+        navigates = multiRow
+          ? cursorBefore && cursorLine(moved) !== cursorBefore
+            ? 'yes'
+            : 'NO'
+          : 'n/a';
+        // Rows carry badges; an unmatchable query must leave none standing.
+        // Counting all visible lines cannot see this in a two-pane frame,
+        // where the brands column keeps its rows whatever the query is.
+        const badgesBefore = pickerRows(moved);
         session.type(UNMATCHABLE_QUERY);
         const filtered = await settledCapture(session);
-        filters = multiRow ? (contentLines(filtered) < rowsBefore ? 'yes' : 'NO') : 'n/a';
+        filters = multiRow ? (pickerRows(filtered) < badgesBefore ? 'yes' : 'NO') : 'n/a';
         session.key('C-u');
         await settledCapture(session);
         session.key('Escape');
