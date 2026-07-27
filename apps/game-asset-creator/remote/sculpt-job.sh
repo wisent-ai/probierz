@@ -51,11 +51,20 @@ echo "addon.py: $ADDON_PY"
 
 BLENDER_BIN="$(command -v blender)"
 "$BLENDER_BIN" -b --python-expr "
-import bpy
+import bpy, re
 bpy.ops.preferences.addon_install(filepath='$ADDON_PY', overwrite=True)
+# The upstream addon reads scene.blendermcp_use_* directly; a scene reset
+# (or factory-settings call) wipes those and kills its server thread.
+# Patch all reads to getattr-with-default BEFORE enabling (learned the hard way).
+import addon as _a
+src = _a.__file__
+code = open(src).read()
+for attr in ['blendermcp_use_polyhaven','blendermcp_use_hyper3d','blendermcp_use_sketchfab','blendermcp_use_hunyuan3d']:
+    code = code.replace(f'bpy.context.scene.{attr}', f'getattr(bpy.context.scene, \"{attr}\", False)')
+open(src, 'w').write(code)
 bpy.ops.preferences.addon_enable(module='addon')
 bpy.ops.wm.save_userpref()
-print('addon installed+enabled')
+print('addon installed+patched+enabled')
 "
 
 # --- 3. Blender with the addon's socket server, in the background ---
