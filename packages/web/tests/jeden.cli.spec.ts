@@ -203,9 +203,11 @@ test.describe('jeden cli (network)', () => {
     expect(out).toContain('Show all');
   });
 
-  test('/model shows provider summary rows', () => {
+  test('/model groups models by provider with counts', () => {
     const out = runJeden([], { cwd: tmpCwd(), input: '/model\n' });
-    expect(/● .+ — \d+ models? · your subscription/.test(out)).toBe(true);
+    // Interactively the providers are the picker's left pane; piped text has
+    // no panes, so the same grouping arrives as section headers with counts.
+    expect(/── \S+ \(\d+\) ──/.test(out)).toBe(true);
     expect(/○ catalog — \d+ models? · no credentials/.test(out)).toBe(true);
   });
 

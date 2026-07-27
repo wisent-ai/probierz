@@ -58,7 +58,10 @@ const PROFILES: AppProfile[] = [
     name: 'jeden',
     start: () => TuiSession.jeden(),
     ready: /Tips|Welcome back/,
-    modelCommand: '/model --all',
+    // The BARE command, because that is what a user types. Asserting the
+    // structure of `/model --all` only proved the flag's layout: the plain
+    // view stayed a flat list for a full release while this row was green.
+    modelCommand: '/model',
     modelTitle: /Select model route/,
     modelFooter: /Esc close/,
     settingsCommand: '/settings',
