@@ -37,7 +37,7 @@ import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun, submitRemoteAuthor } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
-import { existsSync, lstatSync, renameSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -473,19 +473,32 @@ async function main() {
     if (!existsSync(hooksDir)) throw configError(`not a git working tree: ${repo}`);
     const target = path.join(hooksDir, "pre-push");
     const backup = path.join(hooksDir, "pre-push.before-probierz-gate");
+    const managedMarker = "# managed-by: probierz-prepush-gate";
+    const managedCommand = path.join(AGENT_DIR, "prepush-gate.mjs");
     const present = (file) => {
       try { lstatSync(file); return true; } catch { return false; }
     };
-    if (present(target) && !present(backup)) renameSync(target, backup);
+    const managed = (file) => {
+      try {
+        const content = readFileSync(file, "utf8");
+        return content.includes(managedMarker)
+          || (content.includes(managedCommand) && content.includes("--hook --app"));
+      } catch {
+        return false;
+      }
+    };
+    if (present(backup) && managed(backup)) unlinkSync(backup);
+    if (present(target) && !present(backup) && !managed(target)) renameSync(target, backup);
     const script = [
       "#!/bin/sh",
+      managedMarker,
       'HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)',
       'if [ -f "$HOOK_DIR/pre-push.before-probierz-gate" ]; then',
       '  "$HOOK_DIR/pre-push.before-probierz-gate" "$@" || exit $?',
       "fi",
       'GATE_CI="--ci"',
       'if [ "${PROBIERZ_GATE_NO_CI:-}" = "1" ]; then GATE_CI=""; fi',
-      `exec node ${path.join(AGENT_DIR, "prepush-gate.mjs")} --hook --app ${appId} $GATE_CI`,
+      `exec node ${managedCommand} --hook --app ${appId} $GATE_CI`,
       "",
     ].join("\n");
     mkdirSync(hooksDir, { recursive: true });
