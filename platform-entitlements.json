@@ -1,0 +1,11 @@
+{
+  "schema": "wisent.product-entitlements.current",
+  "product": "probierz",
+  "organization_id": "WISENT_ORGANIZATION_ID for hosted operations",
+  "principal_id": "authenticated author or operator identity",
+  "community": ["probierz.local"],
+  "managed": ["probierz.hosted-execution", "probierz.organization-gates", "probierz.dedicated-workers"],
+  "managed_failure": "hosted execution and retained evidence access fail closed",
+  "community_failure": "local runners, receipts, and gate evaluation remain available",
+  "billing_unit": "hosted concurrency, execution, or retained evidence storage"
+}
