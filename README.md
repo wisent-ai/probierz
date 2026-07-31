@@ -78,3 +78,11 @@ apps/             drop your .app / .apk / .ipa / .exe here (gitignored)
 Each package ships a runnable example/smoke test and is configured entirely via
 environment variables — no hardcoded targets. Fill in selectors in the
 `test/specs/*.e2e.ts` files for your own app.
+
+## Project status and support
+
+Probierz is public development source. Local execution, the evidence contract, and gate evaluation are available under the Apache License 2.0. No stable hosted service or supported public binary release is currently promised.
+
+- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
+- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
+- License: Apache License 2.0; see [`LICENSE`](LICENSE)
