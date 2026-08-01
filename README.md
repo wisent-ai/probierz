@@ -1,5 +1,13 @@
 # Probierz
 
+<!-- wisent-readme-signals:start -->
+[![Release](https://img.shields.io/github/v/release/wisent-ai/probierz?display_name=tag&sort=semver)](https://github.com/wisent-ai/probierz/releases)
+[![Downloads](https://img.shields.io/github/downloads/wisent-ai/probierz/total)](https://github.com/wisent-ai/probierz/releases)
+[![License](https://img.shields.io/github/license/wisent-ai/probierz)](https://github.com/wisent-ai/probierz)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Wisent-5865F2?logo=discord&logoColor=white)](https://discord.gg/qRjpkthq54)
+<!-- wisent-readme-signals:end -->
+
+
 Cross-platform test automation toolkit. One TypeScript/Node monorepo (npm
 workspaces) covering **web**, **mobile (iOS + Android)** and **desktop (Electron
 + native macOS/Windows)**.
