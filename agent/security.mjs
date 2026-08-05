@@ -159,13 +159,27 @@ function acceptable(value) {
     || /^<[^>]+>$/.test(value);
 }
 
+function relativePath(root, file) {
+  return path.relative(root, file).split(path.sep).join("/");
+}
+
+function generatedReportAsset(file) {
+  return file.startsWith("html-report/trace/assets/");
+}
+
 export async function scanSecrets(root) {
   const absolute = path.resolve(root);
   if (!existsSync(absolute) || !statSync(absolute).isDirectory()) throw new Error(`secret scan root is not a directory: ${root}`);
   const findings = [];
   let scannedFiles = 0;
   let skippedBinary = 0;
+  let skippedGenerated = 0;
   for (const file of filesBelow(absolute)) {
+    const relative = relativePath(absolute, file);
+    if (generatedReportAsset(relative)) {
+      skippedGenerated += 1;
+      continue;
+    }
     if (binary(file)) {
       skippedBinary += 1;
       continue;
@@ -182,7 +196,7 @@ export async function scanSecrets(root) {
           if (acceptable(value)) continue;
           findings.push({
             rule: rule.id,
-            file: path.relative(absolute, file).split(path.sep).join("/"),
+            file: relative,
             line: lineNumber,
             column: match.index + 1,
             fingerprintSha256: sha256(value),
@@ -202,6 +216,7 @@ export async function scanSecrets(root) {
     scannedAt: new Date().toISOString(),
     scannedFiles,
     skippedBinary,
+    skippedGenerated,
     passed: findings.length === 0,
     findings,
   };
