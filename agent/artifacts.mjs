@@ -142,6 +142,25 @@ async function protectRunImpl({ appId, runId, kind, keyFile, removePlaintext = f
   const days = retentionDays(manifest, retentionKind);
   const key = keyFromFile(keyFile || process.env.PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE);
   const currentManifest = JSON.parse(readFileSync(run.manifestPath, "utf8"));
+  const primaryRepository = (run.source?.repositories || []).find((repository) => repository.index === 0)
+    || run.source?.repositories?.[0]
+    || null;
+  const journeyIdentities = run.journeys.flatMap((name) => {
+    const journey = manifest.journeys[name];
+    return journey?.journeyId ? [{
+      name,
+      journeyId: journey.journeyId,
+      journeyVersion: journey.journeyVersion,
+      journeyVersionId: journey.journeyVersionId,
+      firstSuccessFact: journey.firstSuccessFact,
+      screenId: journey.publication?.screenId || null,
+    }] : [];
+  });
+  const evidenceLevel = run.status !== "passed"
+    ? "E0"
+    : run.conditions?.record && run.evidence?.report && run.evidence?.analysis && run.evidence?.capturePresent
+      ? "E3"
+      : "E2";
   if (currentManifest.protection?.plaintextRemoved) {
     const protectedArtifact = currentManifest.protection;
     if (!existsSync(protectedArtifact.file)) throw new Error("plaintext was removed but the encrypted evidence bundle is missing");
@@ -175,6 +194,7 @@ async function protectRunImpl({ appId, runId, kind, keyFile, removePlaintext = f
       file: destination,
       bytes: statSync(destination).size,
       sha256: await sha256File(destination),
+      contentIndexSha256: existingHeader.contentIndexSha256,
       keyFingerprintSha256: existingHeader.keyFingerprintSha256,
       expiresAt: existingHeader.expiresAt,
       retentionDays: existingHeader.retentionDays,
@@ -194,11 +214,19 @@ async function protectRunImpl({ appId, runId, kind, keyFile, removePlaintext = f
   mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
   const temporary = `${destination}.tmp-${process.pid}-${Date.now()}`;
   const header = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: "probierz-encrypted-evidence",
     algorithm: "AES-256-GCM",
     appId,
     runId,
+    attemptId: runId,
+    productId: manifest.productId || appId,
+    releaseVersion: currentManifest.appVersion || currentManifest.conditions?.PROBIERZ_RELEASE || null,
+    sourceRevision: primaryRepository?.gitSha || null,
+    sourceSha256: run.source?.sha256 || null,
+    buildSha256: run.build?.sha256 || null,
+    evidenceLevel,
+    journeys: journeyIdentities,
     runKind: retentionKind,
     createdAt: new Date().toISOString(),
     expiresAt: expiresAt(run.completedAt || run.startedAt, days),
@@ -239,6 +267,7 @@ async function protectRunImpl({ appId, runId, kind, keyFile, removePlaintext = f
     file: destination,
     bytes: statSync(destination).size,
     sha256: await sha256File(destination),
+    contentIndexSha256: header.contentIndexSha256,
     keyFingerprintSha256: header.keyFingerprintSha256,
     expiresAt: header.expiresAt,
     retentionDays: days,

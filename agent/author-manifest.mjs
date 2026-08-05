@@ -5,12 +5,12 @@
 // rounds feed the validator's errors back into the next brief. With
 // --specs the pipeline continues into author-spec for every declared
 // journey, so declaration and coverage are both automatic.
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { APPS_ROOT, loadAppManifest } from "./apps.mjs";
-import { authorSpec, draftWithModel, probeNative, probeTui, probeWeb } from "./author-spec.mjs";
+import { authorSpec, probeNative, probeTui, probeWeb } from "./author-spec.mjs";
+import { draftStructuredArtifact } from "./model-router.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -52,17 +52,22 @@ function buildManifestBrief({ appId, owner, desc, probe, trees, repositories, ta
     "Output contract (the file is validated strictly):",
     "schemaVersion: 1",
     `appId: ${appId}`,
+    `productId: ${appId}`,
     `owner: ${owner}`,
     "repositories: one entry per repository root above (absolute path, mappings with path globs -> journeys)",
     `surfaces: include the "${target}" surface with a spec filename and the journeys it covers`,
-    "journeys: 3-8 critical user journeys, kebab-case names, each with owner, timeoutMs, and a one-line",
-    "  'description' of the user goal (used later to author the spec)",
+    "journeys: include onboarding-first-use plus 2-7 other critical journeys; every journey has owner, timeoutMs,",
+    "  and a one-line description. onboarding-first-use additionally has journeyId, a release-string",
+    "  journeyVersion, UUID journeyVersionId, firstSuccessFact, and publication with screenId, artifactKinds",
+    "  (screenshot|recording|trace), minimumEvidence (E2|E3), and redactionRequired. Use trace/E2 when the",
+    "  driver has no recording capability; never claim unsupported recording.",
+    "artifacts: retain positive pullRequestDays: 14, nightlyDays: 30, adhocDays: 7; redact TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH",
     "pullRequestPolicy: minimumEvidence E2",
     "",
     "Rules:",
     "- Journeys are critical user paths visible in the probe or implied by the app description, not features.",
     "- Mapping paths must be real paths from the repository layout above (globs ending in /** allowed).",
-    "- Write ONLY the manifest YAML to the file path given at the end.",
+    "- Return the complete manifest through submit_probierz_manifest; do not modify files or use Markdown fences.",
   ];
   if (previousDraft && errors.length) {
     lines.push("", `Round ${round}: the previous draft FAILED validation. Fix it.`, "--- DRAFT ---", previousDraft, "--- VALIDATION ERRORS ---", ...errors);
@@ -72,7 +77,7 @@ function buildManifestBrief({ appId, owner, desc, probe, trees, repositories, ta
   return lines.join("\n");
 }
 
-export async function authorManifest({ appId, desc, owner = null, repositories, target, baseUrl = null, appPath = null, model = "codex", dryRun = false, withSpecs = false }) {
+export async function authorManifest({ appId, desc, owner = null, repositories, target, baseUrl = null, appPath = null, dryRun = false, withSpecs = false }) {
   if (!appId || !desc) throw new Error("authorManifest needs appId and desc");
   if (!Array.isArray(repositories) || !repositories.length) throw new Error("authorManifest needs at least one repository");
   if (target !== "web" && target !== "electron" && !appPath) throw new Error(`${target} needs --app-path`);
@@ -89,11 +94,21 @@ export async function authorManifest({ appId, desc, owner = null, repositories, 
   let errors = [];
   let lastError = null;
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const brief = `${buildManifestBrief({ appId, owner: resolvedOwner, desc, probe, trees, repositories, target, round, previousDraft, errors })}\n\nWrite the manifest to exactly this file: ${stagedPath}`;
+    const brief = `${buildManifestBrief({ appId, owner: resolvedOwner, desc, probe, trees, repositories, target, round, previousDraft, errors })}\n\nCall submit_probierz_manifest exactly once with the complete YAML manifest.`;
     if (dryRun) return { ok: true, dryRun: true, brief, stagedPath };
-    const drafted = draftWithModel(model, brief, stagedDir);
-    if (!existsSync(stagedPath)) {
-      return { ok: false, reason: "model did not write the manifest", agentExit: drafted.status };
+    try {
+      const drafted = await draftStructuredArtifact({
+        brief,
+        toolName: "submit_probierz_manifest",
+        description: "Submit the complete YAML Probierz app manifest for the current authoring round.",
+      });
+      writeFileSync(stagedPath, drafted.content);
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "Stado model-router authoring failed",
+        detail: error instanceof Error ? error.message : String(error),
+      };
     }
     previousDraft = readFileSync(stagedPath, "utf8");
     const manifestDir = path.join(APPS_ROOT, appId);
@@ -110,7 +125,7 @@ export async function authorManifest({ appId, desc, owner = null, repositories, 
         for (const journey of result.journeys) {
           const goal = written.journeys[journey]?.description || journey;
           const authored = await authorSpec({
-            appId, journey, target, desc: goal, baseUrl, appPath, model,
+            appId, journey, target, desc: goal, baseUrl, appPath,
           });
           result.specs.push({ journey, ok: authored.ok === true, spec: authored.spec || null, reason: authored.reason || null });
         }

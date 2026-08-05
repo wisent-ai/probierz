@@ -6,6 +6,15 @@ import { parse } from "yaml";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const APPS_ROOT = path.resolve(HERE, "..", "apps");
 const SENSITIVE_KEY = /(auth|cookie|credential|email|key|otp|password|pii|secret|session|token)/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PUBLICATION_ARTIFACT_KINDS = new Set(["screenshot", "recording", "trace"]);
+const RECORDING_TARGETS = new Set(["web", "mobile:ios", "mobile:android", "desktop:mac", "desktop:win"]);
+
+export function targetSupportsArtifactKind(target, kind) {
+  if (!PUBLICATION_ARTIFACT_KINDS.has(kind)) return false;
+  return kind !== "recording" || RECORDING_TARGETS.has(target);
+}
+
 
 function manifestPath(appId) {
   const clean = String(appId || "").trim();
@@ -25,6 +34,26 @@ function validateManifest(document, file) {
   requireValue(Array.isArray(document.repositories) && document.repositories.length > 0, `${file} repositories are required`);
   requireValue(document.surfaces && typeof document.surfaces === "object", `${file} surfaces are required`);
   requireValue(document.journeys && typeof document.journeys === "object", `${file} journeys are required`);
+  const firstUse = document.journeys["onboarding-first-use"];
+  if (firstUse) {
+    requireValue(/^[a-z0-9][a-z0-9._-]*$/i.test(document.productId || ""), `${file} productId is required and must be stable for onboarding-first-use`);
+    for (const name of ["pullRequestDays", "nightlyDays", "adhocDays"]) {
+      requireValue(
+        Number.isFinite(Number(document.artifacts?.retain?.[name])) && Number(document.artifacts.retain[name]) > 0,
+        `${file} artifacts.retain.${name} is required and must be positive for onboarding-first-use`,
+      );
+    }
+    requireValue(
+      Array.isArray(document.artifacts?.redact)
+        && document.artifacts.redact.length > 0
+        && document.artifacts.redact.every((name) => typeof name === "string" && name.length > 0),
+      `${file} artifacts.redact must contain redaction keys for onboarding-first-use`,
+    );
+    for (const name of ["TOKEN", "SECRET", "PASSWORD", "KEY", "COOKIE", "AUTH"]) {
+      requireValue(document.artifacts.redact.includes(name), `${file} artifacts.redact must include ${name} for onboarding-first-use`);
+    }
+  }
+
 
   for (const repository of document.repositories) {
     requireValue(typeof repository.root === "string" && path.isAbsolute(repository.root), `${file} repository root must be absolute`);
@@ -62,6 +91,37 @@ function validateManifest(document, file) {
     requireValue(journey && typeof journey === "object", `${file} journey ${name} must be an object`);
     requireValue(typeof journey.owner === "string" && journey.owner.length > 0, `${file} journey ${name} owner is required`);
     requireValue(Number(journey.timeoutMs) > 0, `${file} journey ${name} timeoutMs must be positive`);
+    const hasJourneyIdentity = ["journeyId", "journeyVersion", "journeyVersionId", "firstSuccessFact"]
+      .some((field) => journey[field] !== undefined);
+    if (name === "onboarding-first-use" || hasJourneyIdentity) {
+      requireValue(typeof journey.journeyId === "string" && journey.journeyId.length > 0, `${file} journey ${name} journeyId is required`);
+      requireValue(typeof journey.journeyVersion === "string" && journey.journeyVersion.length > 0, `${file} journey ${name} journeyVersion is required`);
+      requireValue(UUID.test(journey.journeyVersionId || ""), `${file} journey ${name} journeyVersionId must be a UUID`);
+      requireValue(typeof journey.firstSuccessFact === "string" && journey.firstSuccessFact.length > 0, `${file} journey ${name} firstSuccessFact is required`);
+    }
+    if (name === "onboarding-first-use") {
+      requireValue(journey.publication && typeof journey.publication === "object", `${file} journey ${name} publication is required`);
+    }
+    if (journey.publication) {
+      const publication = journey.publication;
+      requireValue(hasJourneyIdentity || name === "onboarding-first-use", `${file} journey ${name} publication requires immutable journey identity`);
+      requireValue(typeof document.productId === "string" && document.productId.length > 0, `${file} journey ${name} publication requires productId`);
+      requireValue(typeof publication.screenId === "string" && publication.screenId.length > 0, `${file} journey ${name} publication.screenId is required`);
+      requireValue(Array.isArray(publication.artifactKinds) && publication.artifactKinds.length > 0, `${file} journey ${name} publication.artifactKinds are required`);
+      requireValue(new Set(publication.artifactKinds).size === publication.artifactKinds.length, `${file} journey ${name} publication.artifactKinds must be unique`);
+      for (const kind of publication.artifactKinds) {
+        requireValue(PUBLICATION_ARTIFACT_KINDS.has(kind), `${file} journey ${name} publication artifact kind ${kind} is unsupported`);
+      }
+      requireValue(["E2", "E3"].includes(publication.minimumEvidence), `${file} journey ${name} publication.minimumEvidence must be E2 or E3`);
+      requireValue(typeof publication.redactionRequired === "boolean", `${file} journey ${name} publication.redactionRequired must be boolean`);
+    }
+  }
+  for (const [name, journey] of Object.entries(document.journeys)) {
+    if (!journey.publication?.artifactKinds?.includes("recording")) continue;
+    const targets = Object.entries(document.surfaces)
+      .filter(([, surface]) => surface.journeys.includes(name))
+      .map(([target]) => target);
+    requireValue(targets.some((target) => targetSupportsArtifactKind(target, "recording")), `${file} journey ${name} claims recording but none of its drivers support recording`);
   }
   for (const [key, reference] of Object.entries(document.secretRefs || {})) {
     requireValue(typeof reference === "string" && reference.startsWith("vault://"), `${file} secretRefs.${key} must be a vault:// reference`);

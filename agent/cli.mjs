@@ -11,6 +11,7 @@
 //   probierz setup <target>       — install the parts probierz owns (browsers/drivers)
 //   probierz run <target> [opts]  — EXECUTE a target (preflight-gated), auto-analyze
 //   probierz analyze <report> [dir] — parse a report + inventory media
+//   probierz readme-gif <video> --out <gif> — publish one bounded journey demo
 //   probierz affected [ref]       — which targets a change touched (git diff, or --files)
 //   probierz ci [ref] [opts]      — change-driven pass: affected -> run ready -> analyze
 //
@@ -19,6 +20,7 @@
 import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
 import { appSourceIdentity, completeRun, runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
+import { createReadmeGif } from "./readme-gif.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
 import { affectedFromGit, affectedTargets } from "./affected.mjs";
 import { orchestrate } from "./orchestrate.mjs";
@@ -27,6 +29,7 @@ import { validateAccessibility } from "./accessibility.mjs";
 import { compareRuns, lastGreen, runHistory } from "./history.mjs";
 import { createReceipt, verifyReceipt } from "./receipt.mjs";
 import { createOnboardingPublication } from "./onboarding-publication.mjs";
+import { createPublicationManifest } from "./publication.mjs";
 import { dashboardProjection } from "./dashboard.mjs";
 import { planMatrix, runMatrix } from "./matrix.mjs";
 import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
@@ -38,6 +41,7 @@ import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun, submitRemoteAuthor } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
+import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,12 +65,12 @@ function usage() {
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
-      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--model codex|kimi] [--rounds N] [--dry-run]  autonomously draft a journey spec, verify it with a real run, keep it green",
-      "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--model codex|kimi] [--specs] [--dry-run]  autonomously draft the app journey manifest, then optionally cover every journey with author-spec",
+      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  draft through the authenticated Stado model router, verify with a real run, keep it green",
+      "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--node-source --app-repo p [--env K=V ...] [--config-file f] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
-      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--model codex|kimi] [--host h] [--app-bundle-path p] [--app-repo r] [--no-watch]  author a journey spec on a chosen stado host; the accepted spec + manifest land back in this checkout",
+      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-bundle-path p] [--app-repo r] [--no-watch]  author on a Stado host with a scoped model-router token; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -82,12 +86,14 @@ function usage() {
       "  probierz receipt <appId> <release> <harnessSha256> --source-sha SHA256 --runs ids  sign evidence receipt",
       "  probierz verify-receipt <file>  verify signature, trust, and payload hash",
       "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",
+      "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
       "  probierz describe <spec>      static outline of a spec file",
       "  probierz cmd <target>         exact command to run a target (prints only)",
       "  probierz check <target>       is the toolchain ready + how to fix what is missing",
       "  probierz setup <target>       install the parts probierz owns (browsers/appium drivers)",
       "  probierz run <target> [opts]  execute a target (preflight-gated), capture result, auto-analyze",
       "  probierz analyze <report> [dir]  parse a report + inventory media",
+      "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
@@ -102,6 +108,36 @@ function configError(message) {
   error.exitCode = Number("2");
   return error;
 }
+
+/**
+ * A remote run that did not complete. The state is already classified by the
+ * stado bridge, so the only decision left is which exit code says it: 69 when
+ * the queue or the object store is simply unavailable, 1 when the job itself
+ * failed. A wrapper script can back off on the first and stop on the second
+ * without reading a single line of output.
+ */
+function remoteExit(result) {
+  if (result.state === "completed") return;
+  process.stderr.write(`${result.failure?.message || `Remote run ended as "${result.state}".`}\n`);
+  process.exitCode = result.failure?.retryable ? EXIT_RETRY : Number("1");
+}
+
+function validateAuthorOptions(args, { positionalCount, valueFlags, booleanFlags }) {
+  const values = new Set(valueFlags);
+  const booleans = new Set(booleanFlags);
+  for (let index = positionalCount; index < args.length; index += Number("1")) {
+    const arg = args[index];
+    if (booleans.has(arg)) continue;
+    if (values.has(arg)) {
+      const value = args[index + Number("1")];
+      if (value === undefined || value.startsWith("--")) throw configError(`${arg} needs a value`);
+      index += Number("1");
+      continue;
+    }
+    throw configError(arg.startsWith("--") ? `unknown option: ${arg}` : `unexpected argument: ${arg}`);
+  }
+}
+
 
 
 // Split execution args into flags and an env map. Unknown flags are rejected so
@@ -164,6 +200,34 @@ function parseRunArgs(rest, { allowPositionals = false } = {}) {
     throw configError("--resource-wait needs a non-negative number");
   }
   return opts;
+}
+
+function parseReadmeGifArgs(rest) {
+  const input = rest["".length];
+  if (!input || input.startsWith("--")) throw configError("readme-gif needs an input video");
+  const options = { input, output: undefined, force: false };
+  const valueFlags = new Map([
+    ["--out", "output"],
+    ["--start", "startSeconds"],
+    ["--duration", "durationSeconds"],
+    ["--fps", "framesPerSecond"],
+    ["--width", "width"],
+  ]);
+  for (let index = "x".length; index < rest.length; index += "x".length) {
+    const flag = rest[index];
+    if (flag === "--force") {
+      options.force = true;
+      continue;
+    }
+    const key = valueFlags.get(flag);
+    if (!key) throw configError(flag.startsWith("--") ? `unknown option: ${flag}` : `unexpected argument: ${flag}`);
+    const value = rest[index + "x".length];
+    if (value === undefined || value.startsWith("--")) throw configError(`${flag} needs a value`);
+    options[key] = value;
+    index += "x".length;
+  }
+  if (!options.output) throw configError("readme-gif needs --out <file.gif>");
+  return options;
 }
 
 function filesAfterFlag(args) {
@@ -295,6 +359,11 @@ async function main() {
       return index >= 0 ? rest[index + 1] : undefined;
     };
     if (sub === "author") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("3"),
+        valueFlags: ["--target", "--desc", "--app-bundle-path", "--app-repo", "--host"],
+        booleanFlags: ["--no-watch"],
+      });
       const appId = rest[1];
       const journey = rest[2];
       if (!appId || appId.startsWith("--") || !journey || journey.startsWith("--")) {
@@ -312,14 +381,13 @@ async function main() {
         journey,
         target,
         desc,
-        model: value("--model") || "codex",
         host: value("--host") || "stado:gcp",
         provision,
         appRepo: value("--app-repo") || null,
         watch: !rest.includes("--no-watch"),
       });
       out(result);
-      if (result.state !== "completed") process.exitCode = Number("1");
+      remoteExit(result);
       return;
     }
     const target = rest[1];
@@ -341,7 +409,6 @@ async function main() {
               kind: "node-source",
               appId,
               env: envFlags,
-              configFile: value("--config-file") || null,
               script: scriptPath,
             }
           : null;
@@ -359,10 +426,15 @@ async function main() {
       mode: scriptPath ? "script" : "run",
     });
     out(result);
-    if (result.state !== "completed") process.exitCode = Number("1");
+    remoteExit(result);
     return;
   }
   if (cmd === "author-manifest") {
+    validateAuthorOptions(rest, {
+      positionalCount: Number("1"),
+      valueFlags: ["--desc", "--target", "--repo", "--owner", "--base-url", "--app-path"],
+      booleanFlags: ["--dry-run", "--specs"],
+    });
     const appId = rest[0];
     if (!appId || appId.startsWith("--")) throw configError("author-manifest needs an app ID");
     const value = (flag) => {
@@ -389,7 +461,6 @@ async function main() {
       target,
       baseUrl: value("--base-url") || null,
       appPath: value("--app-path") || null,
-      model: value("--model") || "codex",
       dryRun: rest.includes("--dry-run"),
       withSpecs: rest.includes("--specs"),
     });
@@ -398,6 +469,11 @@ async function main() {
     return;
   }
   if (cmd === "author-spec") {
+    validateAuthorOptions(rest, {
+      positionalCount: Number("2"),
+      valueFlags: ["--desc", "--target", "--paths", "--base-url", "--app-path", "--rounds"],
+      booleanFlags: ["--dry-run"],
+    });
     const appId = rest[0];
     const journey = rest[1];
     if (!appId || appId.startsWith("--") || !journey || journey.startsWith("--")) {
@@ -426,7 +502,6 @@ async function main() {
       baseUrl: value("--base-url") || null,
       appPath: value("--app-path") || null,
       mappingPaths,
-      model: value("--model") || "codex",
       rounds: Number(value("--rounds")) || Number("3"),
       dryRun: rest.includes("--dry-run"),
     });
@@ -607,7 +682,7 @@ async function main() {
     };
     const runIds = String(value("--runs") || "").split(",").filter(Boolean);
     const requiredJourneys = String(value("--journeys") || "").split(",").filter(Boolean);
-    const result = createReceipt({
+    const result = await createReceipt({
       appId,
       release,
       expectedHarnessSha,
@@ -618,6 +693,27 @@ async function main() {
     });
     out(result);
     if (!result.receipt.verdict.passed) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "publication") {
+    const [receiptFile, attemptId, journeyId] = rest;
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= 0 ? rest[index + 1] : undefined;
+    };
+    const assetsFile = value("--assets");
+    if (!receiptFile || !attemptId || !journeyId || !assetsFile) {
+      throw configError("publication needs receipt, attemptId, journeyId, and --assets <json>");
+    }
+    const assets = JSON.parse(readFileSync(assetsFile, "utf8"));
+    out(createPublicationManifest({
+      receiptFile,
+      attemptId,
+      journeyId,
+      assets,
+      trustedPublicKeyFile: value("--public-key"),
+      expectedFingerprint: value("--fingerprint"),
+    }));
     return;
   }
   if (cmd === "verify-receipt") {
@@ -742,6 +838,10 @@ async function main() {
     out(analyzeRun({ reportPath, artifactsDir, tool: opts.tool, frames: opts.frames }));
     return;
   }
+  if (cmd === "readme-gif") {
+    out(await createReadmeGif(parseReadmeGifArgs(rest)));
+    return;
+  }
   if (cmd === "affected") {
     // probierz affected [ref] [--files a b c ...]
     const files = filesAfterFlag(rest);
@@ -783,6 +883,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  process.stderr.write(`probierz: ${err instanceof Error ? err.message : String(err)}\n`);
-  process.exitCode = Number(err?.exitCode || "1");
+  // The single boundary where an unhandled failure becomes an answer. A bare
+  // `err.message` used to land here — a string that never told the operator
+  // whether probierz was broken or their command was. Now: one structured
+  // line, one sentence, one meaningful exit code.
+  process.exitCode = reportBoundaryFailure(err, `probierz ${process.argv.slice(Number("2")).join(" ") || "<no command>"}`);
 });
