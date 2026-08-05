@@ -3,7 +3,7 @@
 // Playwright reporter emits), so run analysis treats TUI coverage like any
 // other surface. A spec passes when it exits zero; stderr becomes the row error.
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,19 +30,55 @@ function clipRowError(text) {
   return `${text.slice(0, Number("600"))}\n…\n${text.slice(-Number("1400"))}`;
 }
 
+const captureErrors = [];
+
 const rows = [];
 for (const file of files) {
+  const title = file.replace(/\.spec\.mjs$/, "");
   const startedAt = new Date().toISOString();
   const started = Date.now();
+  const mediaManifestPath = path.join(artifacts, ".media", `${title}.json`);
+  rmSync(mediaManifestPath, { force: true });
   const child = spawnSync(process.execPath, [path.join(SPECS_DIR, file)], {
     encoding: "utf8",
-    env: { ...process.env, PROBIERZ_ARTIFACTS: artifacts, PROBIERZ_SPEC_NAME: file.replace(/\.spec\.mjs$/, "") },
+    env: {
+      ...process.env,
+      PROBIERZ_ARTIFACTS: artifacts,
+      PROBIERZ_MEDIA_MANIFEST: mediaManifestPath,
+      PROBIERZ_SPEC_NAME: title,
+    },
     maxBuffer: Number("33554432"),
   });
   const duration = Date.now() - started;
   const status = child.status === 0 ? "passed" : "failed";
+  let media = [];
+  if (existsSync(mediaManifestPath)) {
+    try {
+      const declared = JSON.parse(readFileSync(mediaManifestPath, "utf8"));
+      if (!Array.isArray(declared)) throw new Error("media manifest must be an array");
+      const artifactsRoot = path.resolve(artifacts);
+      media = declared.map((entry) => {
+        if (!entry || typeof entry !== "object") throw new Error("media entry must be an object");
+        if (!["screenshot", "trace", "video"].includes(entry.kind)) {
+          throw new Error(`unsupported media kind ${entry.kind}`);
+        }
+        const resolved = path.resolve(String(entry.file || ""));
+        if (resolved !== artifactsRoot && !resolved.startsWith(`${artifactsRoot}${path.sep}`)) {
+          throw new Error("media path escapes the artifacts directory");
+        }
+        if (!existsSync(resolved)) throw new Error(`declared media does not exist: ${resolved}`);
+        return {
+          file: resolved,
+          kind: entry.kind,
+          ...(entry.contentType ? { contentType: String(entry.contentType) } : {}),
+        };
+      });
+    } catch (error) {
+      captureErrors.push(`${title}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   rows.push({
-    title: file.replace(/\.spec\.mjs$/, ""),
+    title,
     passed: status === "passed",
     status,
     flaky: false,
@@ -51,7 +87,7 @@ for (const file of files) {
     startedAt,
     completedAt: new Date(started + duration).toISOString(),
     error: status === "failed" ? clipRowError(String(child.stderr || child.stdout || "")) : null,
-    media: [],
+    media,
   });
 }
 
@@ -59,7 +95,7 @@ mkdirSync(path.dirname(reportPath), { recursive: true });
 const passed = rows.filter((row) => row.status === "passed").length;
 const skipped = Number("0");
 writeFileSync(reportPath, `${JSON.stringify({
-  probierz: { runId: process.env.PROBIERZ_RUN_ID || null },
+  probierz: { runId: process.env.PROBIERZ_RUN_ID || null, captureErrors },
   total: rows.length,
   passed,
   failed: rows.length - passed - skipped,
