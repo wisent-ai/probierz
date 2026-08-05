@@ -139,6 +139,30 @@ function traceEvents(traceFile, fallbackAt, diagnostics) {
     return [];
   }
 }
+function jsonTraceEvents(traceFile, fallbackAt, diagnostics) {
+  try {
+    const document = JSON.parse(readFileSync(traceFile, "utf8"));
+    if (
+      document?.schemaVersion !== 1
+      || typeof document.kind !== "string"
+      || !document.kind.startsWith("probierz-")
+      || document.status !== "completed"
+    ) {
+      throw new Error("invalid Probierz JSON trace");
+    }
+    return [{
+      at: iso(document.completedAt, fallbackAt),
+      type: "observation",
+      source: path.basename(traceFile),
+      status: document.status,
+      message: safeMessage(document.observation?.reply || "").slice(0, 2000),
+    }];
+  } catch (error) {
+    diagnostics.push({ artifact: traceFile, error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
 
 function logEvents(file, source) {
   if (!file || !existsSync(file)) return [];
@@ -183,7 +207,11 @@ export function buildTimeline({ report, summary, media, artifactsDir, stdoutPath
       missing: Boolean(item.missing),
     });
     if (item.kind === "trace" && existsSync(item.file)) {
-      events.push(...traceEvents(item.file, at, diagnostics));
+      events.push(...(
+        item.contentType === "application/json"
+          ? jsonTraceEvents(item.file, at, diagnostics)
+          : traceEvents(item.file, at, diagnostics)
+      ));
     }
   }
   events.sort((left, right) => left.at.localeCompare(right.at) || left.type.localeCompare(right.type));
