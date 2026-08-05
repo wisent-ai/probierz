@@ -1,88 +1,374 @@
 # Probierz
 
-Cross-platform test automation toolkit. One TypeScript/Node monorepo (npm
-workspaces) covering **web**, **mobile (iOS + Android)** and **desktop (Electron
-+ native macOS/Windows)**.
+**Probierz is a cross-platform quality evidence platform that turns user journeys
+into reproducible runs, inspectable artifacts, and enforceable release gates
+across web, Electron, mobile, and native desktop applications.**
 
-| Target | Tool | Package |
-|--------|------|---------|
-| Web (Chromium / Firefox / WebKit + emulated mobile) | Playwright | `packages/web` |
-| Desktop — Electron | Playwright (`_electron`) | `packages/electron` |
-| Mobile — iOS / Android | WebdriverIO + Appium (XCUITest / UiAutomator2) | `packages/mobile` |
-| Desktop — native macOS / Windows | WebdriverIO + Appium Mac2 / WinAppDriver | `packages/desktop-native` |
+Probierz separates deterministic discovery and evidence handling from the
+side-effecting work of setup, execution, authoring, and remote compute.
 
-## Setup
+[Quick start](#quick-start) · [Pipeline](docs/PIPELINE.md) ·
+[Agent interface](skills/probierz/SKILL.md) ·
+[Source and issues](https://github.com/wisent-ai/probierz)
+
+Current proof boundary: source version `0.1.0` provides local execution, evidence,
+receipts, and gate evaluation. No stable public binary or hosted service is
+currently promised.
+
+## Problem and intended users
+
+A release decision usually depends on test definitions, target-specific tooling,
+screenshots, traces, video, source identity, run history, and policy. When those
+pieces live in unrelated scripts and CI logs, teams cannot tell which user
+journeys were exercised, whether evidence belongs to the current source, or why
+a release was allowed.
+
+Probierz serves three audiences:
+
+- **Product and test engineers** define application journeys once and run them
+  across the supported browser, mobile, Electron, and native desktop surfaces.
+- **Release owners** inspect freshness, receipts, regressions, and explicit gate
+  reasons instead of treating a green process exit as sufficient evidence.
+- **Automation and AI agents** discover coverage through stable CLI and MCP
+  contracts without receiving implicit permission to install tools, execute a
+  target, author a specification, or mutate a repository.
+
+Probierz is preferable to disconnected test scripts when the required outcome is
+a source-bound chain from intended journey, through execution and artifacts, to
+one explainable release decision.
+
+## Product boundaries
+
+### Included
+
+- deterministic discovery of supported surfaces, registered applications,
+  specifications, journey outlines, and exact run commands;
+- preflight checks that distinguish missing Probierz-owned tooling from
+  host-level prerequisites;
+- Playwright execution for web and Electron applications;
+- WebdriverIO and Appium execution for iOS, Android, native macOS, and native
+  Windows applications;
+- optional video, trace, screenshot, report, and frame metadata capture where
+  the selected driver supports it, plus bounded README GIF publication from one
+  selected journey recording;
+- application manifests, journey coverage, source identity, run history,
+  comparisons, last-green selection, and evidence dashboards;
+- signed evidence receipts, receipt verification, retention, protected bundles,
+  secret scanning, audit history, and pull-request or release gates;
+- affected-target selection and change-driven orchestration;
+- remote execution and authoring through explicitly selected Stado capacity;
+- specification and manifest authoring through the authenticated Stado model
+  router, followed by deterministic validation and an accepted real run;
+- a human CLI and a stdio MCP server backed by the same agent modules.
+
+### Explicit non-goals
+
+- Probierz is not a unit-test framework and does not replace application-level
+  assertions, fixtures, or accessibility identifiers.
+- Discovery never installs dependencies, starts a driver, executes a suite, or
+  changes an application repository.
+- A generated specification is not trusted merely because a model produced it;
+  acceptance requires the configured validation and execution path.
+- Probierz does not infer release approval from screenshots, prose, or an
+  unverified process exit. Gate inputs must satisfy the evidence contract.
+- Probierz does not provide provider credentials or call model vendors directly.
+  Authoring uses only the authenticated Stado model router.
+- Probierz does not install Xcode, Android SDKs, simulators, physical-device
+  support, WinAppDriver, operating-system permissions, or application runtimes.
+- Probierz does not make Playwright video available for Electron or promise
+  screen recording from drivers that do not expose it.
+- Probierz is not currently a hosted testing service or a supported public
+  binary distribution.
+
+### Supported environments and current capability
+
+| Surface | Execution tool | Required environment | Current state |
+|---|---|---|---|
+| Web | Playwright: Chromium, Firefox, WebKit, emulated mobile | Node.js 22 or newer; installed browser | Implemented |
+| Electron | Playwright `_electron` | Node.js 22 or newer; application entry point | Implemented |
+| Mobile iOS | WebdriverIO, Appium, XCUITest | macOS, Xcode, simulator or authorized device | Implemented when host prerequisites are available |
+| Mobile Android | WebdriverIO, Appium, UiAutomator2 | Android SDK, emulator or authorized device | Implemented when host prerequisites are available |
+| Native macOS | WebdriverIO, Appium Mac2 | macOS target and required Accessibility permission | Implemented when host prerequisites are available |
+| Native Windows | WebdriverIO, WinAppDriver | Windows target, Developer Mode, WinAppDriver | Implemented when host prerequisites are available |
+| Remote execution | Stado bridge | admitted host, capacity, object store, target toolchain | Implemented; availability depends on the selected host |
+| Stable hosted service or public binary | — | — | Not published |
+
+`probierz check <target>` is authoritative for toolchain readiness on the current
+host. Readiness is not evidence that a journey passed; only a completed run can
+produce that evidence.
+
+## Core use cases
+
+### Discover existing journey coverage without executing anything
+
+- **Actor:** a product engineer or automation agent.
+- **Initial state:** a Probierz source checkout and, for product-level coverage,
+  a registered application manifest.
+- **Outcome:** the actor can list surfaces, applications, specifications,
+  journeys, source identity, and exact run commands.
+- **Boundary:** discovery and `check` are read-only; they do not install tooling
+  or run an application.
+
+### Run one journey and preserve its evidence
+
+- **Actor:** a test engineer with an authorized target.
+- **Initial state:** the target-specific preflight passes and the application
+  path, URL, bundle, or package identity is explicit.
+- **Outcome:** Probierz executes the selected specification, records the report
+  and supported media, analyzes the result, and associates it with source and
+  application identity.
+- **Boundary:** execution may drive a real browser, simulator, device, or desktop
+  application; recording support is driver-specific and never upgrades a failed
+  run to success.
+
+### Decide whether current source is eligible to merge or release
+
+- **Actor:** a release owner or repository pre-push gate.
+- **Initial state:** the application manifest defines required journeys and the
+  evidence store contains source-bound runs and receipts.
+- **Outcome:** Probierz reports eligibility and exact blocking reasons such as
+  missing, stale, failing, or identity-mismatched evidence.
+- **Boundary:** evaluate-only inspection is separate from activating or enforcing
+  a repository gate.
+
+### Author a missing manifest or specification
+
+- **Actor:** an explicitly authorized engineer or automation workflow.
+- **Initial state:** the product and journey are described, target coordinates
+  are explicit, and the authenticated Stado model router is configured.
+- **Outcome:** Probierz drafts the artifact, validates its structure, exercises
+  the accepted specification through the real target path, and keeps only the
+  result that satisfies the configured contract.
+- **Boundary:** authoring is side-effecting. The router receives a dedicated
+  router-scoped bearer; Probierz never receives provider credentials.
+
+### Execute on admitted remote capacity
+
+- **Actor:** a release workflow that cannot use the local host.
+- **Initial state:** a Stado host has compatible capacity, toolchain, source, and
+  scoped secret references.
+- **Outcome:** the remote job executes the same target contract and returns its
+  evidence to the configured Probierz object-store path.
+- **Boundary:** selecting a host does not grant broader machine or cloud
+  authority; an unavailable fleet is reported as unavailable, not as empty or
+  successful.
+
+## How Probierz works
+
+```text
+application manifest + required journeys + exact source identity
+                              │
+                              ▼
+                 deterministic discovery / affected
+                              │
+                              ▼
+                  target-specific preflight check
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+               local runner        Stado runner
+                    │                   │
+                    └─────────┬─────────┘
+                              ▼
+            report + screenshots + traces + video metadata
+                              │
+                              ▼
+        analysis + history + comparison + signed evidence receipt
+                              │
+                              ▼
+               status projection and explicit gate verdict
+```
+
+Application manifests define intended journeys and target coordinates. Runner
+modules own execution, analyzers own report and media interpretation, and the
+evidence store owns durable run records and receipts. The dashboard and MCP
+surface are projections over those contracts; they are not alternate sources of
+truth.
+
+Authoring is one layer above deterministic execution: the authenticated model
+router may propose a manifest or specification, but Probierz validates and
+exercises the accepted artifact before it can contribute evidence. Stado owns
+remote capacity and secret materialization; Probierz owns the quality contract
+and returned evidence.
+
+## Quick start
+
+No stable public binary exists. The safe source path below performs discovery
+only: it does not start a browser, install Appium drivers, drive an application,
+or create run evidence.
+
+### Prerequisites
+
+- Git;
+- Node.js 22 or newer;
+- npm;
+- a source checkout of the public repository.
 
 ```bash
-npm run setup     # installs deps + Playwright browsers
+git clone https://github.com/wisent-ai/probierz.git
+cd probierz
+npm install
+node agent/cli.mjs list
+node agent/cli.mjs apps
 ```
 
-Mobile/native also need platform SDKs: Xcode + simulators (iOS), Android SDK +
-emulator (Android), and WinAppDriver + Developer Mode (Windows native).
+Expected result: `list` returns the web, Electron, mobile, and native-desktop
+surfaces with their targets and environment requirements. `apps` returns the
+validated application manifests currently registered in the checkout. Neither
+command executes a test target.
 
-## Running
+### First evidence-producing run
+
+Choose an application and target returned by discovery, then check the exact
+host before running it:
 
 ```bash
-# Web — point at any site
-BASE_URL=https://example.com npm run test:web
-
-# Electron — defaults to the bundled sample app; override with your own entry
-ELECTRON_APP_MAIN=/path/to/app/main.js npm run test:electron
-
-# Mobile
-APP_ANDROID=/abs/path/app.apk npm run test:mobile:android
-APP_IOS=/abs/path/App.app   npm run test:mobile:ios
-# or test an installed app:  APP_PACKAGE=com.your.app  /  BUNDLE_ID=com.your.app
-
-# Native desktop
-MAC_BUNDLE_ID=com.apple.TextEdit npm run test:desktop:mac
-WIN_APP='Microsoft.WindowsCalculator_8wekyb3d8bbwe!App' npm run test:desktop:win
+node agent/cli.mjs check TARGET
+node agent/cli.mjs run TARGET --app APP_ID --record
 ```
 
-Appium servers for the WebdriverIO suites start automatically (except Windows,
-where you run WinAppDriver yourself on `127.0.0.1:4723`).
+`check` either reports readiness or names the missing prerequisite and its owner.
+A successful `run` returns the run result and analysis and writes target-specific
+artifacts under `test-results/`. It may drive a real application and therefore is
+not a read-only continuation of the discovery path. Additional command and
+failure guidance is in the [Probierz agent interface](skills/probierz/SKILL.md).
+The integrated Tama → Probierz → Stado workflow is documented in
+[`docs/PIPELINE.md`](docs/PIPELINE.md).
 
-## Agent surface (read-only)
+### Register verified first-use evidence
 
-Probierz ships a read-only agent surface — a CLI and a stdio MCP server — that
-discovers surfaces and specs and emits run commands, without ever executing a
-suite (a live run needs Chromium/Appium/a simulator and stays a manual step).
-Both are backed by one source of truth, `agent/lib.mjs`.
+An `onboarding-first-use` journey carries an immutable `journeyId`,
+`journeyVersion`, UUID `journeyVersionId`, and `firstSuccessFact`. Its
+`publication` policy names the stable `screenId`, allowed artifact kinds
+(`screenshot`, `recording`, or `trace`), minimum evidence level, and whether
+verified redaction is mandatory. The application manifest also supplies the
+central `productId`.
+
+The same manifest makes retention and redaction explicit with positive
+`artifacts.retain.pullRequestDays`, `nightlyDays`, and `adhocDays`, plus a
+non-empty `artifacts.redact` key list.
+
+
+After a release receipt is signed, provide an asset-registration JSON array:
+
+```json
+[
+  {
+    "file": "media/first-use.webm",
+    "kind": "recording",
+    "storageUrl": "<immutable HTTPS object URL without credentials, query, or fragment>",
+    "contentSha256": "64-lowercase-hex-characters",
+    "redactionStatus": "verified_redacted",
+    "verifiedAt": "2026-08-04T12:00:00.000Z"
+  }
+]
+```
 
 ```bash
-probierz list                 # the four surfaces + tool, npm script, targets, env
-probierz specs [surface]      # e2e/spec files discovered on disk
-probierz describe <spec>      # static outline (describe/it titles) of a spec
-probierz cmd <target>         # the exact shell command to run a target yourself
-
-probierz-mcp                  # the stdio JSON-RPC MCP server (node agent/mcp.mjs)
+node agent/cli.mjs publication RECEIPT_JSON ATTEMPT_ID JOURNEY_ID \
+  --assets ASSET_REGISTRATIONS_JSON \
+  --public-key TRUSTED_PROBIERZ_PUBLIC_KEY
 ```
 
-MCP tools: `probierz_list_surfaces`, `probierz_list_specs`,
-`probierz_describe_spec`, `probierz_run_command`. The surface is federated into
-the ecosystem aggregator `las`; see `skills/probierz/SKILL.md`.
+Probierz emits one immutable
+`probierz-first-use-publication` JSON manifest under
+`test-results/publications/`. The manifest is release-, source-, journey-,
+attempt-, screen-, content-, and signed-receipt-bound. It contains only
+`publishable: true` records: an invalid or untrusted receipt, stale source,
+missing provenance, mismatched content hash, plaintext-secret finding,
+unverified redaction, unsupported recording claim, or credential-bearing
+storage URL rejects publication instead of producing a downgraded manifest.
+Canonical machine consumers should use `manifestId`, `artifactId`, and the
+embedded receipt verification identity rather than deriving identity from file
+names.
 
-## Layout
+`artifactId` is the SHA-256 of the recursively key-sorted canonical asset
+without `artifactId`; `manifestId` uses the same rule over the full manifest
+without `manifestId`. `receiptId` is the first 24 hexadecimal characters of
+SHA-256 over the canonical signed payload, a newline, and the base64 Ed25519
+signature.
 
+
+### Publish a README journey GIF
+
+Probierz owns animated product evidence. Select one recorded journey video from
+`test-results/`, trim it to the shortest complete outcome, and export it:
+
+```bash
+node agent/cli.mjs readme-gif test-results/APP_ID/RUN_ID/path/to/video.webm \
+  --out /path/to/product/assets/demo.gif \
+  --start 0 \
+  --duration 12 \
+  --fps 12 \
+  --width 960
 ```
-packages/
-  web/            Playwright config + example web specs
-  electron/       Playwright Electron config + sample app fixture
-  mobile/         WDIO configs (ios/android) + Appium service + smoke spec
-  desktop-native/ WDIO configs (mac/win) + smoke spec
-agent/            read-only agent surface: lib.mjs (source of truth) + cli.mjs + mcp.mjs
-skills/probierz/  SKILL.md — how agents should use probierz
-apps/             drop your .app / .apk / .ipa / .exe here (gitignored)
-```
 
-Each package ships a runnable example/smoke test and is configured entirely via
-environment variables — no hardcoded targets. Fill in selectors in the
-`test/specs/*.e2e.ts` files for your own app.
+The command writes the silent, looping GIF and a sibling
+`demo.gif.probierz.json` provenance file containing source/output SHA-256 and
+the exact render settings. Duration, frame rate, and width are bounded to keep
+repository media reviewable. The sidecar deliberately marks the GIF as
+`reviewRequired`: conversion does not prove that the clip is free of
+credentials, personal data, production identifiers, or sensitive URLs.
+`PROBIERZ_FFMPEG_BIN` may select an explicit `ffmpeg` executable. Probierz does
+not create static product banners; those belong to `wisent-asset-generator`.
+
+## Primary interfaces
+
+- **Human CLI:** `probierz` is canonical for discovery, setup, execution,
+  analysis, authoring, evidence, gate, retention, security, and Stado workflows.
+- **Machine CLI output:** status, overview, run, analysis, and gate commands
+  expose structured data; automation must not infer state from prose.
+- **MCP:** `probierz-mcp` exposes the same discovery and explicitly named
+  side-effecting operations over stdio JSON-RPC. Tool descriptions preserve the
+  read-only versus mutation boundary.
+- **Repository gate:** `probierz gate-install` installs the pre-push integration;
+  gate evaluation and enforcement remain distinct commands.
+- **Stado bridge:** `probierz stado run` and `probierz stado author` submit the
+  exact remote contract and return evidence through the configured object store.
+
+The complete command surface is printed by `probierz --help` and summarized in
+[`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
+
+## Operational model
+
+- **Configuration:** application manifests define repositories, targets,
+  journeys, paths, and ownership. Environment variables provide explicit
+  target coordinates, not hidden application defaults.
+- **State:** run reports, histories, receipts, protected bundles, audit records,
+  and returned remote evidence live under the configured `test-results/` and
+  object-store paths. An unavailable store is an error, not an empty history.
+- **Credentials:** local discovery requires none. Model authoring requires a
+  distinct `STADO_MODEL_ROUTER_URL` and router-scoped token. Remote Stado jobs
+  materialize the token from the scoped `probierz-model-router` secret reference
+  instead of embedding it in the job payload.
+- **Setup ownership:** `probierz setup` may install npm dependencies, Playwright
+  browsers, and Appium drivers owned by Probierz. Host SDKs, simulators, devices,
+  permissions, and application runtimes remain operator-managed.
+- **Observability:** status, overview, dashboard projection, history, audit, and
+  explicit failure objects distinguish failed work from unavailable
+  dependencies and blocked prerequisites.
+- **Failure recovery:** preflight prevents known-unready runs; retention and
+  protected bundles preserve selected evidence; receipts can be verified before
+  use; remote failures retain their classified failure point and retryability.
+- **Upgrades:** the repository is currently a source distribution. `package.json`
+  owns the source version and Node engine contract; no mutable installation is
+  presented as a stable release channel.
 
 ## Project status and support
 
-Probierz is public development source. Local execution, the evidence contract, and gate evaluation are available under the Apache License 2.0. No stable hosted service or supported public binary release is currently promised.
+- **Maturity:** public development source, version `0.1.0`.
+- **Current support:** local execution, evidence contracts, receipts, and gate
+  evaluation are available from source. Host and remote target availability
+  remains environment-specific.
+- **Public distribution:** no stable hosted service or supported public binary
+  release is currently promised.
+- **Source and defects:** [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz).
+- **Security reports:** use the private
+  [GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new);
+  never include credentials or private artifacts in a public issue.
+- **License:** Apache License 2.0; see [`LICENSE`](LICENSE).
 
-- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
-- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
-- License: Apache License 2.0; see [`LICENSE`](LICENSE)
+This README owns the product promise, boundaries, use cases, interface roles, and
+support status. Executable behavior remains authoritative in the CLI and agent
+modules; downstream documentation must not advertise a broader capability than
+the installed source exposes.

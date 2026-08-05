@@ -1,13 +1,74 @@
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getRun } from "./history.mjs";
 import { loadAppManifest } from "./apps.mjs";
+import { scanSecrets } from "./security.mjs";
+import { appSourceIdentity } from "./runner.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const LEVEL = { E0: 0, E1: 1, E2: 2, E3: 3, E4: 4, E5: 5 };
+export const EVIDENCE_RECEIPT_SCHEMA = Object.freeze({
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "urn:probierz:schema:evidence-receipt:v3",
+  required: [
+    "schemaVersion", "kind", "appId", "productId", "release",
+    "expectedHarnessSha", "expectedSourceSha", "builds", "artifactPolicy",
+    "secretScans", "issuedAt", "policy", "verdict", "runs", "signing",
+  ],
+  properties: {
+    schemaVersion: { const: 3 },
+    kind: { const: "probierz-evidence-receipt" },
+    appId: { type: "string", minLength: 1 },
+    productId: { type: "string", minLength: 1 },
+    release: { type: "string", minLength: 1 },
+    expectedHarnessSha: { type: "string", pattern: "^[0-9a-f]{64}$" },
+    expectedSourceSha: { type: "string", pattern: "^[0-9a-f]{64}$" },
+    artifactPolicy: { type: "object" },
+    builds: { type: "object", additionalProperties: { type: "string", pattern: "^[0-9a-f]{64}$" } },
+    secretScans: { type: "object" },
+    issuedAt: { type: "string", format: "date-time" },
+    policy: { type: "object" },
+    verdict: { type: "object" },
+    runs: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        required: [
+          "runId", "target", "journeys", "journeyIdentities", "status",
+          "evidenceLevel", "harness", "source", "sourceRevision", "build",
+          "startedAt", "completedAt", "artifacts", "media",
+        ],
+        properties: {
+          runId: { type: "string", minLength: 1 },
+          target: { type: "string", minLength: 1 },
+          journeys: { type: "array", items: { type: "string" } },
+          journeyIdentities: { type: "array" },
+          status: { type: "string" },
+          evidenceLevel: { enum: ["E0", "E1", "E2", "E3"] },
+          sourceRevision: { type: ["string", "null"], pattern: "^[0-9a-f]{40}$" },
+          artifacts: { type: "array" },
+          media: { type: "array" },
+        },
+      },
+    },
+    signing: {
+      type: "object",
+      required: ["algorithm", "publicKeyFingerprintSha256", "publicKeyPem", "payloadSha256", "signature"],
+      properties: {
+        algorithm: { const: "Ed25519" },
+        publicKeyFingerprintSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        publicKeyPem: { type: "string" },
+        payloadSha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        signature: { type: "string", minLength: 1 },
+      },
+    },
+  },
+});
+
 
 function segment(value, fallback = "unknown") {
   const clean = String(value || fallback).trim().replace(/[^a-zA-Z0-9._-]+/g, "-");
@@ -53,11 +114,71 @@ function signedProtection(protection) {
   return {
     bytes: Number(protection.bytes || 0),
     sha256: protection.sha256 || null,
+    contentIndexSha256: protection.contentIndexSha256 || null,
     keyFingerprintSha256: protection.keyFingerprintSha256 || null,
     plaintextRemoved: Boolean(protection.plaintextRemoved),
     secretScan: protection.secretScan || null,
   };
 }
+function normalizedArtifactKind(kind) {
+  if (kind === "video") return "recording";
+  return ["screenshot", "trace"].includes(kind) ? kind : null;
+}
+
+function sourceRevision(source) {
+  const repositories = Array.isArray(source?.repositories) ? source.repositories : [];
+  return repositories.find((repository) => repository.index === 0)?.gitSha
+    || repositories[0]?.gitSha
+    || null;
+}
+
+function journeyIdentities(run, manifest) {
+  return run.journeys.flatMap((name) => {
+    const journey = manifest.journeys[name];
+    if (!journey?.journeyId) return [];
+    return [{
+      name,
+      journeyId: journey.journeyId,
+      journeyVersion: journey.journeyVersion,
+      journeyVersionId: journey.journeyVersionId,
+      firstSuccessFact: journey.firstSuccessFact,
+      publication: journey.publication || null,
+    }];
+  });
+}
+
+function signedMedia(run) {
+  const root = path.dirname(run.manifestPath);
+  const artifacts = new Map(run.artifacts.map((artifact) => [artifact.file.split(path.sep).join("/"), artifact]));
+  let analysis = null;
+  try {
+    analysis = run.analysisPath ? JSON.parse(readFileSync(run.analysisPath, "utf8")) : null;
+  } catch {
+    analysis = null;
+  }
+  const typed = new Map();
+  for (const media of analysis?.media || []) {
+    const relative = path.relative(root, path.resolve(media.file)).split(path.sep).join("/");
+    if (relative.startsWith("../") || path.isAbsolute(relative)) continue;
+    const kind = normalizedArtifactKind(media.kind);
+    if (kind) typed.set(relative, kind);
+  }
+  for (const file of ["report.json", "timeline.json"]) {
+    if (artifacts.has(file)) typed.set(file, "trace");
+  }
+  return [...typed.entries()].flatMap(([file, artifact]) => {
+    const inventory = artifacts.get(file);
+    if (!inventory) return [];
+    return [{
+      file,
+      artifactKind: artifact,
+      contentSha256: inventory.sha256 || null,
+      bytes: Number(inventory.bytes || 0),
+      capturedAt: run.completedAt || run.startedAt,
+    }];
+  }).sort((left, right) => left.file.localeCompare(right.file));
+}
+
 
 export function signedReceiptRun(run, manifest) {
   return {
@@ -65,12 +186,14 @@ export function signedReceiptRun(run, manifest) {
     target: run.target,
     spec: run.spec,
     journeys: run.journeys,
+    journeyIdentities: journeyIdentities(run, manifest),
     status: run.status,
     evidenceLevel: evidenceLevel(run),
     kind: run.kind,
     harness: run.harness,
     source: run.source,
     build: run.build,
+    sourceRevision: sourceRevision(run.source),
     device: run.device,
     startedAt: run.startedAt,
     completedAt: run.completedAt,
@@ -81,10 +204,11 @@ export function signedReceiptRun(run, manifest) {
       sha256: artifact.sha256 || null,
       bytes: Number(artifact.bytes || 0),
     })),
+    media: signedMedia(run),
   };
 }
 
-export function createReceipt({
+export async function createReceipt({
   appId,
   release,
   expectedHarnessSha,
@@ -98,6 +222,9 @@ export function createReceipt({
   if (!appId || !release || !expectedHarnessSha || !expectedSourceSha) {
     throw new Error("appId, release, expectedHarnessSha, and expectedSourceSha are required");
   }
+  if (!/^[0-9a-f]{64}$/.test(expectedHarnessSha) || !/^[0-9a-f]{64}$/.test(expectedSourceSha)) {
+    throw new Error("expectedHarnessSha and expectedSourceSha must be lowercase SHA-256 values");
+  }
   if (!Array.isArray(runIds) || !runIds.length) throw new Error("at least one runId is required");
   if (!Object.hasOwn(LEVEL, minimumEvidence)) throw new Error(`unknown evidence level: ${minimumEvidence}`);
   if (!privateKeyFile) throw new Error("PROBIERZ_RECEIPT_PRIVATE_KEY_FILE is required");
@@ -105,18 +232,55 @@ export function createReceipt({
   const runs = runIds.map((runId) => getRun(appId, runId));
   const normalizedRuns = runs.map((run) => signedReceiptRun(run, manifest));
   const errors = [];
+  const currentIdentity = appSourceIdentity(appId);
+  if (currentIdentity.harness?.sha256 !== expectedHarnessSha) {
+    errors.push("expected harness source is stale relative to the current Probierz checkout");
+  }
+  if (currentIdentity.app?.sha256 !== expectedSourceSha) {
+    errors.push("expected app source is stale relative to the current product checkout");
+  }
+  const secretScans = {};
+  for (let index = 0; index < runs.length; index += 1) {
+    const sourceRun = runs[index];
+    const signedRun = normalizedRuns[index];
+    const artifactRoot = path.dirname(sourceRun.manifestPath);
+    for (const artifact of signedRun.artifacts) {
+      const file = path.resolve(artifactRoot, artifact.file);
+      if ((file !== artifactRoot && !file.startsWith(`${artifactRoot}${path.sep}`)) || !existsSync(file) || !statSync(file).isFile()) {
+        errors.push(`${signedRun.runId}: artifact is missing or escapes its run: ${artifact.file}`);
+      } else if (sha256(readFileSync(file)) !== artifact.sha256) {
+        errors.push(`${signedRun.runId}: artifact hash mismatch: ${artifact.file}`);
+      }
+    }
+    const scan = sourceRun.protection?.plaintextRemoved
+      ? sourceRun.protection.secretScan
+      : await scanSecrets(artifactRoot);
+    secretScans[signedRun.runId] = scan ? {
+      passed: Boolean(scan.passed),
+      scannedAt: scan.scannedAt || null,
+      scannedFiles: Number(scan.scannedFiles || 0),
+      skippedBinary: Number(scan.skippedBinary || 0),
+      findings: Array.isArray(scan.findings) ? scan.findings : [],
+    } : null;
+    if (!scan?.passed) errors.push(`${signedRun.runId}: plaintext secret scan is missing or has findings`);
+  }
   for (const run of normalizedRuns) {
     if (run.status !== "passed") errors.push(`${run.runId}: status ${run.status}`);
-    if (run.harness?.sha256 !== expectedHarnessSha || !run.harness.gitSha || !run.harness.worktreeSha256) {
+    if (run.harness?.sha256 !== expectedHarnessSha
+      || !/^[0-9a-f]{40}$/.test(run.harness?.gitSha || "")
+      || !/^[0-9a-f]{64}$/.test(run.harness?.worktreeSha256 || "")) {
       errors.push(`${run.runId}: harness source identity mismatch or incomplete`);
     }
     if (run.source?.sha256 !== expectedSourceSha
       || !Array.isArray(run.source?.repositories)
-      || run.source.repositories.some((repository) => !repository.gitSha || !repository.worktreeSha256)) {
+      || run.source.repositories.some((repository) =>
+        !/^[0-9a-f]{40}$/.test(repository.gitSha || "") || !/^[0-9a-f]{64}$/.test(repository.worktreeSha256 || ""))) {
       errors.push(`${run.runId}: app source identity mismatch or incomplete`);
     }
-    if (!run.build?.sha256) errors.push(`${run.runId}: build hash missing`);
-    if (!run.artifacts.length || run.artifacts.some((artifact) => !artifact.sha256)) errors.push(`${run.runId}: artifact hashes incomplete`);
+    if (!/^[0-9a-f]{64}$/.test(run.build?.sha256 || "")) errors.push(`${run.runId}: build hash missing or invalid`);
+    if (!run.artifacts.length || run.artifacts.some((artifact) => !/^[0-9a-f]{64}$/.test(artifact.sha256 || ""))) {
+      errors.push(`${run.runId}: artifact hashes incomplete or invalid`);
+    }
     if (LEVEL[run.evidenceLevel] < LEVEL[minimumEvidence]) {
       errors.push(`${run.runId}: ${run.evidenceLevel} is below ${minimumEvidence}`);
     }
@@ -135,13 +299,20 @@ export function createReceipt({
   const missingJourneys = [...new Set(requiredJourneys)].filter((journey) => !coveredJourneys.has(journey)).sort();
   for (const journey of missingJourneys) errors.push(`missing journey: ${journey}`);
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     kind: "probierz-evidence-receipt",
     appId,
     release,
     expectedHarnessSha,
     expectedSourceSha,
     builds,
+    productId: manifest.productId || appId,
+    artifactPolicy: {
+      retain: manifest.artifacts?.retain || {},
+      redact: [...(manifest.artifacts?.redact || [])].sort(),
+      pii: manifest.artifacts?.pii || "unknown",
+    },
+    secretScans,
     issuedAt: new Date().toISOString(),
     policy: { minimumEvidence, requiredJourneys: [...new Set(requiredJourneys)].sort() },
     verdict: { passed: errors.length === 0, errors, coveredJourneys: [...coveredJourneys].sort(), missingJourneys },
@@ -191,12 +362,16 @@ export function verifyReceipt(file, { trustedPublicKeyFile, expectedFingerprint 
     trusted,
     fingerprint,
     payloadSha256: sha256(canonicalPayload),
+    receiptId: sha256(`${canonicalPayload}\n${signing.signature}`).slice(0, 24),
+    issuedAt: payload.issuedAt,
+    productId: payload.productId || payload.appId,
     verdict: payload.verdict,
     appId: payload.appId,
     release: payload.release,
     expectedHarnessSha: payload.expectedHarnessSha,
     expectedSourceSha: payload.expectedSourceSha,
     builds: payload.builds,
+    secretScans: payload.secretScans || {},
     policy: payload.policy,
     runs: payload.runs,
     runIds: payload.runs.map((run) => run.runId),

@@ -2,21 +2,23 @@
 // stdio JSON-RPC (Model Context Protocol) server for probierz.
 // Mirrors the echo / weles / skarbiec MCP servers: newline-delimited JSON in on
 // stdin, exactly one response line per request out on stdout, diagnostics on
-// stderr. Discovery tools (list/specs/describe/run_command) are read-only; the
-// `run` and `analyze` tools are the execution surface -- `run` spawns a suite
-// (Chromium / Appium / a simulator) and analyzes what it produced.
+// stderr. Discovery tools (list/specs/describe/run_command) are read-only.
+// `run` executes suites, `analyze` inventories evidence, and
+// `probierz_create_readme_gif` writes one bounded publication asset plus provenance.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { SURFACES, listSpecs, describeSpec, runCommand } from "./lib.mjs";
 import { appSourceIdentity, completeRun, runSurface, targetList } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
+import { createReadmeGif } from "./readme-gif.mjs";
 import { preflight, runSetup } from "./preflight.mjs";
 import { affectedFromGit, affectedTargets } from "./affected.mjs";
 import { orchestrate } from "./orchestrate.mjs";
 import { compareRuns, lastGreen, runHistory } from "./history.mjs";
 import { startRun, runStatus, cancelRun, getResult, listArtifacts, getArtifact } from "./control.mjs";
 import { createReceipt, verifyReceipt } from "./receipt.mjs";
+import { createPublicationManifest } from "./publication.mjs";
 import { dashboardProjection } from "./dashboard.mjs";
 import { planMatrix, runMatrix } from "./matrix.mjs";
 import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
@@ -134,6 +136,19 @@ const TOOLS = [
       tool: { type: "string", description: "playwright | wdio (inferred from the report if omitted)." },
       frames: { type: "number", description: "Extract this many frames per video (needs ffmpeg)." },
     }, ["reportPath"]),
+  },
+  {
+    name: "probierz_create_readme_gif",
+    description: "SIDE-EFFECTING: convert one recorded journey video into a bounded, silent, looping README GIF and write a provenance sidecar with source/output SHA-256 and mandatory publication checks. Requires ffmpeg.",
+    inputSchema: objectSchema({
+      input: { type: "string", description: "Recorded journey video path." },
+      output: { type: "string", description: "Destination path ending in .gif." },
+      startSeconds: { type: "number", description: "Non-negative trim offset; default 0." },
+      durationSeconds: { type: "number", description: "Published clip duration; default 12, maximum 30." },
+      framesPerSecond: { type: "number", description: "GIF frame rate; default 12, maximum 20." },
+      width: { type: "number", description: "Output width; default 960, maximum 1200." },
+      force: { type: "boolean", description: "Replace an existing GIF and sidecar." },
+    }, ["input", "output"]),
   },
   {
     name: "probierz_affected",
@@ -271,7 +286,7 @@ const TOOLS = [
   },
   {
     name: "probierz_author_spec",
-    description: "SIDE-EFFECTING: autonomously draft one journey spec from a probe of the real app, verify it with an actual run, and keep it on green (registers the journey in the app manifest).",
+    description: "SIDE-EFFECTING: use the authenticated Stado model router to draft one journey spec from a probe of the real app, verify it with an actual run, and keep it on green (registers the journey in the app manifest).",
     inputSchema: objectSchema({
       appId: { type: "string" },
       journey: { type: "string" },
@@ -279,13 +294,12 @@ const TOOLS = [
       desc: { type: "string", description: "Journey goal in one or two sentences." },
       baseUrl: { type: "string" },
       appPath: { type: "string" },
-      model: { type: "string", description: "codex (default) or kimi" },
       rounds: { type: "number" },
     }, ["appId", "journey", "target", "desc"]),
   },
   {
     name: "probierz_author_manifest",
-    description: "SIDE-EFFECTING: autonomously draft the whole app journey manifest from a probe and repository layout, validate it, and optionally cover every journey with author-spec.",
+    description: "SIDE-EFFECTING: use the authenticated Stado model router to draft the whole app journey manifest from a probe and repository layout, validate it, and optionally cover every journey with author-spec.",
     inputSchema: objectSchema({
       appId: { type: "string" },
       desc: { type: "string", description: "What the app does, in one or two sentences." },
@@ -293,7 +307,6 @@ const TOOLS = [
       target: { type: "string" },
       baseUrl: { type: "string" },
       appPath: { type: "string" },
-      model: { type: "string" },
       withSpecs: { type: "boolean" },
     }, ["appId", "desc", "repositories", "target"]),
   },
@@ -345,7 +358,7 @@ const TOOLS = [
   },
   {
     name: "probierz_create_receipt",
-    description: "SIDE-EFFECTING: sign a release evidence receipt containing required journeys, run IDs, build identity, artifact hashes, and deterministic verdict.",
+    description: "SIDE-EFFECTING: secret-scan evidence, verify exact source/build/artifact provenance, and sign a release receipt with immutable journey identities and report-typed publication media.",
     inputSchema: objectSchema({
       appId: { type: "string" },
       release: { type: "string" },
@@ -365,6 +378,33 @@ const TOOLS = [
       trustedPublicKeyFile: { type: "string" },
       expectedFingerprint: { type: "string" },
     }, ["file"]),
+  },
+  {
+    name: "probierz_create_publication_manifest",
+    description: "SIDE-EFFECTING: verify a signed receipt, current source, secret scan, evidence hashes, driver capability, redaction review, and immutable storage registrations before emitting a deterministic first-use publication manifest.",
+    inputSchema: objectSchema({
+      receiptFile: { type: "string" },
+      attemptId: { type: "string" },
+      journeyId: { type: "string" },
+      assets: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            file: { type: "string" },
+            kind: { type: "string", enum: ["screenshot", "recording", "trace"] },
+            storageUrl: { type: "string" },
+            contentSha256: { type: "string" },
+            redactionStatus: { type: "string", enum: ["verified_redacted", "not_applicable"] },
+            verifiedAt: { type: "string" },
+          },
+          required: ["file", "storageUrl", "contentSha256", "redactionStatus", "verifiedAt"],
+          additionalProperties: false,
+        },
+      },
+      trustedPublicKeyFile: { type: "string" },
+      expectedFingerprint: { type: "string" },
+    }, ["receiptFile", "attemptId", "journeyId", "assets"]),
   },
   {
     name: "probierz_start_run",
@@ -525,7 +565,6 @@ async function callTool(name, args) {
       desc: asString(args.desc, "desc"),
       baseUrl: typeof args.baseUrl === "string" ? args.baseUrl : null,
       appPath: typeof args.appPath === "string" ? args.appPath : null,
-      model: typeof args.model === "string" ? args.model : "codex",
       rounds: typeof args.rounds === "number" ? args.rounds : Number("3"),
     }));
   }
@@ -538,7 +577,6 @@ async function callTool(name, args) {
       target: asString(args.target, "target"),
       baseUrl: typeof args.baseUrl === "string" ? args.baseUrl : null,
       appPath: typeof args.appPath === "string" ? args.appPath : null,
-      model: typeof args.model === "string" ? args.model : "codex",
       withSpecs: args.withSpecs === true,
     }));
   }
@@ -579,7 +617,7 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_create_receipt") {
-    return textResult(createReceipt({
+    return textResult(await createReceipt({
       appId: asString(args.appId, "appId"),
       release: asString(args.release, "release"),
       expectedHarnessSha: asString(args.expectedHarnessSha, "expectedHarnessSha"),
@@ -597,6 +635,16 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_start_run") return textResult(startRun(args));
+  if (name === "probierz_create_publication_manifest") {
+    return textResult(createPublicationManifest({
+      receiptFile: asString(args.receiptFile, "receiptFile"),
+      attemptId: asString(args.attemptId, "attemptId"),
+      journeyId: asString(args.journeyId, "journeyId"),
+      assets: Array.isArray(args.assets) ? args.assets : [],
+      trustedPublicKeyFile: typeof args.trustedPublicKeyFile === "string" ? args.trustedPublicKeyFile : undefined,
+      expectedFingerprint: typeof args.expectedFingerprint === "string" ? args.expectedFingerprint : undefined,
+    }));
+  }
   if (name === "probierz_run_status") return textResult(runStatus(asString(args.runId, "runId")));
   if (name === "probierz_cancel_run") return textResult(cancelRun(asString(args.runId, "runId")));
   if (name === "probierz_get_result") return textResult(getResult(asString(args.runId, "runId")));
@@ -651,6 +699,17 @@ async function callTool(name, args) {
       artifactsDir: args.artifactsDir,
       tool: args.tool,
       frames: Number(args.frames) || Number("0"),
+    }));
+  }
+  if (name === "probierz_create_readme_gif") {
+    return textResult(await createReadmeGif({
+      input: asString(args.input, "input"),
+      output: asString(args.output, "output"),
+      startSeconds: args.startSeconds,
+      durationSeconds: args.durationSeconds,
+      framesPerSecond: args.framesPerSecond,
+      width: args.width,
+      force: args.force === true,
     }));
   }
   if (name === "probierz_affected") {
