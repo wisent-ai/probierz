@@ -1,0 +1,15 @@
+[automation]
+managed = true
+source_fingerprint = "c88d9241b66c1ec1"
+category = "benchmark"
+
+[banner]
+title = "Test every product surface from one CLI."
+description = "Cross-platform automation for web, Electron, iOS, Android, macOS, and Windows."
+product = "Wisent"
+url = "wisent.ai"
+theme = "dark"
+layout = "benchmark-left"
+art_seed = "probierz"
+width = 1584
+height = 396
