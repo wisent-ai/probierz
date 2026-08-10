@@ -1,4 +1,14 @@
-# Probierz
+<!-- wisent-banner:start -->
+<p align="center">
+  <img src="assets/readme-banner.webp" alt="probierz by Wisent" width="100%">
+</p>
+<!-- wisent-banner:end -->
+
+<!-- wisent-readme-signals:start -->
+[![Source](https://img.shields.io/badge/GitHub-Source-181717?logo=github)](https://github.com/wisent-ai/probierz) [![Issues](https://img.shields.io/badge/GitHub-Issues-181717?logo=github)](https://github.com/wisent-ai/probierz/issues) [![Wisent](https://img.shields.io/badge/Wisent-Website-0B0B0B)](https://wisent.ai) [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qRjpkthq54) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Follow-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/wisent-ai/) [![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/wisentai) [![Enterprise](https://img.shields.io/badge/Enterprise-Book%20a%20call-0B0B0B?logo=calendly)](https://calendly.com/lbartoszcze)
+<!-- wisent-readme-signals:end -->
+
+# Probierz: AI QA That Makes Sure You Never Ship Anything Broken
 
 **Probierz is a cross-platform quality evidence platform that turns user journeys
 into reproducible runs, inspectable artifacts, and enforceable release gates
@@ -414,7 +424,15 @@ The complete command surface is printed by `probierz --help` and summarized in
   never include credentials or private artifacts in a public issue.
 - **License:** Apache License 2.0; see [`LICENSE`](LICENSE).
 
-This README owns the product promise, boundaries, use cases, interface roles, and
+1: This README owns the product promise, boundaries, use cases, interface roles, and
 support status. Executable behavior remains authoritative in the CLI and agent
 modules; downstream documentation must not advertise a broader capability than
 the installed source exposes.
+
+- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
+- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
+- License: Apache License 2.0; see [`LICENSE`](LICENSE)
+2: import { createPublicationManifest } from "./publication.mjs";
+import { createOnboardingPublication } from "./onboarding-publication.mjs";
+3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
+      "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",

@@ -29,7 +29,18 @@ import { listApps, loadAppManifest } from "./apps.mjs";
 import { validateAccessibility } from "./accessibility.mjs";
 import { compareRuns, lastGreen, runHistory } from "./history.mjs";
 import { createReceipt, verifyReceipt } from "./receipt.mjs";
-import { createPublicationManifest } from "./publication.mjs";
+1: This README owns the product promise, boundaries, use cases, interface roles, and
+support status. Executable behavior remains authoritative in the CLI and agent
+modules; downstream documentation must not advertise a broader capability than
+the installed source exposes.
+
+- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
+- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
+- License: Apache License 2.0; see [`LICENSE`](LICENSE)
+2: import { createPublicationManifest } from "./publication.mjs";
+import { createOnboardingPublication } from "./onboarding-publication.mjs";
+3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
+      "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",
 import { dashboardProjection } from "./dashboard.mjs";
 import { planMatrix, runMatrix } from "./matrix.mjs";
 import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
@@ -86,7 +97,18 @@ function usage() {
       "  probierz last-green [appId] [target] [journey]  newest passing evidence",
       "  probierz receipt <appId> <release> <harnessSha256> --source-sha SHA256 --runs ids  sign evidence receipt",
       "  probierz verify-receipt <file>  verify signature, trust, and payload hash",
-      "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
+1: This README owns the product promise, boundaries, use cases, interface roles, and
+support status. Executable behavior remains authoritative in the CLI and agent
+modules; downstream documentation must not advertise a broader capability than
+the installed source exposes.
+
+- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
+- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
+- License: Apache License 2.0; see [`LICENSE`](LICENSE)
+2: import { createPublicationManifest } from "./publication.mjs";
+import { createOnboardingPublication } from "./onboarding-publication.mjs";
+3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
+      "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",
       "  probierz describe <spec>      static outline of a spec file",
       "  probierz cmd <target>         exact command to run a target (prints only)",
       "  probierz check <target>       is the toolchain ready + how to fix what is missing",
@@ -752,6 +774,29 @@ async function main() {
     });
     out(result);
     if (!result.valid) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "publish-onboarding") {
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      const result = index >= 0 ? rest[index + 1] : undefined;
+      if (!result || result.startsWith("--")) throw configError(`${flag} needs a value`);
+      return result;
+    };
+    const result = createOnboardingPublication({
+      receiptFile: rest[0],
+      runId: value("--run"),
+      journeyId: value("--journey"),
+      journeyVersion: value("--journey-version"),
+      journeyVersionId: value("--journey-version-id"),
+      firstSuccessFact: value("--first-success-fact"),
+      screenId: value("--screen"),
+      assetCatalogFile: value("--assets"),
+      outputFile: value("--output"),
+      trustedPublicKeyFile: rest.includes("--public-key") ? value("--public-key") : undefined,
+      expectedFingerprint: rest.includes("--fingerprint") ? value("--fingerprint") : undefined,
+    });
+    out({ file: result.file, manifestId: result.manifestId });
     return;
   }
   if (cmd === "specs") {
