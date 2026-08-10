@@ -267,6 +267,11 @@ blockers. The JSON report records both input and render SHA-256 identities,
 model usage, dimension evidence, the weighted score, and the complete blocker
 list; two PNG renders are written beside it.
 
+Process integrations may provide the router base with `--router-url` and send
+the scoped bearer over standard input with `--router-token-stdin`. This avoids
+placing a short-lived credential in `argv` or a child-process environment;
+interactive use may continue to use the documented environment variables.
+
 
 ### First evidence-producing run
 
@@ -424,15 +429,8 @@ The complete command surface is printed by `probierz --help` and summarized in
   never include credentials or private artifacts in a public issue.
 - **License:** Apache License 2.0; see [`LICENSE`](LICENSE).
 
-1: This README owns the product promise, boundaries, use cases, interface roles, and
+This README owns the product promise, boundaries, use cases, interface roles, and
 support status. Executable behavior remains authoritative in the CLI and agent
 modules; downstream documentation must not advertise a broader capability than
 the installed source exposes.
 
-- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
-- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
-- License: Apache License 2.0; see [`LICENSE`](LICENSE)
-2: import { createPublicationManifest } from "./publication.mjs";
-import { createOnboardingPublication } from "./onboarding-publication.mjs";
-3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
-      "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",

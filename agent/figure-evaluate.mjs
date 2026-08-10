@@ -229,10 +229,10 @@ function routerUrl(raw) {
   return parsed.href.replace(/\/+$/, "");
 }
 
-function routerToken() {
-  const token = String(process.env.STADO_MODEL_ROUTER_TOKEN || "").trim();
-  if (!token) throw new Error("STADO_MODEL_ROUTER_TOKEN is required");
-  if (/\s/.test(token)) throw new Error("STADO_MODEL_ROUTER_TOKEN must not contain whitespace");
+function routerToken(raw) {
+  const token = String(raw || process.env.STADO_MODEL_ROUTER_TOKEN || "").trim();
+  if (!token) throw new Error("STADO_MODEL_ROUTER_TOKEN or an explicit router bearer is required");
+  if (/\s/.test(token)) throw new Error("model router bearer must not contain whitespace");
   return token;
 }
 
@@ -356,13 +356,23 @@ function parseModelEvaluation(value, rubric) {
   };
 }
 
-async function visionEvaluation({ referencePng, candidatePng, referenceGeometry, candidateGeometry, deterministic, rubric, model }) {
+async function visionEvaluation({
+  referencePng,
+  candidatePng,
+  referenceGeometry,
+  candidateGeometry,
+  deterministic,
+  rubric,
+  model,
+  routerBaseUrl,
+  routerBearer,
+}) {
   const selectedModel = String(model || process.env.PROBIERZ_FIGURE_VISION_MODEL || "").trim();
   if (!selectedModel) throw new Error("--model or PROBIERZ_FIGURE_VISION_MODEL is required");
   const tool = evaluationTool(rubric);
-  const response = await fetch(`${routerUrl(process.env.STADO_MODEL_ROUTER_URL)}/v1/chat/completions`, {
+  const response = await fetch(`${routerUrl(routerBaseUrl || process.env.STADO_MODEL_ROUTER_URL)}/v1/chat/completions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${routerToken()}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${routerToken(routerBearer)}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: selectedModel,
       max_tokens: MAX_OUTPUT_TOKENS,
@@ -446,7 +456,15 @@ function outputFiles(rawOutput, candidate) {
   return { report, referencePng, candidatePng };
 }
 
-export async function evaluateFigure({ referencePath, candidatePath, rubricPath, outputPath, model } = {}) {
+export async function evaluateFigure({
+  referencePath,
+  candidatePath,
+  rubricPath,
+  outputPath,
+  model,
+  routerBaseUrl,
+  routerBearer,
+} = {}) {
   const reference = requiredFile(referencePath, "reference");
   const candidate = requiredFile(candidatePath, "candidate");
   const rubric = loadRubric(rubricPath);
@@ -466,6 +484,8 @@ export async function evaluateFigure({ referencePath, candidatePath, rubricPath,
       deterministic,
       rubric,
       model,
+      routerBaseUrl,
+      routerBearer,
     });
     const thresholdBlockers = [];
     let overall = 0;

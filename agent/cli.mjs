@@ -29,18 +29,8 @@ import { listApps, loadAppManifest } from "./apps.mjs";
 import { validateAccessibility } from "./accessibility.mjs";
 import { compareRuns, lastGreen, runHistory } from "./history.mjs";
 import { createReceipt, verifyReceipt } from "./receipt.mjs";
-1: This README owns the product promise, boundaries, use cases, interface roles, and
-support status. Executable behavior remains authoritative in the CLI and agent
-modules; downstream documentation must not advertise a broader capability than
-the installed source exposes.
-
-- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
-- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
-- License: Apache License 2.0; see [`LICENSE`](LICENSE)
-2: import { createPublicationManifest } from "./publication.mjs";
+import { createPublicationManifest } from "./publication.mjs";
 import { createOnboardingPublication } from "./onboarding-publication.mjs";
-3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
-      "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",
 import { dashboardProjection } from "./dashboard.mjs";
 import { planMatrix, runMatrix } from "./matrix.mjs";
 import { enforceRetention, protectRun, restoreBundle } from "./artifacts.mjs";
@@ -97,17 +87,7 @@ function usage() {
       "  probierz last-green [appId] [target] [journey]  newest passing evidence",
       "  probierz receipt <appId> <release> <harnessSha256> --source-sha SHA256 --runs ids  sign evidence receipt",
       "  probierz verify-receipt <file>  verify signature, trust, and payload hash",
-1: This README owns the product promise, boundaries, use cases, interface roles, and
-support status. Executable behavior remains authoritative in the CLI and agent
-modules; downstream documentation must not advertise a broader capability than
-the installed source exposes.
-
-- Source and issues: [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz)
-- Security reports: [private GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new)
-- License: Apache License 2.0; see [`LICENSE`](LICENSE)
-2: import { createPublicationManifest } from "./publication.mjs";
-import { createOnboardingPublication } from "./onboarding-publication.mjs";
-3:       "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
+      "  probierz publication <receipt> <attemptId> <journeyId> --assets <json> [--public-key file | --fingerprint sha256]  emit immutable verified first-use publication manifest",
       "  probierz publish-onboarding <receipt> --run id --journey id --journey-version v --journey-version-id uuid --first-success-fact fact --screen id --assets catalog.json --output publication.json  emit an Echo-ingestible first-use proof manifest",
       "  probierz describe <spec>      static outline of a spec file",
       "  probierz cmd <target>         exact command to run a target (prints only)",
@@ -117,7 +97,7 @@ import { createOnboardingPublication } from "./onboarding-publication.mjs";
       "  probierz analyze <report> [dir]  parse a report + inventory media",
       "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
-      "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json]  deterministic render checks plus rubric-scored vision evaluation",
+      "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json] [--router-url url --router-token-stdin]  deterministic render checks plus rubric-scored vision evaluation",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
@@ -329,10 +309,16 @@ async function main() {
     return;
   }
   if (cmd === "figure-evaluate") {
-    const valueFlags = new Set(["--reference", "--candidate", "--rubric", "--model", "--out"]);
+    const valueFlags = new Set(["--reference", "--candidate", "--rubric", "--model", "--out", "--router-url"]);
+    const booleanFlags = new Set(["--router-token-stdin"]);
     const options = {};
     for (let index = 0; index < rest.length; index += 1) {
       const flag = rest[index];
+      if (booleanFlags.has(flag)) {
+        if (options[flag] !== undefined) throw configError(`${flag} may be supplied only once`);
+        options[flag] = true;
+        continue;
+      }
       if (!valueFlags.has(flag)) throw configError(`unknown figure-evaluate option: ${flag}`);
       const value = rest[index + 1];
       if (!value || value.startsWith("--")) throw configError(`${flag} needs a value`);
@@ -348,6 +334,8 @@ async function main() {
       rubricPath: options["--rubric"],
       outputPath: options["--out"],
       model: options["--model"],
+      routerBaseUrl: options["--router-url"],
+      routerBearer: options["--router-token-stdin"] ? readFileSync(Number("0"), "utf8") : undefined,
     });
     out(result);
     if (!result.verdict.pass) process.exitCode = Number("1");
