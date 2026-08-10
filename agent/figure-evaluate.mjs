@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import {
   copyFileSync,
   constants as fsConstants,
@@ -22,6 +22,12 @@ const MIN_RENDER_WIDTH = 600;
 const MIN_RENDER_HEIGHT = 300;
 const EDGE_MARGIN_PX = 2;
 const SUPPORTED_INPUTS = new Set([".jpeg", ".jpg", ".pdf", ".png", ".svg", ".tex", ".webp"]);
+const EVALUATION_TOOL_NAME = "record_figure_evaluation";
+const DEFAULT_TEX_PREAMBLE = [
+  "\\usepackage{amsmath,amssymb}",
+  "\\usepackage{tikz}",
+  "\\usetikzlibrary{angles,arrows.meta,backgrounds,bending,calc,decorations.markings,decorations.pathmorphing,fit,3d,intersections,matrix,patterns,perspective,positioning,quotes,shadings,shapes.geometric,shapes.misc}",
+];
 
 const DEFAULT_RUBRIC = Object.freeze({
   name: "scientific-figure-release",
@@ -89,7 +95,30 @@ function run(program, args, { cwd, timeoutMs = 120_000 } = {}) {
   return String(result.stdout || "");
 }
 
-function texPdf(input, directory, name) {
+function texPreamble(rawPreamblePath) {
+  if (!rawPreamblePath) return DEFAULT_TEX_PREAMBLE;
+  const file = path.resolve(rawPreamblePath);
+  if (!existsSync(file) || !statSync(file).isFile()) throw new Error(`tex preamble is not a file: ${file}`);
+  const body = readFileSync(file, "utf8");
+  if (/\\documentclass|\\begin\s*\{document\}|\\end\s*\{document\}/.test(body)) {
+    throw new Error("tex preamble must contain only preamble lines, without a document class or document body");
+  }
+  // The wrapper still loads the defaults: a paper preamble that omits a library
+  // its own figure needs would otherwise fail here for a reason that has nothing
+  // to do with the candidate under evaluation. Re-loading a TikZ library is a
+  // no-op, so the union is safe and strictly more permissive.
+  return [...DEFAULT_TEX_PREAMBLE, body.trimEnd()];
+}
+
+function texErrorDetail(logFile) {
+  if (!existsSync(logFile)) return "";
+  const lines = readFileSync(logFile, "utf8").split("\n");
+  const first = lines.findIndex((line) => line.startsWith("!"));
+  if (first === Number("-1")) return lines.slice(-Number("20")).join("\n").trim().slice(Number("0"), Number("2000"));
+  return lines.slice(first, first + Number("20")).join("\n").trim().slice(Number("0"), Number("2000"));
+}
+
+function texPdf(input, directory, name, preambleLines) {
   const source = readFileSync(input.file, "utf8");
   const document = /\\documentclass(?:\[[^\]]*\])?\{/.test(source);
   let texFile;
@@ -102,8 +131,7 @@ function texPdf(input, directory, name) {
       texFile,
       [
         "\\documentclass[tikz,border=8pt]{standalone}",
-        "\\usepackage{tikz}",
-        "\\usetikzlibrary{arrows.meta,backgrounds,calc,decorations.markings,fit,3d,positioning,shadings}",
+        ...preambleLines,
         "\\begin{document}",
         source,
         "\\end{document}",
@@ -111,20 +139,27 @@ function texPdf(input, directory, name) {
       ].join("\n"),
     );
   }
-  run("pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${name}`, `-output-directory=${directory}`, texFile], {
-    cwd: path.dirname(input.file),
-    timeoutMs: 180_000,
-  });
+  try {
+    run("pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${name}`, `-output-directory=${directory}`, texFile], {
+      cwd: path.dirname(input.file),
+      timeoutMs: 180_000,
+    });
+  } catch (error) {
+    // pdfTeX opens with a banner and closes with the failure, so the first 4 kB
+    // of its output is the part that says nothing. The `!` block is the sentence
+    // a revision has to act on, and it is what the caller gets.
+    throw new Error(`pdflatex failed: ${texErrorDetail(path.join(directory, `${name}.log`)) || (error instanceof Error ? error.message : String(error))}`);
+  }
   if (!existsSync(pdf)) throw new Error(`pdflatex did not produce ${pdf}`);
   return pdf;
 }
 
-function renderArtifact(input, directory, name) {
+function renderArtifact(input, directory, name, preambleLines) {
   const png = path.join(directory, `${name}.png`);
   let renderInput = input.file;
   let pageSuffix = "";
   if (input.extension === ".tex") {
-    renderInput = texPdf(input, directory, `${name}-source`);
+    renderInput = texPdf(input, directory, `${name}-source`, preambleLines);
     pageSuffix = "[0]";
   } else if (input.extension === ".pdf") {
     pageSuffix = "[0]";
@@ -275,7 +310,7 @@ function evaluationTool(rubric) {
   return {
     type: "function",
     function: {
-      name: "record_figure_evaluation",
+      name: EVALUATION_TOOL_NAME,
       description: "Record one evidence-grounded scientific figure evaluation.",
       parameters: {
         type: "object",
@@ -356,6 +391,66 @@ function parseModelEvaluation(value, rubric) {
   };
 }
 
+// Brama's chat schema has no `tool_choice`, so a tool call cannot be forced and
+// a compliant model may answer with the arguments object as plain content. Both
+// shapes are accepted; both are then validated against the same rubric contract,
+// so the looser transport never means a looser verdict.
+function decodedEvaluation(message) {
+  const calls = Array.isArray(message?.tool_calls)
+    ? message.tool_calls.filter((call) => call?.function?.name === EVALUATION_TOOL_NAME)
+    : [];
+  if (calls.length > Number("1")) {
+    throw new Error(`model router returned ${calls.length} ${EVALUATION_TOOL_NAME} calls; exactly one is required`);
+  }
+  const raw = calls.length === Number("1")
+    ? calls[Number("0")].function?.arguments
+    : textContent(message?.content);
+  if (typeof raw !== "string" || !raw.trim()) {
+    throw new Error("model router returned no figure evaluation");
+  }
+  const json = raw.trim().startsWith("{") ? raw.trim() : jsonObjectIn(raw);
+  try {
+    return JSON.parse(json);
+  } catch {
+    throw new Error("model router returned an unparseable figure evaluation");
+  }
+}
+
+function textContent(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => (typeof part === "string" ? part : typeof part?.text === "string" ? part.text : ""))
+    .join("");
+}
+
+function jsonObjectIn(raw) {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === Number("-1") || end <= start) {
+    throw new Error("model router returned no figure evaluation object");
+  }
+  return raw.slice(start, end + Number("1"));
+}
+
+// Subscription routes bill the caller's own agent identity, so the gateway
+// requires the HMAC trio over `{agentId}:{timestamp}:{sha256(body)}` in addition
+// to the bearer. Direct aliases need only the bearer, so the trio is sent only
+// when an identity was supplied.
+function agentHeaders(body, agentId, agentSecret) {
+  const id = String(agentId || process.env.PROBIERZ_MODEL_AGENT_ID || "").trim();
+  const secret = String(agentSecret || process.env.PROBIERZ_MODEL_AGENT_SECRET || "").trim();
+  if (!id && !secret) return {};
+  if (!id || !secret) throw new Error("agent identity needs both an agent ID and an agent secret");
+  const timestamp = String(Math.floor(Date.now() / Number("1000")));
+  const digest = createHash("sha256").update(body).digest("hex");
+  return {
+    "x-agent-id": id,
+    "x-agent-timestamp": timestamp,
+    "x-agent-signature": createHmac("sha256", secret).update(`${id}:${timestamp}:${digest}`).digest("hex"),
+  };
+}
+
 async function visionEvaluation({
   referencePng,
   candidatePng,
@@ -366,47 +461,53 @@ async function visionEvaluation({
   model,
   routerBaseUrl,
   routerBearer,
+  agentId,
+  agentSecret,
 }) {
   const selectedModel = String(model || process.env.PROBIERZ_FIGURE_VISION_MODEL || "").trim();
   if (!selectedModel) throw new Error("--model or PROBIERZ_FIGURE_VISION_MODEL is required");
   const tool = evaluationTool(rubric);
+  const body = JSON.stringify({
+    model: selectedModel,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You are the release evaluator for scientific figures.",
+          ...rubric.modelInstructions,
+          `Call ${EVALUATION_TOOL_NAME} exactly once. If the tool is unavailable, return only its arguments object as raw JSON.`,
+        ].join("\n"),
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              task: "Evaluate the candidate scientific figure against the reference and every rubric dimension.",
+              dimensionCriteria: rubric.dimensions,
+              deterministicGeometry: { reference: referenceGeometry, candidate: candidateGeometry, comparison: deterministic },
+            }),
+          },
+          { type: "text", text: "REFERENCE / INTERMEDIATE ARTIFACT" },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${readFileSync(referencePng).toString("base64")}` } },
+          { type: "text", text: "CANDIDATE / FINAL ARTIFACT" },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${readFileSync(candidatePng).toString("base64")}` } },
+        ],
+      },
+    ],
+    tools: [tool],
+  });
   const response = await fetch(`${routerUrl(routerBaseUrl || process.env.STADO_MODEL_ROUTER_URL)}/v1/chat/completions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${routerToken(routerBearer)}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: selectedModel,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      temperature: 0,
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You are the release evaluator for scientific figures.",
-            ...rubric.modelInstructions,
-            "Call record_figure_evaluation exactly once and return no prose outside the tool call.",
-          ].join("\n"),
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                task: "Evaluate the candidate scientific figure against the reference and every rubric dimension.",
-                dimensionCriteria: rubric.dimensions,
-                deterministicGeometry: { reference: referenceGeometry, candidate: candidateGeometry, comparison: deterministic },
-              }),
-            },
-            { type: "text", text: "REFERENCE / INTERMEDIATE ARTIFACT" },
-            { type: "image_url", image_url: { url: `data:image/png;base64,${readFileSync(referencePng).toString("base64")}` } },
-            { type: "text", text: "CANDIDATE / FINAL ARTIFACT" },
-            { type: "image_url", image_url: { url: `data:image/png;base64,${readFileSync(candidatePng).toString("base64")}` } },
-          ],
-        },
-      ],
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: "record_figure_evaluation" } },
-    }),
+    headers: {
+      Authorization: `Bearer ${routerToken(routerBearer)}`,
+      "Content-Type": "application/json",
+      ...agentHeaders(body, agentId, agentSecret),
+    },
+    body,
     signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
   });
   const raw = await response.text();
@@ -419,16 +520,7 @@ async function visionEvaluation({
   if (response.status < HTTP_OK || response.status >= HTTP_REDIRECT) {
     throw new Error(`model router HTTP ${response.status}: ${String(payload?.error?.message || "request failed").slice(0, 500)}`);
   }
-  const calls = Array.isArray(payload?.choices?.[0]?.message?.tool_calls)
-    ? payload.choices[0].message.tool_calls.filter((call) => call?.type === "function" && call?.function?.name === "record_figure_evaluation")
-    : [];
-  if (calls.length !== 1) throw new Error("model router must return exactly one figure evaluation tool call");
-  let decoded;
-  try {
-    decoded = JSON.parse(calls[0].function.arguments);
-  } catch {
-    throw new Error("model router returned invalid figure evaluation arguments");
-  }
+  const decoded = decodedEvaluation(payload?.choices?.[Number("0")]?.message);
   return {
     evaluation: parseModelEvaluation(decoded, rubric),
     model: typeof payload.model === "string" ? payload.model : selectedModel,
@@ -456,6 +548,11 @@ function outputFiles(rawOutput, candidate) {
   return { report, referencePng, candidatePng };
 }
 
+function writeReport(outputs, report) {
+  writeFileSync(outputs.report, `${JSON.stringify(report, null, Number("2"))}\n`, { flag: "wx" });
+  return { ...report, reportPath: outputs.report };
+}
+
 export async function evaluateFigure({
   referencePath,
   candidatePath,
@@ -464,16 +561,71 @@ export async function evaluateFigure({
   model,
   routerBaseUrl,
   routerBearer,
+  texPreamblePath,
+  agentId,
+  agentSecret,
 } = {}) {
   const reference = requiredFile(referencePath, "reference");
   const candidate = requiredFile(candidatePath, "candidate");
   const rubric = loadRubric(rubricPath);
+  const preambleLines = texPreamble(texPreamblePath);
   const outputs = outputFiles(outputPath, candidate);
   const work = mkdtempSync(path.join(tmpdir(), "probierz-figure-"));
   try {
-    const referenceRender = renderArtifact(reference, work, "reference");
-    const candidateRender = renderArtifact(candidate, work, "candidate");
+    const referenceRender = renderArtifact(reference, work, "reference", preambleLines);
     const referenceGeometry = renderGeometry(referenceRender);
+    const renderer = {
+      imageMagick: run("magick", ["-version"]).split("\n")[Number("0")].trim(),
+      pdfLaTeX: reference.extension === ".tex" || candidate.extension === ".tex"
+        ? run("pdflatex", ["--version"]).split("\n")[Number("0")].trim()
+        : null,
+      texPreamble: texPreamblePath ? path.resolve(texPreamblePath) : "built-in",
+    };
+    const identity = {
+      schemaVersion: 1,
+      kind: "probierz-figure-evaluation",
+      createdAt: new Date().toISOString(),
+      inputs: {
+        reference: { path: reference.file, sha256: reference.sha256, type: reference.extension.slice(Number("1")) },
+        candidate: { path: candidate.file, sha256: candidate.sha256, type: candidate.extension.slice(Number("1")) },
+      },
+      rubric,
+      renderer,
+    };
+
+    // A candidate that does not render is the commonest real defect and the one
+    // a revision can actually fix, so it is a blocking verdict with the renderer's
+    // own message as evidence — not an evaluator crash. Crashing here would hand
+    // the caller an operational error and skip the correction loop entirely.
+    let candidateRender;
+    try {
+      candidateRender = renderArtifact(candidate, work, "candidate", preambleLines);
+    } catch (error) {
+      copyFileSync(referenceRender, outputs.referencePng, fsConstants.COPYFILE_EXCL);
+      const evidence = String(error instanceof Error ? error.message : error).slice(Number("0"), Number("4000"));
+      return writeReport(outputs, {
+        ...identity,
+        renders: {
+          reference: { path: outputs.referencePng, sha256: sha256File(outputs.referencePng), ...referenceGeometry },
+          candidate: null,
+        },
+        deterministic: { blockers: [], aspectRatioDrift: null },
+        model: null,
+        evaluation: {
+          summary: "The candidate could not be rendered, so no visual comparison was possible.",
+          dimensions: {},
+          blockers: [],
+          fidelityLosses: [],
+          recommendations: [{ priority: "critical", action: "Fix the renderer error reported below and return a candidate that builds." }],
+        },
+        verdict: {
+          pass: false,
+          overall: 0,
+          blockers: [{ code: "candidate_render_failed", artifact: "candidate", evidence }],
+        },
+      });
+    }
+
     const candidateGeometry = renderGeometry(candidateRender);
     const deterministic = deterministicReview(referenceGeometry, candidateGeometry);
     const routed = await visionEvaluation({
@@ -486,6 +638,8 @@ export async function evaluateFigure({
       model,
       routerBaseUrl,
       routerBearer,
+      agentId,
+      agentSecret,
     });
     const thresholdBlockers = [];
     let overall = 0;
@@ -509,35 +663,19 @@ export async function evaluateFigure({
       });
     }
     const blockers = [...deterministic.blockers, ...routed.evaluation.blockers, ...thresholdBlockers];
-    const renderer = {
-      imageMagick: run("magick", ["-version"]).split("\n")[0].trim(),
-      pdfLaTeX: reference.extension === ".tex" || candidate.extension === ".tex"
-        ? run("pdflatex", ["--version"]).split("\n")[0].trim()
-        : null,
-    };
     copyFileSync(referenceRender, outputs.referencePng, fsConstants.COPYFILE_EXCL);
     copyFileSync(candidateRender, outputs.candidatePng, fsConstants.COPYFILE_EXCL);
-    const report = {
-      schemaVersion: 1,
-      kind: "probierz-figure-evaluation",
-      createdAt: new Date().toISOString(),
-      inputs: {
-        reference: { path: reference.file, sha256: reference.sha256, type: reference.extension.slice(1) },
-        candidate: { path: candidate.file, sha256: candidate.sha256, type: candidate.extension.slice(1) },
-      },
+    return writeReport(outputs, {
+      ...identity,
       renders: {
         reference: { path: outputs.referencePng, sha256: sha256File(outputs.referencePng), ...referenceGeometry },
         candidate: { path: outputs.candidatePng, sha256: sha256File(outputs.candidatePng), ...candidateGeometry },
       },
-      rubric,
       deterministic,
-      renderer,
       model: { name: routed.model, usage: routed.usage, attempts: 1 },
       evaluation: routed.evaluation,
       verdict: { pass: blockers.length === 0, overall, blockers },
-    };
-    writeFileSync(outputs.report, `${JSON.stringify(report, null, 2)}\n`, { flag: "wx" });
-    return { ...report, reportPath: outputs.report };
+    });
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

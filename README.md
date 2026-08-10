@@ -272,6 +272,14 @@ the scoped bearer over standard input with `--router-token-stdin`. This avoids
 placing a short-lived credential in `argv` or a child-process environment;
 interactive use may continue to use the documented environment variables.
 
+A candidate that does not render is a blocking verdict, not a tool failure: the
+report carries a `candidate_render_failed` blocker whose evidence is the
+renderer's own error, so a caller can correct the artifact and re-submit. A
+reference that does not render is an input error and fails the command.
+`--tex-preamble <file>` adds the manuscript's own libraries, colours, and macros
+to the standalone wrapper used for TeX input; the file must contain preamble
+lines only, with no document class or document body.
+
 
 ### First evidence-producing run
 

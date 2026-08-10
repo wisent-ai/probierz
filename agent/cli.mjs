@@ -97,7 +97,7 @@ function usage() {
       "  probierz analyze <report> [dir]  parse a report + inventory media",
       "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
-      "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json] [--router-url url --router-token-stdin]  deterministic render checks plus rubric-scored vision evaluation",
+      "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json] [--tex-preamble file] [--router-url url] [--agent-id id] [--router-token-stdin]  deterministic render checks plus rubric-scored vision evaluation; --router-token-stdin reads the bearer on the first stdin line and an optional agent secret on the second",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
@@ -309,7 +309,7 @@ async function main() {
     return;
   }
   if (cmd === "figure-evaluate") {
-    const valueFlags = new Set(["--reference", "--candidate", "--rubric", "--model", "--out", "--router-url"]);
+    const valueFlags = new Set(["--reference", "--candidate", "--rubric", "--model", "--out", "--router-url", "--tex-preamble", "--agent-id"]);
     const booleanFlags = new Set(["--router-token-stdin"]);
     const options = {};
     for (let index = 0; index < rest.length; index += 1) {
@@ -328,6 +328,9 @@ async function main() {
     }
     if (!options["--reference"]) throw configError("figure-evaluate needs --reference");
     if (!options["--candidate"]) throw configError("figure-evaluate needs --candidate");
+    const stdinLines = options["--router-token-stdin"]
+      ? readFileSync(Number("0"), "utf8").split("\n")
+      : [];
     const result = await evaluateFigure({
       referencePath: options["--reference"],
       candidatePath: options["--candidate"],
@@ -335,7 +338,10 @@ async function main() {
       outputPath: options["--out"],
       model: options["--model"],
       routerBaseUrl: options["--router-url"],
-      routerBearer: options["--router-token-stdin"] ? readFileSync(Number("0"), "utf8") : undefined,
+      texPreamblePath: options["--tex-preamble"],
+      routerBearer: stdinLines[Number("0")],
+      agentId: options["--agent-id"],
+      agentSecret: stdinLines[Number("1")],
     });
     out(result);
     if (!result.verdict.pass) process.exitCode = Number("1");

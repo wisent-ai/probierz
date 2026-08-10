@@ -146,7 +146,9 @@ const TOOLS = [
       referencePath: { type: "string", description: "Reference or intermediate SVG, TeX, PDF, or raster image." },
       candidatePath: { type: "string", description: "Candidate or final SVG, TeX, PDF, or raster image." },
       rubricPath: { type: "string", description: "Optional JSON rubric; uses the scientific-figure release rubric by default." },
+      texPreamblePath: { type: "string", description: "Optional LaTeX preamble lines added to the standalone wrapper used for TeX input." },
       model: { type: "string", description: "Vision-capable model ID; defaults to PROBIERZ_FIGURE_VISION_MODEL." },
+      agentId: { type: "string" , description: "Agent identity for subscription routes; the secret comes from PROBIERZ_MODEL_AGENT_SECRET." },
       outputPath: { type: "string", description: "Optional destination ending in .json; existing evidence is never overwritten." },
     }, ["referencePath", "candidatePath"]),
   },
@@ -494,7 +496,9 @@ async function callTool(name, args) {
       candidatePath: asString(args.candidatePath, "candidatePath"),
       rubricPath: typeof args.rubricPath === "string" ? args.rubricPath : undefined,
       outputPath: typeof args.outputPath === "string" ? args.outputPath : undefined,
+      texPreamblePath: typeof args.texPreamblePath === "string" ? args.texPreamblePath : undefined,
       model: typeof args.model === "string" ? args.model : undefined,
+      agentId: typeof args.agentId === "string" ? args.agentId : undefined,
     }));
   }
   if (name === "probierz_source_identity") {
