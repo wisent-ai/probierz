@@ -1,12 +1,11 @@
 ---
 name: probierz
-description: Use probierz to see, drive, and analyze the Wisent cross-platform test toolkit - web (Playwright), Electron, mobile (iOS/Android via WebdriverIO+Appium), and native desktop (macOS/Windows). It ships a CLI and a stdio MCP server with two layers - a read-only discovery layer that lists the test surfaces and their spec files, outlines a spec's describe/it titles statically, and emits the exact run command; and an execution layer that actually runs a target under chosen conditions (BASE_URL, locale, color-scheme, device), records video/trace/screenshots, and analyzes what the run produced (pass/fail, failure reasons, media inventory with recording metadata). Use it to find what E2E coverage exists for an app (e.g. Byk iOS), to run a suite and capture a recording, or to inspect a finished run. Executing a suite needs Chromium/Appium/a simulator and is heavy + side-effecting.
+description: Use Probierz to discover, execute, and analyze Wisent quality evidence across web, Electron, mobile, native desktop, and scientific figures. Its CLI and stdio MCP server expose read-only discovery, preflight, target execution with report/media capture, and figure comparison that renders SVG/TeX/PDF/raster inputs, records deterministic geometry, and obtains a structured visual verdict through the authenticated model router. Use it to inspect existing journeys, run an authorized target, analyze a completed run, or evaluate a candidate scientific figure against a reference.
 ---
 
 # probierz
 
-probierz (Polish for the assayer's touchstone - the tool that tests purity) is
-the Wisent cross-platform test toolkit: one npm-workspaces monorepo that drives
+Probierz is the Wisent cross-platform quality-evidence toolkit. Its monorepo drives
 web, Electron, mobile, and native-desktop end-to-end tests. Each surface is
 env-var driven, with no hardcoded targets.
 
@@ -32,15 +31,18 @@ env-var driven, with no hardcoded targets.
 Single sources of truth, imported by both the CLI and the MCP server:
 `agent/lib.mjs` (discovery - surfaces, specs, run-command strings),
 `agent/runner.mjs` (execution - spawns a suite), `agent/analyze.mjs` (analysis -
-parses the report + inventories media), `agent/preflight.mjs` (toolchain
-readiness + self-provisioning), `agent/affected.mjs` (change -> affected-target
-selection), `agent/orchestrate.mjs` (the change-driven `ci` composition).
+parses the report + inventories media), `agent/figure-evaluate.mjs` (scientific
+figure rendering, deterministic geometry, rubric scoring, and immutable
+evidence), `agent/preflight.mjs` (toolchain readiness + self-provisioning),
+`agent/affected.mjs` (change -> affected-target selection), and
+`agent/orchestrate.mjs` (the change-driven `ci` composition).
 
 `ci` is the composition the others build up to: `affected` picks the targets a
 change touches, each runs preflight-gated (`check`/`run`), `analyze` reads what
 ran, and it returns one verdict. Deciding WHICH targets is structural and lives
 here; deciding whether a failure is real or what to change is an LLM's job
-(brama), one layer up - probierz stays a deterministic instrument.
+(Brama), one layer up - Probierz stays a deterministic instrument except for its
+explicit, rubric-bound figure vision evaluator.
 
 ## CLI
 
@@ -60,6 +62,7 @@ probierz affected [ref]       # which targets a change touched (git diff vs ref,
 probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture result, auto-analyze
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
 probierz ci [ref] [opts]      # change-driven: affected -> run the ready ones -> analyze -> verdict
+probierz figure-evaluate --reference <file> --candidate <file> [--rubric json] [--model id] [--out report.json]
 ```
 
 Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
@@ -101,6 +104,13 @@ response per request, diagnostics on stderr. Tools:
   `record`, `env` (condition vars), `timeoutMs`, `frames`, `analyze`, `force`, `spec`.
 - `probierz_analyze` - parse a finished run's report + inventory its media. Args:
   `reportPath` (required), `artifactsDir`, `tool`, `frames`.
+- `probierz_evaluate_figure` - render SVG, TeX, PDF, or raster reference and
+  candidate artifacts; record dimensions, content bounds, edge margins, input
+  and render identities; obtain a structured rubric verdict through the
+  authenticated model router; write immutable PNG and JSON evidence. Requires
+  `magick`, plus `pdflatex` for TeX input, `STADO_MODEL_ROUTER_URL`,
+  `STADO_MODEL_ROUTER_TOKEN`, and a vision model via `model` or
+  `PROBIERZ_FIGURE_VISION_MODEL`.
 - `probierz_affected` - which targets a change could affect, so you re-run only
   what is relevant. Deterministic + structural (file -> target by package
   containment; agent/ or repo-root files are cross-cutting -> all). Args: `files`
@@ -151,14 +161,15 @@ Typical flow: `probierz check mobile:ios` -> if it names a missing driver, run
 
 ## Operational rules
 
-- Discovery is read-only; `check` is read-only; `setup` and `run` are the only
-  paths that mutate (install deps) or execute a suite. `cmd` /
-  `probierz_run_command` still return a string to run yourself.
+- Discovery and `check` are read-only. `setup`, `run`, `figure-evaluate`,
+  authoring, artifact, and gate operations are explicitly side-effecting. `cmd`
+  / `probierz_run_command` still return a string to run yourself.
 - Keep MCP and CLI stdout clean: only JSON-RPC frames and command output on
   stdout; diagnostics on stderr.
-- `agent/lib.mjs` (discovery), `agent/runner.mjs` (execution) and
-  `agent/preflight.mjs` (toolchain) are the single sources of truth for
-  surfaces/targets/checks - add one there, not scattered across the CLI/server.
+- `agent/lib.mjs` (discovery), `agent/runner.mjs` (execution),
+  `agent/figure-evaluate.mjs` (figure evaluation), and `agent/preflight.mjs`
+  (toolchain) are the single sources of truth for their contracts - add one
+  there, not scattered across the CLI/server.
 - probierz installs the parts it owns (browsers, drivers) but never host-level
   dependencies (Xcode, Android SDK, simulators, WinAppDriver) - `check` reports
   those with a one-line install hint.

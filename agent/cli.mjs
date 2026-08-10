@@ -2,7 +2,7 @@
 // probierz — command-line view of the cross-platform test toolkit.
 //
 // Reads the same lib the MCP server uses (one source of truth). list/specs/
-// describe/cmd are read-only; check/setup/run/analyze are the execution surface.
+// describe/cmd are read-only; check/setup/run/analyze/figure-evaluate are explicit surfaces.
 //   probierz list                 — the four test surfaces + how to run each
 //   probierz specs [surface]      — e2e/spec files discovered on disk
 //   probierz describe <spec>      — static outline (describe/it titles) of a spec
@@ -14,6 +14,7 @@
 //   probierz readme-gif <video> --out <gif> — publish one bounded journey demo
 //   probierz affected [ref]       — which targets a change touched (git diff, or --files)
 //   probierz ci [ref] [opts]      — change-driven pass: affected -> run ready -> analyze
+//   probierz figure-evaluate ...  — render and score a scientific figure pair
 //
 // run options: --record  --force  --frames N  --timeout MS  --no-analyze  KEY=VALUE...
 // analyze options: [artifactsDir] --frames N --tool playwright|wdio
@@ -41,6 +42,7 @@ import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun, submitRemoteAuthor } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
+import { evaluateFigure } from "./figure-evaluate.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -93,6 +95,7 @@ function usage() {
       "  probierz analyze <report> [dir]  parse a report + inventory media",
       "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
+      "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json]  deterministic render checks plus rubric-scored vision evaluation",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
@@ -301,6 +304,31 @@ async function main() {
     const result = validateAccessibility(appId);
     out(result);
     if (!result.ok) process.exitCode = Number("1");
+    return;
+  }
+  if (cmd === "figure-evaluate") {
+    const valueFlags = new Set(["--reference", "--candidate", "--rubric", "--model", "--out"]);
+    const options = {};
+    for (let index = 0; index < rest.length; index += 1) {
+      const flag = rest[index];
+      if (!valueFlags.has(flag)) throw configError(`unknown figure-evaluate option: ${flag}`);
+      const value = rest[index + 1];
+      if (!value || value.startsWith("--")) throw configError(`${flag} needs a value`);
+      if (options[flag] !== undefined) throw configError(`${flag} may be supplied only once`);
+      options[flag] = value;
+      index += 1;
+    }
+    if (!options["--reference"]) throw configError("figure-evaluate needs --reference");
+    if (!options["--candidate"]) throw configError("figure-evaluate needs --candidate");
+    const result = await evaluateFigure({
+      referencePath: options["--reference"],
+      candidatePath: options["--candidate"],
+      rubricPath: options["--rubric"],
+      outputPath: options["--out"],
+      model: options["--model"],
+    });
+    out(result);
+    if (!result.verdict.pass) process.exitCode = Number("1");
     return;
   }
   if (cmd === "history") {

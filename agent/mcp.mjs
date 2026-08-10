@@ -3,7 +3,8 @@
 // Mirrors the echo / weles / skarbiec MCP servers: newline-delimited JSON in on
 // stdin, exactly one response line per request out on stdout, diagnostics on
 // stderr. Discovery tools (list/specs/describe/run_command) are read-only.
-// `run` executes suites, `analyze` inventories evidence, and
+// `run` executes suites, `analyze` inventories run evidence,
+// `probierz_evaluate_figure` writes rubric-scored figure evidence, and
 // `probierz_create_readme_gif` writes one bounded publication asset plus provenance.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -29,6 +30,7 @@ import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { submitRemoteRun } from "./stado.mjs";
+import { evaluateFigure } from "./figure-evaluate.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -136,6 +138,17 @@ const TOOLS = [
       tool: { type: "string", description: "playwright | wdio (inferred from the report if omitted)." },
       frames: { type: "number", description: "Extract this many frames per video (needs ffmpeg)." },
     }, ["reportPath"]),
+  },
+  {
+    name: "probierz_evaluate_figure",
+    description: "SIDE-EFFECTING: render a scientific reference/candidate pair, run deterministic geometry checks, score the declared visual rubric through the authenticated model router, and write immutable PNG evidence plus a JSON verdict.",
+    inputSchema: objectSchema({
+      referencePath: { type: "string", description: "Reference or intermediate SVG, TeX, PDF, or raster image." },
+      candidatePath: { type: "string", description: "Candidate or final SVG, TeX, PDF, or raster image." },
+      rubricPath: { type: "string", description: "Optional JSON rubric; uses the scientific-figure release rubric by default." },
+      model: { type: "string", description: "Vision-capable model ID; defaults to PROBIERZ_FIGURE_VISION_MODEL." },
+      outputPath: { type: "string", description: "Optional destination ending in .json; existing evidence is never overwritten." },
+    }, ["referencePath", "candidatePath"]),
   },
   {
     name: "probierz_create_readme_gif",
@@ -475,6 +488,15 @@ async function callTool(name, args) {
   if (name === "probierz_list_specs") return textResult(listSpecs(args.surface));
   if (name === "probierz_describe_spec") return textResult(describeSpec(args.spec));
   if (name === "probierz_run_command") return textResult(runCommand(args.target));
+  if (name === "probierz_evaluate_figure") {
+    return textResult(await evaluateFigure({
+      referencePath: asString(args.referencePath, "referencePath"),
+      candidatePath: asString(args.candidatePath, "candidatePath"),
+      rubricPath: typeof args.rubricPath === "string" ? args.rubricPath : undefined,
+      outputPath: typeof args.outputPath === "string" ? args.outputPath : undefined,
+      model: typeof args.model === "string" ? args.model : undefined,
+    }));
+  }
   if (name === "probierz_source_identity") {
     return textResult(appSourceIdentity(asString(args.appId, "appId")));
   }

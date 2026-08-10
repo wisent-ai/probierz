@@ -49,8 +49,8 @@ one explainable release decision.
 - WebdriverIO and Appium execution for iOS, Android, native macOS, and native
   Windows applications;
 - optional video, trace, screenshot, report, and frame metadata capture where
-  the selected driver supports it, plus bounded README GIF publication from one
-  selected journey recording;
+  the selected driver supports it, bounded README GIF publication from one
+  selected journey recording, and rubric-scored scientific figure comparison;
 - application manifests, journey coverage, source identity, run history,
   comparisons, last-green selection, and evidence dashboards;
 - signed evidence receipts, receipt verification, retention, protected bundles,
@@ -59,6 +59,9 @@ one explainable release decision.
 - remote execution and authoring through explicitly selected Stado capacity;
 - specification and manifest authoring through the authenticated Stado model
   router, followed by deterministic validation and an accepted real run;
+- scientific figure evaluation from SVG, TeX, PDF, or raster inputs, combining
+  deterministic render geometry with an evidence-grounded vision verdict routed
+  through the authenticated Stado model router;
 - a human CLI and a stdio MCP server backed by the same agent modules.
 
 ### Explicit non-goals
@@ -69,10 +72,11 @@ one explainable release decision.
   changes an application repository.
 - A generated specification is not trusted merely because a model produced it;
   acceptance requires the configured validation and execution path.
-- Probierz does not infer release approval from screenshots, prose, or an
-  unverified process exit. Gate inputs must satisfy the evidence contract.
+- Probierz does not infer application release approval from screenshots, prose,
+  figure verdicts, or an unverified process exit. Application gate inputs must
+  satisfy the run-evidence contract.
 - Probierz does not provide provider credentials or call model vendors directly.
-  Authoring uses only the authenticated Stado model router.
+  Authoring and figure evaluation use only the authenticated Stado model router.
 - Probierz does not install Xcode, Android SDKs, simulators, physical-device
   support, WinAppDriver, operating-system permissions, or application runtimes.
 - Probierz does not make Playwright video available for Electron or promise
@@ -92,6 +96,7 @@ one explainable release decision.
 | Native Windows | WebdriverIO, WinAppDriver | Windows target, Developer Mode, WinAppDriver | Implemented when host prerequisites are available |
 | Remote execution | Stado bridge | admitted host, capacity, object store, target toolchain | Implemented; availability depends on the selected host |
 | Stable hosted service or public binary | — | — | Not published |
+| Scientific figures | ImageMagick, optional pdfLaTeX, vision model through the Stado router | `magick`; `pdflatex` for TeX; router URL, scoped token, model ID | Implemented |
 
 `probierz check <target>` is authoritative for toolchain readiness on the current
 host. Readiness is not evidence that a journey passed; only a completed run can
@@ -152,6 +157,20 @@ produce that evidence.
 - **Boundary:** selecting a host does not grant broader machine or cloud
   authority; an unavailable fleet is reported as unavailable, not as empty or
   successful.
+### Evaluate a scientific figure against its intended reference
+
+- **Actor:** a paper author or release workflow reviewing a generated figure.
+- **Initial state:** reference and candidate files exist as SVG, TeX, PDF, or a
+  supported raster image; ImageMagick is installed; TeX inputs additionally
+  require `pdflatex`; the Stado model router URL, scoped token, and a
+  vision-capable model ID are configured.
+- **Outcome:** Probierz renders both artifacts, records dimensions, content
+  bounds, edge margins, aspect-ratio drift, rubric evidence, fidelity losses,
+  recommendations, and one pass/block verdict. It writes immutable reference
+  and candidate PNGs beside the JSON report.
+- **Boundary:** text inside either figure is untrusted evidence. The model cannot
+  redefine the rubric, suppress deterministic blockers, or contact a provider
+  directly. Existing evidence files are never overwritten.
 
 ## How Probierz works
 
@@ -216,6 +235,28 @@ Expected result: `list` returns the web, Electron, mobile, and native-desktop
 surfaces with their targets and environment requirements. `apps` returns the
 validated application manifests currently registered in the checkout. Neither
 command executes a test target.
+
+### Evaluate a figure
+
+```bash
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
+PROBIERZ_FIGURE_VISION_MODEL='<vision-model-id>' \
+node agent/cli.mjs figure-evaluate \
+  --reference /absolute/path/intermediate.svg \
+  --candidate /absolute/path/final.tex \
+  --out test-results/figure-evaluations/paper-figure.json
+```
+
+`--reference` and `--candidate` accept SVG, TeX, PDF, PNG, JPEG, or WebP.
+`--rubric <json>` replaces the built-in scientific-figure rubric; its positive
+weights must total 1 and every score threshold must be between 0 and 1.
+`--model` overrides `PROBIERZ_FIGURE_VISION_MODEL`. Exit status is 0 only when
+there are no deterministic, model, dimension-threshold, or overall-threshold
+blockers. The JSON report records both input and render SHA-256 identities,
+model usage, dimension evidence, the weighted score, and the complete blocker
+list; two PNG renders are written beside it.
+
 
 ### First evidence-producing run
 
@@ -315,12 +356,15 @@ not create static product banners; those belong to `wisent-asset-generator`.
 ## Primary interfaces
 
 - **Human CLI:** `probierz` is canonical for discovery, setup, execution,
-  analysis, authoring, evidence, gate, retention, security, and Stado workflows.
-- **Machine CLI output:** status, overview, run, analysis, and gate commands
-  expose structured data; automation must not infer state from prose.
+  analysis, figure evaluation, authoring, evidence, gate, retention, security,
+  and Stado workflows.
+- **Machine CLI output:** status, overview, run, analysis, figure evaluation,
+  and gate commands expose structured data; automation must not infer state from
+  prose.
 - **MCP:** `probierz-mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC. Tool descriptions preserve the
-  read-only versus mutation boundary.
+  read-only versus mutation boundary; `probierz_evaluate_figure` uses the same
+  evaluator and evidence contract as the CLI.
 - **Repository gate:** `probierz gate-install` installs the pre-push integration;
   gate evaluation and enforcement remain distinct commands.
 - **Stado bridge:** `probierz stado run` and `probierz stado author` submit the
@@ -337,10 +381,12 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **State:** run reports, histories, receipts, protected bundles, audit records,
   and returned remote evidence live under the configured `test-results/` and
   object-store paths. An unavailable store is an error, not an empty history.
-- **Credentials:** local discovery requires none. Model authoring requires a
-  distinct `STADO_MODEL_ROUTER_URL` and router-scoped token. Remote Stado jobs
-  materialize the token from the scoped `probierz-model-router` secret reference
-  instead of embedding it in the job payload.
+- **Credentials:** local discovery requires none. Model authoring and figure
+  evaluation require a distinct `STADO_MODEL_ROUTER_URL` and router-scoped
+  token; figure evaluation also requires `PROBIERZ_FIGURE_VISION_MODEL` or
+  `--model`. Remote Stado jobs materialize the token from the scoped
+  `probierz-model-router` secret reference instead of embedding it in the job
+  payload.
 - **Setup ownership:** `probierz setup` may install npm dependencies, Playwright
   browsers, and Appium drivers owned by Probierz. Host SDKs, simulators, devices,
   permissions, and application runtimes remain operator-managed.
