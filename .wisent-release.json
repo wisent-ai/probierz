@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "product": "probierz",
+  "releases": false,
+  "reason": "package.json marks this workspace private, and deploy/ only schedules the source checkout in place; the repository defines no published artifact or durable release channel."
+}
