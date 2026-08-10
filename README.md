@@ -10,12 +10,16 @@
 
 # Probierz: AI QA That Makes Sure You Never Ship Anything Broken
 
-**Probierz is a cross-platform quality evidence platform that turns user journeys
-into reproducible runs, inspectable artifacts, and enforceable release gates
-across web, Electron, mobile, and native desktop applications.**
+The Best Way to Improve Your AI-Generated Code Is to Have an AI Test It.
 
-Probierz separates deterministic discovery and evidence handling from the
-side-effecting work of setup, execution, authoring, and remote compute.
+Probierz gives you the proof your software works as your AI intended. On every
+commit it autonomously creates the journeys of your users and tests them directly
+where your product lives. Be it the terminal, the browser, a desktop or mobile
+app — Probierz tests it all. Every run gives you the evidence you need — reports,
+screenshots and videos so that you can see exactly what is broken in the pipeline.
+
+AI Agent That Tests All of Your Releases. Because the missing piece of vibe
+coding is Vibe QA, Vibe Testing and Vibe Assurance.
 
 [Quick start](#quick-start) · [Pipeline](docs/PIPELINE.md) ·
 [Agent interface](skills/probierz/SKILL.md) ·
