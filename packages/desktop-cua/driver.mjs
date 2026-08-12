@@ -34,11 +34,16 @@ export function cuaCall(tool, args = {}) {
   }
 }
 
-function findWindow(pid) {
+function findWindow(pid, name) {
   const listed = cuaCall("list_windows") || {};
   // Apps spawn untitled utility windows (menus, status items) next to the
-  // real content window; prefer titled, then largest area.
-  const candidates = (listed.windows || []).filter((win) => win.pid === pid && win.layer === 0);
+  // real content window; prefer titled, then largest area. LaunchServices may
+  // return pid -1 while a newly registered app is still starting, so a caller
+  // that supplied the app name can resolve the concrete pid from its window.
+  let candidates = (listed.windows || []).filter((win) => win.pid === pid && win.layer === 0);
+  if (!candidates.length && name) {
+    candidates = (listed.windows || []).filter((win) => win.app_name === name && win.layer === 0);
+  }
   candidates.sort((a, b) => {
     const titleDelta = Number(Boolean(b.title)) - Number(Boolean(a.title));
     if (titleDelta !== 0) return titleDelta;
@@ -51,6 +56,7 @@ export function launchCuaApp({
   bundleId = process.env.CUA_BUNDLE_ID,
   name = process.env.CUA_APP_NAME,
   args = [],
+  expectedName = name,
   urls = [],
   newInstance = false,
 } = {}) {
@@ -62,10 +68,10 @@ export function launchCuaApp({
     ...(newInstance ? { creates_new_application_instance: true } : {}),
   });
   const pid = launched?.pid ?? launched?.app?.pid;
-  if (!pid) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
+  if (pid == null) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
   const ownWindow = (launched?.windows || []).find((win) => win.window_id);
-  if (ownWindow) return { pid, windowId: ownWindow.window_id };
-  return waitForWindow(pid);
+  if (ownWindow) return { pid: ownWindow.pid ?? pid, windowId: ownWindow.window_id };
+  return waitForWindow(pid, expectedName);
 }
 
 // Launch an app by executing its binary directly with a custom environment
@@ -87,11 +93,11 @@ export function launchCuaProcess({
   return waitForWindow(pid);
 }
 
-function waitForWindow(pid) {
+function waitForWindow(pid, name) {
   const deadline = Date.now() + LAUNCH_WAIT_MS;
   while (Date.now() < deadline) {
-    const win = findWindow(pid);
-    if (win) return { pid, windowId: win.window_id };
+    const win = findWindow(pid, name);
+    if (win) return { pid: win.pid, windowId: win.window_id };
     sleep(POLL_MS);
   }
   throw new Error(`pid ${pid} produced no window within ${LAUNCH_WAIT_MS}ms`);

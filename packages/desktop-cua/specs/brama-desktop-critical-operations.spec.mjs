@@ -121,6 +121,7 @@ try {
     }
     app = launchCuaApp({
       bundleId: bundleIdentifier,
+      expectedName: "Brama",
       urls: [launchRequest],
       args: [
         "--disable-notifications",
