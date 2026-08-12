@@ -31,12 +31,18 @@ const REMOTE_SECRET_ENV = {
     item: "probierz-agent-auth",
     field: "agent_auth_secret",
   },
+  PROBIERZ_SEO_RECEIPT_PRIVATE_KEY: {
+    reference: "vault://wisent/probierz/seo-receipt-private-key",
+    item: "probierz-seo-receipt-signing",
+    field: "private_key",
+  },
 };
 
-function remoteRunSecretEnv(appId) {
+function remoteRunSecretEnv(appId, names = Object.keys(REMOTE_SECRET_ENV)) {
   const configured = loadAppManifest(appId).secretRefs || {};
   const secretEnv = {};
-  for (const [name, binding] of Object.entries(REMOTE_SECRET_ENV)) {
+  for (const name of names) {
+    const binding = REMOTE_SECRET_ENV[name];
     const reference = configured[name];
     if (!reference) continue;
     if (reference !== binding.reference) {
@@ -130,7 +136,7 @@ function localFailure(point, action, out) {
 function packRepo(appIds) {
   const hash = createHash("sha256").update(`${Date.now()}-${Math.random()}`).digest("hex").slice(0, Number("12"));
   const file = path.join(tmpdir(), `probierz-${hash}.tar.gz`);
-  const includes = ["agent", "packages", "apps", "package.json", "tsconfig.base.json", ".git"];
+  const includes = ["agent", "packages", "apps", "package.json", "package-lock.json", "tsconfig.base.json", ".git"];
   const args = ["-czf", file, ...includes.filter((entry) => existsSync(path.join(ROOT, entry)))];
   const packed = sh("tar", args, { cwd: ROOT });
   if (packed.status !== Number("0")) throw localFailure("stado.pack", "Packing the probierz checkout failed", packed);
@@ -183,8 +189,10 @@ function upload(localFile, name) {
   return destination;
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null }) {
-  const lines = ["set -euxo pipefail"];
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null, record = false }) {
+  // Remote jobs may receive secret_env values. Shell xtrace would copy any
+  // expanded bearer into the canonical Stado command log.
+  const lines = ["set -euo pipefail"];
   lines.push('JOB_ROOT="$PWD"', "mkdir -p output work");
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
@@ -278,8 +286,13 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
       ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
-      "nohup npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
+      "pkill -f '[a]ppium.*--port 4723' >/dev/null 2>&1 || true",
+      "npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
+      "APPIUM_PID=$!",
+      "trap 'kill \"$APPIUM_PID\" >/dev/null 2>&1 || true' EXIT",
+      "export PROBIERZ_EXTERNAL_APPIUM=1",
       "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done",
+      "nc -z 127.0.0.1 4723",
       "set +e",
       `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "$MAC_APP_PATH"`,
       "PROBIERZ_RC=$?",
@@ -296,7 +309,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // upload whatever test-results exist, then re-emit the run's status so
     // the job's success/failure still reflects the tests.
     "set +e",
-    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
+    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} PROBIERZ_RUN_KIND=pull-request`,
     "PROBIERZ_RUN_RC=$?",
     "set -e",
     `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
@@ -438,7 +451,129 @@ function provisionInputs({ appId, provision, appRepo }) {
   return { sourceRoot: null, inputs };
 }
 
-export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run" }) {
+function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryModel, secondaryModel, adjudicatorModel, agentId, routerUrl, productionEvidence, signatureRequired, hash, platform = "linux" }) {
+  const lines = ["set -euo pipefail", 'JOB_ROOT="$PWD"', "mkdir -p output work"];
+  if (platform === "darwin") {
+    lines.push(
+      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
+      `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
+    );
+  } else {
+    lines.push(
+      `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz`,
+      "tar -xJf /tmp/node.tar.xz -C /tmp",
+      `export PATH=/tmp/node-${NODE_VERSION}-linux-x64/bin:$PATH`,
+    );
+  }
+  lines.push(
+    'mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"',
+    'cd "$JOB_ROOT/work/probierz"',
+    "npm ci --no-audit --no-fund --loglevel=error",
+    "node agent/cli.mjs setup web",
+    `export STADO_MODEL_ROUTER_URL=${shellQuote(routerUrl)}`,
+    `export PROBIERZ_MODEL_AGENT_ID=${shellQuote(agentId)}`,
+    ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
+    ': "${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}"',
+  );
+  if (signatureRequired) {
+    lines.push(': "${PROBIERZ_SEO_RECEIPT_PRIVATE_KEY:?PROBIERZ_SEO_RECEIPT_PRIVATE_KEY was not materialized by Stado}"');
+  }
+  const args = [
+    "node", "agent/cli.mjs", "seo-evaluate",
+    "--app", appId,
+    "--base-url", baseUrl,
+    "--mode", mode,
+    "--policy", policyPath,
+    "--brief", briefPath,
+    "--primary-model", primaryModel,
+    "--secondary-model", secondaryModel,
+    "--adjudicator-model", adjudicatorModel,
+    "--agent-id", agentId,
+  ];
+  if (productionEvidence) args.push("--production-evidence", "$JOB_ROOT/inputs/production-evidence.json");
+  lines.push(
+    "set +e",
+    args.map((value) => value.startsWith("$JOB_ROOT/") ? `\"${value}\"` : shellQuote(value)).join(" "),
+    "PROBIERZ_SEO_RC=$?",
+    "set -e",
+    `tar -czf "$JOB_ROOT/output/probierz-seo-${hash}.tar.gz" test-results`,
+    "exit $PROBIERZ_SEO_RC",
+  );
+  return lines.join("\n");
+}
+
+export async function submitRemoteSeo({
+  appId = "landing-page",
+  baseUrl,
+  mode = "release",
+  policyPath = null,
+  briefPath = null,
+  primaryModel,
+  secondaryModel,
+  adjudicatorModel,
+  agentId = "probierz",
+  productionEvidencePath = null,
+  host = "stado:mini",
+  watch = true,
+} = {}) {
+  const hostDef = listHosts().find((entry) => entry.host === host);
+  if (!hostDef || hostDef.kind !== "stado") {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.NOT_FOUND,
+      detail: `unknown stado host: ${host}`,
+      message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
+    });
+  }
+  if (!baseUrl || !primaryModel || !secondaryModel || !adjudicatorModel) {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      detail: "remote SEO evaluation needs base URL and three pinned model IDs",
+      message: "Remote SEO evaluation needs --base-url, --primary-model, --secondary-model, and --adjudicator-model.",
+    });
+  }
+  const manifest = loadAppManifest(appId);
+  const profile = manifest.seo?.profiles?.[mode];
+  if (!profile) throw new Error(`app ${appId} has no SEO profile for ${mode}`);
+  if (profile.requireProductionEvidence && !productionEvidencePath) throw new Error(`${mode} SEO profile requires --production-evidence`);
+  policyPath ||= manifest.seo.policy;
+  briefPath ||= manifest.seo.brief;
+  const packedRepo = packRepo([appId]);
+  const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const routerUrl = stadoModelRouterUrl();
+  const script = seoRunScript({
+    appId, baseUrl, mode, policyPath, briefPath, primaryModel, secondaryModel,
+    adjudicatorModel, agentId, routerUrl, productionEvidence: Boolean(productionEvidencePath),
+    signatureRequired: profile.requireSignature, hash: packedRepo.hash, platform: hostDef.platform,
+  });
+  const scriptFile = path.join(tmpdir(), `probierz-seo-${packedRepo.hash}.sh`);
+  writeFileSync(scriptFile, script);
+  const inputObjects = {
+    repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
+    script: { stado_uri: upload(scriptFile, `seo-${packedRepo.hash}.sh`), relative_path: "inputs/run.sh" },
+  };
+  if (productionEvidencePath) {
+    if (!existsSync(productionEvidencePath)) throw new Error(`production SEO evidence not found: ${productionEvidencePath}`);
+    inputObjects.productionEvidence = {
+      stado_uri: upload(productionEvidencePath, `seo-production-${packedRepo.hash}.json`),
+      relative_path: "inputs/production-evidence.json",
+    };
+  }
+  const secretNames = ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"];
+  if (profile.requireSignature) secretNames.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
+  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "seo", inputObjects, remoteRunSecretEnv(appId, secretNames));
+  const result = { host, jobId, appId, mode, submitted: Boolean(jobId) };
+  if (!jobId) return { ...result, state: "submit-failed", failure };
+  if (!watch) return { ...result, state: "queued", failure: null };
+  const watched = await watchJob(jobId);
+  result.state = watched.state;
+  result.failure = watched.failure;
+  if (watched.state === "completed") result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "seo");
+  return result;
+}
+
+export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false }) {
   const hostDef = listHosts().find((entry) => entry.host === host);
   if (!hostDef || hostDef.kind !== "stado") {
     throw new FailureError({
@@ -451,7 +586,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
-  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode });
+  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);
@@ -460,7 +595,13 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
     ...provisioned.inputs,
   };
-  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "run", inputObjects, remoteRunSecretEnv(appId));
+  const { jobId, failure } = submitMachine(
+    hostDef,
+    packedRepo.hash,
+    "run",
+    inputObjects,
+    remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
+  );
   const result = { host, jobId, target, appId, submitted: Boolean(jobId) };
   // `failure` replaces the raw submit transcript that used to travel here: the
   // transcript is on the log line, the verdict is what a caller can act on.
@@ -502,7 +643,13 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
     ...provisioned.inputs,
   };
-  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "author", inputObjects, MODEL_ROUTER_SECRET_ENV);
+  const { jobId, failure } = submitMachine(
+    hostDef,
+    packedRepo.hash,
+    "author",
+    inputObjects,
+    remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN"]),
+  );
   const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
