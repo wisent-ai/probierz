@@ -1,0 +1,92 @@
+schemaVersion: 1
+appId: landing-page
+owner: Wisent product and design maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz
+    mappings:
+      - paths:
+          - apps/landing-page/**
+          - packages/web/tests/landing-page.spec.ts
+        journeys: [first-screen, product-proof, responsive, conversion, release-eval]
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/product-guidelines
+    mappings:
+      - paths:
+          - landing-page-best-practices.md
+          - landing-page-examples/**
+        journeys: [first-screen, product-proof, responsive, conversion, release-eval]
+
+surfaces:
+  web:
+    spec: landing-page.spec.ts
+    journeys: [first-screen, product-proof, responsive, conversion, release-eval]
+
+journeys:
+  first-screen:
+    owner: Wisent product and design maintainers
+    timeoutMs: 180000
+    value: The initial desktop, tablet, and mobile viewport communicate the approved product, audience or context, outcome, and primary action.
+  product-proof:
+    owner: Wisent product and design maintainers
+    timeoutMs: 180000
+    value: The page supports its promise with approved product or outcome evidence and contains no invented claims.
+  responsive:
+    owner: Wisent product and design maintainers
+    timeoutMs: 180000
+    value: Desktop, tablet, and mobile preserve hierarchy, legibility, evidence, and conversion without horizontal overflow.
+  conversion:
+    owner: Wisent product and design maintainers
+    timeoutMs: 180000
+    value: The approved primary action is visible and resolves to its approved URL, dialog, or form without submitting user data.
+  release-eval:
+    owner: Wisent product and design maintainers
+    timeoutMs: 180000
+    value: One bounded Brama vision call scores the complete evidence bundle and every deterministic and weighted release threshold passes.
+
+seo:
+  policy: apps/landing-page/seo-policy.json
+  brief: apps/landing-page/brief.skrzynka.json
+  profiles:
+    pull-request:
+      requireSignature: false
+      requireProductionEvidence: false
+    release:
+      requireSignature: true
+      requireProductionEvidence: false
+    nightly:
+      requireSignature: true
+      requireProductionEvidence: false
+    production:
+      requireSignature: true
+      requireProductionEvidence: true
+
+secretRefs:
+  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
+  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
+  PROBIERZ_SEO_RECEIPT_PRIVATE_KEY: vault://wisent/probierz/seo-receipt-private-key
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+matrix:
+  release:
+    targets: [web]
+    record: false
+    timeoutMs: 240000
+    maximumParallel: 1
+    maxCells: 1
+    minimumCellEvidence: E2
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: false
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [first-screen, product-proof, responsive, conversion, release-eval]
+  requiredTargets: [web]
+  requiredMatrixProfile: release
+  requireSecretScan: true
