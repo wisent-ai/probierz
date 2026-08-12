@@ -88,16 +88,18 @@ try {
       secret.id,
       '--type',
       'note',
-      `secret=${secret.value}`,
+      `value=${secret.value}`,
     ]);
-    assert.deepEqual(stored, { id: secret.id, ok: true });
+    assert.deepEqual(stored, { id: secret.id, kind: 'note', ok: true });
   }
 
   for (const secret of secrets) {
     const retrieved = await runJson(['get', secret.id]);
     assert.deepEqual(retrieved, {
-      secret: secret.value,
-      type: 'note',
+      schema: 'skarbiec.item.v2',
+      kind: 'note',
+      fields: { value: secret.value },
+      context: {},
     });
   }
 

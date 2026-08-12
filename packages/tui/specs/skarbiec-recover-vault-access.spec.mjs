@@ -98,9 +98,9 @@ try {
     secretId,
     '--type',
     'note',
-    `secret=${secretValue}`,
+    `value=${secretValue}`,
   ]);
-  assert.deepEqual(stored, { id: secretId, ok: true });
+  assert.deepEqual(stored, { id: secretId, kind: 'note', ok: true });
 
   const recoveryStatus = await runJson(['recovery-status']);
   assert.equal(recoveryStatus.recovery_fpr, initialized.recovery_fpr);
@@ -109,8 +109,10 @@ try {
 
   const beforeRecovery = await runJson(['get', secretId]);
   assert.deepEqual(beforeRecovery, {
-    secret: secretValue,
-    type: 'note',
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
   });
 
   const exportRecoveryKey = [
@@ -166,8 +168,10 @@ try {
     keyring: recoveredKeyring,
   });
   assert.deepEqual(recoveredSecret, {
-    secret: secretValue,
-    type: 'note',
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
   });
 } finally {
   await app.close();

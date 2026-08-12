@@ -80,9 +80,9 @@ try {
     secretId,
     '--type',
     'note',
-    `secret=${secretValue}`,
+    `value=${secretValue}`,
   ]);
-  assert.deepEqual(stored, { id: secretId, ok: true });
+  assert.deepEqual(stored, { id: secretId, kind: 'note', ok: true });
 
   const added = await runJson(['add-user', memberUid, '--role', 'member'], 120_000);
   assert.equal(added.ok, true);
@@ -111,8 +111,10 @@ try {
 
   const ownerCanStillRead = await runJson(['get', secretId]);
   assert.deepEqual(ownerCanStillRead, {
-    secret: secretValue,
-    type: 'note',
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
   });
 } finally {
   await app.close();

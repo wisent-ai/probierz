@@ -98,17 +98,22 @@ try {
     secretId,
     '--type',
     'note',
-    `secret=${secretValue}`,
+    `value=${secretValue}`,
   ]);
-  assert.deepEqual(stored, { id: secretId, ok: true });
+  assert.deepEqual(stored, { id: secretId, kind: 'note', ok: true });
 
   const retrieved = await runJson(['get', secretId]);
-  assert.deepEqual(retrieved, { secret: secretValue, type: 'note' });
+  assert.deepEqual(retrieved, {
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
+  });
 
   const listed = await runJson(['list']);
   assert.equal(listed.length, 1);
   assert.equal(listed[0].id, secretId);
-  assert.equal(listed[0].type, 'note');
+  assert.equal(listed[0].kind, 'note');
   assert.equal(listed[0].deleted, false);
 
   const deleted = await runJson(['delete', secretId]);
@@ -123,8 +128,10 @@ try {
   const restored = await runJson(['restore', secretId]);
   assert.deepEqual(restored, { ok: true });
   assert.deepEqual(await runJson(['get', secretId]), {
-    secret: secretValue,
-    type: 'note',
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
   });
 
   assert.deepEqual(await runJson(['delete', secretId]), { ok: true });

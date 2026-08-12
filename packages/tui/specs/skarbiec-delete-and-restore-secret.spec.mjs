@@ -29,12 +29,17 @@ const runJson = async (args, timeoutMs = 30_000) => {
   const logStart = app.fullLog().length;
   const command = [binary, ...args].map(shellQuote).join(' ');
 
-  app.send(`${command} && printf '\\n${marker}\\n'`);
+  app.send(
+    `${command}; skarbiec_command_status=$?; printf '\\n${marker}:%s\\n' "$skarbiec_command_status"`,
+  );
   app.key('enter');
   await app.waitFor(marker, { timeoutMs, useFullLog: true });
 
   const output = app.fullLog().slice(logStart);
   const appOutput = output.slice(0, output.indexOf(marker));
+  const statusMatch = output.match(new RegExp(`${marker}:(\\d+)`));
+  assert.ok(statusMatch, `expected completion status from: ${args.join(' ')}`);
+  assert.equal(Number(statusMatch[1]), 0, `skarbiec command failed: ${args.join(' ')}`);
   const objectStart = appOutput.indexOf('{');
   const arrayStart = appOutput.indexOf('[');
   const jsonStart =
@@ -66,9 +71,9 @@ try {
     secretId,
     '--type',
     'note',
-    `secret=${secretValue}`,
+    `value=${secretValue}`,
   ]);
-  assert.deepEqual(created, { id: secretId, ok: true });
+  assert.deepEqual(created, { id: secretId, kind: 'note', ok: true });
 
   const liveBeforeDelete = await runJson(['list']);
   assert.equal(liveBeforeDelete.length, 1);
@@ -96,8 +101,10 @@ try {
 
   const recoveredSecret = await runJson(['get', secretId]);
   assert.deepEqual(recoveredSecret, {
-    secret: secretValue,
-    type: 'note',
+    schema: 'skarbiec.item.v2',
+    kind: 'note',
+    fields: { value: secretValue },
+    context: {},
   });
 } finally {
   await app.close();
