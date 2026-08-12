@@ -7,6 +7,9 @@ const commandTimeoutMs = 15_000;
 const probeTimeoutMs = 5_000;
 const startupTimeoutMs = 60_000;
 const socket = path.join(homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
+const bundledDriver = "/Applications/CuaDriver.app/Contents/MacOS/cua-driver";
+const cuaDriver = process.env.CUA_DRIVER_BIN
+  || (process.platform === "darwin" && existsSync(bundledDriver) ? bundledDriver : "cua-driver");
 
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -61,7 +64,7 @@ if (!window) {
   rmSync(socket, { force: true });
 
   const launched = spawn(
-    process.env.CUA_DRIVER_BIN || "cua-driver",
+    cuaDriver,
     ["serve", "--socket", socket],
     {
       detached: true,
