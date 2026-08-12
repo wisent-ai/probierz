@@ -29,10 +29,21 @@ async function freeLoopbackPort() {
   return port;
 }
 
+function isolateBundleIdentity(bundle) {
+  if (!bundle) return;
+  const info = path.join(bundle, "Contents", "Info.plist");
+  const identifier = `com.wisent.brama.desktop.probierz.${randomUUID().replaceAll("-", "")}`;
+  const update = spawnSync("/usr/libexec/PlistBuddy", ["-c", `Set :CFBundleIdentifier ${identifier}`, info], { encoding: "utf8" });
+  if (update.status !== 0) throw new Error(`could not isolate Brama bundle identity: ${update.stderr || update.stdout}`);
+  const sign = spawnSync("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", bundle], { encoding: "utf8" });
+  if (sign.status !== 0) throw new Error(`could not sign isolated Brama bundle: ${sign.stderr || sign.stdout}`);
+}
+
 const appBundle = process.env.MAC_APP_PATH;
 const executable = process.env.CUA_APP_EXECUTABLE
   || (appBundle ? path.join(appBundle, "Contents", "MacOS", "Brama") : null);
 if (!executable) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH or CUA_APP_EXECUTABLE");
+isolateBundleIdentity(appBundle);
 
 const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const mediaDir = path.join(artifacts, "media");
