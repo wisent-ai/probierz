@@ -376,13 +376,14 @@ async function watchJob(jobId) {
     // A job the fleet failed or cancelled is a run result, not an outage: the
     // queue did its part. The worker's own text is the operator's evidence.
     if (["failed", "cancelled"].includes(state)) {
+      const detail = (out.stdout || out.stderr).slice(Number("0"), Number("500"));
       return {
         state: "failed",
-        failure: failureSummary(failureFrom({
-          point: "stado.watch",
-          error: `job ${state}`,
-          detail: (out.stdout || out.stderr).slice(Number("0"), Number("500")),
-          action: `Job ${jobId} ${state} on the remote host`,
+        failure: failureSummary(new FailureError({
+          point: "stado.worker",
+          code: CODE.UNKNOWN,
+          detail,
+          message: `Job ${jobId} ${state} on the remote host; its retained evidence describes the failure.`,
         })),
       };
     }
@@ -574,6 +575,36 @@ export async function submitRemoteSeo({
   return result;
 }
 
+function fetchFailedRun(jobId) {
+  const destDir = path.join(ROOT, "test-results", ".remote", jobId);
+  rmSync(destDir, { recursive: true, force: true });
+  mkdirSync(destDir, { recursive: true });
+  const downloaded = sh(STADO_BIN, ["machine", "artifacts", jobId, "--output-dir", destDir]);
+  if (downloaded.status !== Number("0")) return null;
+  let payload;
+  try {
+    payload = JSON.parse(downloaded.stdout);
+  } catch {
+    return null;
+  }
+  const artifact = (payload?.result?.artifacts || []).find(({ relative_path: relativePath }) =>
+    /^probierz-run-.*\.tar\.gz$/.test(String(relativePath || "")));
+  if (!artifact) return null;
+  const tarball = path.join(destDir, artifact.relative_path);
+  const listed = sh("tar", ["-tzf", tarball], { cwd: ROOT });
+  if (listed.status !== Number("0")) return null;
+  const manifestEntry = listed.stdout.split("\n").find((entry) => entry.endsWith("/run-manifest.json"));
+  const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
+  if (untar.status !== Number("0")) return null;
+  let manifest = null;
+  if (manifestEntry) {
+    try {
+      manifest = JSON.parse(readFileSync(path.join(ROOT, manifestEntry), "utf8"));
+    } catch {}
+  }
+  return { resultsDir: destDir, manifest };
+}
+
 export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false }) {
   const hostDef = listHosts().find((entry) => entry.host === host);
   if (!hostDef || hostDef.kind !== "stado") {
@@ -613,6 +644,24 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
+  }
+  if (watched.state === "failed") {
+    const retained = fetchFailedRun(jobId);
+    if (retained) {
+      result.resultsDir = retained.resultsDir;
+      const preflight = retained.manifest?.preflight;
+      if (preflight?.ready === false) {
+        result.preflight = preflight;
+        const missing = (preflight.missing || []).join(", ") || "target prerequisites";
+        const remediation = (preflight.remediation || []).join("; ");
+        result.failure = failureSummary(new FailureError({
+          point: "stado.worker",
+          code: CODE.CONFIG,
+          detail: `missing: ${missing}${remediation ? `; remediation: ${remediation}` : ""}`,
+          message: `Job ${jobId} did not execute because the selected host is missing: ${missing}.`,
+        }));
+      }
+    }
   }
   return result;
 }
@@ -671,10 +720,9 @@ export function fetchResults(hash, appId, jobId, kind = "run") {
   const tarball = path.join(destDir, "results.tar.gz");
   const down = sh(STADO_BIN, ["storage", "get", `${stateUri("results")}/probierz-${kind}-${hash}.tar.gz`, tarball]);
   if (down.status !== Number("0")) throw remoteFailure("stado.download", `Downloading the evidence for job ${jobId} failed`, down);
-  // Author tarballs carry the accepted spec + manifest next to test-results,
-  // so they extract at the repo root; run evidence extracts as before.
-  const untarCwd = kind === "author" ? ROOT : path.join(ROOT, "test-results");
-  const untar = sh("tar", ["-xzf", tarball, "-C", untarCwd], { cwd: ROOT });
+  // Every remote archive is rooted at the repository: run archives contain
+  // test-results/, while author archives add accepted specs and the manifest.
+  const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
   if (untar.status !== Number("0")) throw localFailure("stado.download", `Unpacking the evidence for job ${jobId} failed`, untar);
   return destDir;
 }
