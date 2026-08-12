@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const commandTimeoutMs = 15_000;
 const probeTimeoutMs = 5_000;
@@ -60,20 +60,15 @@ if (!window) {
   run(["stop", "--socket", socket]);
   rmSync(socket, { force: true });
 
-  const launched = run([
-    "call",
-    "launch_app",
-    JSON.stringify({
-      bundle_id: "com.trycua.driver",
-      creates_new_application_instance: true,
-      additional_arguments: ["serve", "--socket", socket],
-    }),
-    "--no-daemon",
-  ]);
-  if (launched.status !== 0) {
-    process.stderr.write(launched.stderr || launched.stdout || "could not launch the Probierz CuaDriver daemon\n");
-    process.exit(1);
-  }
+  const launched = spawn(
+    process.env.CUA_DRIVER_BIN || "cua-driver",
+    ["serve", "--socket", socket],
+    {
+      detached: true,
+      stdio: "ignore",
+    },
+  );
+  launched.unref();
 
   const deadline = Date.now() + startupTimeoutMs;
   while (Date.now() < deadline && !existsSync(socket)) sleep(100);
