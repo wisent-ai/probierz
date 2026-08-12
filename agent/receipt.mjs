@@ -98,6 +98,25 @@ function publicFingerprint(publicKey) {
   const der = publicKey.export({ type: "spki", format: "der" });
   return sha256(der);
 }
+export function signEvidencePayload(payload, privateKeyInput) {
+  const text = Buffer.isBuffer(privateKeyInput) ? privateKeyInput.toString("utf8").trim() : String(privateKeyInput || "").trim();
+  const privateKey = text.includes("BEGIN")
+    ? createPrivateKey(text)
+    : createPrivateKey({ key: Buffer.from(text, "base64"), format: "der", type: "pkcs8" });
+  if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("evidence private key must be Ed25519");
+  const publicKey = createPublicKey(privateKey);
+  const canonicalPayload = canonical(payload);
+  return {
+    algorithm: "Ed25519",
+    publicKeyFingerprintSha256: publicFingerprint(publicKey),
+    publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
+    payloadSha256: sha256(canonicalPayload),
+    signature: sign(null, Buffer.from(canonicalPayload), privateKey).toString("base64"),
+  };
+}
+export function signedEvidenceId(payload, signing) {
+  return sha256(`${canonical(payload)}\n${signing.signature}`).slice(0, 24);
+}
 
 function policyConditions(run, manifest) {
   const names = new Set(["PROBIERZ_RELEASE"]);
@@ -318,22 +337,9 @@ export async function createReceipt({
     verdict: { passed: errors.length === 0, errors, coveredJourneys: [...coveredJourneys].sort(), missingJourneys },
     runs: normalizedRuns,
   };
-  const privateKey = createPrivateKey(readFileSync(privateKeyFile));
-  if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("receipt private key must be Ed25519");
-  const publicKey = createPublicKey(privateKey);
-  const canonicalPayload = canonical(payload);
-  const signature = sign(null, Buffer.from(canonicalPayload), privateKey).toString("base64");
-  const receipt = {
-    ...payload,
-    signing: {
-      algorithm: "Ed25519",
-      publicKeyFingerprintSha256: publicFingerprint(publicKey),
-      publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
-      payloadSha256: sha256(canonicalPayload),
-      signature,
-    },
-  };
-  const receiptId = sha256(`${canonicalPayload}\n${signature}`).slice(0, 24);
+  const signing = signEvidencePayload(payload, readFileSync(privateKeyFile));
+  const receipt = { ...payload, signing };
+  const receiptId = signedEvidenceId(payload, signing);
   const directory = path.join(outputRoot, segment(appId), segment(release));
   const file = path.join(directory, `${receiptId}.json`);
   mkdirSync(directory, { recursive: true });
@@ -362,7 +368,7 @@ export function verifyReceipt(file, { trustedPublicKeyFile, expectedFingerprint 
     trusted,
     fingerprint,
     payloadSha256: sha256(canonicalPayload),
-    receiptId: sha256(`${canonicalPayload}\n${signing.signature}`).slice(0, 24),
+    receiptId: signedEvidenceId(payload, signing),
     issuedAt: payload.issuedAt,
     productId: payload.productId || payload.appId,
     verdict: payload.verdict,
@@ -373,7 +379,7 @@ export function verifyReceipt(file, { trustedPublicKeyFile, expectedFingerprint 
     builds: payload.builds,
     secretScans: payload.secretScans || {},
     policy: payload.policy,
-    runs: payload.runs,
-    runIds: payload.runs.map((run) => run.runId),
+    runs: payload.runs || [],
+    runIds: (payload.runs || []).map((run) => run.runId),
   };
 }

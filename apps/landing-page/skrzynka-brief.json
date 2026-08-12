@@ -48,6 +48,28 @@
       "Claims that Skrzynka generates replies, sends automatic replies, exposes a remote shared server, or stores resolved mailbox credentials"
     ]
   },
+  "seo": {
+    "queryIntents": [
+      {
+        "queryFamily": "self-hosted inbox for multiple IMAP mailboxes",
+        "userNeed": "Evaluate one local inbox that preserves the originating mailbox identity for synchronization and replies."
+      },
+      {
+        "queryFamily": "local multi-mailbox email operations",
+        "userNeed": "Understand how mailbox credentials remain in Skarbiec while Skrzynka performs IMAP and SMTP operations."
+      }
+    ],
+    "entities": [
+      {
+        "name": "Skrzynka",
+        "type": "SoftwareApplication"
+      },
+      {
+        "name": "Wisent",
+        "type": "Organization"
+      }
+    ]
+  },
   "analyticsOwner": "Wisent product and design maintainers",
   "notes": [
     "The product is self-hosted and currently carries a development contract; the landing must not imply hosted-service availability.",

@@ -1,6 +1,6 @@
 ---
 name: probierz
-description: Use Probierz to discover, execute, and analyze Wisent quality evidence across web, Electron, mobile, native desktop, and scientific figures. Its CLI and stdio MCP server expose read-only discovery, preflight, target execution with report/media capture, and figure comparison that renders SVG/TeX/PDF/raster inputs, records deterministic geometry, and obtains a structured visual verdict through the authenticated model router. Use it to inspect existing journeys, run an authorized target, analyze a completed run, or evaluate a candidate scientific figure against a reference.
+description: Use Probierz to discover, execute, and analyze Wisent quality evidence across web, Electron, mobile, native desktop, scientific figures, and SEO releases. Its CLI and stdio MCP server expose read-only discovery, preflight, target execution with report/media capture, figure comparison, and a complete SEO evaluator that enforces crawl/index contracts, scores content through independent Brama graders, ingests production observations, and signs immutable evidence. Use it to inspect existing journeys, run an authorized target, evaluate a candidate scientific figure, or produce a release SEO verdict.
 ---
 
 # probierz
@@ -33,16 +33,19 @@ Single sources of truth, imported by both the CLI and the MCP server:
 `agent/runner.mjs` (execution - spawns a suite), `agent/analyze.mjs` (analysis -
 parses the report + inventories media), `agent/figure-evaluate.mjs` (scientific
 figure rendering, deterministic geometry, rubric scoring, and immutable
-evidence), `agent/preflight.mjs` (toolchain readiness + self-provisioning),
-`agent/affected.mjs` (change -> affected-target selection), and
-`agent/orchestrate.mjs` (the change-driven `ci` composition).
+evidence), `agent/seo-evaluate.mjs` plus `agent/seo-{policy,crawl,model,verdict}.mjs`
+(SEO contract, evidence, grading, and signed verdict), `agent/preflight.mjs`
+(toolchain readiness + self-provisioning), `agent/affected.mjs` (change ->
+affected-target selection), and `agent/orchestrate.mjs` (the change-driven `ci`
+composition).
 
 `ci` is the composition the others build up to: `affected` picks the targets a
 change touches, each runs preflight-gated (`check`/`run`), `analyze` reads what
 ran, and it returns one verdict. Deciding WHICH targets is structural and lives
 here; deciding whether a failure is real or what to change is an LLM's job
-(Brama), one layer up - Probierz stays a deterministic instrument except for its
-explicit, rubric-bound figure vision evaluator.
+(Brama), one layer up. Probierz stays deterministic except for its explicit,
+rubric-bound figure and SEO evaluators; neither model surface may reinterpret a
+deterministic blocker.
 
 ## CLI
 
@@ -63,6 +66,8 @@ probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture resu
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
 probierz ci [ref] [opts]      # change-driven: affected -> run the ready ones -> analyze -> verdict
 probierz figure-evaluate --reference <file> --candidate <file> [--rubric json] [--model id] [--out report.json]
+probierz seo-evaluate --app <id> --base-url <url> --mode <profile> [--policy json] [--brief json] [--production-evidence json]
+probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--host stado:mini]
 ```
 
 Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
@@ -162,13 +167,15 @@ Typical flow: `probierz check mobile:ios` -> if it names a missing driver, run
 ## Operational rules
 
 - Discovery and `check` are read-only. `setup`, `run`, `figure-evaluate`,
-  authoring, artifact, and gate operations are explicitly side-effecting. `cmd`
-  / `probierz_run_command` still return a string to run yourself.
+  `seo-evaluate`, authoring, artifact, and gate operations are explicitly
+  side-effecting. `cmd` / `probierz_run_command` still return a string to run
+  yourself.
 - Keep MCP and CLI stdout clean: only JSON-RPC frames and command output on
   stdout; diagnostics on stderr.
 - `agent/lib.mjs` (discovery), `agent/runner.mjs` (execution),
-  `agent/figure-evaluate.mjs` (figure evaluation), and `agent/preflight.mjs`
-  (toolchain) are the single sources of truth for their contracts - add one
+  `agent/figure-evaluate.mjs` (figure evaluation),
+  `agent/seo-evaluate.mjs` (SEO orchestration), and `agent/preflight.mjs`
+  (toolchain) are the single sources of truth for their contracts; add one
   there, not scattered across the CLI/server.
 - probierz installs the parts it owns (browsers, drivers) but never host-level
   dependencies (Xcode, Android SDK, simulators, WinAppDriver) - `check` reports

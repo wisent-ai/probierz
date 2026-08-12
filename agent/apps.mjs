@@ -123,6 +123,18 @@ function validateManifest(document, file) {
       .map(([target]) => target);
     requireValue(targets.some((target) => targetSupportsArtifactKind(target, "recording")), `${file} journey ${name} claims recording but none of its drivers support recording`);
   }
+  if (document.seo !== undefined) {
+    requireValue(document.seo && typeof document.seo === "object" && !Array.isArray(document.seo), `${file} seo must be an object`);
+    requireValue(typeof document.seo.policy === "string" && document.seo.policy.length > 0, `${file} seo.policy is required`);
+    requireValue(typeof document.seo.brief === "string" && document.seo.brief.length > 0, `${file} seo.brief is required`);
+    requireValue(document.seo.profiles && typeof document.seo.profiles === "object", `${file} seo.profiles are required`);
+    for (const [profileName, profile] of Object.entries(document.seo.profiles)) {
+      requireValue(["pull-request", "release", "nightly", "production"].includes(profileName), `${file} seo profile ${profileName} is unsupported`);
+      requireValue(profile && typeof profile === "object", `${file} seo.profiles.${profileName} must be an object`);
+      requireValue(typeof profile.requireSignature === "boolean", `${file} seo.profiles.${profileName}.requireSignature must be boolean`);
+      requireValue(typeof profile.requireProductionEvidence === "boolean", `${file} seo.profiles.${profileName}.requireProductionEvidence must be boolean`);
+    }
+  }
   for (const [key, reference] of Object.entries(document.secretRefs || {})) {
     requireValue(typeof reference === "string" && reference.startsWith("vault://"), `${file} secretRefs.${key} must be a vault:// reference`);
   }

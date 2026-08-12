@@ -22,4 +22,20 @@ REPOS="${PROBIERZ_NIGHTLY_REPOS:-/Users/lukaszbartoszcze/Documents/CodingProject
     echo "--- overview"
     cd "$PROBIERZ"
     node agent/cli.mjs overview --text
+    echo "--- seo"
+    if [ -n "${PROBIERZ_SEO_BASE_URL:-}" ]; then
+        : "${PROBIERZ_SEO_PRIMARY_MODEL:?nightly SEO needs PROBIERZ_SEO_PRIMARY_MODEL}"
+        : "${PROBIERZ_SEO_SECONDARY_MODEL:?nightly SEO needs PROBIERZ_SEO_SECONDARY_MODEL}"
+        : "${PROBIERZ_SEO_ADJUDICATOR_MODEL:?nightly SEO needs PROBIERZ_SEO_ADJUDICATOR_MODEL}"
+        node agent/cli.mjs stado seo landing-page \
+            --base-url "$PROBIERZ_SEO_BASE_URL" \
+            --mode nightly \
+            --primary-model "$PROBIERZ_SEO_PRIMARY_MODEL" \
+            --secondary-model "$PROBIERZ_SEO_SECONDARY_MODEL" \
+            --adjudicator-model "$PROBIERZ_SEO_ADJUDICATOR_MODEL" \
+            --agent-id "${PROBIERZ_MODEL_AGENT_ID:-probierz}" \
+            --host "${PROBIERZ_SEO_HOST:-stado:mini}"
+    else
+        echo "seo: not configured (PROBIERZ_SEO_BASE_URL is empty)"
+    fi
 } >> "$OUT_DIR/nightly.log" 2>&1

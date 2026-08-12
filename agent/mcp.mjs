@@ -29,8 +29,9 @@ import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { submitRemoteRun } from "./stado.mjs";
+import { submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
+import { evaluateSeo } from "./seo-evaluate.mjs";
 
 const PROTOCOL_VERSION = "2024-11-05";
 const JSONRPC_VERSION = "2.0";
@@ -151,6 +152,25 @@ const TOOLS = [
       agentId: { type: "string" , description: "Agent identity for subscription routes; the secret comes from PROBIERZ_MODEL_AGENT_SECRET." },
       outputPath: { type: "string", description: "Optional destination ending in .json; existing evidence is never overwritten." },
     }, ["referencePath", "candidatePath"]),
+  },
+  {
+    name: "probierz_evaluate_seo",
+    description: "SIDE-EFFECTING: crawl a declared site as ordinary Chrome and Googlebot Smartphone, enforce indexability and structured-data contracts, collect mobile performance evidence, run two independent Brama content graders with conditional adjudication, ingest optional Search Console/CrUX evidence, and write an immutable signed SEO verdict.",
+    inputSchema: objectSchema({
+      appId: { type: "string", description: "Manifest app ID; defaults to landing-page." },
+      baseUrl: { type: "string", description: "Credential-free HTTPS origin or loopback HTTP URL to evaluate." },
+      policyPath: { type: "string", description: "Optional SEO policy JSON; defaults to manifest seo.policy." },
+      briefPath: { type: "string", description: "Optional approved landing brief JSON; defaults to manifest seo.brief." },
+      mode: { type: "string", description: "pull-request, release, nightly, or production; defaults to release." },
+      outputPath: { type: "string", description: "Optional immutable report destination ending in .json." },
+      productionEvidencePath: { type: "string", description: "Optional Search Console and CrUX evidence JSON." },
+      primaryModel: { type: "string", description: "Pinned first Brama model ID." },
+      secondaryModel: { type: "string", description: "Pinned independent second Brama model ID." },
+      adjudicatorModel: { type: "string", description: "Pinned Brama model used only when graders disagree." },
+      routerBaseUrl: { type: "string", description: "Brama-compatible router base; defaults to STADO_MODEL_ROUTER_URL." },
+      agentId: { type: "string", description: "Probierz model identity." },
+      privateKeyFile: { type: "string", description: "Ed25519 PKCS#8 PEM file for release evidence signing." },
+    }, ["baseUrl"]),
   },
   {
     name: "probierz_create_readme_gif",
@@ -339,6 +359,24 @@ const TOOLS = [
     }, ["target", "appId"]),
   },
   {
+    name: "probierz_stado_evaluate_seo",
+    description: "SIDE-EFFECTING: submit the complete SEO evaluator to a Stado-selected dedicated host, materialize only the declared Brama and signing secrets, and fetch the immutable evidence bundle.",
+    inputSchema: objectSchema({
+      appId: { type: "string", description: "Manifest app ID; defaults to landing-page." },
+      baseUrl: { type: "string" },
+      mode: { type: "string", description: "pull-request, release, nightly, or production." },
+      policyPath: { type: "string" },
+      briefPath: { type: "string" },
+      primaryModel: { type: "string" },
+      secondaryModel: { type: "string" },
+      adjudicatorModel: { type: "string" },
+      agentId: { type: "string" },
+      productionEvidencePath: { type: "string" },
+      host: { type: "string", description: "Dedicated Stado host; defaults to stado:mini." },
+      watch: { type: "boolean", description: "Default true; waits for completion and fetches results." },
+    }, ["baseUrl", "primaryModel", "secondaryModel", "adjudicatorModel"]),
+  },
+  {
     name: "probierz_gate_evaluate",
     description: "Evaluate exact build, E3 evidence, coverage, matrix, encryption, secret scan, and signed receipt eligibility; appends an audit record.",
     inputSchema: objectSchema(gateProperties, ["appId", "mode", "expectedHarnessSha", "expectedSourceSha", "runIds"]),
@@ -501,6 +539,23 @@ async function callTool(name, args) {
       agentId: typeof args.agentId === "string" ? args.agentId : undefined,
     }));
   }
+  if (name === "probierz_evaluate_seo") {
+    return textResult(await evaluateSeo({
+      appId: typeof args.appId === "string" ? args.appId : "landing-page",
+      baseUrl: asString(args.baseUrl, "baseUrl"),
+      policyPath: typeof args.policyPath === "string" ? args.policyPath : undefined,
+      briefPath: typeof args.briefPath === "string" ? args.briefPath : undefined,
+      mode: typeof args.mode === "string" ? args.mode : "release",
+      outputPath: typeof args.outputPath === "string" ? args.outputPath : undefined,
+      productionEvidencePath: typeof args.productionEvidencePath === "string" ? args.productionEvidencePath : undefined,
+      primaryModel: typeof args.primaryModel === "string" ? args.primaryModel : undefined,
+      secondaryModel: typeof args.secondaryModel === "string" ? args.secondaryModel : undefined,
+      adjudicatorModel: typeof args.adjudicatorModel === "string" ? args.adjudicatorModel : undefined,
+      routerBaseUrl: typeof args.routerBaseUrl === "string" ? args.routerBaseUrl : undefined,
+      agentId: typeof args.agentId === "string" ? args.agentId : undefined,
+      privateKeyFile: typeof args.privateKeyFile === "string" ? args.privateKeyFile : undefined,
+    }));
+  }
   if (name === "probierz_source_identity") {
     return textResult(appSourceIdentity(asString(args.appId, "appId")));
   }
@@ -616,6 +671,22 @@ async function callTool(name, args) {
         ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId") }
         : null,
       appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
+      watch: args.watch !== false,
+    }));
+  }
+  if (name === "probierz_stado_evaluate_seo") {
+    return textResult(await submitRemoteSeo({
+      appId: typeof args.appId === "string" ? args.appId : "landing-page",
+      baseUrl: asString(args.baseUrl, "baseUrl"),
+      mode: typeof args.mode === "string" ? args.mode : "release",
+      policyPath: typeof args.policyPath === "string" ? args.policyPath : null,
+      briefPath: typeof args.briefPath === "string" ? args.briefPath : null,
+      primaryModel: asString(args.primaryModel, "primaryModel"),
+      secondaryModel: asString(args.secondaryModel, "secondaryModel"),
+      adjudicatorModel: asString(args.adjudicatorModel, "adjudicatorModel"),
+      agentId: typeof args.agentId === "string" ? args.agentId : "probierz",
+      productionEvidencePath: typeof args.productionEvidencePath === "string" ? args.productionEvidencePath : null,
+      host: typeof args.host === "string" ? args.host : "stado:mini",
       watch: args.watch !== false,
     }));
   }

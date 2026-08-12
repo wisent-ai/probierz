@@ -44,7 +44,7 @@ journeys:
 
 seo:
   policy: apps/landing-page/seo-policy.json
-  brief: apps/landing-page/brief.skrzynka.json
+  brief: apps/landing-page/skrzynka-brief.json
   profiles:
     pull-request:
       requireSignature: false

@@ -40,10 +40,11 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, submitRemoteRun, submitRemoteAuthor } from "./stado.mjs";
+import { listHosts, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
+import { evaluateSeo } from "./seo-evaluate.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,7 +72,8 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--host stado:gcp|azure|aws|any|spot] [--cargo-release --app-repo p --binary b] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-bundle-path p] [--app-repo r] [--no-watch]  author on a Stado host with a scoped model-router token; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
@@ -98,6 +100,7 @@ function usage() {
       "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
       "  probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json] [--tex-preamble file] [--router-url url] [--agent-id id] [--router-token-stdin]  deterministic render checks plus rubric-scored vision evaluation; --router-token-stdin reads the bearer on the first stdin line and an optional agent secret on the second",
+      "  probierz seo-evaluate --app <id> --base-url <url> [--policy json] [--brief json] [--mode pull-request|release|nightly|production] [--out report.json] [--production-evidence json] [--primary-model id] [--secondary-model id] [--adjudicator-model id] [--router-url url] [--agent-id id] [--private-key-file pem] [--router-token-stdin]  full crawl, indexability, structured-data, dual-model content, performance, production, and signed SEO verdict",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
@@ -347,6 +350,53 @@ async function main() {
     if (!result.verdict.pass) process.exitCode = Number("1");
     return;
   }
+  if (cmd === "seo-evaluate") {
+    const valueFlags = new Set([
+      "--app", "--base-url", "--policy", "--brief", "--mode", "--out", "--production-evidence",
+      "--primary-model", "--secondary-model", "--adjudicator-model", "--router-url", "--agent-id", "--private-key-file",
+    ]);
+    const booleanFlags = new Set(["--router-token-stdin"]);
+    const options = {};
+    for (let index = 0; index < rest.length; index += 1) {
+      const flag = rest[index];
+      if (booleanFlags.has(flag)) {
+        if (options[flag] !== undefined) throw configError(`${flag} may be supplied only once`);
+        options[flag] = true;
+        continue;
+      }
+      if (!valueFlags.has(flag)) throw configError(`unknown seo-evaluate option: ${flag}`);
+      const value = rest[index + 1];
+      if (!value || value.startsWith("--")) throw configError(`${flag} needs a value`);
+      if (options[flag] !== undefined) throw configError(`${flag} may be supplied only once`);
+      options[flag] = value;
+      index += 1;
+    }
+    if (!options["--base-url"]) throw configError("seo-evaluate needs --base-url");
+    const stdinLines = options["--router-token-stdin"]
+      ? readFileSync(Number("0"), "utf8").split("\n")
+      : [];
+    const result = await evaluateSeo({
+      appId: options["--app"] || "landing-page",
+      baseUrl: options["--base-url"],
+      policyPath: options["--policy"],
+      briefPath: options["--brief"],
+      mode: options["--mode"] || "release",
+      outputPath: options["--out"],
+      productionEvidencePath: options["--production-evidence"],
+      primaryModel: options["--primary-model"],
+      secondaryModel: options["--secondary-model"],
+      adjudicatorModel: options["--adjudicator-model"],
+      routerBaseUrl: options["--router-url"],
+      agentId: options["--agent-id"],
+      privateKeyFile: options["--private-key-file"],
+      routerBearer: stdinLines[Number("0")],
+      agentSecret: stdinLines[Number("1")],
+      privateKey: stdinLines.slice(Number("2")).join("\n").trim() || undefined,
+    });
+    out(result);
+    if (!result.pass) process.exitCode = Number("1");
+    return;
+  }
   if (cmd === "history") {
     const positionals = [];
     let limit = 50;
@@ -395,7 +445,7 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (sub !== "run" && sub !== "author") throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado author <appId> <journey> --target <t> --desc <d> [...]");
+    if (!["run", "author", "seo"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
@@ -426,6 +476,35 @@ async function main() {
         host: value("--host") || "stado:gcp",
         provision,
         appRepo: value("--app-repo") || null,
+        watch: !rest.includes("--no-watch"),
+      });
+      out(result);
+      remoteExit(result);
+      return;
+    }
+    if (sub === "seo") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("2"),
+        valueFlags: [
+          "--base-url", "--mode", "--policy", "--brief", "--production-evidence",
+          "--primary-model", "--secondary-model", "--adjudicator-model", "--agent-id", "--host",
+        ],
+        booleanFlags: ["--no-watch"],
+      });
+      const appId = rest[1];
+      if (!appId || appId.startsWith("--")) throw configError("stado seo needs an app ID");
+      const result = await submitRemoteSeo({
+        appId,
+        baseUrl: value("--base-url"),
+        mode: value("--mode") || "release",
+        policyPath: value("--policy") || loadAppManifest(appId).seo?.policy,
+        briefPath: value("--brief") || loadAppManifest(appId).seo?.brief,
+        primaryModel: value("--primary-model"),
+        secondaryModel: value("--secondary-model"),
+        adjudicatorModel: value("--adjudicator-model"),
+        agentId: value("--agent-id") || "probierz",
+        productionEvidencePath: value("--production-evidence") ? path.resolve(value("--production-evidence")) : null,
+        host: value("--host") || "stado:mini",
         watch: !rest.includes("--no-watch"),
       });
       out(result);
@@ -466,6 +545,7 @@ async function main() {
       appRepo: value("--app-repo") || null,
       watch: !rest.includes("--no-watch"),
       mode: scriptPath ? "script" : "run",
+      record: rest.includes("--record"),
     });
     out(result);
     remoteExit(result);

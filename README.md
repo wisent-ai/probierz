@@ -285,6 +285,72 @@ to the standalone wrapper used for TeX input; the file must contain preamble
 lines only, with no document class or document body.
 
 
+### Evaluate SEO
+
+`seo-evaluate` is a release evaluator, not a Lighthouse score wrapper. It reads
+the manifest-declared brief and SEO policy, crawls every declared and
+sitemap-discovered URL as ordinary Chrome and Googlebot Smartphone, evaluates
+robots directives, redirects, canonicals, indexability, metadata, hreflang,
+internal-link reachability, duplicate content, JSON-LD, social image responses,
+and a throttled mobile lab profile for LCP, CLS, TBT, failed resources, and
+runtime errors. Production evidence adds CrUX p75 INP.
+
+```bash
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
+PROBIERZ_MODEL_AGENT_ID=probierz \
+PROBIERZ_MODEL_AGENT_SECRET='<agent-secret>' \
+PROBIERZ_SEO_PRIMARY_MODEL='<pinned-model-a>' \
+PROBIERZ_SEO_SECONDARY_MODEL='<pinned-model-b>' \
+PROBIERZ_SEO_ADJUDICATOR_MODEL='<pinned-model-c>' \
+PROBIERZ_RECEIPT_PRIVATE_KEY_FILE=/absolute/path/seo-ed25519.pem \
+node agent/cli.mjs seo-evaluate \
+  --app landing-page \
+  --base-url https://product.example.com \
+  --mode release
+```
+
+The two graders run independently at temperature zero. Probierz takes the
+stricter score when they agree closely and invokes the pinned adjudicator only
+when a dimension differs by more than the policy threshold or their blocker
+sets differ. Models may score search intent, factuality, information gain, and
+snippet quality; they cannot override crawl, indexability, structured-data, or
+performance facts.
+
+The report separates `searchEligibility`, weighted `searchQuality`, and
+`productionOutcome`. A release passes only with no hard or model-confirmed
+blockers, every dimension at or above its minimum, overall quality at or above
+`0.85`, and an Ed25519 signature. The `pull-request`, `release`, `nightly`, and
+`production` profiles live in `apps/landing-page/probierz.yaml`; each profile
+declares whether signed evidence and production observations are mandatory.
+`production` consumes the versioned Search Console and CrUX shape shown in
+`apps/landing-page/production-evidence.example.json`; its evidence must identify
+the `google-search-console+crux` source, be fresh, and observe every declared
+indexable URL.
+
+Run the same evaluator on a dedicated Stado-selected host without putting any
+secret in `argv`:
+
+```bash
+node agent/cli.mjs stado seo landing-page \
+  --base-url https://product.example.com \
+  --mode release \
+  --primary-model '<pinned-model-a>' \
+  --secondary-model '<pinned-model-b>' \
+  --adjudicator-model '<pinned-model-c>' \
+  --host stado:mini
+```
+
+Stado materializes only the manifest-declared Brama bearer, agent-auth secret,
+and, when the profile requires it, SEO receipt key. The private checkout and
+resulting evidence bundle move through `stado://probierz/inputs` and
+`stado://probierz/results`; the report, source and rendered HTML, robots and
+sitemap bodies, screenshots, mobile performance facts, exact model identities,
+request and rubric hashes, source hashes, blocker list, and receipt-compatible
+signature land under `test-results/seo/`. `probierz verify-receipt <report>`
+checks the same canonical Ed25519 signing contract used by other Probierz
+receipts.
+
 ### First evidence-producing run
 
 Choose an application and target returned by discovery, then check the exact
@@ -383,19 +449,21 @@ not create static product banners; those belong to `wisent-asset-generator`.
 ## Primary interfaces
 
 - **Human CLI:** `probierz` is canonical for discovery, setup, execution,
-  analysis, figure evaluation, authoring, evidence, gate, retention, security,
-  and Stado workflows.
+  analysis, figure and SEO evaluation, authoring, evidence, gate, retention,
+  security, and Stado workflows.
 - **Machine CLI output:** status, overview, run, analysis, figure evaluation,
-  and gate commands expose structured data; automation must not infer state from
-  prose.
+  SEO evaluation, and gate commands expose structured data; automation must not
+  infer state from prose.
 - **MCP:** `probierz-mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC. Tool descriptions preserve the
-  read-only versus mutation boundary; `probierz_evaluate_figure` uses the same
-  evaluator and evidence contract as the CLI.
+  read-only versus mutation boundary; `probierz_evaluate_figure` and
+  `probierz_evaluate_seo` use the same evaluators and evidence contracts as the
+  CLI.
 - **Repository gate:** `probierz gate-install` installs the pre-push integration;
   gate evaluation and enforcement remain distinct commands.
-- **Stado bridge:** `probierz stado run` and `probierz stado author` submit the
-  exact remote contract and return evidence through the configured object store.
+- **Stado bridge:** `probierz stado run`, `probierz stado author`, and
+  `probierz stado seo` submit exact remote contracts and return evidence through
+  the configured object store.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
