@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -17,7 +17,6 @@ import {
 } from "../driver.mjs";
 
 const LSREGISTER = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
-
 
 async function freeLoopbackPort() {
   const server = net.createServer();
@@ -45,11 +44,8 @@ function isolateBundleIdentity(bundle) {
 
 const appBundle = process.env.MAC_APP_PATH;
 if (!appBundle) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH");
-const bundleIdentifier = isolateBundleIdentity(appBundle);
-const registration = spawnSync(LSREGISTER, ["-f", appBundle], { encoding: "utf8" });
-if (registration.status !== 0) {
-  throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
-}
+const isolatedBundle = path.join("/Applications", `Brama Probierz ${randomUUID()}.app`);
+let bundleIdentifier = null;
 
 const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const mediaDir = path.join(artifacts, "media");
@@ -100,6 +96,13 @@ let app = null;
 let providerAdded = false;
 let journeySucceeded = false;
 try {
+  cpSync(appBundle, isolatedBundle, { recursive: true });
+  bundleIdentifier = isolateBundleIdentity(isolatedBundle);
+  const registration = spawnSync(LSREGISTER, ["-f", isolatedBundle], { encoding: "utf8" });
+  if (registration.status !== 0) {
+    throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
+  }
+
   const launchEnvironment = {
     BRAMA_BASE_URL: `http://127.0.0.1:${runtimePort}`,
     BRAMA_LOCAL_RUNTIME: "1",
@@ -179,5 +182,6 @@ try {
     ], { stdio: "ignore" });
   }
   if (app) quitApp(app.pid);
-  spawnSync(LSREGISTER, ["-u", appBundle], { stdio: "ignore" });
+  spawnSync(LSREGISTER, ["-u", isolatedBundle], { stdio: "ignore" });
+  rmSync(isolatedBundle, { recursive: true, force: true });
 }
