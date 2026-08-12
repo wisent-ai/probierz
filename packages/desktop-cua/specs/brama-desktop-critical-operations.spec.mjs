@@ -47,6 +47,7 @@ function capture(app, name) {
   const file = path.join(mediaDir, `${name}.jpg`);
   const state = snapshotState(app.pid, app.windowId, { screenshotOutFile: file });
   const tree = String(state?.tree_markdown || "");
+  writeFileSync(path.join(mediaDir, `${name}.ax.txt`), tree);
   assert.match(tree, /AXApplication|AXWindow/, `${name} screenshot must accompany a live Brama accessibility tree`);
   media.push({ file, kind: "screenshot", contentType: "image/jpeg" });
   return String(state.tree_markdown || "");
@@ -96,7 +97,8 @@ let providerAdded = false;
 let journeySucceeded = false;
 
 try {
-  waitForText(app.pid, app.windowId, "Overview", 30_000);
+  const overview = capture(app, "brama-overview");
+  assert.match(overview, /Overview/, "Brama Desktop must expose its overview through the accessibility tree");
   selectSidebarRow(app.pid, app.windowId, 3);
   const operational = waitForText(app.pid, app.windowId, "Operational", 30_000);
   assert.match(operational, new RegExp(`127\\.0\\.0\\.1:${runtimePort}`), "Brama Desktop must connect to its bundled loopback runtime");
