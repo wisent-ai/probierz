@@ -87,7 +87,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
-    { host: "stado:macbook", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukasz-macbook.local" }, description: "stado queue, dedicated MacBook consumer" },
+    { host: "stado:macbook", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -255,15 +255,6 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // native helpers) exactly as a local `probierz setup <target>` would.
     `node agent/cli.mjs setup ${target}`,
   );
-  if (platform === "darwin" && target === "desktop:cua") {
-    // The cua-driver's AX grant lives on the CuaDriver.app bundle, not on
-    // whatever process spawns the CLI — jobs under launchd fail AX without
-    // the app-context daemon. Idempotent background start.
-    lines.push(
-      "open -g -a CuaDriver --args serve || true",
-      "sleep 3",
-    );
-  }
   if (mode === "script") {
     // Custom app job (e.g. game_asset_creator sculpt/eval): run an app-owned
     // script from the probierz checkout after provisioning. The script writes
@@ -279,20 +270,26 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
     return lines.join("\n");
   }
-  if (mode === "author") {    // Remote authoring: the probe needs a live Appium before author-spec
-    // starts; evidence (run artifacts + the accepted spec + manifest with
-    // the submitter-local repo root restored) always comes back.
+  if (mode === "author") {
+    // Remote authoring returns the verified spec, manifest, and run artifacts
+    // with the submitter-local repository root restored.
     if (!modelRouterUrl) throw new Error("remote authoring needs STADO_MODEL_ROUTER_URL");
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
       ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
-      "pkill -f '[a]ppium.*--port 4723' >/dev/null 2>&1 || true",
-      "npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
-      "APPIUM_PID=$!",
-      "trap 'kill \"$APPIUM_PID\" >/dev/null 2>&1 || true' EXIT",
-      "export PROBIERZ_EXTERNAL_APPIUM=1",
-      "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done",
-      "nc -z 127.0.0.1 4723",
+    );
+    if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
+      lines.push(
+        "pkill -f '[a]ppium.*--port 4723' >/dev/null 2>&1 || true",
+        "npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
+        "APPIUM_PID=$!",
+        "trap 'kill \"$APPIUM_PID\" >/dev/null 2>&1 || true' EXIT",
+        "export PROBIERZ_EXTERNAL_APPIUM=1",
+        "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done",
+        "nc -z 127.0.0.1 4723",
+      );
+    }
+    lines.push(
       "set +e",
       `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "$MAC_APP_PATH"`,
       "PROBIERZ_RC=$?",

@@ -96,7 +96,7 @@ export function startPerformanceSampler(child, artifactsDir, { target, env = {} 
 }
 
 function appProcessName(target, env) {
-  const appPath = target === "desktop:mac" ? env.MAC_APP_PATH : env.APP_IOS;
+  const appPath = ["desktop:mac", "desktop:cua"].includes(target) ? env.MAC_APP_PATH : env.APP_IOS;
   if (!appPath) return null;
   return path.basename(String(appPath), path.extname(String(appPath)));
 }
@@ -125,7 +125,7 @@ export function collectPlatformDiagnostics({ target, env, artifactsDir, startedA
   let command = null;
   let args = null;
   let file = null;
-  if (target === "desktop:mac" && processName) {
+  if (["desktop:mac", "desktop:cua"].includes(target) && processName) {
     command = "/usr/bin/log";
     args = ["show", "--style", "compact", "--start", startedAt, "--predicate", `process == "${processName}"`];
     file = path.join(directory, "macos-unified.log");

@@ -35,3 +35,6 @@ videos/
 apps/*
 !apps/.gitkeep
 !apps/game-asset-creator/
+!apps/brama-desktop/
+apps/brama-desktop/*
+!apps/brama-desktop/probierz.yaml

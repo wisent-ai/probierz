@@ -8,7 +8,7 @@ export const APPS_ROOT = path.resolve(HERE, "..", "apps");
 const SENSITIVE_KEY = /(auth|cookie|credential|email|key|otp|password|pii|secret|session|token)/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PUBLICATION_ARTIFACT_KINDS = new Set(["screenshot", "recording", "trace"]);
-const RECORDING_TARGETS = new Set(["web", "mobile:ios", "mobile:android", "desktop:mac", "desktop:win"]);
+const RECORDING_TARGETS = new Set(["web", "mobile:ios", "mobile:android", "desktop:mac", "desktop:cua", "desktop:win"]);
 
 export function targetSupportsArtifactKind(target, kind) {
   if (!PUBLICATION_ARTIFACT_KINDS.has(kind)) return false;

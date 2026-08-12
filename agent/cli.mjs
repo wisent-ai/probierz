@@ -104,8 +104,8 @@ function usage() {
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
       "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
-      "surfaces: web | electron | mobile | desktop-native",
-      "targets:  web | electron | mobile:ios | mobile:android | desktop:mac | desktop:win",
+      "surfaces: web | electron | mobile | desktop-native | desktop-cua | tui",
+      "targets:  web | electron | mobile:ios | mobile:android | desktop:mac | desktop:cua | desktop:win | tui",
     ].join("\n") + "\n",
   );
 }
@@ -566,7 +566,7 @@ async function main() {
     const desc = value("--desc");
     if (!desc) throw configError("author-manifest needs --desc <what the app does>");
     const target = value("--target");
-    if (!target) throw configError("author-manifest needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win>");
+    if (!target) throw configError("author-manifest needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui>");
     const repositories = [];
     for (let index = 0; index < rest.length; index += 1) {
       if (rest[index] === "--repo" && rest[index + 1]) {
@@ -608,7 +608,7 @@ async function main() {
     const desc = value("--desc");
     if (!desc) throw configError("author-spec needs --desc <journey goal>");
     const target = value("--target");
-    if (!target) throw configError("author-spec needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win>");
+    if (!target) throw configError("author-spec needs --target <web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui>");
     const mappingPaths = [];
     for (let index = 0; index < rest.length; index += 1) {
       if (rest[index] === "--paths" && rest[index + 1]) {

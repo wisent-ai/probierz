@@ -2,8 +2,7 @@
 // node process and writes Probierz's canonical report (the same shape the
 // Playwright reporter emits), so run analysis treats desktop-cua coverage like any
 // other surface. A spec passes when it exits zero; stderr becomes the row error.
-import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,28 +29,64 @@ function clipRowError(text) {
   return `${text.slice(0, Number("600"))}\n…\n${text.slice(-Number("1400"))}`;
 }
 
+function readSpecMedia(file) {
+  if (!existsSync(file)) return [];
+  const entries = JSON.parse(readFileSync(file, "utf8"));
+  if (!Array.isArray(entries)) throw new Error(`spec media manifest is not an array: ${file}`);
+  const artifactRoot = path.resolve(artifacts);
+  return entries.map((entry) => {
+    if (!entry || entry.kind !== "screenshot" || typeof entry.file !== "string") {
+      throw new Error(`invalid spec media entry in ${file}`);
+    }
+    const mediaFile = path.resolve(entry.file);
+    const contentType = String(entry.contentType || "");
+    if ((mediaFile !== artifactRoot && !mediaFile.startsWith(`${artifactRoot}${path.sep}`))
+        || !existsSync(mediaFile) || !statSync(mediaFile).isFile()) {
+      throw new Error(`spec media escapes its artifact root or is missing: ${entry.file}`);
+    }
+    if (contentType !== "image/jpeg" && contentType !== "image/png") {
+      throw new Error(`unsupported screenshot content type in ${file}: ${contentType || "missing"}`);
+    }
+    return { kind: entry.kind, file: mediaFile, contentType };
+  });
+}
+
 const rows = [];
 for (const file of files) {
   const startedAt = new Date().toISOString();
   const started = Date.now();
+  const specName = file.replace(/\.spec\.mjs$/, "");
+  const mediaManifest = path.resolve(artifacts, "media", `${specName}.json`);
   const child = spawnSync(process.execPath, [path.join(SPECS_DIR, file)], {
     encoding: "utf8",
-    env: { ...process.env, PROBIERZ_ARTIFACTS: artifacts, PROBIERZ_SPEC_NAME: file.replace(/\.spec\.mjs$/, "") },
+    env: {
+      ...process.env,
+      PROBIERZ_ARTIFACTS: artifacts,
+      PROBIERZ_SPEC_NAME: specName,
+      PROBIERZ_SPEC_MEDIA_PATH: mediaManifest,
+    },
     maxBuffer: Number("33554432"),
   });
   const duration = Date.now() - started;
   const status = child.status === 0 ? "passed" : "failed";
+  let media = [];
+  let mediaError = null;
+  try {
+    media = readSpecMedia(mediaManifest);
+  } catch (error) {
+    mediaError = error instanceof Error ? error.message : String(error);
+  }
   rows.push({
-    title: file.replace(/\.spec\.mjs$/, ""),
-    passed: status === "passed",
-    status,
+    title: specName,
+    passed: status === "passed" && mediaError === null,
+    status: status === "passed" && mediaError === null ? "passed" : "failed",
     flaky: false,
     attempts: Number("1"),
     duration,
     startedAt,
     completedAt: new Date(started + duration).toISOString(),
-    error: status === "failed" ? clipRowError(String(child.stderr || child.stdout || "")) : null,
-    media: [],
+    error: mediaError || (status === "failed" ? clipRowError(String(child.stderr || child.stdout || "")) : null),
+    media,
   });
 }
 

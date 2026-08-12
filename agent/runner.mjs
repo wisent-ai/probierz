@@ -42,7 +42,7 @@ export const TARGETS = {
   "mobile:android": { pkg: "packages/mobile", script: "test:mobile:android", tool: "wdio", kind: "mobile" },
   "desktop:mac": { pkg: "packages/desktop-native", script: "test:desktop:mac", tool: "wdio", kind: "native" },
   "desktop:win": { pkg: "packages/desktop-native", script: "test:desktop:win", tool: "wdio", kind: "native" },
-  "desktop:cua": { pkg: "packages/desktop-cua", script: "test:desktop:cua", tool: "playwright" },
+  "desktop:cua": { pkg: "packages/desktop-cua", script: "test:desktop:cua", tool: "cua-driver" },
   tui: { pkg: "packages/tui", script: "test:tui", tool: "playwright" },
 };
 

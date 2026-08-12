@@ -60,8 +60,10 @@ one explainable release decision.
 - preflight checks that distinguish missing Probierz-owned tooling from
   host-level prerequisites;
 - Playwright execution for web and Electron applications;
-- WebdriverIO and Appium execution for iOS, Android, native macOS, and native
-  Windows applications;
+- WebdriverIO and Appium execution for iOS, Android, native macOS through Mac2,
+  and native Windows applications;
+- `cua-driver` execution for native macOS applications when Accessibility-based
+  automation and screenshot evidence are sufficient and full Xcode is absent;
 - optional video, trace, screenshot, report, and frame metadata capture where
   the selected driver supports it, bounded README GIF publication from one
   selected journey recording, and rubric-scored scientific figure comparison;
@@ -106,7 +108,8 @@ one explainable release decision.
 | Electron | Playwright `_electron` | Node.js 22 or newer; application entry point | Implemented |
 | Mobile iOS | WebdriverIO, Appium, XCUITest | macOS, Xcode, simulator or authorized device | Implemented when host prerequisites are available |
 | Mobile Android | WebdriverIO, Appium, UiAutomator2 | Android SDK, emulator or authorized device | Implemented when host prerequisites are available |
-| Native macOS | WebdriverIO, Appium Mac2 | macOS target and required Accessibility permission | Implemented when host prerequisites are available |
+| Native macOS (Mac2) | WebdriverIO, Appium Mac2 | macOS, full Xcode, target, and required Accessibility permission | Implemented when host prerequisites are available |
+| Native macOS (CUA) | `cua-driver` | macOS target and CuaDriver Accessibility permission | Implemented |
 | Native Windows | WebdriverIO, WinAppDriver | Windows target, Developer Mode, WinAppDriver | Implemented when host prerequisites are available |
 | Remote execution | Stado bridge | admitted host, capacity, object store, target toolchain | Implemented; availability depends on the selected host |
 | Stable hosted service or public binary | — | — | Not published |

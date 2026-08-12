@@ -263,12 +263,23 @@ export async function createReceipt({
     const sourceRun = runs[index];
     const signedRun = normalizedRuns[index];
     const artifactRoot = path.dirname(sourceRun.manifestPath);
-    for (const artifact of signedRun.artifacts) {
-      const file = path.resolve(artifactRoot, artifact.file);
-      if ((file !== artifactRoot && !file.startsWith(`${artifactRoot}${path.sep}`)) || !existsSync(file) || !statSync(file).isFile()) {
-        errors.push(`${signedRun.runId}: artifact is missing or escapes its run: ${artifact.file}`);
-      } else if (sha256(readFileSync(file)) !== artifact.sha256) {
-        errors.push(`${signedRun.runId}: artifact hash mismatch: ${artifact.file}`);
+    if (sourceRun.protection?.plaintextRemoved) {
+      const protectedRoot = path.resolve(ROOT, "test-results", ".protected", appId);
+      const bundle = path.resolve(sourceRun.protection.file || "");
+      if ((bundle !== protectedRoot && !bundle.startsWith(`${protectedRoot}${path.sep}`))
+          || !existsSync(bundle) || !statSync(bundle).isFile()) {
+        errors.push(`${signedRun.runId}: protected artifact is missing or escapes its product root`);
+      } else if (sha256(readFileSync(bundle)) !== signedRun.protection?.sha256) {
+        errors.push(`${signedRun.runId}: protected artifact hash mismatch`);
+      }
+    } else {
+      for (const artifact of signedRun.artifacts) {
+        const file = path.resolve(artifactRoot, artifact.file);
+        if ((file !== artifactRoot && !file.startsWith(`${artifactRoot}${path.sep}`)) || !existsSync(file) || !statSync(file).isFile()) {
+          errors.push(`${signedRun.runId}: artifact is missing or escapes its run: ${artifact.file}`);
+        } else if (sha256(readFileSync(file)) !== artifact.sha256) {
+          errors.push(`${signedRun.runId}: artifact hash mismatch: ${artifact.file}`);
+        }
       }
     }
     const scan = sourceRun.protection?.plaintextRemoved

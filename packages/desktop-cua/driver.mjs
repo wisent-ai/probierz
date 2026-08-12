@@ -4,8 +4,12 @@
 // element_index. Specs stay plain node scripts, same shape as the TUI
 // surface. The binary needs an Accessibility grant once per host.
 import { spawnSync } from "node:child_process";
+import { homedir } from "node:os";
+import path from "node:path";
 
 const CUA_BIN = process.env.CUA_DRIVER_BIN || "cua-driver";
+const CUA_SOCKET = process.env.CUA_DRIVER_SOCKET
+  || path.join(homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 const LAUNCH_WAIT_MS = Number("8000");
 const POLL_MS = Number("400");
 
@@ -14,7 +18,7 @@ function sleep(ms) {
 }
 
 export function cuaCall(tool, args = {}) {
-  const out = spawnSync(CUA_BIN, ["call", tool, JSON.stringify(args)], {
+  const out = spawnSync(CUA_BIN, ["call", tool, JSON.stringify(args), "--socket", CUA_SOCKET], {
     encoding: "utf8",
     maxBuffer: Number("33554432"),
   });
@@ -82,8 +86,14 @@ function waitForWindow(pid) {
   throw new Error(`pid ${pid} produced no window within ${LAUNCH_WAIT_MS}ms`);
 }
 
+export function snapshotState(pid, windowId, { screenshotOutFile } = {}) {
+  const args = { pid, window_id: windowId };
+  if (screenshotOutFile) args.screenshot_out_file = screenshotOutFile;
+  return cuaCall("get_window_state", args);
+}
+
 export function snapshotTree(pid, windowId) {
-  const state = cuaCall("get_window_state", { pid, window_id: windowId });
+  const state = snapshotState(pid, windowId);
   return String(state?.tree_markdown || "");
 }
 

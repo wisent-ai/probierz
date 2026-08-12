@@ -1,0 +1,76 @@
+schemaVersion: 1
+appId: brama-desktop
+productId: brama-desktop
+owner: Brama Desktop maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop
+    mappings:
+      - paths:
+          - Sources/BramaDesktop/**
+          - App/Info.plist
+          - App/BramaRuntime.revision
+          - Scripts/build-app.sh
+          - Package.swift
+          - Package.resolved
+        journeys: [critical-operations]
+surfaces:
+  desktop:cua:
+    spec: brama-desktop-critical-operations.spec.mjs
+    journeys: [critical-operations]
+    conditions:
+      PROBIERZ_DATA_STATE: fresh
+    device:
+      platform: macOS
+      minimumVersion: "14"
+    recording:
+      primary: cua-driver
+journeys:
+  critical-operations:
+    owner: Brama Desktop maintainers
+    timeoutMs: 300000
+    description: Start the exact Brama Desktop bundle in an isolated home, prove the bundled Brama runtime becomes operational without Stado or Skarbiec, and add then remove a uniquely named local model source without exposing its credential.
+    value: An operator can launch Brama Desktop, observe its private runtime, and complete the local Keychain model-source lifecycle.
+    journeyId: critical-operations
+    journeyVersion: 2026-08-11.1
+    journeyVersionId: DD6681C9-E023-47D8-B213-CC62D579931C
+    firstSuccessFact: private_runtime_and_model_source_lifecycle_verified
+    completionEvidence:
+      state: the bundled runtime is operational and the uniquely named model source is absent after removal
+      event: the real native UI completed startup, add, bundled-runtime restart, and remove actions
+      productArtifact: the exact Brama.app bundle and its bundled brama-runtime executable
+    requiredConditions:
+      - The tested ai.wisent.brama.desktop bundle is built from the mapped Brama Desktop source revision
+      - The Stado-selected macOS worker runs the app with an isolated home and a collision-resistant model-source identity
+      - The test source credential is synthetic and must never be accepted as release evidence for a real provider call
+    publication:
+      screenId: brama-private-runtime-operational
+      artifactKinds: [screenshot]
+      minimumEvidence: E3
+      redactionRequired: true
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, CREDENTIAL, PATH]
+  pii: unlikely
+matrix:
+  release:
+    targets: [desktop:cua]
+    record: true
+    timeoutMs: 600000
+    maximumParallel: 1
+    minimumCellEvidence: E3
+    maxCells: 1
+pullRequestPolicy:
+  minimumEvidence: E3
+  requiredJourneys: [critical-operations]
+  requiredTargets: [desktop:cua]
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E3
+  requiredJourneys: [critical-operations]
+  requiredTargets: [desktop:cua]
+  requiredMatrixProfile: release
+  requireProtectedArtifacts: true
+  requireSecretScan: true

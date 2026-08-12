@@ -122,7 +122,7 @@ export async function evaluateGate({
     if (requiredRank >= LEVEL.get("E3") && (!run.artifacts.length || run.artifacts.some((artifact) => !artifact.sha256))) {
       errors.push(`${run.runId}: E3 artifact hashes are incomplete`);
     }
-    if (!policy.requireProtectedArtifacts) {
+    if (!run.protection?.plaintextRemoved) {
       const artifactRoot = path.dirname(run.manifestPath);
       for (const artifact of run.artifacts) {
         const file = path.resolve(artifactRoot, artifact.file);
@@ -141,7 +141,7 @@ export async function evaluateGate({
     }
     if (run.kind !== mode) errors.push(`${run.runId}: run kind ${run.kind} is not ${mode}`);
     if (mode === "release" && release && run.conditions?.PROBIERZ_RELEASE !== release) errors.push(`${run.runId}: release condition does not match ${release}`);
-    if (policy.requireProtectedArtifacts) {
+    if (policy.requireProtectedArtifacts || run.protection?.plaintextRemoved) {
       if (!run.protection?.plaintextRemoved || !run.protection?.file || !existsSync(run.protection.file)) {
         errors.push(`${run.runId}: encrypted-at-rest artifact bundle is missing`);
       } else {

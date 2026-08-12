@@ -1,0 +1,147 @@
+import assert from "node:assert/strict";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import net from "node:net";
+import {
+  clickElement,
+  elementIndexOf,
+  launchCuaProcess,
+  quitApp,
+  selectSidebarRow,
+  snapshotState,
+  snapshotTree,
+  typeText,
+  waitForText,
+} from "../driver.mjs";
+
+async function freeLoopbackPort() {
+  const server = net.createServer();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : null;
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  if (!port) throw new Error("could not allocate an isolated Brama loopback port");
+  return port;
+}
+
+const appBundle = process.env.MAC_APP_PATH;
+const executable = process.env.CUA_APP_EXECUTABLE
+  || (appBundle ? path.join(appBundle, "Contents", "MacOS", "Brama") : null);
+if (!executable) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH or CUA_APP_EXECUTABLE");
+
+const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
+const mediaDir = path.join(artifacts, "media");
+const mediaManifest = process.env.PROBIERZ_SPEC_MEDIA_PATH;
+if (!mediaManifest) throw new Error("PROBIERZ_SPEC_MEDIA_PATH is required for E3 evidence");
+const provider = `probierz-${randomUUID()}`;
+const runtimePort = await freeLoopbackPort();
+const media = [];
+mkdirSync(mediaDir, { recursive: true });
+
+function capture(app, name) {
+  const file = path.join(mediaDir, `${name}.jpg`);
+  const state = snapshotState(app.pid, app.windowId, { screenshotOutFile: file });
+  const tree = String(state?.tree_markdown || "");
+  assert.match(tree, /AXApplication|AXWindow/, `${name} screenshot must accompany a live Brama accessibility tree`);
+  media.push({ file, kind: "screenshot", contentType: "image/jpeg" });
+  return String(state.tree_markdown || "");
+}
+
+function clickByText(app, needle) {
+  const before = snapshotTree(app.pid, app.windowId);
+  clickElement(app.pid, app.windowId, elementIndexOf(before, needle));
+  return snapshotTree(app.pid, app.windowId);
+}
+
+function fillByText(app, needle, value) {
+  const before = snapshotTree(app.pid, app.windowId);
+  typeText(app.pid, value, {
+    windowId: app.windowId,
+    elementIndex: elementIndexOf(before, needle),
+  });
+  return snapshotTree(app.pid, app.windowId);
+}
+
+function waitUntil(app, predicate, message, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  let tree = "";
+  while (Date.now() < deadline) {
+    tree = snapshotTree(app.pid, app.windowId);
+    if (predicate(tree)) return tree;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 400);
+  }
+  throw new Error(`${message}; last tree: ${tree.slice(-1200)}`);
+}
+
+const app = launchCuaProcess({
+  executable,
+  env: {
+    BRAMA_BASE_URL: `http://127.0.0.1:${runtimePort}`,
+    BRAMA_LOCAL_RUNTIME: "1",
+    WISENT_WORKSPACE_ROOT: "",
+  },
+  args: [
+    "-bramaDesktop.automaticDiscovery", "0",
+    "-bramaDesktop.subscriptionAutomaticDiscovery", "0",
+    "-bramaDesktop.runtimeOrigin", `http://127.0.0.1:${runtimePort}`,
+  ],
+});
+let providerAdded = false;
+let journeySucceeded = false;
+
+try {
+  const operational = waitForText(app.pid, app.windowId, "Operational", 30_000);
+  assert.match(operational, new RegExp(`127\\.0\\.0\\.1:${runtimePort}`), "Brama Desktop must connect to its bundled loopback runtime");
+  capture(app, "brama-operational");
+
+  selectSidebarRow(app.pid, app.windowId, 4);
+  waitForText(app.pid, app.windowId, "Model Sources", 15_000);
+  const sources = capture(app, "brama-model-sources-before");
+  assert.doesNotMatch(sources, new RegExp(provider), "the isolated provider must not exist before the journey");
+
+  clickByText(app, 'AXButton = "Add model source"');
+  waitForText(app.pid, app.windowId, "Add model source", 10_000);
+  fillByText(app, "Provider (for example openai or anthropic)", provider);
+  fillByText(app, "Label (optional)", "Probierz isolated QA");
+  fillByText(app, "API key or subscription credential", `qa-${randomUUID()}`);
+  const completedForm = snapshotTree(app.pid, app.windowId);
+  assert.doesNotMatch(completedForm, /AXButton = "Add".*DISABLED/, "Add must become available after the required fields are filled");
+  providerAdded = true;
+  clickByText(app, 'AXButton = "Add"');
+
+  const added = waitForText(app.pid, app.windowId, provider, 30_000);
+  assert.match(added, /active/i, "the local credential must appear as an active model source");
+  waitForText(app.pid, app.windowId, "Operational", 30_000);
+  capture(app, "brama-model-source-added");
+
+  clickByText(app, 'AXButton = "Remove"');
+  waitForText(app.pid, app.windowId, "Remove this model source?", 10_000);
+  clickByText(app, 'AXButton = "Remove model source"');
+  const removed = waitUntil(
+    app,
+    (tree) => !tree.includes(provider) && tree.includes("Operational"),
+    "the model source was not removed or the bundled runtime did not recover",
+  );
+  providerAdded = false;
+  assert.doesNotMatch(removed, new RegExp(provider), "the removed provider must disappear from the UI");
+  capture(app, "brama-model-source-removed");
+  journeySucceeded = true;
+} finally {
+  if (!journeySucceeded) {
+    try { capture(app, "brama-failure"); } catch {}
+  }
+  writeFileSync(mediaManifest, `${JSON.stringify(media, null, 2)}\n`, { mode: 0o600 });
+  if (providerAdded) {
+    spawnSync("security", [
+      "delete-generic-password",
+      "-s", "ai.wisent.brama.desktop.providers",
+      "-a", provider,
+    ], { stdio: "ignore" });
+  }
+  quitApp(app.pid);
+}

@@ -20,6 +20,8 @@ const require = createRequire(import.meta.url);
 const NATIVE_CAPTURE_SOURCE = path.join(ROOT, "packages", "desktop-native", "tools", "screen-capture-kit.swift");
 const NATIVE_CAPTURE_BINARY = path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit");
 const PROBE_MS = 15000;
+const CUA_TREE_PROBE_MS = 5000;
+const CUA_SOCKET = path.join(os.homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 
 // A binary is present if it runs and exits cleanly. `args` is its cheapest
 // version/help invocation. Never touches the network or a browser.
@@ -27,6 +29,17 @@ function hasBinary(bin, args) {
   try {
     const r = spawnSync(bin, args, { stdio: "ignore", timeout: PROBE_MS });
     return r.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasConsoleSession() {
+  if (os.platform() !== "darwin") return false;
+  try {
+    const result = spawnSync("who", [], { encoding: "utf8", timeout: PROBE_MS });
+    return result.status === Number("0")
+      && String(result.stdout || "").split("\n").some((line) => /\sconsole\s/.test(line));
   } catch {
     return false;
   }
@@ -40,19 +53,30 @@ function appiumDriverInstalled(name, env = process.env) {
   const home = env.APPIUM_HOME || path.join(os.homedir(), ".appium");
   return existsSync(path.join(home, "node_modules", `appium-${name}-driver`));
 }
-
-// The cua-driver's own check_permissions reads the CALLING process's TCC
-// state (by design: "results may be inaccurate"), which misreports under
-// launchd/stado parents. What a desktop:cua run actually needs is the
-// daemon driving a live window: enumerate one and walk its AX tree.
+// The daemon owns the Accessibility grant; a launchd worker cannot inspect
+// another process's TCC state with AXIsProcessTrusted. Probe one real window
+// through the daemon instead. This is the exact capability a journey needs,
+// without walking an unbounded inventory or trusting the caller's TCC state.
 function cuaAccessibilityGranted() {
   try {
-    const listed = spawnSync("cua-driver", ["call", "list_windows"], { encoding: "utf8", timeout: PROBE_MS });
+    const listed = spawnSync("cua-driver", ["call", "list_windows", "{}", "--socket", CUA_SOCKET], {
+      encoding: "utf8",
+      timeout: PROBE_MS,
+    });
+    if (listed.status !== 0) return false;
     const data = JSON.parse(String(listed.stdout || "{}"));
-    const win = (data.windows || []).find((w) => w && w.pid && w.window_id);
-    if (!win) return false;
-    const state = spawnSync("cua-driver", ["call", "get_window_state", JSON.stringify({ pid: win.pid, window_id: win.window_id })], { encoding: "utf8", timeout: PROBE_MS });
-    return String(state.stdout || "").includes("AXApplication");
+    const windows = data.windows || [];
+    const candidates = [
+      ...windows.filter((candidate) => candidate?.is_on_screen && candidate.title),
+      ...windows.filter((candidate) => candidate?.pid && candidate?.window_id),
+    ].slice(0, 5);
+    return candidates.some((win) => {
+      const state = spawnSync("cua-driver", ["call", "get_window_state", JSON.stringify({
+        pid: win.pid,
+        window_id: win.window_id,
+      }), "--socket", CUA_SOCKET], { encoding: "utf8", timeout: CUA_TREE_PROBE_MS });
+      return state.status === 0 && String(state.stdout || "").includes("AXApplication");
+    });
   } catch {
     return false;
   }
@@ -201,6 +225,7 @@ function checksFor(target, env = process.env) {
   if (target === "desktop:mac") {
     return [
       { name: "macOS host", ok: os.platform() === "darwin", own: false, hint: "the mac2 driver runs on macOS only" },
+      { name: "full Xcode toolchain", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store and select it with xcode-select" },
       { name: "appium driver: mac2", ok: appiumDriverInstalled("mac2", env), own: true, hint: setupHint(target) },
     ];
   }
@@ -219,8 +244,9 @@ function checksFor(target, env = process.env) {
   if (target === "desktop:cua") {
     return [
       { name: "macOS host", ok: os.platform() === "darwin", own: false, hint: "the cua-driver drives the macOS Accessibility API" },
+      { name: "logged-in macOS console session", ok: hasConsoleSession(), own: false, hint: "select a dedicated macOS host with an active GUI login session" },
       { name: "cua-driver binary", ok: hasBinary("cua-driver", ["--version"]), own: false, hint: "install cua-driver (macOS Accessibility driver)" },
-      { name: "cua-driver accessibility", ok: cuaAccessibilityGranted(), own: true, hint: "grant cua-driver in System Settings > Privacy & Security > Accessibility (once per host)" },
+      { name: "cua-driver accessibility", ok: cuaAccessibilityGranted(), own: true, hint: "grant CuaDriver in System Settings > Privacy & Security > Accessibility (once per host)" },
     ];
   }
   return null;
@@ -279,15 +305,16 @@ export function setupSteps(target) {
     "desktop:win": [npmInstall, driverInstall("windows")],
     "desktop:cua": [npmInstall, {
       name: "cua-driver daemon",
-      command: "open",
-      args: ["-g", "-a", "CuaDriver", "--args", "serve"],
+      command: process.execPath,
+      args: [path.join(ROOT, "packages", "desktop-cua", "ensure-daemon.mjs")],
       cwd: ROOT,
+      skipWhen: () => cuaAccessibilityGranted(),
     }],
     tui: [npmInstall],
   };
   const steps = table[target];
   if (!steps) {
-    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui)`);
+    throw new Error(`unknown target: ${target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui)`);
   }
   return steps;
 }
