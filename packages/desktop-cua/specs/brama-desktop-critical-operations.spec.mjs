@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -96,7 +96,10 @@ let app = null;
 let providerAdded = false;
 let journeySucceeded = false;
 try {
-  cpSync(appBundle, isolatedBundle, { recursive: true });
+  const staged = spawnSync("/usr/bin/ditto", [appBundle, isolatedBundle], { encoding: "utf8" });
+  if (staged.status !== 0) {
+    throw new Error(`could not stage isolated Brama bundle: ${staged.stderr || staged.stdout}`);
+  }
   bundleIdentifier = isolateBundleIdentity(isolatedBundle);
   const registration = spawnSync(LSREGISTER, ["-f", isolatedBundle], { encoding: "utf8" });
   if (registration.status !== 0) {
