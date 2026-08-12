@@ -31,14 +31,13 @@ async function freeLoopbackPort() {
   return port;
 }
 
-function isolateBundleIdentity(bundle) {
-  if (!bundle) return;
+function readBundleIdentifier(bundle) {
   const info = path.join(bundle, "Contents", "Info.plist");
-  const identifier = `com.wisent.brama.desktop.probierz.${randomUUID().replaceAll("-", "")}`;
-  const update = spawnSync("/usr/libexec/PlistBuddy", ["-c", `Set :CFBundleIdentifier ${identifier}`, info], { encoding: "utf8" });
-  if (update.status !== 0) throw new Error(`could not isolate Brama bundle identity: ${update.stderr || update.stdout}`);
-  const sign = spawnSync("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", bundle], { encoding: "utf8" });
-  if (sign.status !== 0) throw new Error(`could not sign isolated Brama bundle: ${sign.stderr || sign.stdout}`);
+  const result = spawnSync("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleIdentifier", info], { encoding: "utf8" });
+  const identifier = result.stdout?.trim();
+  if (result.status !== 0 || !identifier) {
+    throw new Error(`could not read Brama bundle identity: ${result.stderr || result.stdout}`);
+  }
   return identifier;
 }
 
@@ -102,7 +101,8 @@ try {
   if (staged.status !== 0) {
     throw new Error(`could not stage isolated Brama bundle: ${staged.stderr || staged.stdout}`);
   }
-  bundleIdentifier = isolateBundleIdentity(isolatedBundle);
+  spawnSync("/usr/bin/pkill", ["-x", "Brama"], { stdio: "ignore" });
+  bundleIdentifier = readBundleIdentifier(isolatedBundle);
   const registration = spawnSync(LSREGISTER, ["-f", isolatedBundle], { encoding: "utf8" });
   if (registration.status !== 0) {
     throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
