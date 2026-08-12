@@ -1,0 +1,128 @@
+schemaVersion: 1
+appId: skarbiec
+productId: skarbiec
+owner: skarbiec maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec
+    mappings:
+      - paths:
+          - src/**
+          - Cargo.toml
+          - Cargo.lock
+          - build.rs
+        journeys:
+          - onboarding-first-use
+          - initialize-vault
+          - manage-secrets
+          - delete-and-restore-secret
+          - manage-users-and-sharing
+          - recover-vault-access
+          - use-json-output
+      - paths:
+          - browser/**
+          - native-host/**
+          - install/**
+          - scripts/**
+          - deploy/**
+        journeys:
+          - onboarding-first-use
+          - manage-secrets
+          - manage-users-and-sharing
+          - use-json-output
+      - paths:
+          - README.md
+          - docs/**
+          - .github/**
+        journeys:
+          - onboarding-first-use
+          - initialize-vault
+          - manage-secrets
+          - delete-and-restore-secret
+          - manage-users-and-sharing
+          - recover-vault-access
+          - use-json-output
+
+surfaces:
+  tui:
+    spec: skarbiec-*.spec.mjs
+    journeys:
+      - onboarding-first-use
+      - initialize-vault
+      - manage-secrets
+      - delete-and-restore-secret
+      - manage-users-and-sharing
+      - recover-vault-access
+      - use-json-output
+
+journeys:
+  onboarding-first-use:
+    owner: skarbiec maintainers
+    timeoutMs: 240000
+    description: A new owner initializes an isolated vault, completes onboarding, reads the safe demo note, and observes its redacted audit record.
+    journeyId: skarbiec-onboarding-first-use
+    journeyVersion: 2026-08-12.1
+    journeyVersionId: bccb3b04-c14a-5441-83b9-07a3b45ed36f
+    firstSuccessFact: audit_entry_observed
+    publication:
+      screenId: onboarding-completed
+      artifactKinds: [trace]
+      minimumEvidence: E2
+      redactionRequired: true
+  initialize-vault:
+    owner: skarbiec maintainers
+    timeoutMs: 180000
+    description: An owner initializes a new vault with distinct owner and recovery identities.
+  manage-secrets:
+    owner: skarbiec maintainers
+    timeoutMs: 180000
+    description: An owner stores, retrieves, and lists encrypted notes through the public CLI.
+  delete-and-restore-secret:
+    owner: skarbiec maintainers
+    timeoutMs: 180000
+    description: An owner deletes a note, observes it only in trash, restores it, and decrypts it again.
+  manage-users-and-sharing:
+    owner: skarbiec maintainers
+    timeoutMs: 240000
+    description: An owner adds a member, shares and revokes a note, and retains owner access.
+  recover-vault-access:
+    owner: skarbiec maintainers
+    timeoutMs: 240000
+    description: A recovery identity restores access to encrypted vault contents without the owner key.
+  use-json-output:
+    owner: skarbiec maintainers
+    timeoutMs: 180000
+    description: Automation receives valid machine-readable output for the core command lifecycle.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredJourneys:
+    - onboarding-first-use
+    - initialize-vault
+    - manage-secrets
+    - delete-and-restore-secret
+    - manage-users-and-sharing
+    - recover-vault-access
+    - use-json-output
+  requiredTargets: [tui]
+  requireSecretScan: false
+
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys:
+    - onboarding-first-use
+    - initialize-vault
+    - manage-secrets
+    - delete-and-restore-secret
+    - manage-users-and-sharing
+    - recover-vault-access
+    - use-json-output
+  requiredTargets: [tui]
+  requireSecretScan: true
