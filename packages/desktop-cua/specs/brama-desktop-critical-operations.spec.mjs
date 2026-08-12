@@ -98,6 +98,7 @@ try {
     app = launchCuaBundle({
       bundlePath: appBundle,
       expectedName: "Brama",
+      background: false,
       urls: [launchRequest],
       args: [
         "--disable-notifications",

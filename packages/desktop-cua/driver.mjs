@@ -78,12 +78,13 @@ export function launchCuaBundle({
   bundlePath,
   expectedName,
   args = [],
+  background = true,
   urls = [],
 } = {}) {
   if (!bundlePath || !expectedName) throw new Error("launchCuaBundle needs bundlePath and expectedName");
   const launched = spawnSync("/usr/bin/open", [
     "-n",
-    "-g",
+    ...(background ? ["-g"] : []),
     "-a", bundlePath,
     ...urls,
     ...(args.length ? ["--args", ...args] : []),
