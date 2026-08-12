@@ -7,12 +7,13 @@
 // the operator. So `preflight` detects everything a target needs and, for each
 // missing piece, says exactly how to get it: either `probierz setup <target>`
 // (the parts we own) or a one-line host install command (the parts we do not).
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import path from "node:path";
 import os from "node:os";
+import { parse as parseYaml } from "yaml";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -51,7 +52,14 @@ function hasConsoleSession() {
 // list` spawn can when the transient CLI resolution fails.
 function appiumDriverInstalled(name, env = process.env) {
   const home = env.APPIUM_HOME || path.join(os.homedir(), ".appium");
-  return existsSync(path.join(home, "node_modules", `appium-${name}-driver`));
+  const packageDir = path.join(home, "node_modules", `appium-${name}-driver`);
+  if (!existsSync(packageDir)) return false;
+  try {
+    const extensions = parseYaml(readFileSync(path.join(home, "node_modules", ".cache", "appium", "extensions.yaml"), "utf8"));
+    return Boolean(extensions?.drivers?.[name]?.pkgName === `appium-${name}-driver`);
+  } catch {
+    return false;
+  }
 }
 // The daemon owns the Accessibility grant; a launchd worker cannot inspect
 // another process's TCC state with AXIsProcessTrusted. Probe one real window
