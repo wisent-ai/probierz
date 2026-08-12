@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { spawnTui } from '../pty.mjs';
 
 const binary = process.env.TUI_CMD?.trim();
@@ -86,6 +86,42 @@ try {
   assert.match(audit, /"op"\s*:\s*"onboarding-demo-item-read"/);
   assert.match(audit, new RegExp(`"item"\\s*:\\s*"${itemId}"`));
   assert.doesNotMatch(audit, /Skarbiec onboarding note; explicitly not a secret/);
+
+  const artifacts = process.env.PROBIERZ_ARTIFACTS?.trim();
+  const mediaManifest = process.env.PROBIERZ_MEDIA_MANIFEST?.trim();
+  assert.ok(artifacts, 'PROBIERZ_ARTIFACTS is required for the onboarding evidence trace');
+  assert.ok(mediaManifest, 'PROBIERZ_MEDIA_MANIFEST is required for the onboarding evidence trace');
+  const tracePath = join(artifacts, 'skarbiec-onboarding-first-use.trace.json');
+  await mkdir(dirname(tracePath), { recursive: true });
+  await writeFile(tracePath, `${JSON.stringify({
+    schemaVersion: 1,
+    kind: 'probierz-skarbiec-onboarding-trace',
+    evidenceLevel: 'E2',
+    runId: process.env.PROBIERZ_RUN_ID || null,
+    status: 'completed',
+    observation: {
+      firstSuccess: 'audit_entry_observed',
+      itemId,
+      auditOperation: 'onboarding-demo-item-read',
+    },
+    redaction: {
+      status: 'verified_redacted',
+      credentialsIncluded: false,
+      itemValuesIncluded: false,
+    },
+    publicationRequirements: {
+      artifactKind: 'trace',
+      minimumEvidence: 'E2',
+      redactionStatus: 'verified_redacted',
+      signedReceiptRequired: true,
+    },
+  }, null, 2)}\n`, { mode: 0o600 });
+  await mkdir(dirname(mediaManifest), { recursive: true });
+  await writeFile(mediaManifest, `${JSON.stringify([{
+    file: tracePath,
+    kind: 'trace',
+    contentType: 'application/json',
+  }], null, 2)}\n`, { mode: 0o600 });
 } finally {
   if (app) await app.close();
   await rm(tempDir, { recursive: true, force: true });
