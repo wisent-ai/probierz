@@ -19,9 +19,6 @@ surfaces:
     journeys: [critical-operations]
     conditions:
       PROBIERZ_DATA_STATE: fresh
-      PROBIERZ_MAC_APP_ENV_BRAMA_BASE_URL: http://127.0.0.1:8794
-      PROBIERZ_MAC_APP_ENV_BRAMA_LOCAL_RUNTIME: "1"
-      PROBIERZ_MAC_APP_ARGS: '["--disable-notifications","-bramaDesktop.automaticDiscovery","0","-bramaDesktop.subscriptionAutomaticDiscovery","0","-bramaDesktop.runtimeOrigin","http://127.0.0.1:8794"]'
     device:
       platform: macOS
       minimumVersion: "14"
