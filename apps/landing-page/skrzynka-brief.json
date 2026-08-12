@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "product": "Skrzynka",
+  "audience": "People and local tools that receive mail from multiple IMAP mailboxes and must reply through the mailbox that received each message",
+  "problem": "Operating multiple mailboxes usually fragments message state and encourages copying provider credentials into each client or automation",
+  "promise": "One self-hosted local inbox that preserves mailbox identity on every message and reply while keeping resolved credentials in Skarbiec",
+  "primaryAction": {
+    "label": "Read the documentation",
+    "kind": "url",
+    "target": "https://www.wisent.ai/documentation/skrzynka"
+  },
+  "secondaryAction": {
+    "label": "View source",
+    "purpose": "Inspect the canonical Apache-2.0 implementation and product contract"
+  },
+  "approvedClaims": [
+    {
+      "claim": "Skrzynka receives mail from multiple IMAP mailboxes and replies through the mailbox that received each message.",
+      "evidence": "skrzynka/README.md lines 13-17 and 24-27"
+    },
+    {
+      "claim": "Mailbox credentials remain in Skarbiec; Skrzynka stores exact item references and resolves secrets only while opening IMAP or SMTP.",
+      "evidence": "skrzynka/README.md lines 15-17 and 66-84"
+    },
+    {
+      "claim": "The service exposes a CLI and authenticated loopback-only JSON API.",
+      "evidence": "skrzynka/README.md lines 17 and 28-29"
+    }
+  ],
+  "requiredProof": [
+    "A concrete three-step product workflow from selecting a Skarbiec mailbox identity through IMAP synchronization to replying with the originating SMTP identity",
+    "A real first-local-mailbox command sequence using skrzynka status, mailbox add, sync, and message list",
+    "Visible links to the canonical Skrzynka documentation and source repository"
+  ],
+  "brand": {
+    "canonicalAssets": [
+      "las-landing/src/components/WisentMark.jsx",
+      "las-landing/src/lib/surfaces.mjs#skrzynka"
+    ],
+    "rules": [
+      "Use the canonical Wisent mark and the Skrzynka sky accent on the shared dark product-surface system.",
+      "Use concrete operational language; do not imply a hosted shared inbox, automatic replies, or credential storage outside Skarbiec.",
+      "Preserve one dominant documentation action and one lower-emphasis source action."
+    ],
+    "forbidden": [
+      "Invented customer logos or metrics",
+      "Generic substitute product screenshots",
+      "Claims that Skrzynka generates replies, sends automatic replies, exposes a remote shared server, or stores resolved mailbox credentials"
+    ]
+  },
+  "analyticsOwner": "Wisent product and design maintainers",
+  "notes": [
+    "The product is self-hosted and currently carries a development contract; the landing must not imply hosted-service availability.",
+    "The canonical landing source is las-landing/src/lib/surfaces.mjs and the product contract is skrzynka/README.md."
+  ]
+}

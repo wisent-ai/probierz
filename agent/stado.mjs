@@ -1,22 +1,43 @@
 // Bridge to the stado GPU job queue: run a probierz target on a chosen
 // remote host and bring the evidence back into the local test-results tree,
 // so history, status, and the gate treat remote runs like local ones.
-// Inputs travel as tarballs over gs://stado/probierz-inputs (the probierz
+// Inputs travel as tarballs through stado://probierz/inputs (the probierz
 // checkout is private), the job script provisions node and the app's binary
-// on the worker, and results are uploaded to gs://stado/probierz-results.
+// on the worker, and results are persisted under stado://probierz/results.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { stadoModelRouterUrl } from "./model-router.mjs";
+import { loadAppManifest } from "./apps.mjs";
+import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
-const WC_BIN = "wc";
+const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+const MODEL_ROUTER_SECRET_ENV = {
+  STADO_MODEL_ROUTER_TOKEN: { item: "probierz-model-router", field: "token" },
+};
+const MODEL_ROUTER_SECRET_REF = "vault://wisent/probierz/model-router-token";
+
+function remoteRunSecretEnv(appId) {
+  const reference = loadAppManifest(appId).secretRefs?.STADO_MODEL_ROUTER_TOKEN;
+  if (!reference) return {};
+  if (reference !== MODEL_ROUTER_SECRET_REF) {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      detail: `unsupported STADO_MODEL_ROUTER_TOKEN reference: ${reference}`,
+      message: `Remote runs require ${MODEL_ROUTER_SECRET_REF} for STADO_MODEL_ROUTER_TOKEN.`,
+    });
+  }
+  return MODEL_ROUTER_SECRET_ENV;
+}
 // Worker-relative spec dirs per target (mirror of TARGET_SPEC_DIRS in
 // author-spec.mjs) so author-mode evidence tarballs include the new spec.
 const TARGET_SPEC_DIRS_REL = {
@@ -29,49 +50,68 @@ const TARGET_SPEC_DIRS_REL = {
   tui: "packages/tui/specs",
 };
 
-// State backend for the bridge: env PROBIERZ_STADO_BUCKET wins, then
-// stado.config.json (storage.gcs.bucket), then the fleet default.
-function stateBucket() {
-  if (process.env.PROBIERZ_STADO_BUCKET) return process.env.PROBIERZ_STADO_BUCKET;
-  const candidates = [
-    path.join(ROOT, "..", "wisent-compute", "stado.config.json"),
-    path.join(process.env.HOME || "", ".config", "stado", "config.json"),
-    path.join(process.env.HOME || "", ".stado", "config.json"),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      try {
-        const data = JSON.parse(readFileSync(candidate, "utf8"));
-        const bucket = data?.storage?.gcs?.bucket;
-        if (typeof bucket === "string" && bucket) return bucket;
-      } catch { /* unreadable config: fall through to the default */ }
-    }
-  }
-  return "stado";
+function stateUri(kind) {
+  return `stado://probierz/${kind}`;
+}
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\"'\"'")}'`;
 }
 
-function stateUri(kind) {
-  return `gs://${stateBucket()}/probierz-${kind}`;
-}
 
 export function listHosts() {
   return [
     { host: "local", kind: "local", description: "this machine (default)" },
-    { host: "stado:gcp", kind: "stado", submit: ["--provider", "gcp", "--pin-provider"], description: "stado queue, GCP consumers only" },
-    { host: "stado:azure", kind: "stado", submit: ["--provider", "azure", "--pin-provider"], description: "stado queue, Azure consumers only" },
-    { host: "stado:aws", kind: "stado", submit: ["--provider", "aws", "--pin-provider"], description: "stado queue, AWS consumers only" },
-    { host: "stado:any", kind: "stado", submit: ["--any-provider"], description: "stado queue, any consumer with capacity" },
-    { host: "stado:spot", kind: "stado", submit: ["--spot"], description: "stado queue, cheapest preemptible capacity" },
-    { host: "stado:local", kind: "stado", submit: ["--provider", "local", "--pin-provider"], description: "stado queue, local-kind consumers only" },
-    { host: "stado:mini", kind: "stado", platform: "darwin", submit: ["--provider", "local", "--pin-provider", "--pinned-host", "charless-mac-mini"], description: "stado queue, pinned to charless-mac-mini (macOS runner)" },
-    { host: "stado:macbook", kind: "stado", platform: "darwin", submit: ["--provider", "local", "--pin-provider", "--pinned-host", "lukasz-macbook"], description: "stado queue, pinned to lukasz-macbook (macOS runner, live GUI session)" },
-    { host: "stado:t4", kind: "stado", submit: ["--gpu-type", "nvidia-tesla-t4"], description: "stado queue, pinned to nvidia-tesla-t4 slots (GCP)" },
+    { host: "stado:gcp", kind: "stado", request: { provider: "gcp", pin_to_provider: true }, description: "stado queue, GCP consumers only" },
+    { host: "stado:azure", kind: "stado", request: { provider: "azure", pin_to_provider: true }, description: "stado queue, Azure consumers only" },
+    { host: "stado:aws", kind: "stado", request: { provider: "aws", pin_to_provider: true }, description: "stado queue, AWS consumers only" },
+    { host: "stado:any", kind: "stado", request: {}, description: "stado queue, any consumer with capacity" },
+    { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
+    { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
+    { host: "stado:mini", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
+    { host: "stado:macbook", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukasz-macbook.local" }, description: "stado queue, dedicated MacBook consumer" },
+    { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
 
 function sh(command, args, options = {}) {
   const out = spawnSync(command, args, { encoding: "utf8", maxBuffer: Number("33554432"), ...options });
-  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || "") };
+  // `error` carries the spawn failure itself (a missing `stado` binary), which
+  // neither stream reports and which classifies very differently from a
+  // command that ran and refused.
+  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null };
+}
+
+/**
+ * Everything a spawned command told us, in the order that classifies best:
+ * the spawn error first, then stderr, then stdout.
+ */
+function processText(out) {
+  return [out.error?.message, out.stderr, out.stdout].filter(Boolean).join(" ").trim();
+}
+
+function exitText(out) {
+  return out.status === null ? "none" : String(out.status);
+}
+
+/**
+ * A call into the stado queue or its object store that did not complete.
+ * Unrecognisable wording defaults to `infra_down` rather than `unknown`: the
+ * remote side failed to do what we asked, and "we cannot tell why" must not be
+ * downgraded into a shrug the operator ignores.
+ */
+function remoteFailure(point, action, out) {
+  return failureFrom({
+    point,
+    error: processText(out) || null,
+    detail: `${STADO_BIN} exit ${exitText(out)}`,
+    action,
+    fallbackCode: CODE.INFRA_DOWN,
+  });
+}
+
+/** A local packaging step. Nothing remote is implicated, so no outage default. */
+function localFailure(point, action, out) {
+  return failureFrom({ point, error: processText(out) || null, detail: `tar exit ${exitText(out)}`, action });
 }
 
 function packRepo(appIds) {
@@ -80,9 +120,16 @@ function packRepo(appIds) {
   const includes = ["agent", "packages", "apps", "package.json", "tsconfig.base.json", ".git"];
   const args = ["-czf", file, ...includes.filter((entry) => existsSync(path.join(ROOT, entry)))];
   const packed = sh("tar", args, { cwd: ROOT });
-  if (packed.status !== 0) throw new Error(`pack probierz failed: ${packed.stderr}`);
+  if (packed.status !== Number("0")) throw localFailure("stado.pack", "Packing the probierz checkout failed", packed);
   for (const appId of appIds) {
-    if (!existsSync(path.join(ROOT, "apps", appId))) throw new Error(`app manifest not found: apps/${appId}`);
+    if (!existsSync(path.join(ROOT, "apps", appId))) {
+      throw new FailureError({
+        point: "stado.pack",
+        code: CODE.NOT_FOUND,
+        detail: `app manifest not found: apps/${appId}`,
+        message: `No app manifest for "${appId}". Register it under apps/ before submitting a remote run.`,
+      });
+    }
   }
   return { file, hash };
 }
@@ -92,7 +139,7 @@ function packAppSource(appId, repoRoot) {
   const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
   const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
   const packed = sh("tar", args, { cwd: repoRoot });
-  if (packed.status !== 0) throw new Error(`pack ${appId} failed: ${packed.stderr}`);
+  if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
   return { file, hash };
 }
 
@@ -102,7 +149,7 @@ function packAppBundle(appId, bundlePath) {
   const file = path.join(tmpdir(), `${appId}-app-${hash}.tar.gz`);
   // -C into the bundle's parent so the tarball root is <Bundle>.app itself.
   const packed = sh("tar", ["-czf", file, "-C", path.dirname(bundlePath), bundleName]);
-  if (packed.status !== 0) throw new Error(`pack ${appId} bundle failed: ${packed.stderr}`);
+  if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} application bundle failed`, packed);
   return { file, hash, bundleName };
 }
 
@@ -114,17 +161,21 @@ function manifestRepoRoot(appId) {
 }
 
 function upload(localFile, name) {
-  const dest = `${stateUri("inputs")}/${name}`;
-  const out = sh("gcloud", ["storage", "cp", localFile, dest]);
-  if (out.status !== 0) throw new Error(`upload ${localFile} failed: ${out.stderr}`);
-  return dest;
+  const destination = `${stateUri("inputs")}/${name}`;
+  const out = sh(STADO_BIN, ["storage", "put", destination, localFile]);
+  // The local path is diagnostic; it rides the log line, not the message.
+  if (out.status !== Number("0")) {
+    throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile})` });
+  }
+  return destination;
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null }) {
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null }) {
   const lines = ["set -euxo pipefail"];
+  lines.push('JOB_ROOT="$PWD"', "mkdir -p output work");
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
-    // so put homebrew on PATH first (gcloud, node live there on the mini).
+    // so put homebrew on PATH first (stado and node live there on the mini).
     // Then use the node already on the box when present, else fetch the
     // darwin-arm64 tarball.
     lines.push(
@@ -139,56 +190,42 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
   }
   lines.push(
-    `gcloud storage cp ${stateUri("inputs")}/probierz.tar.gz /tmp/`,
-    "mkdir -p /tmp/w/probierz && tar -xzf /tmp/probierz.tar.gz -C /tmp/w/probierz",
+    `mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
   );
   if (provision?.kind === "cargo-release") {
     lines.push(
-      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
-      `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
-      `cargo build --release --manifest-path /tmp/w/${provision.appId}/Cargo.toml`,
-      `export TUI_CMD=/tmp/w/${provision.appId}/target/release/${provision.binary || provision.appId}`,
+      `cargo build --release --manifest-path "$JOB_ROOT/work/${provision.appId}/Cargo.toml"`,
+      `export TUI_CMD="$JOB_ROOT/work/${provision.appId}/target/release/${provision.binary || provision.appId}"`,
     );
   }
   if (provision?.kind === "app-bundle") {
     lines.push(
-      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}-app.tar.gz /tmp/`,
-      `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}-app.tar.gz -C /tmp/w/${provision.appId}`,
-      `export MAC_APP_PATH=/tmp/w/${provision.appId}/${provision.bundleName}`,
-      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
-      `mkdir -p /tmp/w/${provision.appId}-src && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}-src`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `export MAC_APP_PATH="$JOB_ROOT/work/${provision.appId}/${provision.bundleName}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
     );
   }
   if (provision?.kind === "node-source") {
-    // Generic JS app source (e.g. game_asset_creator): sources land in
-    // /tmp/w/<appId>, the caller's env map is exported, and an optional
-    // submit-time-resolved config file (secrets resolved LOCALLY by the
-    // submitter's vault, mode 0600) travels alongside.
+    // Generic JS app sources are staged as immutable job inputs.
     lines.push(
-      `gcloud storage cp ${stateUri("inputs")}/${provision.appId}.tar.gz /tmp/`,
-      `mkdir -p /tmp/w/${provision.appId} && tar -xzf /tmp/${provision.appId}.tar.gz -C /tmp/w/${provision.appId}`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
     );
-    if (provision.configFile) {
-      lines.push(
-        `gcloud storage cp ${stateUri("inputs")}/${provision.appId}-resolved-config.json /tmp/`,
-        `chmod 600 /tmp/${provision.appId}-resolved-config.json`,
-      );
-    }
     for (const [key, value] of Object.entries(provision.env ?? {})) {
       lines.push(`export ${key}=${JSON.stringify(String(value))}`);
     }
   }
   lines.push(
-    "cd /tmp/w/probierz",
+    `cd "$JOB_ROOT/work/probierz"`,
   );
   if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source") {
     // The manifest ships the submitter's absolute repo root; on the worker
     // the sources live under /tmp/w, so rewrite it before the run.
-    const srcDir = provision.kind === "app-bundle" ? `/tmp/w/${provision.appId}-src` : `/tmp/w/${provision.appId}`;
+    const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
     lines.push(
-      `perl -pi -e 's|^  - root: .*|  - root: ${srcDir}|' apps/${appId}/probierz.yaml`,
+      `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
     );
   }
   lines.push(
@@ -216,8 +253,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `bash apps/${appId}/${provision.script}`,
       "PROBIERZ_RUN_RC=$?",
       "set -e",
-      "tar -czf /tmp/results.tar.gz test-results",
-      `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
+      `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
       "exit $PROBIERZ_RUN_RC",
     );
     return lines.join("\n");
@@ -225,17 +261,19 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   if (mode === "author") {    // Remote authoring: the probe needs a live Appium before author-spec
     // starts; evidence (run artifacts + the accepted spec + manifest with
     // the submitter-local repo root restored) always comes back.
+    if (!modelRouterUrl) throw new Error("remote authoring needs STADO_MODEL_ROUTER_URL");
     lines.push(
+      `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
+      ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
       "nohup npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &",
       "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done",
       "set +e",
-      `node agent/cli.mjs author-spec ${appId} ${author.journey} --target ${target} --desc ${JSON.stringify(author.desc)} --app-path "$MAC_APP_PATH" --model ${author.model}`,
+      `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "$MAC_APP_PATH"`,
       "PROBIERZ_RC=$?",
       "set -e",
       "mkdir -p test-results",
-      `perl -pi -e 's|^  - root: .*|  - root: ${(sourceRoot || "").replace(/\//g, "\\/")}|' apps/${appId}/probierz.yaml`,
-      `tar -czf /tmp/results.tar.gz test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
-      `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-author-${hash}.tar.gz`,
+      `perl -pi -e "s|^  - root: .*|  - root: ${(sourceRoot || "").replace(/\//g, "\\/")}|" apps/${appId}/probierz.yaml`,
+      `tar -czf "$JOB_ROOT/output/probierz-author-${hash}.tar.gz" test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
       "exit $PROBIERZ_RC",
     );
     return lines.join("\n");
@@ -248,115 +286,216 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""} PROBIERZ_RUN_KIND=pull-request`,
     "PROBIERZ_RUN_RC=$?",
     "set -e",
-    "tar -czf /tmp/results.tar.gz test-results",
-    `gcloud storage cp /tmp/results.tar.gz ${stateUri("results")}/probierz-run-${hash}.tar.gz`,
+    `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
     "exit $PROBIERZ_RUN_RC",
   );
   return lines.join("\n");
 }
 
-function parseJobId(text) {
-  // Prefer an explicit job id over the batch id: wc echoes "Job ID: <id>"
-  // for single-job submits; only batch submissions lack one.
-  const match = String(text).match(/job[_\s-]?id["'\s:=]+([a-z0-9][a-z0-9-]{6,})/i)
-    || String(text).match(/\b([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\b/)
-    || String(text).match(/[Bb]atch:\s*([a-z0-9][a-z0-9-]{4,})/);
-  return match ? match[1] : null;
+function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
+  const requestFile = path.join(tmpdir(), `probierz-machine-${hash}.json`);
+  const request = {
+    client_request_id: `probierz-${kind}-${hash}`,
+    command: "bash inputs/run.sh",
+    output_uri: stateUri("results"),
+    input_objects: inputObjects,
+    secret_env: secretEnv,
+    ...(hostDef.request || {}),
+  };
+  writeFileSync(requestFile, JSON.stringify(request));
+  const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile]);
+  rmSync(requestFile, { force: true });
+  let jobId = null;
+  try {
+    const payload = JSON.parse(submit.stdout);
+    jobId = payload?.ok ? payload.result?.job?.job_id || null : null;
+  } catch {
+    // A queue that answers with something other than its own protocol is a
+    // queue that is not working; the text lands on the log line below.
+  }
+  if (jobId) return { jobId, failure: null };
+  // The raw submit output is the operator's evidence, so it is logged in full
+  // by `remoteFailure`; the caller gets the verdict, not the transcript.
+  return { jobId: null, failure: failureSummary(remoteFailure("stado.submit", "The stado queue did not accept the job", submit)) };
 }
+
+/**
+ * A `machine status` call that itself fails is a blip until it is a pattern.
+ * Three consecutive failures is the queue being unreachable, and waiting out
+ * the full hour to say so would be the silence this contract forbids.
+ */
+const STATUS_FAILURE_TOLERANCE = Number("3");
 
 async function watchJob(jobId) {
   const deadline = Date.now() + WATCH_BUDGET_MS;
+  let consecutiveStatusFailures = Number("0");
   while (Date.now() < deadline) {
-    const out = sh(WC_BIN, ["status", jobId]);
-    const line = `${out.stdout}\n${out.stderr}`.split("\n").find((entry) => entry.startsWith(jobId));
-    const state = line ? String(line.split(/\s+/)[1] || "").toLowerCase() : "";
-    if (["failed", "cancelled"].includes(state)) return { state: "failed", detail: line || `${out.stdout}${out.stderr}`.slice(-Number("2000")) };
-    if (["uploaded", "completed"].includes(state)) return { state: "completed", detail: line };
+    const out = sh(STADO_BIN, ["machine", "status", jobId]);
+    let payload = null;
+    try { payload = JSON.parse(out.stdout); } catch {}
+    const answered = Boolean(payload?.ok);
+    if (!answered) {
+      consecutiveStatusFailures += Number("1");
+      if (consecutiveStatusFailures >= STATUS_FAILURE_TOLERANCE) {
+        return {
+          state: "unreachable",
+          failure: failureSummary(remoteFailure("stado.watch", `The stado queue stopped answering about job ${jobId}`, out)),
+        };
+      }
+    } else {
+      consecutiveStatusFailures = Number("0");
+    }
+    const state = String(answered ? payload.result?.job?.state || "" : "").toLowerCase();
+    // A job the fleet failed or cancelled is a run result, not an outage: the
+    // queue did its part. The worker's own text is the operator's evidence.
+    if (["failed", "cancelled"].includes(state)) {
+      return {
+        state: "failed",
+        failure: failureSummary(failureFrom({
+          point: "stado.watch",
+          error: `job ${state}`,
+          detail: (out.stdout || out.stderr).slice(Number("0"), Number("500")),
+          action: `Job ${jobId} ${state} on the remote host`,
+        })),
+      };
+    }
+    if (["uploaded", "completed"].includes(state)) return { state: "completed", failure: null };
     await new Promise((resolve) => { setTimeout(resolve, WATCH_INTERVAL_MS); });
   }
-  return { state: "watch-timeout", detail: `job ${jobId} did not finish within ${WATCH_BUDGET_MS}ms` };
+  return {
+    state: "watch-timeout",
+    failure: failureSummary(failureFrom({
+      point: "stado.watch",
+      error: `watching job ${jobId} timed out`,
+      detail: `no terminal state within ${WATCH_BUDGET_MS}ms`,
+      action: `Job ${jobId} was still running when probierz stopped waiting`,
+    })),
+  };
 }
 
 function provisionInputs({ appId, provision, appRepo }) {
+  const inputs = {};
   if (provision?.kind === "cargo-release" || provision?.kind === "node-source") {
-    if (!appRepo) throw new Error(`${provision.kind} provisioning needs the app source repository`);
-    upload(packAppSource(appId, appRepo).file, `${appId}.tar.gz`);
-    if (provision.kind === "node-source" && provision.configFile) {
-      if (!existsSync(provision.configFile)) throw new Error(`resolved config file missing: ${provision.configFile}`);
-      upload(provision.configFile, `${appId}-resolved-config.json`);
+    if (!appRepo) {
+      throw new FailureError({
+        point: "stado.pack",
+        code: CODE.CONFIG,
+        detail: `${provision.kind} provisioning needs the app source repository`,
+        message: `Remote ${provision.kind} provisioning needs --app-repo <path>.`,
+      });
     }
-    return appRepo;
+    const source = packAppSource(appId, appRepo);
+    inputs.app = {
+      stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
+      relative_path: `inputs/${appId}.tar.gz`,
+    };
+    return { sourceRoot: appRepo, inputs };
   }
   if (provision?.kind === "app-bundle") {
-    if (!provision.bundlePath || !existsSync(provision.bundlePath)) throw new Error(`app-bundle path missing: ${provision.bundlePath}`);
+    if (!provision.bundlePath || !existsSync(provision.bundlePath)) {
+      throw new FailureError({
+        point: "stado.pack",
+        code: CODE.NOT_FOUND,
+        detail: `app-bundle path missing: ${provision.bundlePath}`,
+        message: "The --app-bundle-path you gave does not exist. Build the bundle first.",
+      });
+    }
     const bundle = packAppBundle(appId, provision.bundlePath);
     provision.bundleName = bundle.bundleName;
-    upload(bundle.file, `${appId}-app.tar.gz`);
-    // The runner recomputes the source inventory on the worker, so the app
-    // source (with .git) must travel too; the manifest's absolute repo root
-    // is rewritten on the worker to the extracted copy.
+    inputs.bundle = {
+      stado_uri: upload(bundle.file, `${appId}-app-${bundle.hash}.tar.gz`),
+      relative_path: `inputs/${appId}-app.tar.gz`,
+    };
     const sourceRepo = appRepo || manifestRepoRoot(appId);
-    if (!sourceRepo) throw new Error(`app-bundle needs the app source repo (--app-repo or a repositories[0].root in apps/${appId}/probierz.yaml)`);
-    upload(packAppSource(appId, sourceRepo).file, `${appId}.tar.gz`);
-    return sourceRepo;
+    if (!sourceRepo) {
+      throw new FailureError({
+        point: "stado.pack",
+        code: CODE.CONFIG,
+        detail: `app-bundle needs the app source repo for ${appId}`,
+        message: `Remote app-bundle runs need the app source repo: pass --app-repo, or set repositories[0].root in apps/${appId}/probierz.yaml.`,
+      });
+    }
+    const source = packAppSource(appId, sourceRepo);
+    inputs.app = {
+      stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
+      relative_path: `inputs/${appId}.tar.gz`,
+    };
+    return { sourceRoot: sourceRepo, inputs };
   }
-  return null;
+  return { sourceRoot: null, inputs };
 }
 
 export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run" }) {
   const hostDef = listHosts().find((entry) => entry.host === host);
-  if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
+  if (!hostDef || hostDef.kind !== "stado") {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.NOT_FOUND,
+      detail: `unknown stado host: ${host}`,
+      message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
+    });
+  }
   const packedRepo = packRepo([appId]);
-  upload(packedRepo.file, "probierz.tar.gz");
-  provisionInputs({ appId, provision, appRepo });
+  const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
-  upload(scriptFile, `run-${packedRepo.hash}.sh`);
-  const submit = sh(WC_BIN, [
-    "submit",
-    `gcloud storage cp ${stateUri("inputs")}/run-${packedRepo.hash}.sh /tmp/run.sh && bash /tmp/run.sh`,
-    ...hostDef.submit,
-  ]);
-  const jobId = parseJobId(`${submit.stdout}\n${submit.stderr}`);
-  const result = { host, jobId, target, appId, submitted: submit.status === 0, submitText: `${submit.stdout}${submit.stderr}`.slice(-Number("800")) };
-  if (!jobId) return { ...result, state: "submit-failed" };
-  if (!watch) return { ...result, state: "queued" };
+  const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);
+  const inputObjects = {
+    repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
+    script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
+    ...provisioned.inputs,
+  };
+  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "run", inputObjects, remoteRunSecretEnv(appId));
+  const result = { host, jobId, target, appId, submitted: Boolean(jobId) };
+  // `failure` replaces the raw submit transcript that used to travel here: the
+  // transcript is on the log line, the verdict is what a caller can act on.
+  if (!jobId) return { ...result, state: "submit-failed", failure };
+  if (!watch) return { ...result, state: "queued", failure: null };
   const watched = await watchJob(jobId);
   result.state = watched.state;
-  result.detail = watched.detail;
+  result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
   }
   return result;
 }
 
-export async function submitRemoteAuthor({ appId, journey, target, desc, model = "codex", host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+export async function submitRemoteAuthor({ appId, journey, target, desc, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
   const hostDef = listHosts().find((entry) => entry.host === host);
-  if (!hostDef || hostDef.kind !== "stado") throw new Error(`unknown stado host: ${host}`);
+  if (!hostDef || hostDef.kind !== "stado") {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.NOT_FOUND,
+      detail: `unknown stado host: ${host}`,
+      message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
+    });
+  }
+  const modelRouterUrl = stadoModelRouterUrl();
   const packedRepo = packRepo([appId]);
-  upload(packedRepo.file, "probierz.tar.gz");
-  const sourceRoot = provisionInputs({ appId, provision, appRepo });
+  const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({
     target, appId, spec: null, provision, hash: packedRepo.hash,
     platform: hostDef.platform, mode: "author",
-    author: { journey, desc, model }, sourceRoot,
+    author: { journey, desc }, sourceRoot: provisioned.sourceRoot, modelRouterUrl,
   });
   const scriptFile = path.join(tmpdir(), `probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
-  upload(scriptFile, `author-${packedRepo.hash}.sh`);
-  const submit = sh(WC_BIN, [
-    "submit",
-    `gcloud storage cp ${stateUri("inputs")}/author-${packedRepo.hash}.sh /tmp/run.sh && bash /tmp/run.sh`,
-    ...hostDef.submit,
-  ]);
-  const jobId = parseJobId(`${submit.stdout}\n${submit.stderr}`);
-  const result = { host, jobId, target, appId, journey, submitted: submit.status === 0, submitText: `${submit.stdout}${submit.stderr}`.slice(-Number("800")) };
-  if (!jobId) return { ...result, state: "submit-failed" };
-  if (!watch) return { ...result, state: "queued" };
+  const scriptUri = upload(scriptFile, `author-${packedRepo.hash}.sh`);
+  const inputObjects = {
+    repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
+    script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
+    ...provisioned.inputs,
+  };
+  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "author", inputObjects, MODEL_ROUTER_SECRET_ENV);
+  const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
+  if (!jobId) return { ...result, state: "submit-failed", failure };
+  if (!watch) return { ...result, state: "queued", failure: null };
   const watched = await watchJob(jobId);
   result.state = watched.state;
-  result.detail = watched.detail;
+  result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "author");
     result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
@@ -369,12 +508,12 @@ export function fetchResults(hash, appId, jobId, kind = "run") {
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
   const tarball = path.join(destDir, "results.tar.gz");
-  const down = sh("gcloud", ["storage", "cp", `${stateUri("results")}/probierz-${kind}-${hash}.tar.gz`, tarball]);
-  if (down.status !== 0) throw new Error(`download results for ${jobId} failed: ${down.stderr}`);
+  const down = sh(STADO_BIN, ["storage", "get", `${stateUri("results")}/probierz-${kind}-${hash}.tar.gz`, tarball]);
+  if (down.status !== Number("0")) throw remoteFailure("stado.download", `Downloading the evidence for job ${jobId} failed`, down);
   // Author tarballs carry the accepted spec + manifest next to test-results,
   // so they extract at the repo root; run evidence extracts as before.
   const untarCwd = kind === "author" ? ROOT : path.join(ROOT, "test-results");
   const untar = sh("tar", ["-xzf", tarball, "-C", untarCwd], { cwd: ROOT });
-  if (untar.status !== 0) throw new Error(`extract results for ${jobId} failed: ${untar.stderr}`);
+  if (untar.status !== Number("0")) throw localFailure("stado.download", `Unpacking the evidence for job ${jobId} failed`, untar);
   return destDir;
 }

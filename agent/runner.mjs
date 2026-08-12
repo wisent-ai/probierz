@@ -26,6 +26,7 @@ import { appSurface, loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { collectPlatformDiagnostics, startPerformanceSampler } from "./collect.mjs";
 import { acquireResourcesWait, resourcesFor } from "./locks.mjs";
 import { repositoryIdentity } from "./source-identity.mjs";
+import { CODE, failureFrom, failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // probierz/agent -> probierz project root.
@@ -677,16 +678,27 @@ export async function runSurface(target, opts = {}) {
       const cleanup = dataSeeded
         ? runDataCommand(lifecycle?.cleanup, env, secretValues(requestedEnv), stdoutPath, stderrPath)
         : { ok: true, result: null };
+      // A runner that will not even start is a toolchain that is not installed
+      // — the thing `probierz check` exists to catch. Saying so beats handing
+      // the operator a bare `spawn ENOENT` and letting them guess whose fault
+      // it is. Retrying an absent binary never helps, hence `config`.
+      const failure = failureFrom({
+        point: "run.spawn",
+        error,
+        detail: `npm script ${t.script} in ${t.pkg}`,
+        action: `Starting the ${target} runner failed`,
+        fallbackCode: CODE.CONFIG,
+      });
       updateManifest(baseRun, {
         status: "failed",
         completedAt: new Date().toISOString(),
-        spawnError: error.message,
+        spawnFailure: failureSummary(failure),
         cleanup,
         performance,
         platformDiagnostics,
       });
       resourceLease.release();
-      reject(error);
+      reject(failure);
     });
     child.on("close", async (code, signal) => {
       clearTimeout(timer);
