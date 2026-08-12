@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
+import { createHash, createHmac } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -677,30 +678,44 @@ async function modelEvaluation(
     });
   }
   const tool = modelToolSchema(rubric);
+  const body = JSON.stringify({
+    model,
+    max_tokens: maxTokens,
+    temperature: 0,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You are the release evaluator for a landing page.',
+          ...rubric.modelInstructions,
+          'Call record_landing_page_evaluation exactly once. Return no prose outside the tool call.',
+        ].join('\n'),
+      },
+      { role: 'user', content },
+    ],
+    tools: [tool],
+    tool_choice: {
+      type: 'function',
+      function: { name: 'record_landing_page_evaluation' },
+    },
+  });
+  const agentId = requiredEnvironment('PROBIERZ_MODEL_AGENT_ID');
+  const agentSecret = requiredEnvironment('PROBIERZ_MODEL_AGENT_SECRET');
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const digest = createHash('sha256').update(body).digest('hex');
+  const signature = createHmac('sha256', agentSecret)
+    .update(`${agentId}:${timestamp}:${digest}`)
+    .digest('hex');
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'x-agent-id': 'probierz',
+      'x-agent-id': agentId,
+      'x-agent-timestamp': timestamp,
+      'x-agent-signature': signature,
     },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      temperature: 0,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            'You are the release evaluator for a landing page.',
-            ...rubric.modelInstructions,
-            'Call record_landing_page_evaluation exactly once. Return no prose outside the tool call.',
-          ].join('\n'),
-        },
-        { role: 'user', content },
-      ],
-      tools: [tool],
-    }),
+    body,
     signal: AbortSignal.timeout(MAX_ROUTER_MS),
   });
   const raw = await response.text();

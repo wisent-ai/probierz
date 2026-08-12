@@ -20,23 +20,36 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
-const MODEL_ROUTER_SECRET_ENV = {
-  STADO_MODEL_ROUTER_TOKEN: { item: "probierz-model-router", field: "token" },
+const REMOTE_SECRET_ENV = {
+  STADO_MODEL_ROUTER_TOKEN: {
+    reference: "vault://wisent/probierz/model-router-token",
+    item: "probierz-model-router",
+    field: "token",
+  },
+  PROBIERZ_MODEL_AGENT_SECRET: {
+    reference: "vault://wisent/probierz/model-agent-secret",
+    item: "probierz-agent-auth",
+    field: "agent_auth_secret",
+  },
 };
-const MODEL_ROUTER_SECRET_REF = "vault://wisent/probierz/model-router-token";
 
 function remoteRunSecretEnv(appId) {
-  const reference = loadAppManifest(appId).secretRefs?.STADO_MODEL_ROUTER_TOKEN;
-  if (!reference) return {};
-  if (reference !== MODEL_ROUTER_SECRET_REF) {
-    throw new FailureError({
-      point: "stado.submit",
-      code: CODE.CONFIG,
-      detail: `unsupported STADO_MODEL_ROUTER_TOKEN reference: ${reference}`,
-      message: `Remote runs require ${MODEL_ROUTER_SECRET_REF} for STADO_MODEL_ROUTER_TOKEN.`,
-    });
+  const configured = loadAppManifest(appId).secretRefs || {};
+  const secretEnv = {};
+  for (const [name, binding] of Object.entries(REMOTE_SECRET_ENV)) {
+    const reference = configured[name];
+    if (!reference) continue;
+    if (reference !== binding.reference) {
+      throw new FailureError({
+        point: "stado.submit",
+        code: CODE.CONFIG,
+        detail: `unsupported ${name} reference: ${reference}`,
+        message: `Remote runs require ${binding.reference} for ${name}.`,
+      });
+    }
+    secretEnv[name] = { item: binding.item, field: binding.field };
   }
-  return MODEL_ROUTER_SECRET_ENV;
+  return secretEnv;
 }
 // Worker-relative spec dirs per target (mirror of TARGET_SPEC_DIRS in
 // author-spec.mjs) so author-mode evidence tarballs include the new spec.
