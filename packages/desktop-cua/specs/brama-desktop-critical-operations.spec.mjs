@@ -7,7 +7,7 @@ import net from "node:net";
 import {
   clickElement,
   elementIndexOf,
-  launchCuaApp,
+  launchCuaBundle,
   quitApp,
   selectSidebarRow,
   snapshotState,
@@ -31,21 +31,9 @@ async function freeLoopbackPort() {
   return port;
 }
 
-function readBundleIdentifier(bundle) {
-  const info = path.join(bundle, "Contents", "Info.plist");
-  const result = spawnSync("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleIdentifier", info], { encoding: "utf8" });
-  const identifier = result.stdout?.trim();
-  if (result.status !== 0 || !identifier) {
-    throw new Error(`could not read Brama bundle identity: ${result.stderr || result.stdout}`);
-  }
-  return identifier;
-}
-
 const appBundle = process.env.MAC_APP_PATH;
 if (!appBundle) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH");
 const isolatedBundle = path.join("/Applications", `Brama Probierz ${randomUUID()}.app`);
-let bundleIdentifier = null;
-
 const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const mediaDir = path.join(artifacts, "media");
 const mediaManifest = process.env.PROBIERZ_SPEC_MEDIA_PATH;
@@ -102,7 +90,6 @@ try {
     throw new Error(`could not stage isolated Brama bundle: ${staged.stderr || staged.stdout}`);
   }
   spawnSync("/usr/bin/pkill", ["-x", "Brama"], { stdio: "ignore" });
-  bundleIdentifier = readBundleIdentifier(isolatedBundle);
   const registration = spawnSync(LSREGISTER, ["-f", isolatedBundle], { encoding: "utf8" });
   if (registration.status !== 0) {
     throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
@@ -119,8 +106,8 @@ try {
         throw new Error(`could not configure ${name} for isolated Brama launch: ${configured.stderr || configured.stdout}`);
       }
     }
-    app = launchCuaApp({
-      bundleId: bundleIdentifier,
+    app = launchCuaBundle({
+      bundlePath: isolatedBundle,
       expectedName: "Brama",
       urls: [launchRequest],
       args: [

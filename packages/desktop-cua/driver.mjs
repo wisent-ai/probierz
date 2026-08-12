@@ -74,6 +74,26 @@ export function launchCuaApp({
   return waitForWindow(pid, expectedName);
 }
 
+export function launchCuaBundle({
+  bundlePath,
+  expectedName,
+  args = [],
+  urls = [],
+} = {}) {
+  if (!bundlePath || !expectedName) throw new Error("launchCuaBundle needs bundlePath and expectedName");
+  const launched = spawnSync("/usr/bin/open", [
+    "-n",
+    "-g",
+    "-a", bundlePath,
+    ...urls,
+    ...(args.length ? ["--args", ...args] : []),
+  ], { encoding: "utf8" });
+  if (launched.status !== 0) {
+    throw new Error(`open could not launch ${bundlePath}: ${String(launched.stderr || launched.stdout || "").slice(-400)}`);
+  }
+  return waitForWindow(-1, expectedName);
+}
+
 // Launch an app by executing its binary directly with a custom environment
 // (e.g. TAMA_TEST_IDENTITY=1 to bypass a sign-in gate in a debug build).
 // cua-driver's launch_app has no env support, so specs spawn the process
