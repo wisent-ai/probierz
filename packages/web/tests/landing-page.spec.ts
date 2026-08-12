@@ -9,6 +9,8 @@ const HTTP_SUCCESS_MAX = 400;
 const MAX_ROUTER_MS = 120_000;
 const DEFAULT_MAX_OUTPUT_TOKENS = 2400;
 const OVERFLOW_TOLERANCE_PX = 2;
+const CAPTURE_QUALITY = 65;
+const CAPTURE_CONTENT_TYPE = 'image/jpeg';
 
 interface PrimaryAction {
   label: string;
@@ -467,16 +469,16 @@ async function captureViewport(
       },
     );
 
-    const heroPath = testInfo.outputPath(`${profile}-hero.png`);
-    const proofPath = testInfo.outputPath(`${profile}-proof.png`);
-    await page.screenshot({ path: heroPath, fullPage: false });
+    const heroPath = testInfo.outputPath(`${profile}-hero.jpg`);
+    const proofPath = testInfo.outputPath(`${profile}-proof.jpg`);
+    await page.screenshot({ path: heroPath, type: 'jpeg', quality: CAPTURE_QUALITY, fullPage: false });
     const proofY = await page.evaluate(() => {
       const range = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
       return Math.round(range * 0.58);
     });
     await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), proofY);
     await page.waitForTimeout(150);
-    await page.screenshot({ path: proofPath, fullPage: false });
+    await page.screenshot({ path: proofPath, type: 'jpeg', quality: CAPTURE_QUALITY, fullPage: false });
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     return { context, page, audit, heroPath, proofPath };
   } catch (error) {
@@ -671,7 +673,7 @@ async function modelEvaluation(
     content.push({ type: 'text', text: image.label });
     content.push({
       type: 'image_url',
-      image_url: { url: `data:image/png;base64,${(await readFile(image.path)).toString('base64')}` },
+      image_url: { url: `data:${CAPTURE_CONTENT_TYPE};base64,${(await readFile(image.path)).toString('base64')}` },
     });
   }
   const tool = modelToolSchema(rubric);
@@ -902,12 +904,12 @@ test.describe('landing page release evaluation', () => {
       const reportPath = testInfo.outputPath('landing-page-evaluation.json');
       await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
       await Promise.all([
-        testInfo.attach('desktop-hero', { path: images[0].path, contentType: 'image/png' }),
-        testInfo.attach('desktop-proof', { path: images[1].path, contentType: 'image/png' }),
-        testInfo.attach('tablet-hero', { path: images[2].path, contentType: 'image/png' }),
-        testInfo.attach('tablet-proof', { path: images[3].path, contentType: 'image/png' }),
-        testInfo.attach('mobile-hero', { path: images[4].path, contentType: 'image/png' }),
-        testInfo.attach('mobile-proof', { path: images[5].path, contentType: 'image/png' }),
+        testInfo.attach('desktop-hero', { path: images[0].path, contentType: CAPTURE_CONTENT_TYPE }),
+        testInfo.attach('desktop-proof', { path: images[1].path, contentType: CAPTURE_CONTENT_TYPE }),
+        testInfo.attach('tablet-hero', { path: images[2].path, contentType: CAPTURE_CONTENT_TYPE }),
+        testInfo.attach('tablet-proof', { path: images[3].path, contentType: CAPTURE_CONTENT_TYPE }),
+        testInfo.attach('mobile-hero', { path: images[4].path, contentType: CAPTURE_CONTENT_TYPE }),
+        testInfo.attach('mobile-proof', { path: images[5].path, contentType: CAPTURE_CONTENT_TYPE }),
         testInfo.attach('landing-page-evaluation', { path: reportPath, contentType: 'application/json' }),
       ]);
       console.log(
