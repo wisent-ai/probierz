@@ -35,6 +35,20 @@ function hasBinary(bin, args) {
   }
 }
 
+function macAutomationModeNeedsNoAuthentication() {
+  if (os.platform() !== "darwin") return false;
+  try {
+    const result = spawnSync("/usr/bin/automationmodetool", [], {
+      encoding: "utf8",
+      timeout: PROBE_MS,
+    });
+    return result.status === Number("0")
+      && /DOES NOT REQUIRE user authentication/i.test(String(result.stdout || ""));
+  } catch {
+    return false;
+  }
+}
+
 function hasConsoleSession() {
   if (os.platform() !== "darwin") return false;
   try {
@@ -234,6 +248,7 @@ function checksFor(target, env = process.env) {
     return [
       { name: "macOS host", ok: os.platform() === "darwin", own: false, hint: "the mac2 driver runs on macOS only" },
       { name: "full Xcode toolchain", ok: hasBinary("xcodebuild", ["-version"]), own: false, hint: "install Xcode from the App Store and select it with xcode-select" },
+      { name: "UI automation without authentication", ok: macAutomationModeNeedsNoAuthentication(), own: false, hint: "sudo /usr/bin/automationmodetool enable-automationmode-without-authentication" },
       { name: "appium driver: mac2", ok: appiumDriverInstalled("mac2", env), own: true, hint: setupHint(target) },
     ];
   }
