@@ -1,5 +1,8 @@
 import { shared } from './wdio.shared.conf';
 import type { Options } from '@wdio/types';
+import { Agent, setGlobalDispatcher } from 'undici';
+
+setGlobalDispatcher(new Agent());
 
 /**
  * macOS native apps via the Appium Mac2 driver (XCTest).
