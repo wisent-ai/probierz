@@ -1,6 +1,10 @@
 # deps
 node_modules/
-package-lock.json
+
+# local credentials
+.env
+.env.*
+!.env.example
 
 # build / TS
 dist/
