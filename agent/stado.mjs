@@ -249,6 +249,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
     );
   }
+  if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
+    lines.push('export APPIUM_HOME="$HOME/.cache/probierz/appium-2"');
+  }
   lines.push(
     "npm install --no-audit --no-fund --loglevel=error",
     // Fresh worker: provision the target's host-level deps (appium drivers,
