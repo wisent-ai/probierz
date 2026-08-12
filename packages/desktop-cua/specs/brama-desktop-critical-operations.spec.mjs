@@ -55,6 +55,8 @@ const provider = `probierz-${randomUUID()}`;
 const runtimePort = await freeLoopbackPort();
 const media = [];
 mkdirSync(mediaDir, { recursive: true });
+const launchRequest = path.join(artifacts, "brama-launch.request");
+writeFileSync(launchRequest, "");
 
 function capture(app, name) {
   const file = path.join(mediaDir, `${name}.jpg`);
@@ -119,6 +121,7 @@ try {
     }
     app = launchCuaApp({
       bundleId: bundleIdentifier,
+      urls: [launchRequest],
       args: [
         "--disable-notifications",
         "-bramaDesktop.automaticDiscovery", "0",
@@ -186,4 +189,5 @@ try {
   if (app) quitApp(app.pid);
   spawnSync(LSREGISTER, ["-u", isolatedBundle], { stdio: "ignore" });
   rmSync(isolatedBundle, { recursive: true, force: true });
+  rmSync(launchRequest, { force: true });
 }
