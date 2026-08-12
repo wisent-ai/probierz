@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -7,6 +7,7 @@ const commandTimeoutMs = 15_000;
 const probeTimeoutMs = 5_000;
 const startupTimeoutMs = 60_000;
 const socket = path.join(homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
+const daemonLog = path.join(path.dirname(socket), "probierz-daemon.log");
 const bundledDriver = "/Applications/CuaDriver.app/Contents/MacOS/cua-driver";
 const cuaDriver = process.env.CUA_DRIVER_BIN
   || (process.platform === "darwin" && existsSync(bundledDriver) ? bundledDriver : "cua-driver");
@@ -16,7 +17,7 @@ function sleep(ms) {
 }
 
 function run(args, timeout = commandTimeoutMs) {
-  return spawnSync("cua-driver", args, { encoding: "utf8", timeout });
+  return spawnSync(cuaDriver, args, { encoding: "utf8", timeout });
 }
 
 function call(tool, args = {}, timeout = commandTimeoutMs) {
@@ -62,21 +63,27 @@ let window = existsSync(socket) ? probe() : null;
 if (!window) {
   run(["stop", "--socket", socket]);
   rmSync(socket, { force: true });
+  mkdirSync(path.dirname(socket), { recursive: true });
+  rmSync(daemonLog, { force: true });
+  const logFd = openSync(daemonLog, "a", 0o600);
+
 
   const launched = spawn(
     cuaDriver,
     ["serve", "--socket", socket],
     {
       detached: true,
-      stdio: "ignore",
+      stdio: ["ignore", logFd, logFd],
     },
   );
+  closeSync(logFd);
   launched.unref();
 
   const deadline = Date.now() + startupTimeoutMs;
   while (Date.now() < deadline && !existsSync(socket)) sleep(100);
   if (!existsSync(socket)) {
-    process.stderr.write(`CuaDriver did not create ${socket}\n`);
+    const detail = existsSync(daemonLog) ? readFileSync(daemonLog, "utf8").slice(-2000) : "";
+    process.stderr.write(`CuaDriver did not create ${socket}${detail ? `:\n${detail}` : "\n"}`);
     process.exit(1);
   }
   window = waitForProbe();
