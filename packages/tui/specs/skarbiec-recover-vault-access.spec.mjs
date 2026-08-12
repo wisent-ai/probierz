@@ -105,7 +105,7 @@ try {
   const recoveryStatus = await runJson(['recovery-status']);
   assert.equal(recoveryStatus.recovery_fpr, initialized.recovery_fpr);
   assert.equal(recoveryStatus.item_count, 1);
-  assert.match(recoveryStatus.note, /recovery recipient is on every item/i);
+  assert.match(recoveryStatus.note, /shares one failure domain with the owner key/i);
 
   const beforeRecovery = await runJson(['get', secretId]);
   assert.deepEqual(beforeRecovery, {
