@@ -86,6 +86,7 @@ const app = launchCuaProcess({
     WISENT_WORKSPACE_ROOT: "",
   },
   args: [
+    "--disable-notifications",
     "-bramaDesktop.automaticDiscovery", "0",
     "-bramaDesktop.subscriptionAutomaticDiscovery", "0",
     "-bramaDesktop.runtimeOrigin", `http://127.0.0.1:${runtimePort}`,
