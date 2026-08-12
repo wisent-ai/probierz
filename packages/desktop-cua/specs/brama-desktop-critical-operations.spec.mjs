@@ -16,8 +16,6 @@ import {
   waitForText,
 } from "../driver.mjs";
 
-const LSREGISTER = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
-
 async function freeLoopbackPort() {
   const server = net.createServer();
   await new Promise((resolve, reject) => {
@@ -33,7 +31,6 @@ async function freeLoopbackPort() {
 
 const appBundle = process.env.MAC_APP_PATH;
 if (!appBundle) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH");
-const isolatedBundle = path.join("/Applications", `Brama Probierz ${randomUUID()}.app`);
 const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const mediaDir = path.join(artifacts, "media");
 const mediaManifest = process.env.PROBIERZ_SPEC_MEDIA_PATH;
@@ -85,15 +82,7 @@ let app = null;
 let providerAdded = false;
 let journeySucceeded = false;
 try {
-  const staged = spawnSync("/usr/bin/ditto", [appBundle, isolatedBundle], { encoding: "utf8" });
-  if (staged.status !== 0) {
-    throw new Error(`could not stage isolated Brama bundle: ${staged.stderr || staged.stdout}`);
-  }
   spawnSync("/usr/bin/pkill", ["-x", "Brama"], { stdio: "ignore" });
-  const registration = spawnSync(LSREGISTER, ["-f", isolatedBundle], { encoding: "utf8" });
-  if (registration.status !== 0) {
-    throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
-  }
 
   const launchEnvironment = {
     BRAMA_BASE_URL: `http://127.0.0.1:${runtimePort}`,
@@ -107,7 +96,7 @@ try {
       }
     }
     app = launchCuaBundle({
-      bundlePath: isolatedBundle,
+      bundlePath: appBundle,
       expectedName: "Brama",
       urls: [launchRequest],
       args: [
@@ -175,7 +164,5 @@ try {
     ], { stdio: "ignore" });
   }
   if (app) quitApp(app.pid);
-  spawnSync(LSREGISTER, ["-u", isolatedBundle], { stdio: "ignore" });
-  rmSync(isolatedBundle, { recursive: true, force: true });
   rmSync(launchRequest, { force: true });
 }
