@@ -3,6 +3,7 @@
 // Playwright reporter emits), so run analysis treats desktop-cua coverage like any
 // other surface. A spec passes when it exits zero; stderr becomes the row error.
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 

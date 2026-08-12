@@ -117,6 +117,14 @@ function simulatorIdentifier(requested) {
     return value;
   }
 }
+function logInterval(startedAt) {
+  const started = Date.parse(startedAt);
+  const elapsedSeconds = Number.isFinite(started)
+    ? Math.ceil((Date.now() - started) / 1000) + 5
+    : 60;
+  return ["--last", `${Math.max(1, elapsedSeconds)}s`];
+}
+
 
 export function collectPlatformDiagnostics({ target, env, artifactsDir, startedAt }) {
   const directory = path.join(artifactsDir, "diagnostics");
@@ -127,11 +135,11 @@ export function collectPlatformDiagnostics({ target, env, artifactsDir, startedA
   let file = null;
   if (["desktop:mac", "desktop:cua"].includes(target) && processName) {
     command = "/usr/bin/log";
-    args = ["show", "--style", "compact", "--start", startedAt, "--predicate", `process == "${processName}"`];
+    args = ["show", "--style", "compact", ...logInterval(startedAt), "--predicate", `process == "${processName}"`];
     file = path.join(directory, "macos-unified.log");
   } else if (target === "mobile:ios" && processName) {
     command = "xcrun";
-    args = ["simctl", "spawn", simulatorIdentifier(env.IOS_DEVICE), "log", "show", "--style", "compact", "--start", startedAt, "--predicate", `process == "${processName}"`];
+    args = ["simctl", "spawn", simulatorIdentifier(env.IOS_DEVICE), "log", "show", "--style", "compact", ...logInterval(startedAt), "--predicate", `process == "${processName}"`];
     file = path.join(directory, "ios-simulator.log");
   } else if (target === "mobile:android") {
     command = "adb";
