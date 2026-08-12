@@ -679,7 +679,11 @@ async function modelEvaluation(
   const tool = modelToolSchema(rubric);
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'x-agent-id': 'probierz',
+    },
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
@@ -696,7 +700,6 @@ async function modelEvaluation(
         { role: 'user', content },
       ],
       tools: [tool],
-      tool_choice: { type: 'function', function: { name: 'record_landing_page_evaluation' } },
     }),
     signal: AbortSignal.timeout(MAX_ROUTER_MS),
   });
