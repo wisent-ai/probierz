@@ -10,7 +10,7 @@ export const config: Options.Testrunner = {
   port: 4723,
   services: process.env.PROBIERZ_EXTERNAL_APPIUM === '1'
     ? []
-    : [['appium', { args: { relaxedSecurity: true } }]],
+    : [['appium', { logPath: process.env.PROBIERZ_ARTIFACTS, args: { relaxedSecurity: true } }]],
   capabilities: [
     {
       platformName: 'mac',
