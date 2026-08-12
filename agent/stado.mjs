@@ -250,7 +250,8 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
   }
   if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
-    lines.push('export APPIUM_HOME="$HOME/.cache/probierz/appium-2"');
+    const appiumEnvironment = target === "desktop:mac" ? "appium-2-mac2-2.2.2" : "appium-2";
+    lines.push(`export APPIUM_HOME="$HOME/.cache/probierz/${appiumEnvironment}"`);
   }
   lines.push(
     "npm install --no-audit --no-fund --loglevel=error",

@@ -309,7 +309,7 @@ export function setupSteps(target) {
     electron: [npmInstall, pwInstall("electron", false)],
     "mobile:ios": [npmInstall, driverInstall("xcuitest")],
     "mobile:android": [npmInstall, driverInstall("uiautomator2")],
-    "desktop:mac": [npmInstall, driverInstall("mac2", "1.20.5"), nativeCaptureBuild],
+    "desktop:mac": [npmInstall, driverInstall("mac2", "2.2.2"), nativeCaptureBuild],
     "desktop:win": [npmInstall, driverInstall("windows")],
     "desktop:cua": [npmInstall, {
       name: "cua-driver daemon",
