@@ -119,7 +119,6 @@ try {
     }
     app = launchCuaApp({
       bundleId: bundleIdentifier,
-      newInstance: true,
       args: [
         "--disable-notifications",
         "-bramaDesktop.automaticDiscovery", "0",
