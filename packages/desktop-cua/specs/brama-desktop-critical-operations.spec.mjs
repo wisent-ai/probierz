@@ -96,6 +96,8 @@ let providerAdded = false;
 let journeySucceeded = false;
 
 try {
+  waitForText(app.pid, app.windowId, "Overview", 30_000);
+  selectSidebarRow(app.pid, app.windowId, 3);
   const operational = waitForText(app.pid, app.windowId, "Operational", 30_000);
   assert.match(operational, new RegExp(`127\\.0\\.0\\.1:${runtimePort}`), "Brama Desktop must connect to its bundled loopback runtime");
   capture(app, "brama-operational");
