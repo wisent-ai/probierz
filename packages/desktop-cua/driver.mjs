@@ -124,7 +124,7 @@ function waitForWindow(pid, name) {
 }
 
 export function snapshotState(pid, windowId, { screenshotOutFile } = {}) {
-  const args = { pid, window_id: windowId };
+  const args = { pid, window_id: windowId, exact_window: true, max_elements: 5000, max_depth: 64 };
   if (screenshotOutFile) args.screenshot_out_file = screenshotOutFile;
   return cuaCall("get_window_state", args);
 }
