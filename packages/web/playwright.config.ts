@@ -9,7 +9,8 @@ const record = process.env.PROBIERZ_RECORD === '1' || process.env.PROBIERZ_RECOR
 const cs = process.env.PROBIERZ_COLOR_SCHEME;
 const colorScheme = cs === 'dark' ? 'dark' : cs === 'light' ? 'light' : undefined;
 // PROBIERZ_SPEC scopes the run to one spec (matched by basename anywhere).
-const testMatch = process.env.PROBIERZ_SPEC ? `**/${process.env.PROBIERZ_SPEC.split('/').pop()}` : undefined;
+const scopedSpec = process.env.PROBIERZ_SPEC?.split('/').pop() || null;
+const testMatch = scopedSpec ? `**/${scopedSpec}` : undefined;
 const artifactsDir = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 
 // jeden/omp comparison specs drive real TUIs through tmux; the browser is
@@ -18,6 +19,8 @@ const artifactsDir = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 // concurrent control-plane logins) off the machine.
 const JEDEN_SPECS = /jeden\.[a-z-]+\.spec\.ts$/;
 const JEDEN_MATRIX = /jeden\.matrix\.spec\.ts$/;
+const LANDING_PAGE_SPECS = /landing-page\.spec\.ts$/;
+const IGNORE_ALL = /.*/;
 
 export default defineConfig({
   testDir: './tests',
@@ -43,15 +46,15 @@ export default defineConfig({
   globalTeardown: './harness/verdict-report.ts',
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: JEDEN_SPECS },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: JEDEN_SPECS },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: JEDEN_SPECS },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, testIgnore: JEDEN_SPECS },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] }, testIgnore: JEDEN_SPECS },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: [JEDEN_SPECS, LANDING_PAGE_SPECS] },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: [JEDEN_SPECS, LANDING_PAGE_SPECS] },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, testIgnore: [JEDEN_SPECS, LANDING_PAGE_SPECS] },
+    { name: 'mobile-safari', use: { ...devices['iPhone 14'] }, testIgnore: [JEDEN_SPECS, LANDING_PAGE_SPECS] },
     {
       name: 'jeden',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: JEDEN_SPECS,
-      testIgnore: JEDEN_MATRIX,
+      testMatch: scopedSpec && JEDEN_SPECS.test(scopedSpec) ? testMatch : JEDEN_SPECS,
+      testIgnore: scopedSpec && !JEDEN_SPECS.test(scopedSpec) ? IGNORE_ALL : JEDEN_MATRIX,
       // Retries are for flakes; these contracts are deterministic, and a
       // failing 5-minute scan replayed twice buys nothing but ten minutes.
       retries: Number(process.env.PROBIERZ_JEDEN_RETRIES ?? '0'),
@@ -64,8 +67,9 @@ export default defineConfig({
     {
       name: 'jeden-matrix',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: JEDEN_MATRIX,
+      testMatch: scopedSpec && JEDEN_MATRIX.test(scopedSpec) ? testMatch : JEDEN_MATRIX,
       dependencies: ['jeden'],
+      testIgnore: scopedSpec && !JEDEN_MATRIX.test(scopedSpec) ? IGNORE_ALL : undefined,
     },
   ],
 });

@@ -2,7 +2,8 @@ import { expect, test, type Browser, type BrowserContext, type Page, type TestIn
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const RUBRIC_PATH = resolve(process.cwd(), '../../apps/landing-page/rubric.json');
+const REPO_ROOT = resolve(process.cwd(), '../..');
+const RUBRIC_PATH = resolve(REPO_ROOT, 'apps/landing-page/rubric.json');
 const HTTP_SUCCESS_MIN = 200;
 const HTTP_SUCCESS_MAX = 400;
 const MAX_ROUTER_MS = 120_000;
@@ -158,7 +159,7 @@ async function readJson(path: string): Promise<unknown> {
 }
 
 async function loadBrief(): Promise<{ path: string; brief: LandingBrief }> {
-  const path = resolve(requiredEnvironment('PROBIERZ_LANDING_BRIEF'));
+  const path = resolve(REPO_ROOT, requiredEnvironment('PROBIERZ_LANDING_BRIEF'));
   const raw = (await readJson(path)) as Partial<LandingBrief>;
   if (!raw || typeof raw !== 'object' || raw.schemaVersion !== 1) {
     throw new Error('landing brief schemaVersion must be 1');
