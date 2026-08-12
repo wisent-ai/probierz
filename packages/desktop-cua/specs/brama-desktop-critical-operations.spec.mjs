@@ -7,7 +7,7 @@ import net from "node:net";
 import {
   clickElement,
   elementIndexOf,
-  launchCuaProcess,
+  launchCuaApp,
   quitApp,
   selectSidebarRow,
   snapshotState,
@@ -15,6 +15,9 @@ import {
   typeText,
   waitForText,
 } from "../driver.mjs";
+
+const LSREGISTER = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
+
 
 async function freeLoopbackPort() {
   const server = net.createServer();
@@ -37,13 +40,16 @@ function isolateBundleIdentity(bundle) {
   if (update.status !== 0) throw new Error(`could not isolate Brama bundle identity: ${update.stderr || update.stdout}`);
   const sign = spawnSync("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", bundle], { encoding: "utf8" });
   if (sign.status !== 0) throw new Error(`could not sign isolated Brama bundle: ${sign.stderr || sign.stdout}`);
+  return identifier;
 }
 
 const appBundle = process.env.MAC_APP_PATH;
-const executable = process.env.CUA_APP_EXECUTABLE
-  || (appBundle ? path.join(appBundle, "Contents", "MacOS", "Brama") : null);
-if (!executable) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH or CUA_APP_EXECUTABLE");
-isolateBundleIdentity(appBundle);
+if (!appBundle) throw new Error("Brama Desktop CUA journey needs MAC_APP_PATH");
+const bundleIdentifier = isolateBundleIdentity(appBundle);
+const registration = spawnSync(LSREGISTER, ["-f", appBundle], { encoding: "utf8" });
+if (registration.status !== 0) {
+  throw new Error(`could not register isolated Brama bundle: ${registration.stderr || registration.stdout}`);
+}
 
 const artifacts = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const mediaDir = path.join(artifacts, "media");
@@ -90,24 +96,37 @@ function waitUntil(app, predicate, message, timeoutMs = 30_000) {
   throw new Error(`${message}; last tree: ${tree.slice(-1200)}`);
 }
 
-const app = launchCuaProcess({
-  executable,
-  env: {
-    BRAMA_BASE_URL: `http://127.0.0.1:${runtimePort}`,
-    BRAMA_LOCAL_RUNTIME: "1",
-    WISENT_WORKSPACE_ROOT: "",
-  },
-  args: [
-    "--disable-notifications",
-    "-bramaDesktop.automaticDiscovery", "0",
-    "-bramaDesktop.subscriptionAutomaticDiscovery", "0",
-    "-bramaDesktop.runtimeOrigin", `http://127.0.0.1:${runtimePort}`,
-  ],
-});
+let app = null;
 let providerAdded = false;
 let journeySucceeded = false;
-
 try {
+  const launchEnvironment = {
+    BRAMA_BASE_URL: `http://127.0.0.1:${runtimePort}`,
+    BRAMA_LOCAL_RUNTIME: "1",
+  };
+  try {
+    for (const [name, value] of Object.entries(launchEnvironment)) {
+      const configured = spawnSync("/bin/launchctl", ["setenv", name, value], { encoding: "utf8" });
+      if (configured.status !== 0) {
+        throw new Error(`could not configure ${name} for isolated Brama launch: ${configured.stderr || configured.stdout}`);
+      }
+    }
+    app = launchCuaApp({
+      bundleId: bundleIdentifier,
+      newInstance: true,
+      args: [
+        "--disable-notifications",
+        "-bramaDesktop.automaticDiscovery", "0",
+        "-bramaDesktop.subscriptionAutomaticDiscovery", "0",
+        "-bramaDesktop.runtimeOrigin", `http://127.0.0.1:${runtimePort}`,
+      ],
+    });
+  } finally {
+    for (const name of Object.keys(launchEnvironment)) {
+      spawnSync("/bin/launchctl", ["unsetenv", name], { stdio: "ignore" });
+    }
+  }
+
   const overview = capture(app, "brama-overview");
   assert.match(overview, /Overview/, "Brama Desktop must expose its overview through the accessibility tree");
   selectSidebarRow(app.pid, app.windowId, 3);
@@ -148,7 +167,7 @@ try {
   capture(app, "brama-model-source-removed");
   journeySucceeded = true;
 } finally {
-  if (!journeySucceeded) {
+  if (app && !journeySucceeded) {
     try { capture(app, "brama-failure"); } catch {}
   }
   writeFileSync(mediaManifest, `${JSON.stringify(media, null, 2)}\n`, { mode: 0o600 });
@@ -159,5 +178,6 @@ try {
       "-a", provider,
     ], { stdio: "ignore" });
   }
-  quitApp(app.pid);
+  if (app) quitApp(app.pid);
+  spawnSync(LSREGISTER, ["-u", appBundle], { stdio: "ignore" });
 }

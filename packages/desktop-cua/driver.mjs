@@ -47,9 +47,18 @@ function findWindow(pid) {
   return candidates[0] || null;
 }
 
-export function launchCuaApp({ bundleId = process.env.CUA_BUNDLE_ID, name = process.env.CUA_APP_NAME } = {}) {
+export function launchCuaApp({
+  bundleId = process.env.CUA_BUNDLE_ID,
+  name = process.env.CUA_APP_NAME,
+  args = [],
+  newInstance = false,
+} = {}) {
   if (!bundleId && !name) throw new Error("launchCuaApp needs CUA_BUNDLE_ID or CUA_APP_NAME");
-  const launched = cuaCall("launch_app", bundleId ? { bundle_id: bundleId } : { name });
+  const launched = cuaCall("launch_app", {
+    ...(bundleId ? { bundle_id: bundleId } : { name }),
+    ...(args.length ? { additional_arguments: args } : {}),
+    ...(newInstance ? { creates_new_application_instance: true } : {}),
+  });
   const pid = launched?.pid ?? launched?.app?.pid;
   if (!pid) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
   const ownWindow = (launched?.windows || []).find((win) => win.window_id);
