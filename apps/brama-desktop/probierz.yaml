@@ -14,21 +14,24 @@ repositories:
           - Package.resolved
         journeys: [critical-operations]
 surfaces:
-  desktop:cua:
-    spec: brama-desktop-critical-operations.spec.mjs
+  desktop:mac:
+    spec: brama-desktop-critical-operations.e2e.ts
     journeys: [critical-operations]
     conditions:
       PROBIERZ_DATA_STATE: fresh
+      PROBIERZ_MAC_APP_ENV_BRAMA_BASE_URL: http://127.0.0.1:8794
+      PROBIERZ_MAC_APP_ENV_BRAMA_LOCAL_RUNTIME: "1"
+      PROBIERZ_MAC_APP_ARGS: '["--disable-notifications","-bramaDesktop.automaticDiscovery","0","-bramaDesktop.subscriptionAutomaticDiscovery","0","-bramaDesktop.runtimeOrigin","http://127.0.0.1:8794"]'
     device:
       platform: macOS
       minimumVersion: "14"
     recording:
-      primary: cua-driver
+      primary: appium-mac2
 journeys:
   critical-operations:
     owner: Brama Desktop maintainers
     timeoutMs: 300000
-    description: Start the exact Brama Desktop bundle in an isolated home, prove the bundled Brama runtime becomes operational without Stado or Skarbiec, and add then remove a uniquely named local model source without exposing its credential.
+    description: Start the exact Brama Desktop bundle on a dedicated macOS host, prove the bundled Brama runtime becomes operational without Stado or Skarbiec, and add then remove a uniquely named local model source without exposing its credential.
     value: An operator can launch Brama Desktop, observe its private runtime, and complete the local Keychain model-source lifecycle.
     journeyId: critical-operations
     journeyVersion: 2026-08-11.1
@@ -40,7 +43,7 @@ journeys:
       productArtifact: the exact Brama.app bundle and its bundled brama-runtime executable
     requiredConditions:
       - The tested ai.wisent.brama.desktop bundle is built from the mapped Brama Desktop source revision
-      - The Stado-selected macOS worker runs the app with an isolated home and a collision-resistant model-source identity
+      - The Stado-selected macOS worker runs the app with a collision-resistant model-source identity
       - The test source credential is synthetic and must never be accepted as release evidence for a real provider call
     publication:
       screenId: brama-private-runtime-operational
@@ -56,7 +59,7 @@ artifacts:
   pii: unlikely
 matrix:
   release:
-    targets: [desktop:cua]
+    targets: [desktop:mac]
     record: true
     timeoutMs: 600000
     maximumParallel: 1
@@ -65,12 +68,12 @@ matrix:
 pullRequestPolicy:
   minimumEvidence: E3
   requiredJourneys: [critical-operations]
-  requiredTargets: [desktop:cua]
+  requiredTargets: [desktop:mac]
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E3
   requiredJourneys: [critical-operations]
-  requiredTargets: [desktop:cua]
+  requiredTargets: [desktop:mac]
   requiredMatrixProfile: release
   requireProtectedArtifacts: true
   requireSecretScan: true

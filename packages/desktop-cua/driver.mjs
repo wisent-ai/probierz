@@ -34,16 +34,11 @@ export function cuaCall(tool, args = {}) {
   }
 }
 
-function findWindow(pid, name) {
+function findWindow(pid) {
   const listed = cuaCall("list_windows") || {};
   // Apps spawn untitled utility windows (menus, status items) next to the
-  // real content window; prefer titled, then largest area. LaunchServices may
-  // return pid -1 while a newly registered app is still starting, so a caller
-  // that supplied the app name can resolve the concrete pid from its window.
-  let candidates = (listed.windows || []).filter((win) => win.pid === pid && win.layer === 0);
-  if (!candidates.length && name) {
-    candidates = (listed.windows || []).filter((win) => win.app_name === name && win.layer === 0);
-  }
+  // real content window; prefer titled, then largest area.
+  const candidates = (listed.windows || []).filter((win) => win.pid === pid && win.layer === 0);
   candidates.sort((a, b) => {
     const titleDelta = Number(Boolean(b.title)) - Number(Boolean(a.title));
     if (titleDelta !== 0) return titleDelta;
@@ -56,43 +51,19 @@ export function launchCuaApp({
   bundleId = process.env.CUA_BUNDLE_ID,
   name = process.env.CUA_APP_NAME,
   args = [],
-  expectedName = name,
-  urls = [],
   newInstance = false,
 } = {}) {
   if (!bundleId && !name) throw new Error("launchCuaApp needs CUA_BUNDLE_ID or CUA_APP_NAME");
   const launched = cuaCall("launch_app", {
     ...(bundleId ? { bundle_id: bundleId } : { name }),
     ...(args.length ? { additional_arguments: args } : {}),
-    ...(urls.length ? { urls } : {}),
     ...(newInstance ? { creates_new_application_instance: true } : {}),
   });
   const pid = launched?.pid ?? launched?.app?.pid;
-  if (pid == null) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
+  if (!pid) throw new Error(`launch_app returned no pid: ${JSON.stringify(launched).slice(-300)}`);
   const ownWindow = (launched?.windows || []).find((win) => win.window_id);
-  if (ownWindow) return { pid: ownWindow.pid ?? pid, windowId: ownWindow.window_id };
-  return waitForWindow(pid, expectedName);
-}
-
-export function launchCuaBundle({
-  bundlePath,
-  expectedName,
-  args = [],
-  background = true,
-  urls = [],
-} = {}) {
-  if (!bundlePath || !expectedName) throw new Error("launchCuaBundle needs bundlePath and expectedName");
-  const launched = spawnSync("/usr/bin/open", [
-    "-n",
-    ...(background ? ["-g"] : []),
-    "-a", bundlePath,
-    ...urls,
-    ...(args.length ? ["--args", ...args] : []),
-  ], { encoding: "utf8" });
-  if (launched.status !== 0) {
-    throw new Error(`open could not launch ${bundlePath}: ${String(launched.stderr || launched.stdout || "").slice(-400)}`);
-  }
-  return waitForWindow(-1, expectedName);
+  if (ownWindow) return { pid, windowId: ownWindow.window_id };
+  return waitForWindow(pid);
 }
 
 // Launch an app by executing its binary directly with a custom environment
@@ -114,18 +85,18 @@ export function launchCuaProcess({
   return waitForWindow(pid);
 }
 
-function waitForWindow(pid, name) {
+function waitForWindow(pid) {
   const deadline = Date.now() + LAUNCH_WAIT_MS;
   while (Date.now() < deadline) {
-    const win = findWindow(pid, name);
-    if (win) return { pid: win.pid, windowId: win.window_id };
+    const win = findWindow(pid);
+    if (win) return { pid, windowId: win.window_id };
     sleep(POLL_MS);
   }
   throw new Error(`pid ${pid} produced no window within ${LAUNCH_WAIT_MS}ms`);
 }
 
 export function snapshotState(pid, windowId, { screenshotOutFile } = {}) {
-  const args = { pid, window_id: windowId, exact_window: true, max_elements: 5000, max_depth: 64 };
+  const args = { pid, window_id: windowId };
   if (screenshotOutFile) args.screenshot_out_file = screenshotOutFile;
   return cuaCall("get_window_state", args);
 }
