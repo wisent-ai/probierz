@@ -1,12 +1,12 @@
 // The failure contract, in the shape a command-line tool needs it.
 //
-// Same codes, severities and semantics as the ecosystem contract
-// (wisent-app/src/lib/failure, image-video-router/src/failure). What differs is
-// the audience: probierz answers an operator on a terminal, not a browser. So
-// there is no HTTP status, no response body, and — deliberately — no network
-// call to an analytics collector. A test harness that hangs because its own
-// telemetry endpoint is unreachable is the failure mode this module exists to
-// avoid.
+// The vocabulary, the severities, the retryable and outage sets, the upstream
+// status classification and the retry exit code all come from `@wisent/errors`,
+// the one place the fleet keeps them. What differs here is the audience:
+// probierz answers an operator on a terminal, not a browser. So there is no
+// HTTP status, no response body, and — deliberately — no network call to an
+// analytics collector. A test harness that hangs because its own telemetry
+// endpoint is unreachable is the failure mode this module exists to avoid.
 //
 // What an operator gets instead, on stderr:
 //   1. one structured line (`probierz-failure {...}`) carrying failure_point,
@@ -18,58 +18,48 @@
 // and one exit code that tells a shell script the same thing without parsing
 // anything.
 
+import {
+  CODES,
+  FALLBACK,
+  RETRY_EXIT,
+  exitCode,
+  fromUpstreamStatus,
+  outage,
+  retryable,
+  severity,
+} from "@wisent/errors";
+import { SEVERITIES } from "@wisent/errors/codes";
+
+// probierz trims tighter than the package's envelope does. An operator reads
+// these lines on a terminal, where a two-thousand-character upstream body is
+// not a detail but a wall, and 300 is what every probierz-failure line already
+// logged: widening it would rewrite output a log shipper has already indexed.
 const MAX_DETAIL_CHARS = Number("300");
 const ZERO = Number("0");
 
-export const CODE = {
-  CONFIG: "config",
-  AUTH: "auth",
-  NOT_FOUND: "not_found",
-  RATE_LIMIT: "rate_limit",
-  TIMEOUT: "timeout",
-  INFRA_DOWN: "infra_down",
-  UNKNOWN: "unknown",
-};
+/** The catalogue's seven codes, under the names this module's callers use. */
+export const CODE = Object.freeze(Object.fromEntries(CODES.map((code) => [code.toUpperCase(), code])));
 
-export const SEVERITY = {
-  WARNING: "warning",
-  ERROR: "error",
-  CRITICAL: "critical",
-};
+export const SEVERITY = Object.freeze(Object.fromEntries(SEVERITIES.map((name) => [name.toUpperCase(), name])));
 
-/** Codes that mean "our side is down", i.e. nothing the operator did is wrong. */
-const OUTAGE_CODES = new Set([CODE.CONFIG, CODE.TIMEOUT, CODE.INFRA_DOWN]);
-
-/** Codes worth retrying without the operator changing anything. */
-const RETRYABLE_CODES = new Set([CODE.TIMEOUT, CODE.INFRA_DOWN, CODE.RATE_LIMIT]);
-
-const SEVERITY_BY_CODE = {
-  [CODE.CONFIG]: SEVERITY.CRITICAL,
-  [CODE.INFRA_DOWN]: SEVERITY.CRITICAL,
-  [CODE.TIMEOUT]: SEVERITY.ERROR,
-  [CODE.RATE_LIMIT]: SEVERITY.WARNING,
-  [CODE.AUTH]: SEVERITY.WARNING,
-  [CODE.NOT_FOUND]: SEVERITY.WARNING,
-  [CODE.UNKNOWN]: SEVERITY.ERROR,
-};
-
-const HTTP_UNAUTHORIZED = Number("401");
-const HTTP_FORBIDDEN = Number("403");
-const HTTP_NOT_FOUND = Number("404");
-const HTTP_GONE = Number("410");
-const HTTP_REQUEST_TIMEOUT = Number("408");
-const HTTP_TOO_MANY_REQUESTS = Number("429");
-const HTTP_SERVER_ERROR = Number("500");
-const HTTP_GATEWAY_TIMEOUT = Number("504");
+/**
+ * What a code implies, taken from the catalogue and never decided here. A code
+ * the catalogue does not name falls back rather than throwing: reporting a
+ * failure must not itself be a source of failures.
+ */
+function derived(code) {
+  const known = CODES.includes(code) ? code : FALLBACK;
+  return { severity: severity(known), retryable: retryable(known), outage: outage(known) };
+}
 
 /**
  * Exit code for a failure the operator can simply retry. 69 is sysexits'
  * EX_UNAVAILABLE: the boring, pre-existing spelling of "not your fault, try
- * later". Chosen over renumbering because probierz already means specific
+ * later". Kept rather than renumbered because probierz already means specific
  * things by 1 (a suite failed), 2 (bad invocation) and 3 (blocked), and a
  * change there would silently rewrite what every CI script concludes.
  */
-export const EXIT_RETRY = Number("69");
+export const EXIT_RETRY = RETRY_EXIT;
 
 /** A missing or malformed environment variable is our outage, not a mistake the operator made. */
 const CONFIG_RE = /(is required|not configured|missing env|must be set|env var)/i;
@@ -88,16 +78,6 @@ const NETWORK_RE = /(fetch failed|failed to fetch|networkerror|load failed|econn
 const AUTH_RE = /(unauthorized|forbidden|permission denied|invalid token|not authenticated|access denied)/i;
 const NOT_FOUND_RE = /(not found|no such (file|object|key|host is not)|does not exist)/i;
 const RATE_LIMIT_RE = /(rate limit|too many requests|quota exceeded|throttl)/i;
-
-function fromStatus(status) {
-  if (!Number.isFinite(status)) return null;
-  if (status === HTTP_UNAUTHORIZED || status === HTTP_FORBIDDEN) return CODE.AUTH;
-  if (status === HTTP_NOT_FOUND || status === HTTP_GONE) return CODE.NOT_FOUND;
-  if (status === HTTP_REQUEST_TIMEOUT || status === HTTP_GATEWAY_TIMEOUT) return CODE.TIMEOUT;
-  if (status === HTTP_TOO_MANY_REQUESTS) return CODE.RATE_LIMIT;
-  if (status >= HTTP_SERVER_ERROR) return CODE.INFRA_DOWN;
-  return null;
-}
 
 function textOf(error) {
   if (!error) return "";
@@ -139,17 +119,16 @@ function detailOf(error, status) {
  */
 export function classifyFailure({ error = null, status = null } = {}) {
   const numericStatus = Number.isFinite(status) ? Number(status) : null;
-  const known = error && typeof error.failureCode === "string" && error.failureCode in SEVERITY_BY_CODE
+  const known = error && typeof error.failureCode === "string" && CODES.includes(error.failureCode)
     ? error.failureCode
     : null;
   const name = error && typeof error.name === "string" ? error.name : "";
   const byName = name === "AbortError" || name === "TimeoutError" ? CODE.TIMEOUT : null;
-  const code = known || byName || fromText(textOf(error)) || fromStatus(numericStatus) || CODE.UNKNOWN;
+  const byStatus = numericStatus === null ? null : fromUpstreamStatus(numericStatus);
+  const code = known || byName || fromText(textOf(error)) || byStatus || FALLBACK;
   return {
     code,
-    severity: SEVERITY_BY_CODE[code] || SEVERITY.ERROR,
-    retryable: RETRYABLE_CODES.has(code),
-    outage: OUTAGE_CODES.has(code),
+    ...derived(code),
     detail: detailOf(error, numericStatus),
   };
 }
@@ -160,7 +139,7 @@ export function classifyFailure({ error = null, status = null } = {}) {
  * everything else keeps whatever the command already meant by failing.
  */
 export function exitCodeFor(code, fallback = Number("1")) {
-  return RETRYABLE_CODES.has(code) ? EXIT_RETRY : Number(fallback);
+  return exitCode(CODES.includes(code) ? code : FALLBACK, Number(fallback));
 }
 
 /**
@@ -273,13 +252,11 @@ export function failureLogLine(point, classified) {
  * there is the same silence this contract exists to end.
  */
 function withFallback(classified, fallbackCode) {
-  if (classified.code !== CODE.UNKNOWN || fallbackCode === CODE.UNKNOWN) return classified;
+  if (classified.code !== FALLBACK || fallbackCode === FALLBACK) return classified;
   return {
     ...classified,
     code: fallbackCode,
-    severity: SEVERITY_BY_CODE[fallbackCode] || SEVERITY.ERROR,
-    retryable: RETRYABLE_CODES.has(fallbackCode),
-    outage: OUTAGE_CODES.has(fallbackCode),
+    ...derived(fallbackCode),
   };
 }
 
@@ -322,9 +299,7 @@ export class FailureError extends Error {
     const resolved = failurePoint(point);
     const classified = {
       code,
-      severity: SEVERITY_BY_CODE[code] || SEVERITY.ERROR,
-      retryable: RETRYABLE_CODES.has(code),
-      outage: OUTAGE_CODES.has(code),
+      ...derived(code),
       detail: boundedDetail(detail),
     };
     super(message || humanMessage(resolved, classified, null));

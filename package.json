@@ -50,5 +50,8 @@
     "pngjs": "^7.0.0",
     "typescript": "^5.5.4",
     "yaml": "^2.9.0"
+  },
+  "dependencies": {
+    "@wisent/errors": "github:wisent-ai/wisent-errors"
   }
 }
