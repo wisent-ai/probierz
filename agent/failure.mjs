@@ -22,20 +22,22 @@ import {
   CODES,
   FALLBACK,
   RETRY_EXIT,
+  codeOrFallback,
   exitCode,
+  failureOrFallback,
   fromUpstreamStatus,
   outage,
   retryable,
   severity,
+  trimDetail,
 } from "@wisent/errors";
 import { SEVERITIES } from "@wisent/errors/codes";
 
-// probierz trims tighter than the package's envelope does. An operator reads
-// these lines on a terminal, where a two-thousand-character upstream body is
-// not a detail but a wall, and 300 is what every probierz-failure line already
-// logged: widening it would rewrite output a log shipper has already indexed.
+// The rule for how to cut a detail is the package's; the width is probierz's.
+// An operator reads these lines on a terminal, where the package's own
+// two-thousand-character bound is not a detail but a wall, and 300 is what
+// every probierz-failure line has always carried.
 const MAX_DETAIL_CHARS = Number("300");
-const ZERO = Number("0");
 
 /** The catalogue's seven codes, under the names this module's callers use. */
 export const CODE = Object.freeze(Object.fromEntries(CODES.map((code) => [code.toUpperCase(), code])));
@@ -48,7 +50,7 @@ export const SEVERITY = Object.freeze(Object.fromEntries(SEVERITIES.map((name) =
  * failure must not itself be a source of failures.
  */
 function derived(code) {
-  const known = CODES.includes(code) ? code : FALLBACK;
+  const known = codeOrFallback(code);
   return { severity: severity(known), retryable: retryable(known), outage: outage(known) };
 }
 
@@ -100,9 +102,12 @@ function fromText(text) {
   return null;
 }
 
-/** Bounded technical text. Complete enough to debug, short enough to log. */
+/**
+ * Bounded technical text. Complete enough to debug, short enough to log, and
+ * null rather than empty so an absent detail reads as absent on the line.
+ */
 export function boundedDetail(value) {
-  return String(value ?? "").trim().slice(ZERO, MAX_DETAIL_CHARS) || null;
+  return trimDetail(value, MAX_DETAIL_CHARS) || null;
 }
 
 function detailOf(error, status) {
@@ -139,7 +144,7 @@ export function classifyFailure({ error = null, status = null } = {}) {
  * everything else keeps whatever the command already meant by failing.
  */
 export function exitCodeFor(code, fallback = Number("1")) {
-  return exitCode(CODES.includes(code) ? code : FALLBACK, Number(fallback));
+  return exitCode(codeOrFallback(code), Number(fallback));
 }
 
 /**
@@ -231,18 +236,21 @@ export function humanMessage(point, classified, action) {
  * The single structured line. JSON on one line so `grep`, `jq` and a log
  * shipper all work without a parser, and so two failures never interleave into
  * one unreadable paragraph.
+ *
+ * The envelope is the package's, so `severity`, `retryable` and `outage` cannot
+ * disagree with the code here and agree with it elsewhere; the prefix and the
+ * stream are probierz's, because this line is what an operator already greps.
+ * `failureOrFallback` rather than `failure`: a malformed code has to arrive on
+ * the line as data, not as an exception thrown inside the error path.
  */
 export function failureLogLine(point, classified) {
-  return `probierz-failure ${JSON.stringify({
-    failure_point: point.id,
-    error_code: classified.code,
+  return `probierz-failure ${JSON.stringify(failureOrFallback({
+    failurePoint: point.id,
+    code: classified.code,
     service: point.service,
     impact: point.impact,
-    severity: classified.severity,
-    retryable: classified.retryable,
-    outage: classified.outage,
     detail: classified.detail,
-  })}`;
+  }))}`;
 }
 
 /**
