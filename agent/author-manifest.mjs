@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { APPS_ROOT, loadAppManifest } from "./apps.mjs";
-import { authorSpec, probeNative, probeTui, probeWeb } from "./author-spec.mjs";
+import { authorSpec, probeCua, probeNative, probeTui, probeWeb } from "./author-spec.mjs";
 import { draftStructuredArtifact } from "./model-router.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -85,7 +85,9 @@ export async function authorManifest({ appId, desc, owner = null, repositories, 
   const resolvedOwner = owner || `${appId} maintainers`;
   const probe = target === "web" || target === "electron"
     ? await probeWeb(baseUrl)
-    : (target === "tui" ? await probeTui(appPath) : await probeNative(target, appPath));
+    : (target === "tui"
+      ? await probeTui(appPath)
+      : (target === "desktop:cua" ? await probeCua(appPath) : await probeNative(target, appPath)));
   const trees = Object.fromEntries(repositories.map((repo) => [repo, repoTree(repo)]));
   const stagedDir = path.join(ROOT, "test-results", ".author-manifest");
   mkdirSync(stagedDir, { recursive: true });
