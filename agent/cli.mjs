@@ -116,14 +116,15 @@ function configError(message) {
 }
 
 /**
- * A remote run that did not complete. The state is already classified by the
- * stado bridge, so the only decision left is which exit code says it: 69 when
- * the queue or the object store is simply unavailable, 1 when the job itself
- * failed. A wrapper script can back off on the first and stop on the second
- * without reading a single line of output.
+ * A completed run and an accepted asynchronous submission are both successful
+ * CLI outcomes. Terminal and infrastructure failures keep the bridge's
+ * classified exit code so wrappers can distinguish retryable outages.
  */
 function remoteExit(result) {
-  if (result.state === "completed") return;
+  if (
+    result.state === "completed"
+    || (result.state === "queued" && result.submitted === true && !result.failure)
+  ) return;
   process.stderr.write(`${result.failure?.message || `Remote run ended as "${result.state}".`}\n`);
   process.exitCode = result.failure?.retryable ? EXIT_RETRY : Number("1");
 }
