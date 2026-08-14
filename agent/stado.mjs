@@ -87,7 +87,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
-    { host: "stado:macbook", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
+    { host: "stado:macbook", kind: "stado", platform: "darwin", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -335,7 +335,9 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
     ...(hostDef.request || {}),
   };
   writeFileSync(requestFile, JSON.stringify(request));
-  const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile]);
+  const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile], {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+  });
   rmSync(requestFile, { force: true });
   let jobId = null;
   try {
@@ -358,11 +360,13 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
  */
 const STATUS_FAILURE_TOLERANCE = Number("3");
 
-async function watchJob(jobId) {
+async function watchJob(jobId, hostDef) {
   const deadline = Date.now() + WATCH_BUDGET_MS;
   let consecutiveStatusFailures = Number("0");
   while (Date.now() < deadline) {
-    const out = sh(STADO_BIN, ["machine", "status", jobId]);
+    const out = sh(STADO_BIN, ["machine", "status", jobId], {
+      env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    });
     let payload = null;
     try { payload = JSON.parse(out.stdout); } catch {}
     const answered = Boolean(payload?.ok);
@@ -585,19 +589,20 @@ export async function submitRemoteSeo({
   const result = { host, jobId, appId, mode, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId);
+  const watched = await watchJob(jobId, hostDef);
   result.state = watched.state;
   result.failure = watched.failure;
   if (watched.state === "completed") result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "seo");
   return result;
 }
 
-function fetchFailedRun(jobId) {
+function fetchFailedRun(jobId, hostDef) {
   const destDir = path.join(ROOT, "test-results", ".remote", jobId);
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
-  const downloaded = sh(STADO_BIN, ["machine", "artifacts", jobId, "--output-dir", destDir]);
-  if (downloaded.status !== Number("0")) return null;
+  const downloaded = sh(STADO_BIN, ["machine", "artifacts", jobId, "--output-dir", destDir], {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+  });
   let payload;
   try {
     payload = JSON.parse(downloaded.stdout);
@@ -656,14 +661,14 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   // transcript is on the log line, the verdict is what a caller can act on.
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId);
+  const watched = await watchJob(jobId, hostDef);
   result.state = watched.state;
   result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
   }
   if (watched.state === "failed") {
-    const retained = fetchFailedRun(jobId);
+    const retained = fetchFailedRun(jobId, hostDef);
     if (retained) {
       result.resultsDir = retained.resultsDir;
       const preflight = retained.manifest?.preflight;
@@ -720,7 +725,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId);
+  const watched = await watchJob(jobId, hostDef);
   result.state = watched.state;
   result.failure = watched.failure;
   if (watched.state === "completed") {
