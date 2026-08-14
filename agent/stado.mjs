@@ -214,12 +214,15 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     `mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
   );
   if (provision?.kind === "cargo-release") {
+    const manifestPath = provision.manifestPath || "Cargo.toml";
+    const manifestDir = path.posix.dirname(manifestPath);
+    const targetPrefix = manifestDir === "." ? "" : `${manifestDir}/`;
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
-      `cargo build --release --manifest-path "$JOB_ROOT/work/${provision.appId}/Cargo.toml"`,
-      `export TUI_CMD="$JOB_ROOT/work/${provision.appId}/target/release/${provision.binary || provision.appId}"`,
+      `cargo build --release --manifest-path "$JOB_ROOT/work/${provision.appId}/${manifestPath}"`,
+      `export TUI_CMD="$JOB_ROOT/work/${provision.appId}/${targetPrefix}target/release/${provision.binary || provision.appId}"`,
     );
   }
   if (provision?.kind === "app-bundle") {
@@ -281,6 +284,8 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
       ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
+      "export PROBIERZ_MODEL_AGENT_ID=probierz",
+      ': "${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}"',
     );
     if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
       lines.push(
@@ -411,6 +416,18 @@ function provisionInputs({ appId, provision, appRepo }) {
         detail: `${provision.kind} provisioning needs the app source repository`,
         message: `Remote ${provision.kind} provisioning needs --app-repo <path>.`,
       });
+    }
+    if (provision.kind === "cargo-release") {
+      const manifestPath = provision.manifestPath || "Cargo.toml";
+      if (!/^[A-Za-z0-9._/-]+$/.test(manifestPath) || path.posix.isAbsolute(manifestPath) || manifestPath.split("/").includes("..")) {
+        throw new FailureError({
+          point: "stado.pack",
+          code: CODE.CONFIG,
+          detail: `invalid cargo manifest path: ${manifestPath}`,
+          message: "--cargo-manifest must be a safe path relative to --app-repo.",
+        });
+      }
+      provision.manifestPath = manifestPath;
     }
     const source = packAppSource(appId, appRepo);
     inputs.app = {
@@ -698,7 +715,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     packedRepo.hash,
     "author",
     inputObjects,
-    remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN"]),
+    remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
   );
   const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
