@@ -1,0 +1,254 @@
+schemaVersion: 1
+appId: oko
+productId: oko-ios
+owner: Oko maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko
+    mappings:
+      - paths:
+          - Sources/Oko/Auth/**
+          - Sources/Oko/App/OkoApp.swift
+        journeys: [auth]
+      - paths:
+          - Sources/Oko/App/RootScene*
+          - Sources/Oko/UI/Onboarding/**
+          - Sources/Oko/Persistence/Onboarding*
+        journeys: [onboarding]
+      - paths:
+          - Sources/Oko/UI/CompanyContext/**
+          - Sources/Oko/Persistence/CompanyContext*
+          - Sources/OkoKit/Company/**
+        journeys: [strategy, writer-conflict]
+      - paths:
+          - Sources/Oko/Persistence/Orchestrator/Feedback/**
+          - Sources/Oko/Persistence/OrchestratorSuggestionsPath.swift
+          - Sources/OkoKit/Strategy/StrategicFeedback.swift
+          - Sources/oko-cli/Suggestions/**
+        journeys: [slack-feedback]
+      - paths:
+          - Sources/OkoKit/Autonomy/**
+          - Sources/oko-cli/AutonomyCommand.swift
+          - Sources/oko-cli/Suggestions/SuggestionsAgents.swift
+          - scripts/run-autonomy-service.sh
+        journeys: [autonomy-experimental]
+      - paths:
+          - Sources/Oko/**
+          - Sources/OkoKit/**
+        journeys: [resilience]
+      - paths:
+          - Package.swift
+          - Resources/**
+          - scripts/bundle.sh
+        journeys: [auth, onboarding, strategy, writer-conflict, slack-feedback, resilience]
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios
+    mappings:
+      - paths:
+          - Sources/Features/AuthFeature.swift
+          - Sources/Core/Net/SupabaseClient.swift
+        journeys: [auth, resilience]
+      - paths:
+          - Sources/Features/StrategyFeature.swift
+          - Sources/Core/Models/CompanyContext.swift
+        journeys: [strategy]
+      - paths:
+          - Sources/Features/ChatFeature.swift
+          - Sources/Core/Net/ChatClient.swift
+        journeys: [chat]
+      - paths:
+          - Sources/Core/Onboarding/**
+          - Sources/Features/OnboardingFeature.swift
+          - Sources/Features/Orchestrator/OrchestratorFeature.swift
+        journeys: [onboarding-first-use]
+      - paths:
+          - Sources/Features/RootView.swift
+          - Sources/App/**
+          - project.yml
+          - Package.swift
+        journeys: [auth, strategy, chat, onboarding-first-use]
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web
+    mappings:
+      - paths:
+          - packages/onboarding-swift/Sources/WisentOnboarding/**
+          - packages/onboarding-swift/Package.swift
+        journeys: [onboarding-first-use]
+surfaces:
+  mobile:ios:
+    spec: oko-ios.e2e.ts
+    journeys: [auth, strategy, chat, onboarding-first-use]
+    journeyOverrides:
+      - when: {PROBIERZ_NETWORK_PROFILE: offline}
+        journeys: [resilience]
+    conditions:
+      BUNDLE_ID: ai.wisent.oko
+      APP_IOS: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
+      PROBIERZ_BUILD_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
+      IOS_DEVICE: iPhone 17
+    env:
+      SUPABASE_URL: OKO_E2E_SUPABASE_URL
+      SUPABASE_ANON_KEY: OKO_E2E_SUPABASE_ANON_KEY
+    device:
+      platform: iOS
+      minimumVersion: "17"
+    recording:
+      primary: appium
+      fallback: xcrun-simctl-io
+  desktop:mac:
+    spec: oko-macos.e2e.ts
+    journeys: [auth, onboarding, strategy, writer-conflict, slack-feedback, chat, resilience]
+    journeyOverrides:
+      - when: {PROBIERZ_NETWORK_PROFILE: offline}
+        journeys: [resilience]
+    conditions:
+      MAC_BUNDLE_ID: ai.wisent.oko
+      MAC_APP_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko/.build/Oko.app
+      PROBIERZ_BUILD_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko/.build/Oko.app
+    env:
+      SUPABASE_URL: OKO_E2E_SUPABASE_URL
+      SUPABASE_ANON_KEY: OKO_E2E_SUPABASE_ANON_KEY
+      SLACK_BOT_TOKEN: OKO_E2E_SLACK_BOT_TOKEN
+      SLACK_CHANNEL_ID: OKO_E2E_SLACK_CHANNEL
+    device:
+      platform: macOS
+      minimumVersion: "14"
+    recording:
+      primary: appium
+      fallback: screencapturekit
+  tui:
+    spec: oko-autonomy.spec.mjs
+    journeys: [autonomy-experimental]
+journeys:
+  auth:
+    owner: Oko maintainers
+    timeoutMs: 180000
+    value: Email OTP sign-in survives relaunch and refreshes an expired session.
+  onboarding:
+    owner: Oko maintainers
+    timeoutMs: 300000
+    value: A new account completes and resumes onboarding, then opens the persisted onboarding conversation.
+  strategy:
+    owner: Oko maintainers
+    timeoutMs: 300000
+    value: A seeded strategy renders expected metrics and persists a controlled edit across relaunch.
+  onboarding-first-use:
+    owner: Oko maintainers
+    timeoutMs: 300000
+    value: A fresh authenticated mobile subject resumes the explanation, then completes only after Oko reloads and observes a real workspace result.
+    journeyId: first-use
+    journeyVersion: 2026-08-04.1
+    journeyVersionId: 8c4f2e3d-71a9-4d26-8b35-24a0cc271403
+    firstSuccessFact: workspace_result_observed
+    publication:
+      screenId: workspace-result
+      artifactKinds: [screenshot, recording]
+      minimumEvidence: E3
+      redactionRequired: true
+  writer-conflict:
+    owner: Oko maintainers
+    timeoutMs: 240000
+    value: A stale UI writer is rejected and the newer persisted revision remains visible.
+  slack-feedback:
+    owner: Oko maintainers
+    timeoutMs: 360000
+    value: Isolated Slack feedback becomes a durable decision visible after Oko reload.
+  chat:
+    owner: Oko maintainers
+    timeoutMs: 240000
+    value: Authenticated chat produces a real assistant response and surfaces every backend error as a failure.
+  resilience:
+    owner: Oko maintainers
+    timeoutMs: 240000
+    value: Network, session, duplicate-event and interrupted-operation failures are visible and non-destructive.
+  autonomy-experimental:
+    owner: Oko maintainers
+    timeoutMs: 21600000
+    value: Experimental Oko autonomy is local-user scoped, bounded against spending and irreversible actions, closes a goal only after a successful Pursuit receipt, and recovers from idle or failed ticks without false success.
+secretRefs:
+  OKO_E2E_EMAIL: vault://wisent/oko/e2e/email
+  OKO_E2E_SUPABASE_ANON_KEY: vault://wisent/oko/e2e/supabase-anon-key
+  OKO_E2E_OTP_BROKER_TOKEN: vault://wisent/oko/e2e/otp-broker-token
+  OKO_E2E_OTP_BROKER_URL: vault://wisent/oko/e2e/otp-broker-url
+  OKO_E2E_SUPABASE_SERVICE_ROLE_KEY: vault://wisent/oko/e2e/supabase-service-role-key
+  OKO_E2E_SUPABASE_URL: vault://wisent/oko/e2e/supabase-url
+  OKO_E2E_SLACK_CHANNEL: vault://wisent/oko/e2e/slack-channel
+  OKO_E2E_SLACK_BOT_TOKEN: vault://wisent/oko/e2e/slack-bot-token
+  OKO_E2E_SLACK_USER_TOKEN: vault://wisent/oko/e2e/slack-user-token
+  PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE: vault://wisent/probierz/artifact-encryption-key-file
+data:
+  seed:
+    command: node
+    args: [apps/oko/seed.mjs, seed]
+  cleanup:
+    command: node
+    args: [apps/oko/seed.mjs, cleanup]
+  isolationKeyEnv: PROBIERZ_RUN_ID
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    syntheticDays: 7
+    adhocDays: 7
+    releaseDays: 365
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, OTP]
+  pii: possible
+matrix:
+  nightly:
+    targets: [mobile:ios, desktop:mac]
+    record: true
+    frames: 3
+    timeoutMs: 1200000
+    resourceWaitMs: 600000
+    maximumParallel: 4
+    minimumCellEvidence: E3
+    artifactEncryption: required
+    removePlaintextAfterProtection: true
+    maxCells: 384
+    dimensions:
+      PROBIERZ_LOCALE: [pl, en]
+      PROBIERZ_COLOR_SCHEME: [light, dark]
+      PROBIERZ_NETWORK_PROFILE: [normal, offline]
+      PROBIERZ_SOAK_ITERATION: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    surfaces:
+      mobile:ios:
+        dimensions:
+          PROBIERZ_DEVICE_PROFILE: [ios-iphone17]
+          PROBIERZ_RUNTIME: [iOS-26]
+      desktop:mac:
+        dimensions:
+          PROBIERZ_DEVICE_PROFILE: [mac-arm64]
+          PROBIERZ_RUNTIME: [macOS-26]
+  release:
+    targets: [mobile:ios, desktop:mac]
+    record: true
+    frames: 8
+    timeoutMs: 1200000
+    resourceWaitMs: 600000
+    maximumParallel: 2
+    minimumCellEvidence: E3
+    maxCells: 16
+    artifactEncryption: required
+    removePlaintextAfterProtection: true
+    dimensions:
+      PROBIERZ_LOCALE: [pl, en]
+      PROBIERZ_COLOR_SCHEME: [light, dark]
+      PROBIERZ_DATA_STATE: [clean]
+      PROBIERZ_NETWORK_PROFILE: [normal, offline]
+    surfaces:
+      mobile:ios:
+        dimensions:
+          PROBIERZ_DEVICE_PROFILE: [ios-iphone17]
+          PROBIERZ_RUNTIME: [iOS-26]
+      desktop:mac:
+        dimensions:
+          PROBIERZ_DEVICE_PROFILE: [mac-arm64]
+          PROBIERZ_RUNTIME: [macOS-26]
+pullRequestPolicy:
+  minimumEvidence: E3
+  requireProtectedArtifacts: false
+  requireSecretScan: false
+releasePolicy:
+  minimumEvidence: E3
+  requiredJourneys: [auth, onboarding, onboarding-first-use, strategy, chat, writer-conflict, slack-feedback, resilience]
+  requiredTargets: [mobile:ios, desktop:mac]
+  requiredMatrixProfile: release
+  requireProtectedArtifacts: true
+  requireSecretScan: true

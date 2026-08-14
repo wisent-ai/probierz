@@ -38,3 +38,9 @@ apps/*
 !apps/brama-desktop/
 apps/brama-desktop/*
 !apps/brama-desktop/probierz.yaml
+!apps/oko/
+apps/oko/*
+!apps/oko/probierz.yaml
+!apps/oko/seed.mjs
+!apps/oko/otp-broker.mjs
+!apps/oko/otp-broker.d.mts

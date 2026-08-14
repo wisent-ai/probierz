@@ -156,6 +156,8 @@ function acceptable(value) {
     || value === "[REDACTED]"
     || value.startsWith("vault:")
     || value.startsWith("${")
+    || /^(?:env|source|process\.env)\.[A-Za-z_][A-Za-z0-9_]*$/.test(value)
+    || /^[A-Z][A-Z0-9_]+$/.test(value)
     || /^<[^>]+>$/.test(value);
 }
 
