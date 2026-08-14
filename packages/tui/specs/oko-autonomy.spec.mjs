@@ -8,9 +8,9 @@ const sourceRoot = process.env.OKO_SOURCE_ROOT
   || manifestText.match(/^  - root: (.+)$/m)?.[1]?.trim();
 assert.ok(sourceRoot, 'Oko manifest must provide the source repository root');
 
-async function runSwift(arguments_) {
+async function runCommand(executable, arguments_) {
   return new Promise((resolve, reject) => {
-    const child = spawn('/usr/bin/swift', arguments_, {
+    const child = spawn(executable, arguments_, {
       cwd: sourceRoot,
       env: {
         ...process.env,
@@ -24,7 +24,7 @@ async function runSwift(arguments_) {
     child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
-      reject(new Error(`Oko autonomy command timed out: swift ${arguments_.join(' ')}`));
+      reject(new Error(`Oko autonomy command timed out: ${executable} ${arguments_.join(' ')}`));
     }, 900_000);
     child.once('error', reject);
     child.once('close', (code, signal) => {
@@ -34,7 +34,17 @@ async function runSwift(arguments_) {
   });
 }
 
-const build = await runSwift([
+const revisionResult = await runCommand('/usr/bin/git', ['-C', sourceRoot, 'rev-parse', 'HEAD']);
+assert.equal(revisionResult.code, 0, `cannot resolve Oko source revision: ${revisionResult.stderr}`);
+const sourceRevision = revisionResult.stdout.trim();
+assert.match(sourceRevision, /^[0-9a-f]{40}$/, 'Oko source revision is not a full Git SHA');
+const statusResult = await runCommand('/usr/bin/git', ['-C', sourceRoot, 'status', '--porcelain']);
+assert.equal(statusResult.code, 0, `cannot inspect Oko source state: ${statusResult.stderr}`);
+if (process.env.OKO_SOURCE_ROOT) {
+  assert.equal(statusResult.stdout, '', 'explicit Oko evidence source must be a clean worktree');
+}
+
+const build = await runCommand('/usr/bin/swift', [
   'build',
   '--package-path', sourceRoot,
   '--product', 'oko-cli',
@@ -45,7 +55,7 @@ assert.equal(
   `Oko autonomy CLI build exited ${build.code ?? build.signal}:\n${build.stderr.slice(-6000)}\n${build.stdout.slice(-6000)}`,
 );
 
-const result = await runSwift([
+const result = await runCommand('/usr/bin/swift', [
   'test',
   '--package-path', sourceRoot,
   '--filter', 'OkoAutonomyTests',
@@ -72,6 +82,8 @@ await writeFile(tracePath, `${JSON.stringify({
   status: 'completed',
   observation: {
     sourceRoot,
+    sourceRevision,
+    sourceDirty: statusResult.stdout !== '',
     buildExitCode: build.code,
     testExitCode: result.code,
     output: `${build.stdout}${build.stderr}${result.stdout}${result.stderr}`.trim().slice(-6000),
