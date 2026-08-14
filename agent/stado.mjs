@@ -295,7 +295,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     }
     lines.push(
       "set +e",
-      `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "$MAC_APP_PATH"`,
+      `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "${target === "tui" ? "$TUI_CMD" : "$MAC_APP_PATH"}"`,
       "PROBIERZ_RC=$?",
       "set -e",
       "mkdir -p test-results",
