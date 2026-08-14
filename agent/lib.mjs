@@ -12,8 +12,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // probierz/agent -> probierz project root.
 const ROOT = path.resolve(HERE, "..");
 
-// The four cross-platform surfaces this toolkit drives. Single source of truth
-// for `list`; the run commands are strings only (never executed here).
+// Cross-platform surfaces this toolkit drives. Single source of truth for
+// `list`; the run commands are strings only (never executed here).
 export const SURFACES = [
   {
     name: "web",
@@ -47,10 +47,26 @@ export const SURFACES = [
     targets: "native macOS / Windows",
     env: ["MAC_BUNDLE_ID", "WIN_APP"],
   },
+  {
+    name: "desktop-cua",
+    pkg: "packages/desktop-cua",
+    tool: "cua-driver",
+    script: "test:desktop:cua",
+    targets: "native desktop accessibility surfaces",
+    env: ["CUA_APP_EXECUTABLE"],
+  },
+  {
+    name: "tui",
+    pkg: "packages/tui",
+    tool: "PTY",
+    script: "test:tui",
+    targets: "terminal applications",
+    env: ["TUI_CMD"],
+  },
 ];
 
-const SPEC_DIRS = ["test/specs", "tests"];
-const SPEC_SUFFIXES = [".e2e.ts", ".spec.ts"];
+const SPEC_DIRS = ["test/specs", "tests", "specs"];
+const SPEC_SUFFIXES = [".e2e.ts", ".spec.ts", ".spec.mjs"];
 
 function listSpecFiles(pkgRel) {
   const out = [];
