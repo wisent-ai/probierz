@@ -74,7 +74,7 @@ function usage() {
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
       "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
-      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--cargo-release --binary b --app-repo r [--cargo-manifest p]] [--app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
+      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -453,7 +453,7 @@ async function main() {
     if (sub === "author") {
       validateAuthorOptions(rest, {
         positionalCount: Number("3"),
-        valueFlags: ["--target", "--desc", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
+        valueFlags: ["--target", "--desc", "--app-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
         booleanFlags: ["--cargo-release", "--no-watch"],
       });
       const appId = rest[1];
@@ -465,13 +465,15 @@ async function main() {
       const desc = value("--desc");
       if (!target) throw configError("stado author needs --target <t>");
       if (!desc) throw configError("stado author needs --desc <journey goal>");
-      const provision = value("--app-bundle-path")
-        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-        : rest.includes("--cargo-release")
-          ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-          : null;
-      if (target === "tui" && provision?.kind !== "cargo-release") {
-        throw configError("stado author --target tui needs --cargo-release --app-repo <path> [--binary <name>]");
+      const provision = value("--app-path")
+        ? { kind: "installed-tui", appId, path: value("--app-path") }
+        : value("--app-bundle-path")
+          ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
+          : rest.includes("--cargo-release")
+            ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
+            : null;
+      if (target === "tui" && !["installed-tui", "cargo-release"].includes(provision?.kind)) {
+        throw configError("stado author --target tui needs --app-path <installed-command> or --cargo-release --app-repo <path> [--binary <name>]");
       }
       const result = await submitRemoteAuthor({
         appId,

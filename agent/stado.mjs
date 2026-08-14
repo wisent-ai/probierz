@@ -213,6 +213,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   lines.push(
     `mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
   );
+  if (provision?.kind === "installed-tui") {
+    lines.push(`export TUI_CMD=${shellQuote(provision.path)}`);
+  }
   if (provision?.kind === "cargo-release") {
     const manifestPath = provision.manifestPath || "Cargo.toml";
     const manifestDir = path.posix.dirname(manifestPath);
@@ -412,6 +415,17 @@ async function watchJob(jobId, hostDef) {
 
 function provisionInputs({ appId, provision, appRepo }) {
   const inputs = {};
+  if (provision?.kind === "installed-tui") {
+    if (!provision.path || !path.isAbsolute(provision.path)) {
+      throw new FailureError({
+        point: "stado.pack",
+        code: CODE.CONFIG,
+        detail: `installed TUI path must be absolute: ${provision.path || "(empty)"}`,
+        message: "Remote installed-TUI authoring needs --app-path <absolute-path>.",
+      });
+    }
+    return { sourceRoot: null, inputs };
+  }
   if (provision?.kind === "cargo-release" || provision?.kind === "node-source") {
     if (!appRepo) {
       throw new FailureError({
