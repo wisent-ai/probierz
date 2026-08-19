@@ -1,0 +1,48 @@
+schemaVersion: 1
+appId: skarbiec-desktop
+productId: skarbiec-desktop
+owner: Skarbiec Desktop maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec-desktop
+    mappings:
+      - paths:
+          - Sources/SkarbiecDesktop/CapabilitiesView.swift
+          - Sources/SkarbiecDesktop/CapabilityRoutes.swift
+        journeys: [capabilities-screen]
+      - paths:
+          - Sources/SkarbiecDesktop/CLIClient.swift
+          - Sources/SkarbiecDesktop/RootView.swift
+          - Sources/SkarbiecDesktop/AppModel.swift
+          - Sources/SkarbiecDesktop/Models.swift
+          - Package.swift
+          - Package.resolved
+        journeys: [capabilities-screen]
+surfaces:
+  desktop:cua:
+    spec: skarbiec-desktop-*.spec.mjs
+    journeys: [capabilities-screen]
+    conditions:
+      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec-desktop/.build/Skarbiec.app/Contents/MacOS/Skarbiec
+journeys:
+  capabilities-screen:
+    owner: Skarbiec Desktop maintainers
+    timeoutMs: 300000
+    description: The Capabilities screen loads the broker's real capability routes, names every route the vault cannot resolve beside the ones it can, and refuses its mutating action without a typed reason.
+    value: An operator sees which resource a refused workload had no route for, on the screen that owns routes, instead of reading a broker log.
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+pullRequestPolicy:
+  minimumEvidence: E3
+  requiredJourneys: [capabilities-screen]
+  requiredTargets: [desktop:cua]
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E3
+  requiredJourneys: [capabilities-screen]
+  requiredTargets: [desktop:cua]
+  requireSecretScan: true

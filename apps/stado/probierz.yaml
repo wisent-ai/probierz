@@ -1,0 +1,231 @@
+schemaVersion: 1
+appId: stado
+productId: stado
+owner: Stado Desktop maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute
+    mappings:
+      - paths:
+          - desktop/StadoDesktop/Sources/Stado/StadoApp.swift
+          - desktop/StadoDesktop/Sources/Stado/StadoFirstUseJourney.swift
+          - desktop/StadoDesktop/Sources/Stado/ConsoleView.swift
+          - desktop/StadoDesktop/Sources/Stado/JobsView.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsModels.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsStore.swift
+          - desktop/StadoDesktop/Sources/Stado/Resources/stado-first-use.json
+          - desktop/StadoDesktop/Resources/Info.plist
+          - desktop/StadoDesktop/Package.swift
+        journeys: [onboarding-first-use]
+      - paths:
+          - stado-rs/src/cli/azure.rs
+          - stado-rs/src/credential_store/**
+          - stado-rs/src/capabilities.rs
+          - docs/configuration.md
+        journeys: [azure-subscription-recovery]
+      - paths:
+          - stado-rs/src/cli/release_evidence.rs
+          - stado-rs/src/release_agent.rs
+        journeys: [release-logs, release-doctor]
+      - paths:
+          - stado-rs/src/cli/release_quarantine.rs
+        journeys: [release-doctor, release-quarantine]
+      - paths:
+          - stado-rs/src/deploy/host_gates.rs
+          - stado-rs/src/deploy/host_disk.rs
+        journeys: [host-gates, release-doctor]
+      - paths:
+          - stado-rs/src/deploy/host_reclaim.rs
+        journeys: [host-reclaim]
+      - paths:
+          - stado-rs/src/cli/service_converge.rs
+          - stado-rs/scripts/report-installed-versions.sh
+        journeys: [service-converge]
+      - paths:
+          - stado-rs/src/deploy/service.rs
+          - stado-rs/src/cli/service.rs
+        journeys: [service-converge, service-unowned-processes, service-ensure]
+      - paths:
+          - stado-rs/src/cli/host.rs
+          - stado-rs/src/deploy/host_channel.rs
+          - docs/cli.md
+        journeys:
+          - host-gates
+          - host-reclaim
+          - release-logs
+          - release-doctor
+          - release-quarantine
+          - service-converge
+          - service-unowned-processes
+          - service-ensure
+      - paths:
+          - desktop/StadoDesktop/Sources/Stado/ReleasesView.swift
+        journeys: [releases-screen]
+      - paths:
+          - desktop/StadoDesktop/Sources/Stado/HostsView.swift
+        journeys: [hosts-screen]
+      - paths:
+          - desktop/StadoDesktop/Sources/Stado/ServicesView.swift
+        journeys: [services-screen]
+      - paths:
+          - desktop/StadoDesktop/Sources/Stado/FleetControlStore.swift
+          - desktop/StadoDesktop/Sources/Stado/StadoCLI.swift
+          - desktop/StadoDesktop/Sources/Stado/ConsoleChrome.swift
+        journeys: [releases-screen, hosts-screen, services-screen]
+surfaces:
+  desktop:mac:
+    spec: stado-onboarding-first-use.e2e.ts
+    journeys: [onboarding-first-use]
+    conditions:
+      MAC_BUNDLE_ID: ai.wisent.stado
+      PROBIERZ_DATA_STATE: fresh
+    device:
+      platform: macOS
+      minimumVersion: "14"
+    recording:
+      primary: appium
+      fallback: screencapturekit
+  desktop:cua:
+    spec: stado-*.spec.mjs
+    journeys: [releases-screen, hosts-screen, services-screen]
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: releases-screen}
+        journeys: [releases-screen]
+      - when: {PROBIERZ_JOURNEY: hosts-screen}
+        journeys: [hosts-screen]
+      - when: {PROBIERZ_JOURNEY: services-screen}
+        journeys: [services-screen]
+    conditions:
+      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
+  tui:
+    spec: stado-*.spec.mjs
+    journeys:
+      - azure-subscription-recovery
+      - release-logs
+      - release-doctor
+      - release-quarantine
+      - host-gates
+      - host-reclaim
+      - service-converge
+      - service-unowned-processes
+      - service-ensure
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: release-logs}
+        journeys: [release-logs]
+      - when: {PROBIERZ_JOURNEY: release-doctor}
+        journeys: [release-doctor]
+      - when: {PROBIERZ_JOURNEY: release-quarantine}
+        journeys: [release-quarantine]
+      - when: {PROBIERZ_JOURNEY: host-gates}
+        journeys: [host-gates]
+      - when: {PROBIERZ_JOURNEY: host-reclaim}
+        journeys: [host-reclaim]
+      - when: {PROBIERZ_JOURNEY: service-converge}
+        journeys: [service-converge]
+      - when: {PROBIERZ_JOURNEY: service-unowned-processes}
+        journeys: [service-unowned-processes]
+      - when: {PROBIERZ_JOURNEY: service-ensure}
+        journeys: [service-ensure]
+      - when: {PROBIERZ_JOURNEY: azure-subscription-recovery}
+        journeys: [azure-subscription-recovery]
+    conditions:
+      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/stado-rs/target/release/stado
+journeys:
+  onboarding-first-use:
+    owner: Stado Desktop maintainers
+    timeoutMs: 600000
+    description: Explain Stado's observe-first fleet model, resume the persisted explanation, and finish only when the live dashboard reports an authorized completed job.
+    value: A fresh operator reaches the console and inspects a real authorized job outcome rather than treating deployment or navigation as success.
+    journeyId: first-use
+    journeyVersion: 2026-08-04.1
+    journeyVersionId: 10000000-0000-4000-8000-000000000004
+    firstSuccessFact: authorized_job_completed
+    completionEvidence:
+      state: the device-scoped journey is completed only after completedRecent contains a real job
+      event: authorized_job_completed is emitted by the completed-job observation hook
+      productArtifact: the exact authorized job ID is visible in the Jobs completed-outcomes table
+    requiredConditions:
+      - The installed ai.wisent.stado build is produced from the mapped wisent-compute source revision
+      - A dedicated authenticated subject has fresh onboarding progress and read access to a real Stado dashboard snapshot
+      - PROBIERZ_STADO_COMPLETED_JOB_ID identifies an authorized completed job visible in that snapshot
+    publication:
+      screenId: first_success
+      artifactKinds: [screenshot, recording, trace]
+      minimumEvidence: E3
+      redactionRequired: true
+  azure-subscription-recovery:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: Verify the recovered Azure subscription through Stado by applying its idempotent required RBAC, proving no role assignment failed, and confirming that no deny assignment remains.
+  release-logs:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: Read a release candidate's own stdout and stderr off the target host and tell a log that is missing from one that is present and empty from one that was read.
+    value: An operator diagnosing a candidate that died in ninety seconds sees the reason the candidate itself wrote, instead of guessing from a rollout phase.
+  release-doctor:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: One verdict over desired versus observed release, the candidate, the host's quarantine map and its claiming gates - blocked when the desired digest is quarantined or the disk gate is unresolved, settled only when observed equals desired.
+    value: An operator learns whether a rollout will land, and what is holding it, from one read that starts nothing and writes nothing.
+  release-quarantine:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: List the digests a host refuses to roll out again and retire exactly one, refusing a clear without a digest or a reason, backing the state up, auditing the change, and restarting nothing.
+    value: A quarantined digest has a documented way back that is neither a hand-edit on the host nor a burnt version number.
+  host-gates:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: Say why a host is claiming nothing, in the blocker words its own agent publishes, with the disk policy behind them and its declared slots against its published free ones.
+    value: A host that has stopped claiming work is visible as that, instead of as a healthy host with an empty queue.
+  host-reclaim:
+    owner: Stado maintainers
+    timeoutMs: 300000
+    description: Reclaim host disk in three declared stages, previewing by default so a dry run deletes nothing, and refusing an apply that carries no reason.
+    value: The space comes back through a command that measures each stage and leaves an audit record, not through a shell script written during the outage.
+  service-converge:
+    owner: Stado maintainers
+    timeoutMs: 300000
+    description: Compare the version a host is declared to run against the version it reports, and report whether the live process is executing the artefact its unit declares - binary_matches_process false when it is not.
+    value: A host whose unit, declared version and installed tree all look correct while the live process runs something else is reported as exactly that.
+  service-unowned-processes:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    description: Find product processes on a host that no launchd job or systemd unit owns, naming the pid, the command, when it started and which product it appears to be.
+    value: Two agent processes running for four days with no unit behind them are findable instead of invisible to every unit-scoped report.
+  service-ensure:
+    owner: Stado maintainers
+    timeoutMs: 300000
+    description: Assert the unit a host must be running, idempotently - refused without a reason, installed where absent, and reported already_correct with nothing touched when the host already runs it.
+    value: An operator has one command that can be run twice, or from a script, to make a host run what it is supposed to run.
+  releases-screen:
+    owner: Stado Desktop maintainers
+    timeoutMs: 300000
+    description: The Releases screen loads real rollout state, renders desired against observed with the rollout verdict and its blockers, and refuses its mutating action without a typed reason.
+  hosts-screen:
+    owner: Stado Desktop maintainers
+    timeoutMs: 300000
+    description: The Hosts screen loads real fleet state, names why a host is claiming nothing beside its disk figures, and refuses its reclamation action without a typed reason.
+  services-screen:
+    owner: Stado Desktop maintainers
+    timeoutMs: 300000
+    description: The Services screen loads declared services with the revision each host reports and whether the live process matches its declared artefact, and offers no mutating control at all - an unowned process is reported, and ending it is left to whoever knows what it is doing.
+secretRefs:
+  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
+  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, EMAIL, JOB]
+  pii: possible
+pullRequestPolicy:
+  minimumEvidence: E3
+  requiredJourneys: [onboarding-first-use]
+  requiredTargets: [desktop:mac]
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E3
+  requiredJourneys: [onboarding-first-use]
+  requiredTargets: [desktop:mac]
+  requireProtectedArtifacts: true
+  requireSecretScan: true

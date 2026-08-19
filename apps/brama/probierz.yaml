@@ -1,0 +1,79 @@
+schemaVersion: 1
+appId: brama
+productId: brama
+owner: brama maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama
+    mappings:
+      - paths:
+          - Cargo.toml
+          - Cargo.lock
+          - src/**
+          - README.md
+          - ONBOARDING.md
+          - CORE.md
+        journeys:
+          - onboarding-first-use
+      - paths:
+          - src/subscription_dispatch/**
+          - src/gateway/broker.rs
+        journeys:
+          - subscription-pool
+surfaces:
+  tui:
+    spec: brama-*.spec.mjs
+    journeys:
+      - onboarding-first-use
+      - subscription-pool
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: onboarding-first-use}
+        journeys: [onboarding-first-use]
+      - when: {PROBIERZ_JOURNEY: subscription-pool}
+        journeys: [subscription-pool]
+    conditions:
+      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama/target/release/brama
+journeys:
+  onboarding-first-use:
+    owner: brama maintainers
+    timeoutMs: 240000
+    description: Resume Brama's first-use explanation, then receive one real response through an explicitly supplied model route and workload identity.
+    journeyId: first-use
+    journeyVersion: 2026-08-04.1
+    journeyVersionId: 5a4a397b-4839-4d1e-b90f-31c543a6ebc9
+    firstSuccessFact: model_response_received
+    publication:
+      screenId: real-model-response
+      artifactKinds: [trace]
+      minimumEvidence: E2
+      redactionRequired: true
+  subscription-pool:
+    owner: brama maintainers
+    timeoutMs: 240000
+    description: An operator reads the subscription pool joined to the usage ledger without any secret material in the output, and a refresh that carries no reason is refused before any provider is contacted.
+    value: The state of a pool whose grants are burnt or expired is readable, and the command that changes it records why.
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+matrix:
+  onboarding:
+    targets: [tui]
+    record: false
+    timeoutMs: 240000
+    maximumParallel: 1
+    minimumCellEvidence: E2
+    maxCells: 1
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredTargets: [tui]
+  requiredJourneys: [onboarding-first-use, subscription-pool]
+releasePolicy:
+  minimumEvidence: E2
+  requiredTargets: [tui]
+  requiredJourneys: [onboarding-first-use, subscription-pool]
+  requiredMatrixProfile: onboarding
+  requireProtectedArtifacts: false
+  requireSecretScan: true

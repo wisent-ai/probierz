@@ -44,3 +44,12 @@ apps/oko/*
 !apps/oko/seed.mjs
 !apps/oko/otp-broker.mjs
 !apps/oko/otp-broker.d.mts
+!apps/brama/
+apps/brama/*
+!apps/brama/probierz.yaml
+!apps/stado/
+apps/stado/*
+!apps/stado/probierz.yaml
+!apps/skarbiec-desktop/
+apps/skarbiec-desktop/*
+!apps/skarbiec-desktop/probierz.yaml

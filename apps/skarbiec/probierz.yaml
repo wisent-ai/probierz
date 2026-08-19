@@ -19,6 +19,11 @@ repositories:
           - recover-vault-access
           - use-json-output
       - paths:
+          - src/access/routes.rs
+          - src/access/capability.rs
+        journeys:
+          - manage-service-routes
+      - paths:
           - browser/**
           - native-host/**
           - install/**
@@ -41,6 +46,7 @@ repositories:
           - manage-users-and-sharing
           - recover-vault-access
           - use-json-output
+          - manage-service-routes
 
 surfaces:
   tui:
@@ -53,6 +59,10 @@ surfaces:
       - manage-users-and-sharing
       - recover-vault-access
       - use-json-output
+      - manage-service-routes
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: manage-service-routes}
+        journeys: [manage-service-routes]
 
 journeys:
   onboarding-first-use:
@@ -92,6 +102,11 @@ journeys:
     owner: skarbiec maintainers
     timeoutMs: 180000
     description: Automation receives valid machine-readable output for the core command lifecycle.
+  manage-service-routes:
+    owner: skarbiec maintainers
+    timeoutMs: 240000
+    description: An operator lists capability routes with whether the vault holds each item and field, has a broken route named by resource and problem, adds one route with a required reason beside a retained backup of the previous table, and is refused a reasonless add.
+    value: A workload refused at a login has one place that says which resource had no route, and one audited command that maps it.
 
 artifacts:
   retain:
@@ -111,6 +126,7 @@ pullRequestPolicy:
     - manage-users-and-sharing
     - recover-vault-access
     - use-json-output
+    - manage-service-routes
   requiredTargets: [tui]
   requireSecretScan: false
 
@@ -124,5 +140,6 @@ releasePolicy:
     - manage-users-and-sharing
     - recover-vault-access
     - use-json-output
+    - manage-service-routes
   requiredTargets: [tui]
   requireSecretScan: true

@@ -13,6 +13,11 @@ repositories:
           - Package.swift
           - Package.resolved
         journeys: [critical-operations]
+      - paths:
+          - Sources/BramaDesktop/SubscriptionPoolScreen.swift
+          - Sources/BramaDesktop/BramaSubscriptionPoolClient.swift
+          - Sources/BramaDesktop/BramaStore.swift
+        journeys: [subscription-pool-screen]
 surfaces:
   desktop:mac:
     spec: brama-desktop-critical-operations.e2e.ts
@@ -24,6 +29,11 @@ surfaces:
       minimumVersion: "14"
     recording:
       primary: appium-mac2
+  desktop:cua:
+    spec: brama-desktop-*.spec.mjs
+    journeys: [subscription-pool-screen]
+    conditions:
+      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop/.build/Brama.app/Contents/MacOS/Brama
 journeys:
   critical-operations:
     owner: Brama Desktop maintainers
@@ -47,6 +57,10 @@ journeys:
       artifactKinds: [screenshot]
       minimumEvidence: E3
       redactionRequired: true
+  subscription-pool-screen:
+    owner: Brama Desktop maintainers
+    timeoutMs: 300000
+    description: The Subscription Pool screen loads the deployment's real subscription state and renders every field it contracts - provider, subscription id, state, expiry and the last redeem error - with no secret material, and refuses its refresh action without a typed reason.
 artifacts:
   retain:
     pullRequestDays: 14
