@@ -1,11 +1,13 @@
 [automation]
 managed = true
-source_fingerprint = "8b8b097a54b28f56"
+source_fingerprint = "5e782e6d3b66d12a"
 category = "benchmark"
+copy_status = "approved"
+approved_in = "019fe3db-84a1-7000-bf79-c5455aefd43f@2026-08-09T23:59:29Z"
 
 [banner]
-title = "Test every product surface from one CLI."
-description = "Cross-platform automation for web, Electron, iOS, Android, macOS, and Windows."
+title = "Probierz: AI QA That Makes Sure You Never Ship Anything Broken"
+description = ""
 product = "Wisent"
 url = "wisent.com"
 theme = "dark"
