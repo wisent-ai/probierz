@@ -188,6 +188,7 @@ const POINTS = {
   "repair.dispatch": { service: SERVICE.MODEL_ROUTER, impact: IMPACT.REPAIR },
   "repair.apply": { service: SERVICE.HARNESS, impact: IMPACT.REPAIR },
   "repair.verify": { service: SERVICE.HARNESS, impact: IMPACT.REPAIR },
+  "cli.failures": { service: SERVICE.CLI, impact: IMPACT.CLI },
   "cli.unknown": { service: SERVICE.CLI, impact: IMPACT.CLI },
 };
 

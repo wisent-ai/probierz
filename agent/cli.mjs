@@ -44,6 +44,7 @@ import { listHosts, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from 
 import { overview, renderOverview } from "./overview.mjs";
 import { repairFailedRun } from "./repair.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
+import { failuresIndex, renderFailures, serveIntake } from "./intake.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
@@ -75,6 +76,8 @@ function usage() {
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
       "  probierz errors [appId...] [--text]  fast all-app failure view without repository violation scans",
+      "  probierz intake serve [--bind 127.0.0.1:9790]  listen for wisent-errors failure envelopes from desktop apps (bearer: PROBIERZ_INTAKE_TOKEN or ~/.probierz/intake-token)",
+      "  probierz failures [--service s] [--limit N] [--json]  the intake failure index: counts by service and error_code plus the newest envelopes (exit 0 always)",
       "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
@@ -457,6 +460,57 @@ async function main() {
     });
     if (rest.includes("--text")) process.stdout.write(`${renderOverview(report)}\n`);
     else out(report);
+    return;
+  }
+  if (cmd === "intake") {
+    const sub = rest[Number("0")];
+    if (sub !== "serve") throw configError("usage: probierz intake serve [--bind 127.0.0.1:9790]");
+    let bind = "127.0.0.1:9790";
+    for (let index = Number("1"); index < rest.length; index += Number("1")) {
+      const flag = rest[index];
+      if (flag !== "--bind") throw configError(flag.startsWith("--") ? `unknown option: ${flag}` : `unexpected argument: ${flag}`);
+      const value = rest[index + Number("1")];
+      if (value === undefined || value.startsWith("--")) throw configError("--bind needs a value");
+      bind = value;
+      index += Number("1");
+    }
+    await serveIntake({ bind });
+    return;
+  }
+  if (cmd === "failures") {
+    // The failure index never fails: parse trouble and store trouble are
+    // reported through failure.mjs inside the index, and anything that still
+    // reaches here is reported the same way — the exit code stays 0.
+    let service = null;
+    let limit = Number("10");
+    let json = false;
+    for (let index = Number("0"); index < rest.length; index += Number("1")) {
+      const flag = rest[index];
+      if (flag === "--json") {
+        json = true;
+        continue;
+      }
+      if (flag === "--service" || flag === "--limit") {
+        const value = rest[index + Number("1")];
+        if (value === undefined || value.startsWith("--")) throw configError(`${flag} needs a value`);
+        if (flag === "--service") service = value;
+        else {
+          limit = Number(value);
+          if (!Number.isInteger(limit) || limit < Number("0")) throw configError("--limit needs a non-negative integer");
+        }
+        index += Number("1");
+        continue;
+      }
+      throw configError(flag.startsWith("--") ? `unknown option: ${flag}` : `unexpected argument: ${flag}`);
+    }
+    try {
+      const report = failuresIndex({ service, limit });
+      if (json) out(report);
+      else process.stdout.write(`${renderFailures(report)}\n`);
+    } catch (error) {
+      reportBoundaryFailure(error, "probierz failures");
+      process.exitCode = Number("0");
+    }
     return;
   }
   if (cmd === "stado") {
