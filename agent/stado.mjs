@@ -313,6 +313,13 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
     return lines.join("\n");
   }
+  if (!modelRouterUrl) throw new Error("remote run needs STADO_MODEL_ROUTER_URL for automatic repair");
+  lines.push(
+    `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
+    ': "${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}"',
+    "export PROBIERZ_MODEL_AGENT_ID=probierz",
+    ': "${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}"',
+  );
   lines.push(
     // Evidence must survive a failing run: capture the exit code, tar and
     // upload whatever test-results exist, then re-emit the run's status so
@@ -654,7 +661,8 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
-  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record });
+  const modelRouterUrl = stadoModelRouterUrl(process.env.STADO_MODEL_ROUTER_URL || "https://brama.wisent.com");
+  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record, modelRouterUrl });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);

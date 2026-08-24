@@ -4,6 +4,7 @@ import path from "node:path";
 import { analyzeRun } from "./analyze.mjs";
 import { completeRun, runSurface } from "./runner.mjs";
 import { auditAccess } from "./security.mjs";
+import { repairFailedRun } from "./repair.mjs";
 
 const jobs = new Map();
 const MAX_ARTIFACT_BYTES = 5 * 1024 * 1024;
@@ -65,6 +66,13 @@ async function execute(job, options) {
     job.status = result.canceled
       ? "canceled"
       : (completed.passed ? "passed" : "failed");
+    if (job.status === "failed" && options.noRepair !== true && !process.env.PROBIERZ_REPAIR_SUPPRESS) {
+      job.result.repair = await repairFailedRun({
+        appId: completed.appId,
+        runId: completed.runId,
+        rounds: Number("1"),
+      });
+    }
   } catch (error) {
     job.error = error instanceof Error ? error.message : String(error);
     job.status = job.controller.signal.aborted ? "canceled" : "failed";
@@ -102,6 +110,7 @@ export function startRun(options = {}) {
     spec: typeof options.spec === "string" ? options.spec : undefined,
     frames: Number(options.frames) || 0,
     analyze: options.analyze !== false,
+    noRepair: options.noRepair === true,
   }));
   return publicJob(job);
 }

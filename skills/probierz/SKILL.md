@@ -44,8 +44,8 @@ change touches, each runs preflight-gated (`check`/`run`), `analyze` reads what
 ran, and it returns one verdict. Deciding WHICH targets is structural and lives
 here; deciding whether a failure is real or what to change is an LLM's job
 (Brama), one layer up. Probierz stays deterministic except for its explicit,
-rubric-bound figure and SEO evaluators; neither model surface may reinterpret a
-deterministic blocker.
+bounded model surfaces: automatic repair plus the rubric-bound figure and SEO
+evaluators. None may reinterpret a deterministic blocker.
 
 ## CLI
 
@@ -62,7 +62,8 @@ probierz setup <target>       # install the parts probierz owns (browsers / appi
 
 # selection + execution + analysis
 probierz affected [ref]       # which targets a change touched (git diff vs ref, or --files a b c)
-probierz run <target> [opts]  # EXECUTE a target (preflight-gated), capture result, auto-analyze
+probierz run <target> [opts]  # execute, capture, analyze, auto-repair failures through Brama
+probierz repair <appId> [--run id] [--rounds N] [--dry-run]  # repair recorded failure
 probierz analyze <report> [dir] [--tool playwright|wdio] [--frames N]
 probierz ci [ref] [opts]      # change-driven: affected -> run the ready ones -> analyze -> verdict
 probierz figure-evaluate --reference <file> --candidate <file> [--rubric json] [--model id] [--out report.json]
@@ -74,10 +75,11 @@ Targets: `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
 `desktop:win`.
 
 `run` options: `--record` (force video+trace+screenshot on), `--force` (skip the
-preflight gate and spawn anyway), `--spec <path>` (run only one spec, e.g. a
-single app's suite instead of every spec in the package), `--frames N` (extract
-N frames per recorded video, needs ffmpeg), `--timeout MS`, `--no-analyze`, and
-any `KEY=VALUE` condition env (e.g. `BASE_URL=...`, `APP_IOS=...`,
+preflight gate and spawn anyway), `--no-repair` (record the failure without
+dispatching Brama), `--spec <path>` (run only one spec, e.g. a single app's
+suite instead of every spec in the package), `--frames N` (extract N frames per
+recorded video, needs ffmpeg), `--timeout MS`, `--no-analyze`, and any
+`KEY=VALUE` condition env (e.g. `BASE_URL=...`, `APP_IOS=...`,
 `PROBIERZ_LOCALE=...`, `PROBIERZ_COLOR_SCHEME=dark`).
 
 ## MCP
@@ -166,14 +168,15 @@ Typical flow: `probierz check mobile:ios` -> if it names a missing driver, run
 
 ## Operational rules
 
-- Discovery and `check` are read-only. `setup`, `run`, `figure-evaluate`,
-  `seo-evaluate`, authoring, artifact, and gate operations are explicitly
-  side-effecting. `cmd` / `probierz_run_command` still return a string to run
-  yourself.
+- Discovery and `check` are read-only. `setup`, `run`, `repair`,
+  `figure-evaluate`, `seo-evaluate`, authoring, artifact, and gate operations
+  are explicitly side-effecting. `cmd` / `probierz_run_command` still return a
+  string to run yourself.
 - Keep MCP and CLI stdout clean: only JSON-RPC frames and command output on
   stdout; diagnostics on stderr.
 - `agent/lib.mjs` (discovery), `agent/runner.mjs` (execution),
-  `agent/figure-evaluate.mjs` (figure evaluation),
+  `agent/repair.mjs` (bounded Brama diagnosis, worktree patches, and spec
+  verification), `agent/figure-evaluate.mjs` (figure evaluation),
   `agent/seo-evaluate.mjs` (SEO orchestration), and `agent/preflight.mjs`
   (toolchain) are the single sources of truth for their contracts; add one
   there, not scattered across the CLI/server.

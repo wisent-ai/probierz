@@ -2,14 +2,15 @@
 // deterministic pieces into one CI-style pass: given a change, select the
 // affected targets (affected.mjs), run each one preflight-gated (runner.mjs
 // skips + reports the not-ready ones instead of failing opaquely), analyze what
-// ran (analyze.mjs), and return a consolidated verdict. No LLM, no watching, no
-// autonomy: it decides WHICH targets by structure and reports facts. Whether a
-// failure is "real" and what to change about the code is brama's job, upstream.
+// ran, dispatch a bounded Brama repair for each failed run, and return a
+// consolidated verdict. Structural selection and deterministic blockers remain
+// facts; only the explicit repair step asks a model what to change.
 import { affectedTargets, affectedFromGit } from "./affected.mjs";
 import { completeRun, runSurface } from "./runner.mjs";
 import { analyzeRun } from "./analyze.mjs";
 import { validateAccessibility } from "./accessibility.mjs";
 import { resourcesFor } from "./locks.mjs";
+import { repairFailedRun } from "./repair.mjs";
 
 // Parallelize independent work while preserving FIFO order on every shared
 // resource. Callers still need cross-process leases at the execution boundary.
@@ -100,6 +101,9 @@ export async function orchestrate(input = {}, opts = {}) {
       analysis = { error: error instanceof Error ? error.message : String(error) };
     }
     const completed = completeRun(run, analysisError ? null : analysis, analysisError);
+    const repair = !completed.passed && opts.noRepair !== true && !process.env.PROBIERZ_REPAIR_SUPPRESS
+      ? await repairFailedRun({ appId: completed.appId, runId: completed.runId, rounds: Number("1") })
+      : null;
 
     return {
       target,
@@ -114,6 +118,7 @@ export async function orchestrate(input = {}, opts = {}) {
       analysisPath: completed.analysisPath,
       evidence: completed.evidence,
       analysis,
+      repair,
     };
   };
 

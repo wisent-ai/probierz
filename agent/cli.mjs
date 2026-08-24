@@ -42,6 +42,7 @@ import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
 import { listHosts, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
+import { repairFailedRun } from "./repair.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
@@ -70,6 +71,7 @@ function usage() {
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
       "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  draft through the authenticated Stado model router, verify with a real run, keep it green",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
+      "  probierz repair <appId> [--run id] [--rounds N] [--dry-run]  dispatch one bounded Brama worker at a failed run, publish a repair branch, and verify spec fixes",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
       "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
@@ -95,7 +97,7 @@ function usage() {
       "  probierz cmd <target>         exact command to run a target (prints only)",
       "  probierz check <target>       is the toolchain ready + how to fix what is missing",
       "  probierz setup <target>       install the parts probierz owns (browsers/appium drivers)",
-      "  probierz run <target> [opts]  execute a target (preflight-gated), capture result, auto-analyze",
+      "  probierz run <target> [opts]  execute, capture, analyze, and auto-repair a failed run through Brama (--no-repair opts out)",
       "  probierz analyze <report> [dir]  parse a report + inventory media",
       "  probierz readme-gif <video> --out <file.gif> [--start seconds] [--duration seconds] [--fps N] [--width pixels] [--force]  render a bounded, silent journey demo plus provenance sidecar",
       "  probierz affected [ref]       which targets a change affects (git diff vs ref, or --files a b c)",
@@ -155,6 +157,7 @@ function parseRunArgs(rest, { allowPositionals = false } = {}) {
     record: false,
     analyze: true,
     force: false,
+    noRepair: false,
     appId: undefined,
     spec: undefined,
     frames: Number("0"),
@@ -171,6 +174,7 @@ function parseRunArgs(rest, { allowPositionals = false } = {}) {
     const arg = rest[i];
     if (arg === "--record") opts.record = true;
     else if (arg === "--force") opts.force = true;
+    else if (arg === "--no-repair") opts.noRepair = true;
     else if (arg === "--no-analyze") opts.analyze = false;
     else if (arg === "--frames") {
       opts.frames = Number(valueFor(i, arg));
@@ -639,6 +643,28 @@ async function main() {
     if (!result.ok) process.exitCode = Number("1");
     return;
   }
+  if (cmd === "repair") {
+    validateAuthorOptions(rest, {
+      positionalCount: Number("1"),
+      valueFlags: ["--run", "--rounds"],
+      booleanFlags: ["--dry-run"],
+    });
+    const appId = rest[0];
+    if (!appId || appId.startsWith("--")) throw configError("repair needs an app ID");
+    const value = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= Number("0") ? rest[index + Number("1")] : undefined;
+    };
+    const result = await repairFailedRun({
+      appId,
+      runId: value("--run") || null,
+      rounds: Number(value("--rounds")) || Number("2"),
+      dryRun: rest.includes("--dry-run"),
+    });
+    out(result);
+    if (!result.ok) process.exitCode = Number("1");
+    return;
+  }
   if (cmd === "gate-status") {
     if (!rest[0]) throw configError("gate-status needs an app ID");
     out(gateStatus(rest[0]));
@@ -937,7 +963,16 @@ async function main() {
       }
       completed = completeRun(result, analysisError ? null : analysis, analysisError);
     }
-    out({ ...completed, analysis });
+    let repair = null;
+    const authoringCandidate = String(completed.spec || "").includes(".author-staging-");
+    if (!completed.passed && !authoringCandidate && !opts.noRepair && !process.env.PROBIERZ_REPAIR_SUPPRESS) {
+      repair = await repairFailedRun({
+        appId: completed.appId,
+        runId: completed.runId,
+        rounds: Number("1"),
+      });
+    }
+    out({ ...completed, analysis, repair });
     if (!completed.passed) process.exitCode = Number("1");
     return;
   }
@@ -1001,6 +1036,7 @@ async function main() {
       spec: opts.spec,
       timeoutMs: opts.timeoutMs,
       resourceWaitMs: opts.resourceWaitMs,
+      noRepair: opts.noRepair,
     });
     out(result);
     // Non-zero exit when anything failed or is blocked, so CI can gate on it.

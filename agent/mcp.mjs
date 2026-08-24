@@ -29,6 +29,7 @@ import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
+import { repairFailedRun } from "./repair.mjs";
 import { submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
@@ -116,7 +117,7 @@ const TOOLS = [
   },
   {
     name: "probierz_run",
-    description: "EXECUTE a target end-to-end (spawns Playwright or WebdriverIO+Appium) under chosen conditions, records video/trace/screenshot when record=true, and returns the run result plus an analysis of what it produced. Heavy + side-effecting: needs Chromium / Appium / a simulator.",
+    description: "EXECUTE a target end-to-end, capture evidence, analyze it, and dispatch a bounded Brama repair worker when it fails. Heavy + side-effecting: needs the target toolchain; noRepair=true records without repair.",
     inputSchema: objectSchema({
       target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
       record: { type: "boolean", description: "Force video + trace + screenshot capture on." },
@@ -128,6 +129,7 @@ const TOOLS = [
       analyze: { type: "boolean", description: "Analyze the report after the run (default true)." },
       force: { type: "boolean", description: "Skip the preflight gate and spawn even if the toolchain looks incomplete." },
       spec: { type: "string", description: "Run only this one spec (path/substring), e.g. packages/mobile/test/specs/byk.e2e.ts, to scope the run to a single app's suite." },
+      noRepair: { type: "boolean", description: "Record a failed run without dispatching Brama." },
     }, ["target"]),
   },
   {
@@ -195,7 +197,7 @@ const TOOLS = [
   },
   {
     name: "probierz_ci",
-    description: "Change-driven test pass: select the targets a change affects, run the ready ones (preflight-gated, blocked ones are reported with their fix, not spawned), analyze what ran, and return a consolidated verdict {summary:{passed,failed,blocked,ran}, results}. Composes probierz_affected + probierz_run + probierz_analyze. Heavy: runs real suites. Deterministic selection; no LLM reasoning about the results.",
+    description: "Change-driven pass: select affected targets, run and analyze them, then dispatch a bounded Brama repair worker for each failure unless noRepair=true. Selection and blockers stay deterministic; only the explicit repair step asks a model what to change.",
     inputSchema: objectSchema({
       files: { type: "array", items: { type: "string" }, description: "Changed file paths (repo-relative). If given, git is not consulted." },
       ref: { type: "string", description: "git ref to diff the working tree against when `files` is omitted (default HEAD)." },
@@ -207,6 +209,7 @@ const TOOLS = [
       frames: { type: "number", description: "Extract this many frames per recorded video (needs ffmpeg)." },
       timeoutMs: { type: "number", description: "Per-run timeout in ms." },
       resourceWaitMs: { type: "number", description: "Wait per selected run for a busy device/port lease; default 10 min, 0 fails fast." },
+      noRepair: { type: "boolean", description: "Record failed runs without dispatching Brama." },
     }),
   },
   {
@@ -331,6 +334,16 @@ const TOOLS = [
       appPath: { type: "string" },
       rounds: { type: "number" },
     }, ["appId", "journey", "target", "desc"]),
+  },
+  {
+    name: "probierz_repair",
+    description: "SIDE-EFFECTING: dispatch one bounded Brama worker at a recorded failed run. Product fixes land on a fresh published branch; spec fixes must pass the real journey before publication.",
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      runId: { type: "string" },
+      rounds: { type: "number", description: "One to three bounded repair rounds." },
+      dryRun: { type: "boolean", description: "Write the decision brief but do not call Brama or change repositories." },
+    }, ["appId"]),
   },
   {
     name: "probierz_author_manifest",
@@ -473,6 +486,7 @@ const TOOLS = [
       analyze: { type: "boolean" },
       force: { type: "boolean" },
       spec: { type: "string" },
+      noRepair: { type: "boolean", description: "Record a failed run without dispatching Brama." },
     }, ["target"]),
   },
   {
@@ -649,6 +663,14 @@ async function callTool(name, args) {
       rounds: typeof args.rounds === "number" ? args.rounds : Number("3"),
     }));
   }
+  if (name === "probierz_repair") {
+    return textResult(await repairFailedRun({
+      appId: asString(args.appId, "appId"),
+      runId: typeof args.runId === "string" ? args.runId : null,
+      rounds: typeof args.rounds === "number" ? args.rounds : Number("2"),
+      dryRun: args.dryRun === true,
+    }));
+  }
   if (name === "probierz_author_manifest") {
     if (!Array.isArray(args.repositories) || !args.repositories.length) throw new Error("repositories must be a non-empty array");
     return textResult(await authorManifest({
@@ -780,7 +802,15 @@ async function callTool(name, args) {
       }
       completed = completeRun(result, analysisError ? null : analysis, analysisError);
     }
-    return textResult({ ...completed, analysis });
+    let repair = null;
+    if (!completed.passed && args.noRepair !== true && !process.env.PROBIERZ_REPAIR_SUPPRESS) {
+      repair = await repairFailedRun({
+        appId: completed.appId,
+        runId: completed.runId,
+        rounds: Number("1"),
+      });
+    }
+    return textResult({ ...completed, analysis, repair });
   }
   if (name === "probierz_check") {
     return textResult(preflight(asString(args.target, "target")));
@@ -824,6 +854,7 @@ async function callTool(name, args) {
       frames: Number(args.frames) || Number("0"),
       timeoutMs: Number(args.timeoutMs) || Number("0"),
       resourceWaitMs: args.resourceWaitMs === undefined ? undefined : Number(args.resourceWaitMs),
+      noRepair: args.noRepair === true,
     }));
   }
   const err = new Error(`unknown tool: ${name}`);

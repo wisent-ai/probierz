@@ -168,6 +168,7 @@ export const IMPACT = {
   FLEET_HEALTH: "fleet-health",
   LOCAL_RUN: "local-run",
   AUTHORING: "authoring",
+  REPAIR: "automated-repair",
   CLI: "cli",
 };
 
@@ -184,6 +185,9 @@ const POINTS = {
   "model.route": { service: SERVICE.MODEL_ROUTER, impact: IMPACT.AUTHORING },
   "run.spawn": { service: SERVICE.HARNESS, impact: IMPACT.LOCAL_RUN },
   "run.report": { service: SERVICE.HARNESS, impact: IMPACT.LOCAL_RUN },
+  "repair.dispatch": { service: SERVICE.MODEL_ROUTER, impact: IMPACT.REPAIR },
+  "repair.apply": { service: SERVICE.HARNESS, impact: IMPACT.REPAIR },
+  "repair.verify": { service: SERVICE.HARNESS, impact: IMPACT.REPAIR },
   "cli.unknown": { service: SERVICE.CLI, impact: IMPACT.CLI },
 };
 

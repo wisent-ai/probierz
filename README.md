@@ -452,8 +452,8 @@ not create static product banners; those belong to `wisent-asset-generator`.
 ## Primary interfaces
 
 - **Human CLI:** `probierz` is canonical for discovery, setup, execution,
-  analysis, figure and SEO evaluation, authoring, evidence, gate, retention,
-  security, and Stado workflows.
+  analysis, figure and SEO evaluation, authoring, automatic repair, evidence,
+  gate, retention, security, and Stado workflows.
 - **Machine CLI output:** status, overview, run, analysis, figure evaluation,
   SEO evaluation, and gate commands expose structured data; automation must not
   infer state from prose.
@@ -466,7 +466,8 @@ not create static product banners; those belong to `wisent-asset-generator`.
   gate evaluation and enforcement remain distinct commands.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
-  the configured object store.
+  the configured object store. A failed remote run invokes the same bounded
+  Brama repair worker before its evidence bundle returns.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
@@ -479,21 +480,25 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **State:** run reports, histories, receipts, protected bundles, audit records,
   and returned remote evidence live under the configured `test-results/` and
   object-store paths. An unavailable store is an error, not an empty history.
-- **Credentials:** local discovery requires none. Model authoring and figure
-  evaluation require a distinct `STADO_MODEL_ROUTER_URL` and router-scoped
-  token; figure evaluation also requires `PROBIERZ_FIGURE_VISION_MODEL` or
-  `--model`. Remote Stado jobs materialize the token from the scoped
-  `probierz-model-router` secret reference instead of embedding it in the job
-  payload.
+- **Credentials:** local discovery requires none. Model authoring, automatic
+  repair, and figure evaluation require a distinct `STADO_MODEL_ROUTER_URL` and
+  router-scoped token; figure evaluation also requires
+  `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs materialize the
+  token from the scoped `probierz-model-router` secret reference instead of
+  embedding it in the job payload.
 - **Setup ownership:** `probierz setup` may install npm dependencies, Playwright
   browsers, and Appium drivers owned by Probierz. Host SDKs, simulators, devices,
   permissions, and application runtimes remain operator-managed.
 - **Observability:** status, overview, dashboard projection, history, audit, and
   explicit failure objects distinguish failed work from unavailable
   dependencies and blocked prerequisites.
-- **Failure recovery:** preflight prevents known-unready runs; retention and
-  protected bundles preserve selected evidence; receipts can be verified before
-  use; remote failures retain their classified failure point and retryability.
+- **Failure recovery:** every failed `probierz run` dispatches one bounded Brama
+  repair worker unless `--no-repair` is present. Product fixes apply only in a
+  fresh worktree, reject secret and evidence paths, cap the change at eight
+  files, commit and publish a repair branch, and open a pull request when GitHub
+  credentials are available. Spec fixes must pass the same real journey before
+  publication. Infrastructure failures and unsafe repairs are recorded refusals,
+  not model guesses.
 - **Upgrades:** the repository is currently a source distribution. `package.json`
   owns the source version and Node engine contract; no mutable installation is
   presented as a stable release channel.
