@@ -14,14 +14,14 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { CODES, FAILURE_POINT_PATTERN, failureOrFallback, trimDetail } from "@wisent/errors";
 import { reportFailure } from "./failure.mjs";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-// probierz/agent -> probierz project root (same resolution as lib.mjs).
-const ROOT = path.resolve(HERE, "..");
-const FAILURES_DIR = path.join(ROOT, "test-results", "failures");
+// The store lives outside any TCC-protected directory: a launchd intake
+// cannot read ~/Documents, and the index and desktop screen must read the
+// same lines the listener writes. PROBIERZ_FAILURES_DIR overrides.
+const FAILURES_DIR = process.env.PROBIERZ_FAILURES_DIR
+  || path.join(os.homedir(), ".probierz", "failures");
 
 const DEFAULT_BIND = "127.0.0.1:9790";
 const TOKEN_FILE = path.join(os.homedir(), ".probierz", "intake-token");
