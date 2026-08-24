@@ -1,151 +1,253 @@
-# CLI reference
+# CLI reference — conventions, discovery, execution
 
-`probierz` (source entry point `agent/cli.mjs`) is the canonical interface
-for discovery, setup, execution, analysis, figure and SEO evaluation,
-authoring, evidence, gate, retention, security, and Stado workflows.
-`probierz --help` prints the authoritative usage; this page groups the same
-commands by intent. Commands marked read-only never execute a target,
-install anything, or mutate a repository.
+`probierz` (source entry point `agent/cli.mjs`; `npm install` links the
+`probierz` bin) is the canonical interface. This page covers output and
+failure conventions, discovery, the toolchain, and execution. The rest of
+the surface is split across:
 
-Surfaces: `web`, `electron`, `mobile`, `desktop-native`, `desktop-cua`,
-`tui`. Targets: `web`, `electron`, `mobile:ios`, `mobile:android`,
-`desktop:mac`, `desktop:cua`, `desktop:win`, `tui`.
+- [cli-evidence.md](cli-evidence.md) — status, history, comparison,
+  protection, retention, audit;
+- [cli-gates.md](cli-gates.md) — gates, receipts, publication;
+- [cli-authoring-remote.md](cli-authoring-remote.md) — authoring,
+  evaluators, remote Stado execution.
+
+`probierz --help` (also bare `probierz`, `help`, `-h`) prints the
+authoritative usage on stderr and exits 0.
+
+## Conventions
+
+- **Output** is pretty-printed JSON on stdout, one document per invocation.
+  Human renderings exist only where flagged (`status --text`,
+  `overview --text`).
+- **Failures** produce exactly two stderr lines at the process boundary
+  (`agent/failure.mjs`): one greppable structured line and one sentence:
+
+  ```
+  probierz-failure {"failure_point":"cli.unknown","error_code":"unknown","service":"cli","impact":"cli","severity":"error","retryable":false,"outage":false,"detail":"unknown command: frobnicate"}
+  probierz frobnicate: probierz failed in a way probierz does not recognise. See the detail on the line above.
+  ```
+
+  `error_code` is one of `config`, `auth`, `not_found`, `rate_limit`,
+  `timeout`, `infra_down`, `unknown`, classified from the failure text;
+  `failure_point` names the dependency axis (`stado.upload`,
+  `stado.download`, `stado.submit`, `stado.watch`, `stado.worker`,
+  `stado.pack`, `objects.config`, `objects.list`, `objects.read`,
+  `model.route`, `run.spawn`, `run.report`, `cli.unknown`). `detail` is
+  bounded to 300 characters. When a retryable remote failure would strand
+  an operator, the sentence appends: `Local runs are unaffected — 'probierz
+  run <target>' still works without the stado queue.`
+
+- **Exit codes** (captured on this checkout):
+
+  | Code | Meaning |
+  |---|---|
+  | `0` | success; for decision commands, a passing verdict |
+  | `1` | failing verdict / blocked status / findings / not-found and other classified non-retryable failures |
+  | `2` | usage or configuration mistake (`configError`): unknown command/option/target, missing required flag value |
+  | `3` | `run` blocked by preflight (never spawned); `ci` with any blocked target and no failures |
+  | `69` | retryable infrastructure failure (`EXIT_RETRY`, sysexits `EX_UNAVAILABLE`) — back off and retry |
+
+- **Vocabulary.** Surfaces: `web`, `electron`, `mobile`, `desktop-native`,
+  `desktop-cua`, `tui`. Targets: `web`, `electron`, `mobile:ios`,
+  `mobile:android`, `desktop:mac`, `desktop:cua`, `desktop:win`, `tui`
+  (plus the special `mobile:ios:byk-auth` runner target).
 
 ## Discovery (read-only)
 
-| Command | What it answers |
-|---|---|
-| `probierz list` | every test surface + run script |
-| `probierz apps` | registered products, targets, and journeys |
-| `probierz app <appId>` | the validated product manifest |
-| `probierz source-identity <appId>` | exact harness and app source SHA-256 |
-| `probierz specs [surface]` | spec files on disk (optional surface filter) |
-| `probierz describe <spec>` | static outline (describe/it titles) of a spec file |
-| `probierz cmd <target>` | the exact command to run a target (prints only) |
-| `probierz accessibility <appId>` | validate stable IDs and native selectors |
-| `probierz hosts` | run hosts: local and stado providers |
-| `probierz affected [ref]` | which targets a change affects (git diff vs ref, or `--files a b c`) |
+### `probierz list`
+
+No arguments. Prints the `SURFACES` table from `agent/lib.mjs`: per surface
+`name`, `pkg`, `tool`, `script`, `targets` description, and the env vars the
+suite reads. Never fails, exit 0.
+
+### `probierz apps`
+
+No arguments. Loads and validates **every** `apps/*/probierz.yaml`; output
+per app: `appId`, `owner`, `file`, sorted `targets`, sorted `journeys`.
+Fail-closed: one invalid manifest anywhere fails the whole command with
+`invalid app manifest: <file> <reason>` (exit 1). See
+[limitations](limitations.md) for the current state of this checkout.
+
+### `probierz app <appId>`
+
+Prints the single validated manifest plus its `file` path. Errors:
+`app needs an app ID` (exit 2), `invalid app ID: <id>` (exit 1),
+`app manifest not found: <path>` (exit 1, classified `not_found`),
+`app manifest ID mismatch: expected <a>, got <b>` (exit 1), any
+`invalid app manifest: …` sentence from
+[concepts/application](concepts/application.md).
+
+### `probierz source-identity <appId>`
+
+Prints `{ schemaVersion: 1, harness, app }` — the exact identity a gate or
+receipt expects: per repository `gitSha`, `dirty`, `worktreeSha256` (SHA-256
+over every tracked and untracked-but-not-ignored file's path, kind, mode,
+size, and content; harness identity excludes `node_modules/`,
+`test-results/`, `.env*`, runtime `probierz-*.json`, and includes
+`package-lock.json`), and a combined `sha256`. Error: `source-identity
+needs an app ID` (exit 2); a non-git repository root fails with
+`source inventory failed for <root>`.
+
+### `probierz specs [surface]`
+
+Spec files discovered on disk per surface (`test/specs`, `tests`, `specs`
+dirs; `.e2e.ts`, `.spec.ts`, `.spec.mjs` suffixes). Error:
+`unknown surface: <name>`.
+
+### `probierz describe <spec>`
+
+Static outline — `describe` / `it` / `test` titles in file order; nothing is
+executed. Errors: `describe needs a spec path`, `path escapes the probierz
+root`, `spec not found: <path>`.
+
+### `probierz cmd <target>`
+
+Prints the exact shell command string for a target; never executes it.
+**Only** `web`, `electron`, `mobile:ios`, `mobile:android`, `desktop:mac`,
+`desktop:win` have entries; `cmd tui` and `cmd desktop:cua` fail with
+`unknown target: <t> (one of web, electron, mobile:ios, mobile:android,
+desktop:mac, desktop:win)` — captured, see [limitations](limitations.md).
+
+### `probierz accessibility <appId>`
+
+Validates stable IDs and native selectors between app sources and specs;
+output `{ ok, sourceFiles, specFiles, identifiers: { defined, explicit,
+referenced, unused }, errors }`; exit 1 when `ok` is false.
+
+### `probierz affected [ref] [--files a b c]`
+
+Maps a change to run targets. With `--files`, classifies the given paths;
+otherwise diffs the working tree against `ref` (default `HEAD`). Rules
+(`agent/affected.mjs`): a file matching an app manifest mapping affects that
+app's journey targets; a file inside `packages/<x>` affects that package's
+targets; a file under `agent/` or at the repo root is cross-cutting and
+affects **all** targets; anything else affects nothing. Output
+`{ ref?, targets, crossCutting, files: [{file, affects, apps?}], apps }`.
+Errors: `--files needs at least one path` (exit 2); `git diff --name-only
+<ref> failed: <stderr>`; walks the app registry, so an invalid registered
+manifest fails it.
+
+### `probierz hosts`
+
+Prints the run-host table: `local` plus the `stado:*` selectors with their
+capacity request JSON. Read-only; queries nothing.
 
 ## Toolchain
 
-- `probierz check <target>` — is the toolchain ready + how to fix what is
-  missing. Read-only.
-- `probierz setup <target>` — install the parts Probierz owns (browsers,
-  Appium drivers). Side-effecting.
+### `probierz check <target>`
 
-## Execution and analysis
+Runs preflight detection standalone — deterministic binary probes and
+filesystem checks, never a network call or browser launch. Output:
 
-- `probierz run <target> [opts]` — execute a target (preflight-gated),
-  capture the result, auto-analyze.
-- `probierz analyze <report> [dir]` — parse a report + inventory media.
-- `probierz ci [ref] [opts]` — change-driven: select affected targets, run
-  the ready ones, analyze.
-- `probierz matrix <appId> <nightly|release> [--plan] [--release id]
-  [KEY=VALUE...]` — plan or execute a declared condition matrix
-  ([evidence-model](evidence-model.md#matrix-evidence-e4)).
+```json
+{ "target": "tui", "ready": true,
+  "checks": [{ "name": "...", "ok": true, "own": false, "hint": "..." }],
+  "missing": [], "remediation": [] }
+```
 
-### Run options
+`own: true` means `probierz setup <target>` can install it (npm deps,
+Playwright browsers, Appium drivers); otherwise `hint` is a one-line host
+instruction (Xcode, Android SDK, WinAppDriver, Accessibility grants —
+Probierz never installs these). Exit 1 when not ready. Errors:
+`check needs a target (one of …)`, `unknown target: <t>` (exit 2).
 
-`--app <appId>`, `--record`, `--force` (skip preflight), `--spec <path>`,
-`--frames N`, `--timeout MS`, `--resource-wait MS`, `--no-analyze`, plus any
-`KEY=VALUE` condition variables (for example `BASE_URL=...`,
-`APP_IOS=/abs/App.app`).
+Captured example of a not-ready target on this machine:
 
-## Evidence, history, and comparison
+```json
+{ "ready": false,
+  "missing": ["adb", "ANDROID_HOME set", "appium driver: uiautomator2"],
+  "remediation": [
+    "install Android SDK platform-tools and add them to PATH",
+    "export ANDROID_HOME to your Android SDK location",
+    "probierz setup mobile:android" ] }
+```
 
-| Command | What it answers |
-|---|---|
-| `probierz status <appId> [--base ref] [--text]` | journey coverage, freshness vs HEAD, merge eligibility (exit 1 when blocked) |
-| `probierz overview [appId...] [--text]` | unified status: journeys + merge eligibility + violations + stado fleet health |
-| `probierz history [appId] [target] [--limit N]` | stability by run, journey, and test |
-| `probierz dashboard <appId> [limit]` | product/version/journey evidence projection |
-| `probierz compare <leftRunId> <rightRunId> [appId]` | deterministic run diff |
-| `probierz last-green [appId] [target] [journey]` | newest passing evidence |
-| `probierz audit [appId] [--run runId] [--action name] [--limit N]` | access audit records |
+### `probierz setup <target> [--timeout MS]`
 
-## Gates, receipts, and publication
+Executes the ordered provisioning steps Probierz owns, stopping at the first
+failure, then re-runs preflight and prints both. Steps per target
+(`agent/preflight.mjs setupSteps`): workspace `npm install` always; then
+`playwright install` (`--with-deps` for web), or `appium driver install
+xcuitest|uiautomator2|mac2@2.2.2|windows`, or the ScreenCaptureKit recorder
+build (`desktop:mac`), or the cua-driver daemon (`desktop:cua`). `tui` needs
+only the npm install. Exit 1 on a failed step.
 
-- `probierz gate-status <appId>` — pull-request and release gate activation
-  state.
-- `probierz gate-evaluate|gate-enforce|gate-activate <appId>
-  <pull-request|release> <harnessSha256> --source-sha SHA256 --runs ids
-  [release opts]` — evaluate, enforce, or activate a gate.
-- `probierz gate-prepush [--repo path] [--app id] [--base ref] [--head sha]
-  [--ci]` — pre-push merge gate (exit 1 when blocked).
-- `probierz gate-install <appId> [--repo path]` — install the pre-push hook
-  into a repository (chains an existing hook).
-- `probierz receipt <appId> <release> <harnessSha256> --source-sha SHA256
-  --runs ids` — sign an evidence receipt.
-- `probierz verify-receipt <file>` — verify signature, trust, and payload
-  hash.
-- `probierz publication <receipt> <attemptId> <journeyId> --assets <json>
-  [--public-key file | --fingerprint sha256]` — emit an immutable verified
-  first-use publication manifest.
-- `probierz publish-onboarding <receipt> --run id --journey id
-  --journey-version v --journey-version-id uuid --first-success-fact fact
-  --screen id --assets catalog.json --output publication.json` — emit an
-  Echo-ingestible first-use proof manifest.
+## Execution
 
-Details: [gates-and-receipts](gates-and-receipts.md).
+### `probierz run <target> [opts] [KEY=VALUE...]`
 
-## Artifact protection, retention, and scanning
+Runs one target end-to-end: preflight gate → resource leases → manifest
+`data.seed` hook → spawn `npm run <script>` → report identity check →
+`data.cleanup` → auto-analysis → completion verdict. The full lifecycle and
+manifest contract are in [concepts/run](concepts/run.md).
 
-- `probierz protect <appId> <runId> [kind] --key-file <path>
-  [--remove-source]` — encrypt a run into an authenticated evidence bundle.
-- `probierz restore <bundle> <destination> --key-file <path>` — restore a
-  bundle into an empty directory.
-- `probierz retention <appId> [--at ISO] [--apply]` — plan or apply
-  retention expiry.
-- `probierz secret-scan <directory>` — scan plaintext artifacts for
-  high-confidence secrets.
+Options (unknown flags are rejected — `unknown option: <flag>`, exit 2):
 
-## Authoring (model-routed, side-effecting)
+| Flag | Effect | Default |
+|---|---|---|
+| `--app <appId>` | resolve the app surface: manifest conditions, `secretRefs` forwarding, `env` renames, declared spec and journeys | `probierz` (no app) |
+| `--record` | force capture on (`PROBIERZ_RECORD=1`); makes E3 reachable | off |
+| `--force` | skip the preflight gate | off |
+| `--spec <path>` | run only this spec (path or substring) | app surface spec |
+| `--frames N` | extract N evenly spaced frames per video (needs ffmpeg) | 0 |
+| `--timeout MS` | kill the run after MS | 1 200 000 (20 min) |
+| `--resource-wait MS` | poll for busy device locks instead of failing | fail immediately |
+| `--no-analyze` | skip auto-analysis (no completion verdict) | analyze |
+| `KEY=VALUE` | recorded run condition (redacted if sensitive) | — |
 
-- `probierz author-spec <appId> <journey> --target <t> --desc <goal>
-  [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]` —
-  draft one journey spec through the authenticated Stado model router,
-  verify it with a real run, keep it green.
-- `probierz author-manifest <appId> --desc <what> --repo <path> --target <t>
-  [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]` — draft
-  the application manifest, then optionally cover every journey.
+Exit codes: `0` passed; `1` failed (including report/analysis integrity
+failures); `3` blocked by preflight — the JSON carries
+`preflight.missing` and `preflight.remediation` and a `blocked` run manifest
+is still written. Numeric flag validation: `--frames needs a non-negative
+number`, `--timeout needs a non-negative number`, `--resource-wait needs a
+non-negative number` (exit 2). A spawn that cannot start is classified
+`run.spawn` / `config`: `Starting the <target> runner failed: …`.
 
-## Evaluators
+### `probierz analyze <report> [artifactsDir] [--tool playwright|wdio] [--frames N]`
 
-- `probierz figure-evaluate --reference <svg|tex|pdf|image> --candidate
-  <svg|tex|pdf|image> [--rubric json] [--model id] [--out report.json]
-  [--tex-preamble file] [--router-url url] [--agent-id id]
-  [--router-token-stdin]` — deterministic render checks plus rubric-scored
-  vision evaluation.
-- `probierz seo-evaluate --app <id> --base-url <url> [--policy json]
-  [--brief json] [--mode pull-request|release|nightly|production]
-  [--out report.json] [--production-evidence json] [--primary-model id]
-  [--secondary-model id] [--adjudicator-model id] [--router-url url]
-  [--agent-id id] [--private-key-file pem] [--router-token-stdin]` — full
-  crawl, indexability, structured-data, dual-model content, performance,
-  production, and signed SEO verdict.
-- `probierz readme-gif <video> --out <file.gif> [--start seconds]
-  [--duration seconds] [--fps N] [--width pixels] [--force]` — render a
-  bounded, silent journey demo GIF plus a provenance sidecar.
+Parses a report (canonical Probierz shape, Playwright, or WDIO — inferred
+when `--tool` is omitted), types media from the report itself (never from
+file names), enriches with on-disk size and video metadata, writes
+`timeline.json`, summarizes diagnostics, and inventories all other files.
+Error: `report not found: <path> (did the run produce one?)`; a report
+carrying another run's ID fails with `report run ID mismatch: expected <id>,
+got <id|missing>` when `runId` is enforced.
 
-Details: [evaluators](evaluators.md).
+### `probierz ci [ref] [--files a b c] [run opts]`
 
-## Remote execution on Stado
+Change-driven pass: affected targets → accessibility checks for affected
+apps → preflight-gated runs (device resources serialized in-process and
+cross-process) → analysis → one consolidated result
+`{ ref?, affected, results, summary: { total, passed, failed, blocked,
+ran } }`. Exit `1` when anything failed, else `3` when anything is blocked,
+else `0`. This is the same pass the pre-push hook invokes with `--ci`.
 
-- `probierz stado run <target> --app <id> [--spec f] [--record] [--host ...]
-  [--no-watch]` — run a target on a chosen Stado host; evidence lands back
-  in `test-results/`.
-- `probierz stado author <appId> <journey> --target <t> --desc <d>
-  [--host h] [--no-watch]` — author on a Stado host with scoped model
-  credentials.
-- `probierz stado seo <appId> --base-url <url> --primary-model <id>
-  --secondary-model <id> --adjudicator-model <id> [--mode ...] [--host ...]
-  [--no-watch]` — execute the complete SEO evaluator on a Stado-selected
-  dedicated host.
+### `probierz matrix <appId> <profile> [--plan] [--release id] [KEY=VALUE...]`
 
-Host selectors and provisioning flags: [remote-stado](remote-stado.md).
+Plans or executes a declared condition matrix (profile is typically
+`nightly` or `release`). `--plan` prints the expansion without running:
+cells are target × sorted scalar dimensions, each with a 16-hex `cellId`;
+refusals: `app <id> has no <profile> matrix`, `matrix <profile> expands to
+<n> cells (max <maxCells>)`. Execution schedules cells by resource with
+bounded parallelism (`maximumParallel`, default 4; `maxCells` default 128),
+injects `PROBIERZ_RELEASE` for release matrices (`release matrix execution
+needs --release <id>`, exit 2 from the CLI; `release matrix execution needs
+a release ID` from the module), refuses axis overrides (`matrix axis <name>
+cannot be overridden`), and — when the profile requires encryption —
+demands `PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE` (`matrix requires
+PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE`) and protects every cell after it
+completes. Verdict: `passed` only when every cell passed at
+`minimumCellEvidence`; then `evidenceLevel` is `"E4"`. Exit 1 on a failing
+executed verdict.
 
-## Machine output
+### `probierz readme-gif <video> --out <file.gif> [--start s] [--duration s] [--fps N] [--width px] [--force]`
 
-Status, overview, run, analysis, figure evaluation, SEO evaluation, and gate
-commands expose structured data; automation must not infer state from prose.
-The same modules also back the stdio MCP server, [mcp](mcp.md).
+Renders one bounded, silent, looping journey GIF plus a
+`<out>.probierz.json` provenance sidecar (source and output SHA-256, exact
+render settings, `reviewRequired: true`). Bounds and refusals:
+`readme-gif needs an input video`, `readme-gif needs --out <file.gif>`,
+`--out must end in .gif`, `input video and --out must be different files`,
+`output already exists: <path>; pass force=true to replace it`,
+`durationSeconds must be between 1 and 30`, `framesPerSecond must be between
+1 and 15`, `width must be between 1 and 1280`, `README GIF export failed:
+<detail>`. Requires ffmpeg (`PROBIERZ_FFMPEG_BIN` selects the binary).

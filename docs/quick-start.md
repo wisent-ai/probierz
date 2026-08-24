@@ -58,7 +58,7 @@ executes the application's declared spec, records video/trace/screenshots
 (`--record`), analyzes the report and media, and writes everything under
 `test-results/<appId>/<target>/<date>/<runId>/`. A failing suite is a
 recorded result, not a tool error. Run options are listed in
-[cli](cli.md#run-options); what the run directory contains is in
+[cli](cli.md#execution); what the run directory contains is in
 [evidence-model](evidence-model.md).
 
 ## Read the result
@@ -76,6 +76,11 @@ reasons (exit 1 when blocked). `history` aggregates pass rate, flaky tests,
 and duration trends from the run manifests on disk. `last-green` prints the
 newest passing evidence.
 
+Note: `status`, `apps`, `affected`, and `ci` walk the whole app registry
+and are blocked on this checkout by one invalid registered manifest — the
+exact failure and the repair are in [limitations](limitations.md). The
+per-app projections (`history`, `last-green`) are unaffected.
+
 ## Run only what a change affects
 
 ```bash
@@ -87,3 +92,10 @@ node agent/cli.mjs ci origin/main
 affected → preflight-gated run → analyze and returns one consolidated
 verdict. This is the same pass the [pre-push gate](gates-and-receipts.md)
 invokes with `--ci`.
+
+## Do it end-to-end, executed
+
+Two captured walkthroughs run this whole page against a demo application on
+this checkout: [register an application](walkthrough-register-app.md) and
+[run → gate → signed receipt](walkthrough-gate-and-receipt.md); the
+runnable scripts live in [examples](examples/README.md).

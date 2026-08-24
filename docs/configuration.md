@@ -48,6 +48,15 @@ persistence). Variables with defined meaning:
 | `PROBIERZ_APP_VERSION` | recorded application version |
 | `APPIUM_HOME` | Appium driver install root used by preflight detection |
 
+Each surface additionally reads its own suite variables — the authoritative
+list per surface is printed by `probierz list` (`agent/lib.mjs`): `mobile`
+reads `APP_IOS`, `APP_ANDROID`, `BUNDLE_ID`, `APP_PACKAGE`, `IOS_DEVICE`,
+`IOS_VERSION`, `GMAIL_TOKEN`; `desktop-native` reads `MAC_BUNDLE_ID`,
+`WIN_APP`; `desktop-cua` reads `CUA_APP_EXECUTABLE`; `tui` reads `TUI_CMD`;
+`web` reads `BASE_URL`. The `mobile:ios:byk-auth` runner requires exactly
+one of `APP_IOS` or `BUNDLE_ID` (`set exactly one of APP_IOS or BUNDLE_ID`)
+and refuses surrounding whitespace in either.
+
 ## Variables Probierz sets for suites
 
 `run` exports `PROBIERZ_APP_ID`, `PROBIERZ_RUN_ID`, `PROBIERZ_ARTIFACTS`,
@@ -65,6 +74,7 @@ write the report to `PROBIERZ_REPORT_PATH` and stamp it with the run ID.
 | `PROBIERZ_GATE_NO_CI` | `1` makes the installed pre-push hook evaluate-only |
 | `PROBIERZ_ACTOR` | audit-record actor (falls back to `GITHUB_ACTOR`, then `USER`) |
 | `PROBIERZ_FFMPEG_BIN` | explicit ffmpeg binary for `readme-gif` |
+| `CI`, `GITHUB_WORKFLOW`, `GITHUB_JOB` | recorded verbatim into each audit record's `context` |
 
 Secrets never belong in a manifest: `secretRefs` hold `vault://` references,
 and the values reach a suite only from the invoking process environment

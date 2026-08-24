@@ -48,8 +48,9 @@ push. See [gates-and-receipts](gates-and-receipts.md).
 Probierz is not a unit-test framework and does not replace application-level
 assertions. Discovery never installs dependencies, starts a driver, executes
 a suite, or changes an application repository. Probierz does not call model
-vendors directly: authoring and the figure and SEO evaluators use only the
-authenticated Stado model router, and no deterministic blocker can be
+vendors directly: manifest authoring and the figure and SEO evaluators use
+only the authenticated Stado model router, spec authoring drafts through a
+local coding-agent binary (`codex`), and no deterministic blocker can be
 overridden by a model. It does not install host-level dependencies (Xcode,
 Android SDKs, simulators, WinAppDriver), and it is currently a source
 distribution — no stable public binary or hosted service is promised.
