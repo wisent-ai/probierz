@@ -1,18 +1,93 @@
 {
   "schemaVersion": 1,
-  "documents": {
-    "docs/what-is-probierz.md": {},
-    "docs/quick-start.md": {},
-    "docs/cli.md": {},
-    "docs/evidence-model.md": {},
-    "docs/gates-and-receipts.md": {},
-    "docs/applications.md": {},
-    "docs/execution.md": {},
-    "docs/remote-stado.md": {},
-    "docs/evaluators.md": {},
-    "docs/mcp.md": {},
-    "docs/configuration.md": {}
-  },
-  "sources": ["agent/", "README.md"],
-  "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+  "documents": [
+    {
+      "output": "docs/what-is-probierz.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/quick-start.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/cli.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/evidence-model.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/gates-and-receipts.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/applications.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/execution.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/remote-stado.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/evaluators.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/mcp.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    },
+    {
+      "output": "docs/configuration.md",
+      "sources": [
+        "agent",
+        "README.md"
+      ],
+      "instruction": "The docs must stay true to the commands, flags, schemas, evidence contracts, and gate semantics defined by agent/*.mjs and printed by `node agent/cli.mjs --help`."
+    }
+  ]
 }
