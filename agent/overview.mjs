@@ -1,16 +1,18 @@
 // Unified user status: one view over repository hygiene (violations),
 // journey coverage and merge eligibility per app, and stado fleet health.
 // Composition only — each layer keeps its own source of truth
-// (find-violations scanner, manifests/history, GCS agent heartbeats).
+// (find-violations scanner, manifests/history, Stado agent heartbeats).
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { listApps } from "./apps.mjs";
 import { appStatus } from "./status.mjs";
+import { listObjects } from "./object-store.mjs";
+import { failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const TAMA_CLI = path.resolve(HERE, "..", "..", "hooks-rotator", "src", "cli.mjs");
-const AGENT_HEARTBEAT_PREFIX = "gs://stado/capacity/";
+const TAMA_CLI = "tama";
+const AGENT_HEARTBEAT_PREFIX = "stado://probierz/capacity/";
 const HEARTBEAT_FRESH_SECONDS = Number("900");
 
 function sh(command, args, options = {}) {
@@ -19,7 +21,7 @@ function sh(command, args, options = {}) {
 }
 
 function violationsFor(repoRoot) {
-  const out = sh(process.execPath, [TAMA_CLI, "find-violations", "--repo", repoRoot, "--json"]);
+  const out = sh(TAMA_CLI, ["find-violations", "--repo", repoRoot, "--json"]);
   if (out.status !== 0 && !out.stdout.trim().startsWith("{")) {
     return { error: out.stderr.trim().split("\n")[0] || `exit ${out.status}` };
   }
@@ -36,20 +38,31 @@ function violationsFor(repoRoot) {
   }
 }
 
-function fleetHealth() {
-  const listing = sh("gcloud", ["storage", "ls", "-l", `${AGENT_HEARTBEAT_PREFIX}**`]);
-  if (listing.status !== 0) return { error: listing.stderr.trim().split("\n")[0] || "gcloud storage ls failed" };
-  const now = Date.now() / 1000;
+async function fleetHealth() {
+  let objects;
+  try {
+    objects = await listObjects(AGENT_HEARTBEAT_PREFIX);
+  } catch (error) {
+    // Never an empty fleet: "no agents" and "we could not ask" are different
+    // facts, and only one of them means the operator should retry.
+    return { available: false, ...failureSummary(error, "objects.list") };
+  }
+  const now = Date.now() / Number("1000");
   const agents = [];
-  for (const line of listing.stdout.split("\n")) {
-    const match = line.match(/^\s*(\d+)\s+(\S+)\s+(\S+)$/);
-    if (!match) continue;
-    const updated = Date.parse(match[2]);
+  for (const object of objects) {
+    const updated = Date.parse(String(object.updated_at || ""));
     if (!Number.isFinite(updated)) continue;
-    agents.push({ name: path.basename(match[3]), updatedAt: new Date(updated).toISOString(), fresh: (now - updated / 1000) <= HEARTBEAT_FRESH_SECONDS });
+    const name = path.basename(String(object.key || ""));
+    if (!name) continue;
+    agents.push({
+      name,
+      updatedAt: new Date(updated).toISOString(),
+      fresh: (now - updated / Number("1000")) <= HEARTBEAT_FRESH_SECONDS,
+    });
   }
   agents.sort((a, b) => a.name.localeCompare(b.name));
   return {
+    available: true,
     live: agents.filter((agent) => agent.fresh).map((agent) => agent.name),
     stale: agents.filter((agent) => !agent.fresh).map((agent) => agent.name),
   };
@@ -72,7 +85,7 @@ export async function overview({ appIds = null } = {}) {
   return {
     generatedAt: new Date().toISOString(),
     apps,
-    fleet: fleetHealth(),
+    fleet: await fleetHealth(),
   };
 }
 
@@ -84,7 +97,11 @@ export function renderOverview(report) {
     for (const reason of app.blockingReasons.slice(0, Number("3"))) lines.push(`    - ${reason}`);
   }
   const fleet = report.fleet;
-  if (fleet.error) lines.push(`  fleet: ${fleet.error}`);
-  else lines.push(`  fleet: live [${fleet.live.join(", ") || "none"}] | stale [${fleet.stale.join(", ") || "none"}]`);
+  if (fleet.available === false) {
+    lines.push(`  fleet: unknown — ${fleet.message}`);
+    lines.push(`         (${fleet.failurePoint} / ${fleet.errorCode} / retryable: ${fleet.retryable})`);
+  } else {
+    lines.push(`  fleet: live [${fleet.live.join(", ") || "none"}] | stale [${fleet.stale.join(", ") || "none"}]`);
+  }
   return lines.join("\n");
 }
