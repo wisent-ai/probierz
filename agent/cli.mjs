@@ -74,6 +74,7 @@ function usage() {
       "  probierz repair <appId> [--run id] [--rounds N] [--dry-run]  dispatch one bounded Brama worker at a failed run, publish a repair branch, and verify spec fixes",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
+      "  probierz errors [appId...] [--text]  fast all-app failure view without repository violation scans",
       "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
@@ -444,6 +445,16 @@ async function main() {
   if (cmd === "overview") {
     const appIds = rest.filter((arg) => !arg.startsWith("--"));
     const report = await overview({ appIds: appIds.length ? appIds : null });
+    if (rest.includes("--text")) process.stdout.write(`${renderOverview(report)}\n`);
+    else out(report);
+    return;
+  }
+  if (cmd === "errors") {
+    const appIds = rest.filter((arg) => !arg.startsWith("--"));
+    const report = await overview({
+      appIds: appIds.length ? appIds : null,
+      includeViolations: false,
+    });
     if (rest.includes("--text")) process.stdout.write(`${renderOverview(report)}\n`);
     else out(report);
     return;

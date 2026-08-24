@@ -68,7 +68,7 @@ async function fleetHealth() {
   };
 }
 
-export async function overview({ appIds = null } = {}) {
+export async function overview({ appIds = null, includeViolations = true } = {}) {
   const apps = (appIds || listApps().map((app) => app.appId)).map((appId) => {
     const status = appStatus({ appId });
     const root = status.repositories[0]?.root || null;
@@ -79,7 +79,7 @@ export async function overview({ appIds = null } = {}) {
       affectedJourneys: status.affectedJourneys,
       eligible: status.mergeEligibility.eligible,
       blockingReasons: status.mergeEligibility.blockingReasons,
-      violations: root ? violationsFor(root) : { error: "no repository root" },
+      violations: includeViolations ? (root ? violationsFor(root) : { error: "no repository root" }) : null,
     };
   });
   return {
@@ -92,8 +92,10 @@ export async function overview({ appIds = null } = {}) {
 export function renderOverview(report) {
   const lines = [`overview ${report.generatedAt}`];
   for (const app of report.apps) {
-    const violations = app.violations.error ? `violations: ${app.violations.error}` : `violations: ${app.violations.violations}`;
-    lines.push(`  ${app.appId}: journeys ${app.journeys} (untested ${app.untested}) | eligible: ${app.eligible} | ${violations}`);
+    const violations = app.violations
+      ? (app.violations.error ? ` | violations: ${app.violations.error}` : ` | violations: ${app.violations.violations}`)
+      : "";
+    lines.push(`  ${app.appId}: journeys ${app.journeys} (untested ${app.untested}) | eligible: ${app.eligible}${violations}`);
     for (const reason of app.blockingReasons.slice(0, Number("3"))) lines.push(`    - ${reason}`);
   }
   const fleet = report.fleet;

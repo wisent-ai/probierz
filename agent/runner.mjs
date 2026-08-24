@@ -26,7 +26,7 @@ import { appSurface, loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { collectPlatformDiagnostics, startPerformanceSampler } from "./collect.mjs";
 import { acquireResourcesWait, resourcesFor } from "./locks.mjs";
 import { repositoryIdentity } from "./source-identity.mjs";
-import { CODE, failureFrom, failureSummary } from "./failure.mjs";
+import { CODE, FailureError, classifyFailure, failureFrom, failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // probierz/agent -> probierz project root.
@@ -323,6 +323,15 @@ export function completeRun(run, analysis, analysisError = null) {
     ],
   };
   const passed = Boolean(run.passed) && evidence.report && evidence.analysis && evidence.capturePresent;
+  // The manifest's failure, in the fleet envelope: the same fields every other
+  // product logs, so a reader of run-manifest.json gets error_code, severity,
+  // retryable and outage instead of only prose sentences.
+  const failure = passed ? null : failureSummary(new FailureError({
+    point: "run.report",
+    code: classifyFailure({ error: evidence.errors.join("; ") || null }).code,
+    detail: evidence.errors.join("; ") || null,
+    message: `Run ${run.runId} did not pass: ${evidence.errors[0] || "no evidence error was recorded"}.`,
+  }), "run.report");
   updateManifest(run, {
     status: passed ? "passed" : "failed",
     completedAt: new Date().toISOString(),
@@ -330,6 +339,7 @@ export function completeRun(run, analysis, analysisError = null) {
     timedOut: run.timedOut,
     reportValidation: run.reportValidation,
     evidence,
+    failure,
     analysisPath,
     artifacts: artifactHashes(run.artifactsDir, run.manifestPath),
   });
