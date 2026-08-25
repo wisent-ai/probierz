@@ -86,8 +86,8 @@ export function listHosts() {
     { host: "stado:any", kind: "stado", request: {}, description: "stado queue, any consumer with capacity" },
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
-    { host: "stado:mini", kind: "stado", platform: "darwin", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
-    { host: "stado:macbook", kind: "stado", platform: "darwin", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
+    { host: "stado:mini", kind: "stado", platform: "darwin", target: "charless-mac-mini", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
+    { host: "stado:macbook", kind: "stado", platform: "darwin", target: "lukasz-macbook", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -131,6 +131,40 @@ function remoteFailure(point, action, out) {
 /** A local packaging step. Nothing remote is implicated, so no outage default. */
 function localFailure(point, action, out) {
   return failureFrom({ point, error: processText(out) || null, detail: `tar exit ${exitText(out)}`, action });
+}
+function requireGuiReady(hostDef, target) {
+  if (target !== "desktop:cua") return;
+  if (!hostDef.target) {
+    throw new FailureError({
+      point: "stado.preflight",
+      code: CODE.CONFIG,
+      detail: `host ${hostDef.host} has no registry target for GUI readiness`,
+      message: `The selected host "${hostDef.host}" cannot prove a usable macOS GUI session.`,
+    });
+  }
+  const status = sh(STADO_BIN, ["host", "gui-automation", "status", hostDef.target], {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+  });
+  if (status.status !== Number("0")) {
+    throw remoteFailure("stado.preflight", `Reading GUI readiness for ${hostDef.target} failed`, status);
+  }
+  const fields = new Map(
+    status.stdout
+      .split("\n")
+      .map((line) => line.trim().split("\t"))
+      .filter((parts) => parts.length >= Number("3"))
+      .map((parts) => [parts[Number("1")], parts.slice(Number("2")).join("\t")]),
+  );
+  if (fields.get("gui-ready") !== "yes") {
+    const consoleOwner = fields.get("console") || "unknown";
+    const accessibility = fields.get("accessibility") || "unknown";
+    throw new FailureError({
+      point: "stado.preflight",
+      code: CODE.CONFIG,
+      detail: `target=${hostDef.target}; console=${consoleOwner}; accessibility=${accessibility}; gui-ready=${fields.get("gui-ready") || "not-reported"}`,
+      message: `The selected host "${hostDef.host}" is not ready for desktop:cua: it needs an active macOS console session and a granted CuaDriver.`,
+    });
+  }
 }
 
 function packRepo(appIds) {
@@ -651,6 +685,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
       message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
     });
   }
+  requireGuiReady(hostDef, target);
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
@@ -712,6 +747,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
       message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
     });
   }
+  requireGuiReady(hostDef, target);
   const modelRouterUrl = stadoModelRouterUrl();
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
