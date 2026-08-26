@@ -6,8 +6,8 @@
 // reads those two durable stores after every mutation.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
@@ -18,16 +18,34 @@ import {
   snapshotTree,
 } from "../driver.mjs";
 
+function reservePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve(address.port);
+      });
+    });
+  });
+}
+
 const BUNDLE_EXECUTABLE = process.env.CUA_APP_EXECUTABLE
   || "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop/.build/Brama.app/Contents/MacOS/Brama";
-const ROUTES = path.join(homedir(), "Library", "Application Support", "Brama", "Runtime", "routes.json");
-const KEYCHAIN_SERVICE = "ai.wisent.brama.desktop.providers";
 const artifactsDir = path.resolve(process.env.PROBIERZ_ARTIFACTS || "test-results");
 const specName = process.env.PROBIERZ_SPEC_NAME || "brama-desktop-critical-operations";
 const media = [];
-
 const suffix = randomUUID().replaceAll("-", "");
-const provider = `probierz-${suffix.slice(0, 12)}`;
+const stateRoot = path.join(artifactsDir, `${specName}-state-${suffix}`);
+const routes = path.join(stateRoot, "Runtime", "routes.json");
+const keychainNamespace = `ai.wisent.brama.desktop.probierz.${suffix}`;
+const keychainService = `${keychainNamespace}.providers`;
+const keychainRuntimeService = `${keychainNamespace}.runtime`;
+const runtimeOrigin = `http://127.0.0.1:${await reservePort()}`;
+const provider = "openai";
 const firstKey = `qa-${randomUUID()}`;
 const replacementKey = `qa-${randomUUID()}`;
 const alias = `probierz/${suffix}`;
@@ -180,36 +198,38 @@ function publishMedia() {
 
 function keychainValue() {
   const result = spawnSync("security", [
-    "find-generic-password", "-w", "-s", KEYCHAIN_SERVICE, "-a", provider,
+    "find-generic-password", "-w", "-s", keychainService, "-a", provider,
   ], { encoding: "utf8" });
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function deleteKeychainValue() {
-  spawnSync("security", [
-    "delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", provider,
-  ], { stdio: "ignore" });
+function deleteKeychainState() {
+  for (const [service, account] of [
+    [keychainService, provider],
+    [keychainRuntimeService, "brama-desktop"],
+  ]) {
+    spawnSync("security", [
+      "delete-generic-password", "-s", service, "-a", account,
+    ], { stdio: "ignore" });
+  }
 }
 
 function routeRegistry() {
-  return JSON.parse(readFileSync(ROUTES, "utf8"));
+  return JSON.parse(readFileSync(routes, "utf8"));
 }
 
-function removeLeftoverAlias() {
-  if (!existsSync(ROUTES)) return;
-  const registry = routeRegistry();
-  if (!(alias in (registry.routes || {})) && !(alias in (registry.fallbacks || {}))) return;
-  delete registry.routes?.[alias];
-  delete registry.fallbacks?.[alias];
-  writeFileSync(ROUTES, `${JSON.stringify(registry)}\n`, { mode: 0o600 });
-}
-
-assert.equal(keychainValue(), null, "the collision-resistant provider must start absent from Keychain");
-removeLeftoverAlias();
+mkdirSync(stateRoot, { recursive: true });
+deleteKeychainState();
+assert.equal(keychainValue(), null, "the isolated provider must start absent from Keychain");
 
 const app = launchCuaProcess({
   executable: BUNDLE_EXECUTABLE,
-  env: { BRAMA_LOCAL_RUNTIME: "1" },
+  env: {
+    BRAMA_LOCAL_RUNTIME: "1",
+    BRAMA_BASE_URL: runtimeOrigin,
+    BRAMA_DESKTOP_STATE_DIR: stateRoot,
+    BRAMA_DESKTOP_KEYCHAIN_NAMESPACE: keychainNamespace,
+  },
 });
 
 try {
@@ -399,6 +419,6 @@ try {
 } finally {
   publishMedia();
   quitApp(app.pid);
-  deleteKeychainValue();
-  removeLeftoverAlias();
+  deleteKeychainState();
+  rmSync(stateRoot, { recursive: true, force: true });
 }
