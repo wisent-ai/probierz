@@ -273,6 +273,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export MAC_APP_PATH="$JOB_ROOT/work/${provision.appId}/${provision.bundleName}"`,
+      "export CUA_APP_EXECUTABLE=\"$MAC_APP_PATH/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' \"$MAC_APP_PATH/Contents/Info.plist\")\"",
       `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
     );
   }

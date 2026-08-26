@@ -33,8 +33,6 @@ surfaces:
   desktop:cua:
     spec: brama-desktop-*.spec.mjs
     journeys: [critical-operations, subscription-pool-screen]
-    conditions:
-      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop/.build/Brama.app/Contents/MacOS/Brama
 journeys:
   critical-operations:
     owner: Brama Desktop maintainers
