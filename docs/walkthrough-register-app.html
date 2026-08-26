@@ -1,0 +1,112 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Walkthrough: register an application — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/walkthrough-register-app.md</p><h1>Walkthrough: register an application</h1>
+<p>Executed end-to-end on this checkout on 2026-08-24. Every output below is pasted from the session (long absolute paths shortened to <code>&lt;checkout&gt;</code>). The goal: take a product Probierz has never seen and register it so runs, history, and gates can hold it accountable. Registration is one file — a validated <code>apps/&lt;appId&gt;/probierz.yaml</code> — nothing else.</p>
+<p>The runnable version of this walkthrough is <a href="examples/register-demo-app.sh">examples/register-demo-app.sh</a>; <a href="examples/cleanup-demo-app.sh">examples/cleanup-demo-app.sh</a> removes everything it creates.</p>
+<h2>1. The product</h2>
+<p>A one-prompt terminal program, the smallest thing with a user journey:</p>
+<pre data-language="bash"><code>mkdir -p /tmp/probierz-demo-app &amp;&amp; cd /tmp/probierz-demo-app &amp;&amp; git init -q
+cat &gt; hello.mjs &lt;&lt;&#x27;EOF&#x27;
+#!/usr/bin/env node
+// Minimal interactive TUI: asks for a name, greets, exits 0.
+import readline from &quot;node:readline&quot;;
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+rl.question(&quot;What is your name? &quot;, (name) =&gt; {
+  process.stdout.write(`Hello, ${name || &quot;stranger&quot;}!\n`);
+  rl.close();
+});
+EOF
+git add -A &amp;&amp; git commit -qm &quot;demo product&quot;</code></pre>
+<p>The repository matters: app source identity is computed per declared repository, and <code>status</code> freshness compares recorded SHAs against its HEAD.</p>
+<h2>2. The spec</h2>
+<p>The <code>tui</code> surface runs specs from <code>packages/tui/specs/</code> through the PTY helper. One imperative spec that drives the real program:</p>
+<pre data-language="bash"><code>cat &gt; packages/tui/specs/docs-demo-hello.spec.mjs &lt;&lt;&#x27;EOF&#x27;
+// Journey: greet — start the demo CLI, answer the prompt, expect the greeting.
+import { spawnTui } from &quot;../pty.mjs&quot;;
+
+const cli = process.env.DEMO_CLI || &quot;/tmp/probierz-demo-app/hello.mjs&quot;;
+const tui = spawnTui(&quot;node&quot;, [cli]);
+await tui.waitFor(&quot;What is your name?&quot;);
+tui.send(&quot;Ada\r&quot;);
+await tui.waitFor(&quot;Hello, Ada!&quot;);
+const { code } = await tui.close();
+if (code !== 0 &amp;&amp; code !== null) {
+  console.error(`demo CLI exited ${code}`);
+  process.exit(1);
+}
+EOF</code></pre>
+<h2>3. The manifest — the registration itself</h2>
+<pre data-language="bash"><code>mkdir -p apps/docs-demo
+cat &gt; apps/docs-demo/probierz.yaml &lt;&lt;&#x27;EOF&#x27;
+schemaVersion: 1
+appId: docs-demo
+owner: docs
+repositories:
+  - root: /tmp/probierz-demo-app
+    mappings:
+      - paths: [&quot;hello.mjs&quot;]
+        journeys: [greet]
+surfaces:
+  tui:
+    spec: docs-demo-hello.spec.mjs
+    journeys: [greet]
+journeys:
+  greet:
+    owner: docs
+    timeoutMs: 30000
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredJourneys: [greet]
+EOF</code></pre>
+<p>There is no register command; a valid manifest in place <strong>is</strong> the registration (<a href="concepts/application.md">concepts/application</a>).</p>
+<h2>4. Prove it registered</h2>
+<pre data-language=""><code>$ node agent/cli.mjs app docs-demo
+{
+  &quot;schemaVersion&quot;: 1,
+  &quot;appId&quot;: &quot;docs-demo&quot;,
+  &quot;owner&quot;: &quot;docs&quot;,
+  &quot;repositories&quot;: [ { &quot;root&quot;: &quot;/tmp/probierz-demo-app&quot;,
+      &quot;mappings&quot;: [ { &quot;paths&quot;: [&quot;hello.mjs&quot;], &quot;journeys&quot;: [&quot;greet&quot;] } ] } ],
+  &quot;surfaces&quot;: { &quot;tui&quot;: { &quot;spec&quot;: &quot;docs-demo-hello.spec.mjs&quot;, &quot;journeys&quot;: [&quot;greet&quot;] } },
+  &quot;journeys&quot;: { &quot;greet&quot;: { &quot;owner&quot;: &quot;docs&quot;, &quot;timeoutMs&quot;: 30000 } },
+  &quot;pullRequestPolicy&quot;: { &quot;minimumEvidence&quot;: &quot;E2&quot;, &quot;requiredJourneys&quot;: [&quot;greet&quot;] },
+  &quot;file&quot;: &quot;&lt;checkout&gt;/apps/docs-demo/probierz.yaml&quot;
+}</code></pre>
+<p>Exit 0. The document you get back is the validated manifest plus its file path — what every other command will read.</p>
+<h2>5. Validation is total, not advisory</h2>
+<p>Delete the <code>owner:</code> line and ask again:</p>
+<pre data-language=""><code>$ node agent/cli.mjs app docs-demo
+probierz-failure {&quot;failure_point&quot;:&quot;cli.unknown&quot;,&quot;error_code&quot;:&quot;config&quot;,&quot;service&quot;:&quot;cli&quot;,&quot;impact&quot;:&quot;cli&quot;,&quot;severity&quot;:&quot;critical&quot;,&quot;retryable&quot;:false,&quot;outage&quot;:true,&quot;detail&quot;:&quot;invalid app manifest: &lt;checkout&gt;/apps/docs-demo/probierz.yaml owner is required&quot;}
+probierz app docs-demo: probierz is missing configuration. See the detail on the line above; retrying will not help.</code></pre>
+<p>Exit 1. An invalid manifest is an error, never a partial registration. Restore the line before continuing.</p>
+<h2>6. The registry-wide view — blocked on this checkout, honestly</h2>
+<pre data-language=""><code>$ node agent/cli.mjs apps
+probierz-failure {…&quot;detail&quot;:&quot;invalid app manifest: &lt;checkout&gt;/apps/game-asset-creator/probierz.yaml surface eval spec is required&quot;}
+probierz apps: probierz is missing configuration. See the detail on the line above; retrying will not help.</code></pre>
+<p><code>apps</code> validates <strong>every</strong> registered manifest and fails closed, and this revision ships one broken manifest — so the registry-wide commands (<code>apps</code>, <code>status</code>, <code>overview</code>, <code>affected</code>, <code>ci</code>) are blocked until it is fixed. See <a href="limitations.md">limitations</a>. Our registration is unaffected for every single-app command, which is what the rest of this walkthrough uses.</p>
+<h2>7. Is the surface ready to run?</h2>
+<pre data-language=""><code>$ node agent/cli.mjs check tui
+{
+  &quot;target&quot;: &quot;tui&quot;,
+  &quot;ready&quot;: true,
+  &quot;checks&quot;: [
+    { &quot;name&quot;: &quot;python3 pty.spawn shim&quot;, &quot;ok&quot;: true, &quot;own&quot;: false,
+      &quot;hint&quot;: &quot;python3 stdlib provides the pty.spawn shim the TUI driver uses&quot; },
+    { &quot;name&quot;: &quot;node runtime&quot;, &quot;ok&quot;: true, &quot;own&quot;: false,
+      &quot;hint&quot;: &quot;node is required for the TUI spec runner&quot; }
+  ],
+  &quot;missing&quot;: [], &quot;remediation&quot;: []
+}</code></pre>
+<p>Two honest edges of the discovery layer, captured:</p>
+<pre data-language=""><code>$ node agent/cli.mjs describe packages/tui/specs/docs-demo-hello.spec.mjs
+{ &quot;spec&quot;: &quot;packages/tui/specs/docs-demo-hello.spec.mjs&quot;, &quot;count&quot;: 0, &quot;outline&quot;: [] }
+
+$ node agent/cli.mjs cmd tui
+probierz-failure {…&quot;detail&quot;:&quot;unknown target: tui (one of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win)&quot;}</code></pre>
+<p><code>describe</code> outlines <code>describe</code>/<code>it</code> titles and sees nothing in an imperative spec; <code>cmd</code> has no entry for <code>tui</code> (<a href="limitations.md#cmd-covers-six-targets-run-covers-nine">limitations</a>). Neither affects execution.</p>
+<h2>8. The identity a gate will demand</h2>
+<pre data-language=""><code>$ node agent/cli.mjs source-identity docs-demo
+{ &quot;harness&quot;: { &quot;sha256&quot;: &quot;74ab23def1e65b14ce964c1f7ccb3261f9ec4b43e2f081327115c113a3014331&quot;,
+               &quot;gitSha&quot;: &quot;f8807e5d76ede5e5a797ec386119f87911fec2e5&quot;, &quot;dirty&quot;: true, … },
+  &quot;app&quot;:     { &quot;sha256&quot;: &quot;bf76b35155387978d44936fb30019110c5791c32b26648d03c814e20935be6f2&quot;, … } }</code></pre>
+<p><code>dirty: true</code> because this walkthrough&#x27;s own uncommitted docs are part of the harness worktree hash — identity binds to content, not to the git SHA alone. These two values are exactly what <code>gate-evaluate</code> and <code>receipt</code> take as expectations.</p>
+<h2>Where to next</h2>
+<p>The application is registered. Producing evidence against it — runs, the gate lifecycle, a signed receipt, the async queue — is <a href="walkthrough-gate-and-receipt.md">walkthrough-gate-and-receipt</a>.</p></main></body></html>

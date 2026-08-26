@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Evidence item — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/evidence.md</p><h1>Evidence item</h1>
+<p>&quot;The suite passed&quot; is not evidence. In Probierz an evidence item is a run record whose strength is explicitly graded, whose files are hash-bound, and whose weaknesses are enumerated rather than averaged away.</p>
+<h2>What it is</h2>
+<p>The <code>evidence</code> block <code>completeRun</code> writes into every completed run manifest (<code>agent/runner.mjs</code>), plus the graded level derived from it everywhere evidence is consumed:</p>
+<pre data-language="json"><code>&quot;evidence&quot;: {
+  &quot;report&quot;: true,            // report exists, postdates start, carries this run&#x27;s ID
+  &quot;analysis&quot;: true,          // valid analysis: &gt;0 checks, 0 failures, 0 capture errors,
+                             // 0 missing report-typed media, 0 crash diagnostics
+  &quot;captureRequired&quot;: false,  // was --record requested
+  &quot;capturePresent&quot;: true,    // report-typed video/trace/screenshot exists when required
+  &quot;captureErrors&quot;: [], &quot;missingMedia&quot;: [], &quot;crashes&quot;: [],
+  &quot;errors&quot;: []               // every reason this run is weaker than it claims
+}</code></pre>
+<p><code>errors</code> entries are exact and additive: <code>&quot;analysis run ID mismatch&quot;</code>, <code>&quot;zero executed checks&quot;</code>, <code>&quot;&lt;n&gt; failed checks&quot;</code>, <code>&quot;missing report-typed artifact: &lt;file&gt;&quot;</code>, <code>&quot;recording requested but no report-typed capture was produced&quot;</code>, <code>&quot;crash evidence: &lt;message&gt;&quot;</code>.</p>
+<h2>The level ladder</h2>
+<p>Computed identically in <code>gate.mjs</code>, <code>receipt.mjs</code>, <code>status.mjs</code>, <code>matrix.mjs</code>:</p>
+<p>| Level | Meaning | Producer | |---|---|---| | <code>E0</code> | run did not pass | any non-passed run | | <code>E1</code> | reserved; no current producer | — | | <code>E2</code> | run passed with a valid report and analysis | default passing run | | <code>E3</code> | <code>E2</code> + <code>--record</code> requested + report-typed capture present | recording-capable targets | | <code>E4</code> | complete matrix passed, every cell at its minimum level | <code>probierz matrix</code> verdict (<code>evidenceLevel: &quot;E4&quot;</code> only when passed) | | <code>E5</code> | label of the aggregated stability history projection | <code>probierz history</code> |</p>
+<p>Policies (<code>pullRequestPolicy</code>, <code>releasePolicy</code>, matrix <code>minimumCellEvidence</code>, receipt <code>--minimum</code>) accept <code>E2</code> or <code>E3</code>; a gate refuses anything else with <code>unsupported gate evidence level: &lt;value&gt;</code>. Capture support is driver-specific and a missing capability never upgrades a failed run — the level is computed from what was actually produced.</p>
+<h2>Hash binding</h2>
+<p>At completion, every file in the run directory is inventoried into <code>artifacts[]</code> with SHA-256 and byte size. Consumers re-hash rather than trust:</p>
+<ul><li>a gate re-hashes every artifact of every submitted run</li></ul>
+<p>(<code>&lt;runId&gt;: artifact hash mismatch: &lt;file&gt;</code>, <code>&lt;runId&gt;: artifact is missing: &lt;file&gt;</code>, <code>&lt;runId&gt;: artifact path escapes its run: &lt;file&gt;</code>);</p>
+<ul><li>a receipt re-hashes again at signing time and refuses stale expectations</li></ul>
+<p>(<code>expected harness source is stale relative to the current Probierz checkout</code>);</p>
+<ul><li>protection stores a content index hash inside the encrypted bundle and</li></ul>
+<p>refuses to reuse a bundle whose plaintext changed (<code>plaintext artifacts changed after the encrypted bundle was created</code>).</p>
+<h2>Protection, retention, scanning</h2>
+<ul><li><code>probierz protect &lt;appId&gt; &lt;runId&gt; [kind] --key-file &lt;f&gt;</code> encrypts the run</li></ul>
+<p>directory into one AES-256-GCM bundle <code>test-results/.protected/&lt;appId&gt;/&lt;kind&gt;/&lt;runId&gt;.pev</code> (file magic <code>PROBIERZ-EVIDENCE-1</code>), records <code>sha256</code>, <code>contentIndexSha256</code>, and <code>keyFingerprintSha256</code> in the run manifest, and runs a secret scan first. <code>--remove-source</code> deletes plaintext after the scan passes. <code>probierz restore &lt;bundle&gt; &lt;dir&gt; --key-file &lt;f&gt;</code> authenticates and unpacks into an empty directory only (<code>restore destination must be empty</code>); a wrong key is <code>artifact encryption key fingerprint mismatch</code>.</p>
+<ul><li><code>probierz retention &lt;appId&gt; [--at ISO] [--apply]</code> plans expiry from</li></ul>
+<p><code>artifacts.retain.*</code> (default 14 days when undeclared) and deletes expired plaintext runs and bundles only with <code>--apply</code>.</p>
+<ul><li><code>probierz secret-scan &lt;dir&gt;</code> applies the high-confidence rules in</li></ul>
+<p><code>agent/security.mjs</code> (private keys, AWS/GitHub/Slack tokens, JWTs, assigned secrets) without printing values — findings carry only rule, file, line, column, and a SHA-256 fingerprint of the match.</p>
+<h2>Reading evidence back</h2>
+<p><code>history</code>, <code>status</code>, <code>dashboard</code>, <code>compare</code>, <code>last-green</code> are projections over run manifests on disk — never alternate sources of truth. <code>history</code> splits failures into <code>product</code> vs <code>infrastructure</code> by matching failure text against <code>executable doesn&#x27;t exist|driver.*not installed|toolchain|connection refused|econnrefused</code>.</p>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="run.md">run</a></strong> — the record; the evidence item is its graded,</li></ul>
+<p>hash-bound content.</p>
+<ul><li><strong>A <a href="verdict.md">verdict</a></strong> — a decision computed over evidence items.</li><li><strong>A <a href="receipt.md">receipt</a></strong> — a signed, portable statement about evidence</li></ul>
+<p>items.</p></main></body></html>

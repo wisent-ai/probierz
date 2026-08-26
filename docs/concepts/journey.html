@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Journey — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/journey.md</p><h1>Journey</h1>
+<p>What unit does a gate actually protect? Not a test title — a journey: one named user behavior an <a href="application.md">application</a> declares, owns, and must keep proven.</p>
+<h2>What it is</h2>
+<p>An entry in the manifest&#x27;s <code>journeys</code> map:</p>
+<pre data-language="yaml"><code>journeys:
+  checkout:
+    owner: team-or-person     # required
+    timeoutMs: 60000          # required, positive</code></pre>
+<p>Surfaces claim journeys (<code>surfaces.&lt;target&gt;.journeys: [checkout]</code>), and file mappings translate changed paths into affected journeys (<code>repositories[].mappings[]</code>). A run covers the journeys of the surface it executed — recorded in the run manifest as <code>appManifest.journeys</code> — so journey coverage is derived from run records, never asserted separately.</p>
+<h2>Journey identity and publication</h2>
+<p>A journey that publishes first-use evidence (and <code>onboarding-first-use</code> always) must carry an immutable identity:</p>
+<p>| Field | Rule (from <code>agent/apps.mjs</code>) | |---|---| | <code>journeyId</code> | non-empty string | | <code>journeyVersion</code> | non-empty string | | <code>journeyVersionId</code> | UUID, refused otherwise: <code>journey &lt;name&gt; journeyVersionId must be a UUID</code> | | <code>firstSuccessFact</code> | non-empty string | | <code>publication.screenId</code> | non-empty string | | <code>publication.artifactKinds</code> | unique subset of <code>screenshot</code>, <code>recording</code>, <code>trace</code> | | <code>publication.minimumEvidence</code> | <code>E2</code> or <code>E3</code> | | <code>publication.redactionRequired</code> | boolean |</p>
+<p>A journey may claim <code>recording</code> only if at least one of its surfaces runs on a recording-capable target (<code>web</code>, <code>mobile:ios</code>, <code>mobile:android</code>, <code>desktop:mac</code>, <code>desktop:cua</code>, <code>desktop:win</code>); otherwise: <code>journey &lt;name&gt; claims recording but none of its drivers support recording</code>. <code>onboarding-first-use</code> additionally requires a <code>productId</code>, all three retention windows, and a redaction list including <code>TOKEN</code>, <code>SECRET</code>, <code>PASSWORD</code>, <code>KEY</code>, <code>COOKIE</code>, and <code>AUTH</code>. These identities are copied verbatim into signed receipts (<code>journeyIdentities</code> per run) and enforced at publication time — see <a href="receipt.md">receipt</a>.</p>
+<h2>Journey overrides</h2>
+<p>A surface may swap its journey list per run environment:</p>
+<pre data-language="yaml"><code>journeyOverrides:
+  - when: { PROBIERZ_LOCALE: pl }
+    journeys: [checkout-pl]</code></pre>
+<p>The first override whose <code>when</code> values all match the run&#x27;s conditions wins (<code>surfaceJourneys</code> in <code>agent/apps.mjs</code>); <code>when</code> keys must be non-sensitive scalars.</p>
+<h2>Lifecycle</h2>
+<ol><li><strong>Declared</strong> in the manifest with an owner and timeout.</li><li><strong>Covered</strong> when a run of a surface claiming it completes; the newest run</li></ol>
+<p>per journey is what <a href="../cli-evidence.md">status</a> reports.</p>
+<ol><li><strong>Affected</strong> when a changed file matches a mapping naming it; only</li></ol>
+<p>affected journeys are evaluated for merge eligibility.</p>
+<ol><li><strong>Stale</strong> when its latest evidence&#x27;s recorded <code>gitSha</code> no longer equals</li></ol>
+<p>the current HEAD of every declared repository — reported as <code>&quot;&lt;journey&gt;: evidence is older than HEAD&quot;</code>.</p>
+<ol><li><strong>Untested</strong> when no run covers it at all: <code>&quot;&lt;journey&gt;: no runs recorded&quot;</code>.</li></ol>
+<h2>Invariants</h2>
+<ul><li>Every journey named by a surface, override, policy, or matrix must exist in</li></ul>
+<p><code>journeys</code>; unknown names are load-time refusals (<code>surface &lt;t&gt; journey &lt;j&gt; is unknown</code>, <code>&lt;policy&gt; journey &lt;j&gt; is unknown</code>).</p>
+<ul><li>Journey stability is a projection: <code>probierz history</code> aggregates per-journey</li></ul>
+<p>pass rate and latest run from run manifests on disk; there is no separate journey database.</p>
+<ul><li>A gate&#x27;s <code>requiredJourneys</code> fails with <code>required journey is missing: &lt;j&gt;</code></li></ul>
+<p>when no submitted run covers it; a receipt fails with <code>missing journey: &lt;j&gt;</code>.</p>
+<h2>Commands</h2>
+<pre data-language="bash"><code>probierz status &lt;appId&gt; --text        # per-journey coverage + freshness (currently blocked on this checkout, see limitations)
+probierz history &lt;appId&gt;              # journeys[] stability block
+probierz last-green &lt;appId&gt; [target] [journey]</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A spec</strong> — the file that drives a surface; several journeys can live in</li></ul>
+<p>one spec, and one journey can be proven on several surfaces.</p>
+<ul><li><strong>A test title</strong> — a row inside a report; journeys are declared in the</li></ul>
+<p>manifest, not discovered from titles.</p>
+<ul><li><strong>A <a href="run.md">run</a></strong> — one execution instance; the journey is what the run</li></ul>
+<p>is evidence *of*.</p></main></body></html>

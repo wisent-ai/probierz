@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gate — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/gate.md</p><h1>Gate</h1>
+<p>Who decides whether evidence is good enough to merge or release — and what stops that decision from being quietly weakened? A gate: a deterministic evaluation bound to exact source identity, with an activation state that fails closed until it has been green once.</p>
+<h2>What it is</h2>
+<p>Per application, two modes — <code>pull-request</code> and <code>release</code> — each with an enforcement state persisted in <code>gates.json</code> beside the manifest:</p>
+<pre data-language="json"><code>{
+  &quot;schemaVersion&quot;: 2,
+  &quot;appId&quot;: &quot;docs-demo&quot;,
+  &quot;modes&quot;: {
+    &quot;pull-request&quot;: { &quot;enforcement&quot;: &quot;pending-green&quot; },
+    &quot;release&quot;:      { &quot;enforcement&quot;: &quot;pending-green&quot; }
+  }
+}</code></pre>
+<p>Until the file exists, <code>gate-status</code> reports this default with <code>&quot;exists&quot;: false</code>. The policy a gate enforces comes from the manifest (<code>pullRequestPolicy</code> / <code>releasePolicy</code>): <code>minimumEvidence</code> (default <code>E3</code> when a policy exists but is silent), <code>requiredTargets</code>, <code>requiredJourneys</code>, <code>requiredMatrixProfile</code>, <code>requireProtectedArtifacts</code>, <code>requireSecretScan</code>.</p>
+<h2>What an evaluation checks</h2>
+<p><code>gate-evaluate &lt;appId&gt; &lt;mode&gt; &lt;harnessSha256&gt; --source-sha SHA --runs ids</code> checks, for every submitted run: passed status, complete harness and app source identity matching the expected values, exact build hash, evidence level at or above the minimum, artifact re-hash (or encrypted-bundle re-hash when protected), run <code>kind</code> equal to the gate mode, and — release mode — the <code>PROBIERZ_RELEASE</code> condition. Across runs: one exact app source, one build per target, required targets/journeys present, required matrix fully covered with no extra runs. Release mode additionally requires a signed <a href="receipt.md">receipt</a> that agrees with the local evidence byte-for-byte (<code>canonical(signed) === canonical(local)</code>). The result is a <a href="verdict.md">verdict</a>; the full error vocabulary is listed there.</p>
+<h2>Lifecycle: pending-green → required</h2>
+<pre data-language=""><code>pending-green ──gate-activate (fully green evaluation)──▶ required
+      │                                                      │
+      └── gate-enforce: fails closed with                    └── gate-enforce:
+          &quot;gate is pending green activation&quot;                     re-evaluates current evidence</code></pre>
+<ul><li><code>gate-activate</code> runs a full evaluation and refuses on any error:</li></ul>
+<p><code>gate activation refused: &lt;error&gt;; &lt;error&gt;…</code> with error code <code>PROBIERZ_GATE_NOT_GREEN</code>. On success it atomically writes <code>enforcement: &quot;required&quot;</code> plus the activation evidence — expected identities, run IDs, builds, and receipt fingerprint (captured example in the <a href="../walkthrough-gate-and-receipt.md">walkthrough</a>).</p>
+<ul><li><code>gate-enforce</code> on a <code>pending-green</code> mode returns</li></ul>
+<p><code>{&quot;passed&quot;: false, &quot;errors&quot;: [&quot;gate is pending green activation&quot;]}</code> and exit 1 without evaluating anything — fail closed. Once <code>required</code>, it re-evaluates.</p>
+<p>Every evaluate/enforce/activate appends an integrity-checked audit record (<code>gate.evaluate</code> / <code>gate.enforce</code> / <code>gate.activate</code>, outcome <code>allowed</code>/<code>denied</code>) under <code>test-results/.audit/</code> — see <code>probierz audit</code>.</p>
+<h2>The pre-push gate</h2>
+<p><code>gate-install &lt;appId&gt; [--repo path]</code> writes a managed <code>pre-push</code> hook (marker <code># managed-by: probierz-prepush-gate</code>; an existing foreign hook is backed up as <code>pre-push.before-probierz-gate</code> and chained first). On a push to <code>main</code>/<code>master</code> the hook runs <code>agent/prepush-gate.mjs --hook --app &lt;appId&gt; --ci</code> (evaluate-only when <code>PROBIERZ_GATE_NO_CI=1</code>), which:</p>
+<ol><li>resolves the app (explicit <code>--app</code>, else the repo must match a manifest:</li></ol>
+<p><code>no probierz app manifest matches &lt;repo&gt;</code>);</p>
+<ol><li>resolves the base (`cannot resolve a merge base with origin/main; fetch</li></ol>
+<p>first or pass --base`);</p>
+<ol><li>maps the push diff to affected journeys — none means</li></ol>
+<p><code>{&quot;ok&quot;: true, &quot;note&quot;: &quot;no affected journeys&quot;}</code>;</p>
+<ol><li>optionally runs <code>probierz ci &lt;base&gt;</code> (<code>probierz ci failed (exit &lt;n&gt;)</code>);</li><li>picks the newest passing run per affected journey (none:</li></ol>
+<p><code>no passing runs recorded for the affected journeys; run &#x27;probierz ci &lt;base&gt;&#x27; (or re-run with --ci) before pushing</code>);</p>
+<ol><li>evaluates the pull-request gate against the exact <strong>current</strong> harness and</li></ol>
+<p>app identity and blocks with the verdict&#x27;s reasons (exit 1).</p>
+<p><code>gate-prepush</code> runs the same pass manually; <code>probierz status &lt;appId&gt;</code> shows the same eligibility without pushing. Note: steps that map the diff walk the whole app registry, so one invalid registered manifest blocks the hook — see <a href="../limitations.md">limitations</a>.</p>
+<h2>Invariants</h2>
+<ul><li>No model, human note, or environment variable can override a gate error;</li></ul>
+<p>the only way through is different evidence.</p>
+<ul><li>Gates only accept runs whose <code>kind</code> matches the mode — an <code>adhoc</code> rerun</li></ul>
+<p>can never satisfy a pull-request gate (<code>&lt;runId&gt;: run kind adhoc is not pull-request</code>, captured).</p>
+<ul><li>Activation is one-way in the data model: the code path only ever writes</li></ul>
+<p><code>required</code>; loosening means editing managed state by hand, which the audit trail would show.</p>
+<h2>Commands</h2>
+<pre data-language="bash"><code>probierz gate-status &lt;appId&gt;
+probierz gate-evaluate &lt;appId&gt; pull-request &lt;harnessSha&gt; --source-sha &lt;sha&gt; --runs id1,id2
+probierz gate-activate &lt;appId&gt; pull-request &lt;harnessSha&gt; --source-sha &lt;sha&gt; --runs ids
+probierz gate-enforce  &lt;appId&gt; pull-request &lt;harnessSha&gt; --source-sha &lt;sha&gt; --runs ids
+probierz gate-install  &lt;appId&gt; --repo /path/to/product
+probierz gate-prepush  --repo /path/to/product --app &lt;appId&gt; [--base ref] [--ci]</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="verdict.md">verdict</a></strong> — one evaluation&#x27;s output; the gate also owns</li></ul>
+<p>activation state across evaluations.</p>
+<ul><li><strong>A <a href="receipt.md">receipt</a></strong> — evidence the release gate consumes; signing</li></ul>
+<p>a receipt does not open any gate.</p>
+<ul><li><strong>Preflight</strong> — readiness of a toolchain before a run; a gate judges</li></ul>
+<p>recorded evidence after runs.</p></main></body></html>

@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Application — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/application.md</p><h1>Application</h1>
+<p>How does Probierz know what a product is supposed to prove? Not from its test files — from one declared manifest per product. An application is a registration: <code>apps/&lt;appId&gt;/probierz.yaml</code>, validated in full on every load.</p>
+<h2>What it is</h2>
+<p>A YAML document (schema version 1) naming the product&#x27;s repositories, the surfaces it is tested on, the journeys each surface covers, the file→journey mappings that drive change selection, and the policies gates enforce. The manifest is the only place intended coverage lives; <code>status</code>, <code>affected</code>, <code>ci</code>, the pre-push gate, and receipts all read it, never a hidden default.</p>
+<h2>Fields</h2>
+<p>Required (<code>agent/apps.mjs</code> <code>validateManifest</code>):</p>
+<p>| Field | Rule | |---|---| | <code>schemaVersion</code> | must be <code>1</code> | | <code>appId</code> | must match the directory name; <code>loadAppManifest</code> refuses <code>app manifest ID mismatch: expected &lt;a&gt;, got &lt;b&gt;</code> | | <code>owner</code> | non-empty string | | <code>repositories[]</code> | at least one; each <code>root</code> must be an absolute path, each entry must carry <code>mappings</code> | | <code>surfaces</code> | one entry per run target; each needs <code>spec</code> and a non-empty <code>journeys</code> list naming declared journeys | | <code>journeys</code> | every journey needs an <code>owner</code> and positive <code>timeoutMs</code> |</p>
+<p>Optional blocks: <code>productId</code>, <code>secretRefs</code> (every value must start <code>vault://</code>), <code>data.seed</code>/<code>data.cleanup</code> hooks, <code>artifacts.retain.*</code> (positive day counts), <code>artifacts.redact</code>, <code>artifacts.pii</code>, <code>matrix.&lt;profile&gt;</code>, <code>pullRequestPolicy</code> / <code>releasePolicy</code>, <code>seo</code>. Per-surface options: <code>conditions</code> (no sensitive key names — those must go through <code>secretRefs</code>), <code>env</code> renames, <code>journeyOverrides</code> (<code>when</code> must be non-empty, scalar, non-sensitive). The complete schema walk-through with an example manifest is in <a href="../applications.md">applications</a>.</p>
+<h2>Lifecycle</h2>
+<ol><li><strong>Registered</strong> the moment a valid <code>apps/&lt;appId&gt;/probierz.yaml</code> exists.</li></ol>
+<p>There is no separate register command; <code>probierz author-manifest</code> can draft one, but the file is the registration.</p>
+<ol><li><strong>Loaded and validated on every read.</strong> Validation failures are hard</li></ol>
+<p>errors, not partial registrations. <code>probierz app &lt;appId&gt;</code> prints the validated document plus its <code>file</code> path.</p>
+<ol><li><strong>Extended</strong> by <code>gates.json</code> written beside it by <code>gate-activate</code> —</li></ol>
+<p>managed state, not hand-edited (see <a href="gate.md">gate</a>).</p>
+<ol><li><strong>Deregistered</strong> by deleting the directory. Runs already recorded under</li></ol>
+<p><code>test-results/&lt;appId&gt;/</code> remain readable by ID.</p>
+<h2>Invariants</h2>
+<ul><li>One invalid registered manifest fails every registry-wide command:</li></ul>
+<p><code>listApps()</code> validates all manifests, so <code>apps</code>, <code>status</code>, <code>overview</code>, <code>affected</code>, <code>ci</code>, and <code>gate-prepush</code> refuse until it is fixed. Observed on this checkout — see <a href="../limitations.md">limitations</a>.</p>
+<ul><li>App IDs match <code>/^[a-z0-9][a-z0-9._-]*$/i</code>; anything else is</li></ul>
+<p><code>invalid app ID: &lt;value&gt;</code>.</p>
+<ul><li>A journey that publishes (or is named <code>onboarding-first-use</code>) must carry</li></ul>
+<p>immutable identity: <code>journeyId</code>, <code>journeyVersion</code>, UUID <code>journeyVersionId</code>, <code>firstSuccessFact</code> — see <a href="journey.md">journey</a>.</p>
+<ul><li>Secrets never enter a manifest: sensitive-named <code>conditions</code> keys are</li></ul>
+<p>refused with <code>secret condition &lt;key&gt; must use secretRefs</code>.</p>
+<h2>Exact refusal sentences</h2>
+<p>All prefixed <code>invalid app manifest: &lt;file&gt; …</code>:</p>
+<pre data-language=""><code>… is not an object
+… schemaVersion must be 1
+… appId is required
+… owner is required
+… repositories are required
+… repository root must be absolute
+… repository mappings are required
+… surfaces are required
+… surface &lt;t&gt; spec is required
+… surface &lt;t&gt; journeys are required
+… surface &lt;t&gt; journey &lt;j&gt; is unknown
+… secret condition &lt;key&gt; must use secretRefs
+… journeys are required
+… journey &lt;j&gt; owner is required
+… journey &lt;j&gt; timeoutMs must be positive
+… secretRefs.&lt;key&gt; must be a vault:// reference
+… matrix.&lt;p&gt; target &lt;t&gt; has no surface
+… &lt;policy&gt;.minimumEvidence must be E2 or E3
+… &lt;policy&gt; target &lt;t&gt; has no surface
+… &lt;policy&gt; journey &lt;j&gt; is unknown</code></pre>
+<p>Plus <code>app manifest not found: &lt;path&gt;</code> when the file is absent.</p>
+<h2>Commands</h2>
+<pre data-language="bash"><code>probierz apps                # all registered applications (fails closed on any invalid manifest)
+probierz app &lt;appId&gt;         # one validated manifest
+probierz source-identity &lt;appId&gt;
+probierz accessibility &lt;appId&gt;</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="journey.md">journey</a></strong> — one behavior the application declares;</li></ul>
+<p>the application is the container and policy holder.</p>
+<ul><li><strong>A surface</strong> — one target the application is tested on (<code>web</code>,</li></ul>
+<p><code>tui</code>, <code>mobile:ios</code>, …); an application usually has several.</p>
+<ul><li><strong>The harness</strong> — Probierz itself. Both identities are recorded per</li></ul>
+<p><a href="run.md">run</a>, separately.</p></main></body></html>

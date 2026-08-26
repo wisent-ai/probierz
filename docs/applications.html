@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Application manifests — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/applications.md</p><h1>Application manifests</h1>
+<p>An application is registered by one YAML manifest at <code>apps/&lt;appId&gt;/probierz.yaml</code>. The manifest is validated on every load; an invalid manifest is an error, not a partial registration. <code>probierz apps</code> lists all registered applications, <code>probierz app &lt;appId&gt;</code> prints one validated manifest.</p>
+<h2>Required shape</h2>
+<pre data-language="yaml"><code>schemaVersion: 1
+appId: my-app            # must match the directory name
+owner: team-or-person
+repositories:
+  - root: /absolute/path/to/repo
+    mappings:
+      - paths: [&quot;src/**&quot;, &quot;package.json&quot;]   # glob patterns, repo-relative
+        journeys: [checkout, onboarding]    # journeys those files affect
+surfaces:
+  web:
+    spec: my-app.e2e.ts        # the spec file the target runs
+    journeys: [checkout]       # must name declared journeys
+journeys:
+  checkout:
+    owner: team-or-person
+    timeoutMs: 60000</code></pre>
+<ul><li><code>repositories[]</code> — every source repository, with absolute <code>root</code> paths and</li></ul>
+<p><code>mappings</code> that translate changed files into affected journeys. These mappings drive <code>probierz affected</code>, <code>probierz status</code>, <code>probierz ci</code>, and the pre-push gate.</p>
+<ul><li><code>surfaces</code> — one entry per run target (<code>web</code>, <code>electron</code>, <code>mobile:ios</code>,</li></ul>
+<p><code>mobile:android</code>, <code>desktop:mac</code>, <code>desktop:cua</code>, <code>desktop:win</code>, <code>tui</code>). Each declares its <code>spec</code> and its <code>journeys</code>. Optional keys:</p>
+<ul><li><code>conditions</code> — default environment for the target; keys with sensitive</li></ul>
+<p>names (token/secret/password/…) are rejected — secrets go through <code>secretRefs</code>.</p>
+<ul><li><code>env</code> — a <code>{TARGET_NAME: SOURCE_NAME}</code> map that forwards an existing</li></ul>
+<p>variable under the name the suite expects.</p>
+<ul><li><code>journeyOverrides</code> — <code>[{when: {VAR: value}, journeys: [...]}]</code>; the</li></ul>
+<p>first override whose <code>when</code> conditions all match the run environment replaces the journey list for that run.</p>
+<ul><li><code>journeys</code> — every journey with an <code>owner</code> and a positive <code>timeoutMs</code>.</li></ul>
+<h2>Optional blocks</h2>
+<ul><li><code>productId</code> — the stable central product identifier; required when any</li></ul>
+<p>journey carries publication identity.</p>
+<ul><li><code>secretRefs</code> — named secret references; every value must be a <code>vault://</code></li></ul>
+<p>reference. At run time a matching process environment variable is forwarded to the suite; the manifest never holds a secret value.</p>
+<ul><li><code>data.seed</code> / <code>data.cleanup</code> — <code>{command, args[]}</code> hooks executed around a</li></ul>
+<p>run to prepare and clean test data.</p>
+<ul><li><code>artifacts.retain.{pullRequestDays,nightlyDays,adhocDays}</code> — positive</li></ul>
+<p>retention windows per run kind; <code>artifacts.redact</code> — the key names whose values must be redacted from persisted evidence; <code>artifacts.pii</code> — a declared PII stance recorded into receipts.</p>
+<ul><li><code>matrix.&lt;profile&gt;</code> — declared condition matrices (typically <code>nightly</code> and</li></ul>
+<p><code>release</code>): <code>targets</code> (must have surfaces), scalar <code>dimensions</code>, <code>minimumCellEvidence</code> (<code>E2</code>/<code>E3</code>, default <code>E3</code>), <code>artifactEncryption</code> (<code>optional</code>/<code>required</code>), <code>removePlaintextAfterProtection</code>, <code>maxCells</code> (default 128), <code>maximumParallel</code> (default 4). See <a href="evidence-model.md#matrix-evidence-e4">evidence-model</a>.</p>
+<ul><li><code>pullRequestPolicy</code> / <code>releasePolicy</code> — what a gate enforces:</li></ul>
+<p><code>minimumEvidence</code> (<code>E2</code>/<code>E3</code>), <code>requiredTargets</code>, <code>requiredJourneys</code>, <code>requiredMatrixProfile</code>, <code>requireProtectedArtifacts</code>, <code>requireSecretScan</code>. See <a href="gates-and-receipts.md">gates-and-receipts</a>.</p>
+<ul><li><code>seo</code> — <code>policy</code> and <code>brief</code> file paths plus per-profile settings</li></ul>
+<p>(<code>pull-request</code>, <code>release</code>, <code>nightly</code>, <code>production</code>), each declaring <code>requireSignature</code> and <code>requireProductionEvidence</code>. See <a href="evaluators.md#seo-evaluation">evaluators</a>.</p>
+<h2>Journey identity and publication</h2>
+<p>A journey that publishes first-use evidence (and the <code>onboarding-first-use</code> journey always) must carry an immutable identity: <code>journeyId</code>, <code>journeyVersion</code>, a UUID <code>journeyVersionId</code>, and <code>firstSuccessFact</code>. Its <code>publication</code> block names the stable <code>screenId</code>, the allowed <code>artifactKinds</code> (<code>screenshot</code>, <code>recording</code>, <code>trace</code>), <code>minimumEvidence</code> (<code>E2</code>/<code>E3</code>), and whether <code>redactionRequired</code> is true. A journey may claim a <code>recording</code> kind only if at least one of its surfaces runs on a recording-capable target (<code>web</code>, <code>mobile:ios</code>, <code>mobile:android</code>, <code>desktop:mac</code>, <code>desktop:cua</code>, <code>desktop:win</code>). <code>onboarding-first-use</code> additionally requires <code>productId</code>, all three retention windows, and a redaction key list including <code>TOKEN</code>, <code>SECRET</code>, <code>PASSWORD</code>, <code>KEY</code>, <code>COOKIE</code>, and <code>AUTH</code>.</p>
+<h2>Gate state</h2>
+<p><code>gates.json</code>, written beside <code>probierz.yaml</code> by <code>probierz gate-activate</code>, holds the per-mode enforcement state (<a href="gates-and-receipts.md#gate-lifecycle-pending-green-activate-enforce">gates-and-receipts</a>). It is managed by Probierz, not hand-edited.</p>
+<h2>Authoring</h2>
+<p><code>probierz author-manifest</code> drafts a manifest through the authenticated Stado model router; the draft must pass this same validation, and journeys are only accepted with real verifying runs (<code>probierz author-spec</code>). A generated artifact is never trusted merely because a model produced it.</p></main></body></html>

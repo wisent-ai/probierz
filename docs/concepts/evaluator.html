@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Evaluator — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/evaluator.md</p><h1>Evaluator</h1>
+<p>Journeys prove behavior; some release questions — &quot;is this figure faithful?&quot;, &quot;will this page survive search?&quot; — need judgment. An evaluator is Probierz&#x27;s bounded answer: deterministic facts first, pinned models only through the authenticated Stado router, and no model verdict that can reinterpret a deterministic blocker.</p>
+<h2>What it is</h2>
+<p>A command that renders or crawls real inputs, computes deterministic facts, optionally obtains structured scores from pinned models, and emits one report with a pass/fail verdict and a complete blocker list. Two ship today, plus one bounded publisher:</p>
+<p>| Evaluator | Command | Facts | Models | |---|---|---|---| | Figure | <code>probierz figure-evaluate</code> | ImageMagick renders, dimensions, content bounds, margins, aspect drift | one vision model, structured rubric verdict | | SEO | <code>probierz seo-evaluate</code> | crawl (Chrome + Googlebot Smartphone UAs), robots, redirects, canonicals, indexability, metadata, hreflang, links, duplicates, JSON-LD, social images, throttled mobile lab | two independent pinned graders at temperature 0 + pinned adjudicator on divergence | | README GIF | <code>probierz readme-gif</code> | ffmpeg render, bounded duration/fps/width, SHA-256 provenance sidecar | none |</p>
+<h2>The router boundary</h2>
+<p>Evaluators never hold provider credentials. Model access goes through the Stado model router only (<code>agent/model-router.mjs</code>):</p>
+<ul><li><code>STADO_MODEL_ROUTER_URL</code> must be HTTPS or loopback HTTP, with no</li></ul>
+<p>credentials, query, or fragment — refusals: <code>STADO_MODEL_ROUTER_URL is required</code>, <code>… must be a valid URL</code>, <code>… must not contain credentials, query parameters, or a fragment</code>, <code>… must use HTTPS or loopback HTTP</code>;</p>
+<ul><li><code>STADO_MODEL_ROUTER_TOKEN</code> is a router-scoped bearer</li></ul>
+<p>(<code>… must not contain whitespace</code>), optionally delivered on stdin via <code>--router-token-stdin</code> so it never enters <code>argv</code>;</p>
+<ul><li><code>PROBIERZ_MODEL_AGENT_ID</code> / <code>PROBIERZ_MODEL_AGENT_SECRET</code> are the agent</li></ul>
+<p>identity headers;</p>
+<ul><li>a router response must contain exactly one expected tool call</li></ul>
+<p>(<code>Stado model router response must contain exactly one &lt;tool&gt; tool call</code>), with parseable, non-empty content — anything else is an error, never a silent fallback.</p>
+<p>Manifest authoring (<code>author-manifest</code>) drafts through this same router boundary; spec authoring (<code>author-spec</code>) drafts through a local coding-agent binary (<code>codex</code>) instead — see <a href="../cli-authoring-remote.md">cli-authoring-remote</a>. Either way a drafted artifact must pass the same manifest validation and is accepted only with a real verifying run.</p>
+<h2>Verdict discipline</h2>
+<ul><li>Exit status is 0 only when the evaluator&#x27;s own verdict passes</li></ul>
+<p>(<code>result.verdict.pass</code> for figures, <code>result.pass</code> for SEO — <code>agent/cli.mjs</code>).</p>
+<ul><li>Deterministic blockers are never model-overridable: a candidate figure</li></ul>
+<p>that does not render is the blocking verdict <code>candidate_render_failed</code> with the renderer&#x27;s error as evidence; crawl, indexability, structured-data, and performance facts stand regardless of content scores.</p>
+<ul><li>Text inside evaluated inputs is untrusted: it cannot redefine the rubric,</li></ul>
+<p>suppress blockers, or reach a provider.</p>
+<ul><li>Reports record input and render hashes, exact model identities, request</li></ul>
+<p>and rubric hashes, and the complete blocker list; existing evidence files are never overwritten. The SEO report is Ed25519-signed with the receipt contract and checked by <code>verify-receipt</code>.</p>
+<h2>Where results live</h2>
+<ul><li>Figures: the <code>--out</code> report plus two immutable PNG renders beside it.</li><li>SEO: <code>test-results/seo/</code> — report, source and rendered HTML, robots and</li></ul>
+<p>sitemap bodies, screenshots, performance facts, signature.</p>
+<ul><li>GIFs: the <code>--out</code> GIF plus <code>&lt;out&gt;.gif.probierz.json</code> provenance sidecar</li></ul>
+<p>marked <code>reviewRequired</code> (conversion does not prove the clip is free of credentials or personal data).</p>
+<p>Full flag tables, rubric rules, model-selection env vars, and the production-evidence contract: <a href="../evaluators.md">evaluators</a>.</p>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="journey.md">journey</a> run</strong> — executes the product; an evaluator</li></ul>
+<p>judges artifacts and pages, and produces its own signed evidence.</p>
+<ul><li><strong>A <a href="gate.md">gate</a></strong> — consumes recorded evidence; evaluators produce</li></ul>
+<p>it.</p>
+<ul><li><strong>Authoring</strong> — drafts specs and manifests through the same router</li></ul>
+<p>boundary, but its output is code that must then earn evidence, not evidence itself.</p></main></body></html>

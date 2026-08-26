@@ -1,0 +1,182 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>MCP server reference — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/mcp.md</p><h1>MCP server reference</h1>
+<p><code>probierz-mcp</code> (source entry point <code>agent/mcp.mjs</code>; <code>npm install</code> links the bin) exposes the same agent modules the CLI uses as a stdio MCP server. This page is the complete tool reference; the underlying contracts are the CLI&#x27;s and are documented in <a href="cli.md">cli</a>, <a href="evidence-model.md">evidence-model</a>, <a href="gates-and-receipts.md">gates-and-receipts</a>, and <a href="evaluators.md">evaluators</a>.</p>
+<h2>Protocol</h2>
+<p>Newline-delimited JSON-RPC 2.0: UTF-8 requests on stdin, exactly one response line per request on stdout, diagnostics on stderr. Four methods are served: <code>initialize</code>, <code>ping</code>, <code>tools/list</code>, and <code>tools/call</code>. No resources or prompts are registered. Captured <code>initialize</code> answer (this checkout):</p>
+<pre data-language="json"><code>{ &quot;protocolVersion&quot;: &quot;2024-11-05&quot;,
+  &quot;capabilities&quot;: { &quot;tools&quot;: {} },
+  &quot;serverInfo&quot;: { &quot;name&quot;: &quot;probierz&quot;, &quot;version&quot;: &quot;0.1.0&quot; } }</code></pre>
+<ul><li>Every tool result is one <code>content</code> entry of type <code>text</code> holding</li></ul>
+<p>pretty-printed JSON — the same document the CLI would print.</p>
+<ul><li>Errors: <code>-32700</code> unparseable line, <code>-32601</code> unknown method or tool</li></ul>
+<p>(captured: <code>unknown tool: probierz_nope</code>), <code>-32000</code> any handler failure with the thrown message (captured: <code>unknown runId: nope</code>).</p>
+<ul><li><code>tools/list</code> serves 44 tools; every schema below is taken verbatim from</li></ul>
+<p>that answer on this checkout.</p>
+<ul><li>The <code>probierz_run</code>/<code>probierz_check</code>/<code>probierz_setup</code> description strings</li></ul>
+<p>enumerate six targets, but the handlers accept the full <code>TARGETS</code> map in <code>agent/runner.mjs</code>: <code>web</code>, <code>electron</code>, <code>mobile:ios</code>, <code>mobile:ios:byk-auth</code>, <code>mobile:android</code>, <code>desktop:mac</code>, <code>desktop:win</code>, <code>desktop:cua</code>, <code>tui</code>.</p>
+<h2>The asynchronous run queue</h2>
+<p>Six tools drive the in-process run queue in <code>agent/control.mjs</code> — the full lifecycle semantics are in <a href="concepts/run.md#asynchronous-runs">concepts/run</a>. Captured session (demo app, this checkout):</p>
+<pre data-language=""><code>probierz_start_run {&quot;target&quot;:&quot;tui&quot;,&quot;appId&quot;:&quot;docs-demo&quot;}
+  → { &quot;runId&quot;: &quot;2026-08-24T22-38-06-656Z-104d5be2-…&quot;, &quot;status&quot;: &quot;queued&quot;, … }
+probierz_run_status (immediately)          → &quot;status&quot;: &quot;running&quot;
+probierz_run_status (after 0.5 s)          → &quot;status&quot;: &quot;passed&quot;,
+    &quot;artifactsDir&quot;: &quot;…/test-results/docs-demo/tui/2026-08-24/2026-08-24T22-38-06-656Z-…&quot;
+probierz_list_artifacts                    → 8 files (analysis.json, diagnostics.json,
+    performance.json, report.json, run-manifest.json, stderr.log, stdout.log, timeline.json)
+probierz_get_artifact {&quot;file&quot;:&quot;report.json&quot;} → base64, 513 bytes; the report
+    carries the run&#x27;s own ID under report.probierz.runId
+probierz_cancel_run (settled job)          → &quot;cancelRequested&quot;: false
+probierz_cancel_run (running job)          → &quot;cancelRequested&quot;: true; the job
+    settles as &quot;status&quot;: &quot;canceled&quot; with no error
+probierz_get_artifact {&quot;file&quot;:&quot;../../secrets&quot;} → error -32000
+    &quot;artifact path escapes the run directory&quot;</code></pre>
+<p>Queue facts (<code>agent/control.mjs</code>):</p>
+<ul><li><code>startRun</code> refuses a missing target with `target must be a non-empty</li></ul>
+<p>string<code>, assigns </code>runId<code> (timestamp + UUID), and executes the same </code>runSurface<code> → </code>analyzeRun<code> → </code>completeRun<code> path as </code>probierz run`.</p>
+<ul><li>Job states: <code>queued</code> → <code>running</code> → <code>passed</code> | <code>failed</code> | <code>blocked</code> |</li></ul>
+<p><code>canceled</code>. A preflight-refused run settles as <code>blocked</code>.</p>
+<ul><li>The job table is an in-process <code>Map</code>; it does not survive a server restart</li></ul>
+<p>(run directories on disk do), and every artifact read is audited (<code>artifact.list</code> / <code>artifact.read</code>, denied reads included).</p>
+<ul><li><code>probierz_get_artifact</code> is bounded to 5 MiB</li></ul>
+<p>(<code>artifact exceeds 5242880 byte inline limit</code>) and refuses non-files (<code>artifact is not a file: &lt;file&gt;</code>) and traversal (<code>artifact path escapes the run directory</code>).</p>
+<h2>Execution note</h2>
+<p>Read-only tools, the async queue, and <code>probierz_verify_receipt</code> were exercised live for this page. The heavy local tools (<code>probierz_setup</code>, <code>probierz_run_matrix</code>, <code>probierz_protect_run</code>, …) share their contracts with the CLI commands documented in <a href="cli.md">cli</a> and siblings; the authoring, evaluator, and <code>probierz_stado_*</code> tools additionally need the Stado queue or the authenticated model router and were not executed here — their entries below are schema-grounded only.</p>
+<h2>Discovery (read-only)</h2>
+<h3><code>probierz_list_surfaces</code></h3>
+<p>List the cross-platform test surfaces (web, electron, mobile, desktop-native): tool, npm script, targets, and relevant env vars.</p>
+<p>No arguments.</p>
+<h3><code>probierz_list_specs</code></h3>
+<p>Discover e2e/spec files on disk; optional surface narrows to one (web|electron|mobile|desktop-native).</p>
+<ul><li><code>surface</code> (string, optional) — Optional surface filter.</li></ul>
+<h3><code>probierz_describe_spec</code></h3>
+<p>Static outline of a spec (describe/it/test titles in file order) by its path under the probierz root. Does not execute anything.</p>
+<ul><li><code>spec</code> (string, required) — Spec path, e.g. packages/mobile/test/specs/byk.e2e.ts</li></ul>
+<h3><code>probierz_run_command</code></h3>
+<p>Return the exact shell command to run a target yourself (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win). Read-only: probierz never runs it.</p>
+<ul><li><code>target</code> (string, required) — One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win.</li></ul>
+<h3><code>probierz_check</code></h3>
+<p>Preflight a target&#x27;s toolchain WITHOUT running anything: reports whether it is ready and, for each missing piece, exactly how to fix it -- <code>probierz setup &lt;target&gt;</code> for parts probierz owns (Playwright browsers, Appium drivers) or a host install command for the rest (Xcode, Android SDK, simulators, WinAppDriver). Read-only.</p>
+<ul><li><code>target</code> (string, required) — One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win.</li></ul>
+<h3><code>probierz_affected</code></h3>
+<p>Given a change, report which run targets it could affect, so you re-run only what is relevant. Deterministic + structural (maps files to targets by package containment; agent/ or repo-root files are cross-cutting -&gt; all targets). Provide <code>files</code> explicitly, or omit to diff the working tree against <code>ref</code> (default HEAD) via git. Read-only.</p>
+<ul><li><code>files</code> (array of string, optional) — Changed file paths (repo-relative). If given, git is not consulted.</li><li><code>ref</code> (string, optional) — git ref to diff the working tree against when <code>files</code> is omitted (default HEAD).</li></ul>
+<h3><code>probierz_source_identity</code></h3>
+<p>Compute exact path-independent harness and app source SHA-256 identities.</p>
+<ul><li><code>appId</code> (string, required)</li></ul>
+<h3><code>probierz_history</code></h3>
+<p>Read deterministic E5 stability history: pass rate, infrastructure failures, duration trend, flaky tests, journeys, latest run, and last green.</p>
+<ul><li><code>appId</code> (string, optional) — Product identifier (default probierz).</li><li><code>target</code> (string, optional) — Optional target filter.</li><li><code>limit</code> (number, optional) — Maximum recent runs (default 50).</li></ul>
+<h3><code>probierz_dashboard</code></h3>
+<p>Project evidence for product → version → journey → surface → device → result → artifact dashboard navigation.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>limit</code> (number, optional) — Maximum recent runs (default 500).</li></ul>
+<h3><code>probierz_matrix_plan</code></h3>
+<p>Read the deterministic nightly or release matrix without executing it.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>profile</code> (string, required) — nightly or release</li></ul>
+<h3><code>probierz_status</code></h3>
+<p>Journey coverage, evidence freshness vs HEAD, untested surfaces, and pull-request merge eligibility for an app.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>baseRef</code> (string, optional) — Default origin/main.</li></ul>
+<h3><code>probierz_gate_status</code></h3>
+<p>Read pull-request and release gate activation state.</p>
+<ul><li><code>appId</code> (string, required)</li></ul>
+<h3><code>probierz_audit</code></h3>
+<p>Read and integrity-check access audit records, optionally filtered by app, run, or action.</p>
+<ul><li><code>appId</code> (string, optional)</li><li><code>runId</code> (string, optional)</li><li><code>action</code> (string, optional)</li><li><code>limit</code> (number, optional)</li></ul>
+<h3><code>probierz_secret_scan</code></h3>
+<p>Scan a plaintext artifact directory for high-confidence secrets without returning secret values.</p>
+<ul><li><code>directory</code> (string, required)</li></ul>
+<h3><code>probierz_compare_runs</code></h3>
+<p>Deterministically compare status, duration, tests, evidence, build identity, and artifact hashes between two run IDs.</p>
+<ul><li><code>appId</code> (string, optional) — Product identifier (default probierz).</li><li><code>leftRunId</code> (string, required)</li><li><code>rightRunId</code> (string, required)</li></ul>
+<h3><code>probierz_last_green</code></h3>
+<p>Return the newest passing run for a product, optional target, and optional journey.</p>
+<ul><li><code>appId</code> (string, optional) — Product identifier (default probierz).</li><li><code>target</code> (string, optional)</li><li><code>journey</code> (string, optional)</li></ul>
+<h3><code>probierz_verify_receipt</code></h3>
+<p>Verify receipt payload hash and Ed25519 signature against an explicit trusted public key or fingerprint.</p>
+<ul><li><code>file</code> (string, required)</li><li><code>trustedPublicKeyFile</code> (string, optional)</li><li><code>expectedFingerprint</code> (string, optional)</li></ul>
+<h2>Toolchain and execution</h2>
+<h3><code>probierz_setup</code></h3>
+<p>Install the toolchain parts probierz owns for a target (npm deps + Playwright browsers, or npm deps + the Appium driver). Does NOT install host-level dependencies (Xcode, Android SDK, simulators, WinAppDriver) -- probierz_check reports those. Side-effecting: runs npm / appium driver install.</p>
+<ul><li><code>target</code> (string, required) — One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win.</li><li><code>timeoutMs</code> (number, optional) — Kill a setup step after this many ms (default 30 min).</li></ul>
+<h3><code>probierz_run</code></h3>
+<p>EXECUTE a target end-to-end (spawns Playwright or WebdriverIO+Appium) under chosen conditions, records video/trace/screenshot when record=true, and returns the run result plus an analysis of what it produced. Heavy + side-effecting: needs Chromium / Appium / a simulator.</p>
+<ul><li><code>target</code> (string, required) — One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win.</li><li><code>record</code> (boolean, optional) — Force video + trace + screenshot capture on.</li><li><code>appId</code> (string, optional) — Product identifier used in the run-scoped artifact path and manifest.</li><li><code>env</code> (object, optional) — Condition env vars, e.g. { BASE_URL, APP_IOS, PROBIERZ_LOCALE, PROBIERZ_COLOR_SCHEME }.</li><li><code>timeoutMs</code> (number, optional) — Kill the run after this many ms (default 20 min).</li><li><code>resourceWaitMs</code> (number, optional) — Wait this long for a busy device/port lease; 0 fails fast.</li><li><code>frames</code> (number, optional) — Extract this many frames per recorded video (needs ffmpeg).</li><li><code>analyze</code> (boolean, optional) — Analyze the report after the run (default true).</li><li><code>force</code> (boolean, optional) — Skip the preflight gate and spawn even if the toolchain looks incomplete.</li><li><code>spec</code> (string, optional) — Run only this one spec (path/substring), e.g. packages/mobile/test/specs/byk.e2e.ts, to scope the run to a single app&#x27;s suite.</li></ul>
+<h3><code>probierz_analyze</code></h3>
+<p>Parse a finished run&#x27;s report (Playwright report.json or the WDIO probierz-&lt;kind&gt;-results.json) and inventory its media: totals, per-test status, failure reasons, and recording metadata (duration/dimensions via ffprobe, optional frame montage via ffmpeg).</p>
+<ul><li><code>reportPath</code> (string, required) — Path to the machine-readable report (from a probierz_run result).</li><li><code>artifactsDir</code> (string, optional) — Directory to inventory for media (from a probierz_run result).</li><li><code>tool</code> (string, optional) — playwright | wdio (inferred from the report if omitted).</li><li><code>frames</code> (number, optional) — Extract this many frames per video (needs ffmpeg).</li></ul>
+<h3><code>probierz_ci</code></h3>
+<p>Change-driven test pass: select the targets a change affects, run the ready ones (preflight-gated, blocked ones are reported with their fix, not spawned), analyze what ran, and return a consolidated verdict {summary:{passed,failed,blocked,ran}, results}. Composes probierz_affected + probierz_run + probierz_analyze. Heavy: runs real suites. Deterministic selection; no LLM reasoning about the results.</p>
+<ul><li><code>files</code> (array of string, optional) — Changed file paths (repo-relative). If given, git is not consulted.</li><li><code>ref</code> (string, optional) — git ref to diff the working tree against when <code>files</code> is omitted (default HEAD).</li><li><code>appId</code> (string, optional) — Product identifier for every selected run.</li><li><code>env</code> (object, optional) — Conditions forwarded to every selected run.</li><li><code>spec</code> (string, optional) — Optional spec filter forwarded to every selected target.</li><li><code>record</code> (boolean, optional) — Force video/trace/screenshot capture on for every run.</li><li><code>force</code> (boolean, optional) — Skip each target&#x27;s preflight gate and spawn anyway.</li><li><code>frames</code> (number, optional) — Extract this many frames per recorded video (needs ffmpeg).</li><li><code>timeoutMs</code> (number, optional) — Per-run timeout in ms.</li><li><code>resourceWaitMs</code> (number, optional) — Wait per selected run for a busy device/port lease; default 10 min, 0 fails fast.</li></ul>
+<h3><code>probierz_run_matrix</code></h3>
+<p>HEAVY + SIDE-EFFECTING: execute every cell of a declared nightly or release matrix and return an E4 verdict.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>profile</code> (string, required) — nightly or release</li><li><code>release</code> (string, optional) — Required for a release matrix.</li><li><code>env</code> (object, optional) — Secrets and exact release artifact conditions; matrix axes cannot be overridden.</li></ul>
+<h3><code>probierz_gate_prepush</code></h3>
+<p>Pre-push merge gate: select affected journeys from the push diff and evaluate the newest passing runs against the exact current HEAD identity (pull-request policy).</p>
+<ul><li><code>repo</code> (string, required)</li><li><code>appId</code> (string, optional) — Inferred from manifest repositories when omitted.</li><li><code>base</code> (string, optional)</li><li><code>head</code> (string, optional)</li><li><code>runCi</code> (boolean, optional) — Run probierz ci &lt;base&gt; before evaluating.</li></ul>
+<h2>Asynchronous runs (in-process queue)</h2>
+<h3><code>probierz_start_run</code></h3>
+<p>HEAVY + SIDE-EFFECTING: start a real run asynchronously and return its runId immediately. Poll with probierz_run_status; cancel with probierz_cancel_run.</p>
+<ul><li><code>target</code> (string, required)</li><li><code>record</code> (boolean, optional)</li><li><code>appId</code> (string, optional)</li><li><code>env</code> (object, optional)</li><li><code>timeoutMs</code> (number, optional)</li><li><code>resourceWaitMs</code> (number, optional) — Wait this long for a busy device/port lease; 0 fails fast.</li><li><code>frames</code> (number, optional)</li><li><code>analyze</code> (boolean, optional)</li><li><code>force</code> (boolean, optional)</li><li><code>spec</code> (string, optional)</li></ul>
+<h3><code>probierz_run_status</code></h3>
+<p>Return queued/running/blocked/passed/failed/canceled state for an asynchronous run.</p>
+<ul><li><code>runId</code> (string, required)</li></ul>
+<h3><code>probierz_cancel_run</code></h3>
+<p>Cancel an asynchronous run and terminate its complete spawned process tree.</p>
+<ul><li><code>runId</code> (string, required)</li></ul>
+<h3><code>probierz_get_result</code></h3>
+<p>Return the completed normalized result and evidence for an asynchronous run.</p>
+<ul><li><code>runId</code> (string, required)</li></ul>
+<h3><code>probierz_list_artifacts</code></h3>
+<p>List run-scoped evidence artifacts for a completed asynchronous run.</p>
+<ul><li><code>runId</code> (string, required)</li></ul>
+<h3><code>probierz_get_artifact</code></h3>
+<p>Read one run-scoped artifact up to 5 MiB as base64; path traversal is rejected.</p>
+<ul><li><code>runId</code> (string, required)</li><li><code>file</code> (string, required) — Run-relative artifact path.</li></ul>
+<h2>Evidence handling</h2>
+<h3><code>probierz_protect_run</code></h3>
+<p>SIDE-EFFECTING: encrypt a complete run into an authenticated AES-256-GCM evidence bundle; optionally remove plaintext artifacts.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>runId</code> (string, required)</li><li><code>kind</code> (string, optional)</li><li><code>keyFile</code> (string, optional)</li><li><code>removePlaintext</code> (boolean, optional)</li></ul>
+<h3><code>probierz_restore_bundle</code></h3>
+<p>SIDE-EFFECTING: authenticate and restore an encrypted evidence bundle into an empty directory.</p>
+<ul><li><code>file</code> (string, required)</li><li><code>destination</code> (string, required)</li><li><code>keyFile</code> (string, optional)</li></ul>
+<h3><code>probierz_retention</code></h3>
+<p>Plan retention expiry; with apply=true, delete expired plaintext runs and encrypted bundles.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>at</code> (string, optional) — Optional ISO timestamp.</li><li><code>apply</code> (boolean, optional)</li></ul>
+<h3><code>probierz_create_receipt</code></h3>
+<p>SIDE-EFFECTING: secret-scan evidence, verify exact source/build/artifact provenance, and sign a release receipt with immutable journey identities and report-typed publication media.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>release</code> (string, required)</li><li><code>expectedHarnessSha</code> (string, required)</li><li><code>expectedSourceSha</code> (string, required)</li><li><code>runIds</code> (array of string, required)</li><li><code>requiredJourneys</code> (array of string, optional)</li><li><code>minimumEvidence</code> (string, optional) — Default E3.</li><li><code>privateKeyFile</code> (string, optional) — Defaults to PROBIERZ_RECEIPT_PRIVATE_KEY_FILE.</li></ul>
+<h3><code>probierz_create_publication_manifest</code></h3>
+<p>SIDE-EFFECTING: verify a signed receipt, current source, secret scan, evidence hashes, driver capability, redaction review, and immutable storage registrations before emitting a deterministic first-use publication manifest.</p>
+<ul><li><code>receiptFile</code> (string, required)</li><li><code>attemptId</code> (string, required)</li><li><code>journeyId</code> (string, required)</li><li><code>assets</code> (array of object, required)</li><li><code>trustedPublicKeyFile</code> (string, optional)</li><li><code>expectedFingerprint</code> (string, optional)</li></ul>
+<h2>Gates</h2>
+<h3><code>probierz_gate_evaluate</code></h3>
+<p>Evaluate exact build, E3 evidence, coverage, matrix, encryption, secret scan, and signed receipt eligibility; appends an audit record.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>mode</code> (string, required) — pull-request or release</li><li><code>expectedHarnessSha</code> (string, required)</li><li><code>expectedSourceSha</code> (string, required)</li><li><code>runIds</code> (array of string, required)</li><li><code>release</code> (string, optional) — Required for release mode.</li><li><code>receiptFile</code> (string, optional) — Required signed evidence receipt for release mode.</li><li><code>trustedPublicKeyFile</code> (string, optional)</li><li><code>expectedFingerprint</code> (string, optional)</li></ul>
+<h3><code>probierz_gate_enforce</code></h3>
+<p>Enforce an activated gate against current evidence; pending-green gates fail closed.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>mode</code> (string, required) — pull-request or release</li><li><code>expectedHarnessSha</code> (string, required)</li><li><code>expectedSourceSha</code> (string, required)</li><li><code>runIds</code> (array of string, required)</li><li><code>release</code> (string, optional) — Required for release mode.</li><li><code>receiptFile</code> (string, optional) — Required signed evidence receipt for release mode.</li><li><code>trustedPublicKeyFile</code> (string, optional)</li><li><code>expectedFingerprint</code> (string, optional)</li></ul>
+<h3><code>probierz_gate_activate</code></h3>
+<p>SIDE-EFFECTING: atomically activate a gate only after all green evidence requirements pass.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>mode</code> (string, required) — pull-request or release</li><li><code>expectedHarnessSha</code> (string, required)</li><li><code>expectedSourceSha</code> (string, required)</li><li><code>runIds</code> (array of string, required)</li><li><code>release</code> (string, optional) — Required for release mode.</li><li><code>receiptFile</code> (string, optional) — Required signed evidence receipt for release mode.</li><li><code>trustedPublicKeyFile</code> (string, optional)</li><li><code>expectedFingerprint</code> (string, optional)</li></ul>
+<h2>Authoring</h2>
+<h3><code>probierz_author_spec</code></h3>
+<p>SIDE-EFFECTING: use the authenticated Stado model router to draft one journey spec from a probe of the real app, verify it with an actual run, and keep it on green (registers the journey in the app manifest).</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>journey</code> (string, required)</li><li><code>target</code> (string, required) — web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui</li><li><code>desc</code> (string, required) — Journey goal in one or two sentences.</li><li><code>baseUrl</code> (string, optional)</li><li><code>appPath</code> (string, optional)</li><li><code>rounds</code> (number, optional)</li></ul>
+<h3><code>probierz_author_manifest</code></h3>
+<p>SIDE-EFFECTING: use the authenticated Stado model router to draft the whole app journey manifest from a probe and repository layout, validate it, and optionally cover every journey with author-spec.</p>
+<ul><li><code>appId</code> (string, required)</li><li><code>desc</code> (string, required) — What the app does, in one or two sentences.</li><li><code>repositories</code> (array of string, required)</li><li><code>target</code> (string, required)</li><li><code>baseUrl</code> (string, optional)</li><li><code>appPath</code> (string, optional)</li><li><code>withSpecs</code> (boolean, optional)</li></ul>
+<h2>Evaluators and media</h2>
+<h3><code>probierz_evaluate_figure</code></h3>
+<p>SIDE-EFFECTING: render a scientific reference/candidate pair, run deterministic geometry checks, score the declared visual rubric through the authenticated model router, and write immutable PNG evidence plus a JSON verdict.</p>
+<ul><li><code>referencePath</code> (string, required) — Reference or intermediate SVG, TeX, PDF, or raster image.</li><li><code>candidatePath</code> (string, required) — Candidate or final SVG, TeX, PDF, or raster image.</li><li><code>rubricPath</code> (string, optional) — Optional JSON rubric; uses the scientific-figure release rubric by default.</li><li><code>texPreamblePath</code> (string, optional) — Optional LaTeX preamble lines added to the standalone wrapper used for TeX input.</li><li><code>model</code> (string, optional) — Vision-capable model ID; defaults to PROBIERZ_FIGURE_VISION_MODEL.</li><li><code>agentId</code> (string, optional) — Agent identity for subscription routes; the secret comes from PROBIERZ_MODEL_AGENT_SECRET.</li><li><code>outputPath</code> (string, optional) — Optional destination ending in .json; existing evidence is never overwritten.</li></ul>
+<h3><code>probierz_evaluate_seo</code></h3>
+<p>SIDE-EFFECTING: crawl a declared site as ordinary Chrome and Googlebot Smartphone, enforce indexability and structured-data contracts, collect mobile performance evidence, run two independent Brama content graders with conditional adjudication, ingest optional Search Console/CrUX evidence, and write an immutable signed SEO verdict.</p>
+<ul><li><code>appId</code> (string, optional) — Manifest app ID; defaults to landing-page.</li><li><code>baseUrl</code> (string, required) — Credential-free HTTPS origin or loopback HTTP URL to evaluate.</li><li><code>policyPath</code> (string, optional) — Optional SEO policy JSON; defaults to manifest seo.policy.</li><li><code>briefPath</code> (string, optional) — Optional approved landing brief JSON; defaults to manifest seo.brief.</li><li><code>mode</code> (string, optional) — pull-request, release, nightly, or production; defaults to release.</li><li><code>outputPath</code> (string, optional) — Optional immutable report destination ending in .json.</li><li><code>productionEvidencePath</code> (string, optional) — Optional Search Console and CrUX evidence JSON.</li><li><code>primaryModel</code> (string, optional) — Pinned first Brama model ID.</li><li><code>secondaryModel</code> (string, optional) — Pinned independent second Brama model ID.</li><li><code>adjudicatorModel</code> (string, optional) — Pinned Brama model used only when graders disagree.</li><li><code>routerBaseUrl</code> (string, optional) — Brama-compatible router base; defaults to STADO_MODEL_ROUTER_URL.</li><li><code>agentId</code> (string, optional) — Probierz model identity.</li><li><code>privateKeyFile</code> (string, optional) — Ed25519 PKCS#8 PEM file for release evidence signing.</li></ul>
+<h3><code>probierz_create_readme_gif</code></h3>
+<p>SIDE-EFFECTING: convert one recorded journey video into a bounded, silent, looping README GIF and write a provenance sidecar with source/output SHA-256 and mandatory publication checks. Requires ffmpeg.</p>
+<ul><li><code>input</code> (string, required) — Recorded journey video path.</li><li><code>output</code> (string, required) — Destination path ending in .gif.</li><li><code>startSeconds</code> (number, optional) — Non-negative trim offset; default 0.</li><li><code>durationSeconds</code> (number, optional) — Published clip duration; default 12, maximum 30.</li><li><code>framesPerSecond</code> (number, optional) — GIF frame rate; default 12, maximum 20.</li><li><code>width</code> (number, optional) — Output width; default 960, maximum 1200.</li><li><code>force</code> (boolean, optional) — Replace an existing GIF and sidecar.</li></ul>
+<h2>Remote execution</h2>
+<h3><code>probierz_stado_run</code></h3>
+<p>SIDE-EFFECTING: run a target on a chosen stado host (provider/pin/spot/GPU); evidence lands back in test-results.</p>
+<ul><li><code>target</code> (string, required)</li><li><code>appId</code> (string, required)</li><li><code>spec</code> (string, optional)</li><li><code>host</code> (string, optional) — stado:gcp|azure|aws|any|spot|local|t4</li><li><code>cargoRelease</code> (boolean, optional) — Build the app binary on the worker with cargo (needs appRepo).</li><li><code>appRepo</code> (string, optional)</li><li><code>watch</code> (boolean, optional) — Default true; waits for completion and fetches results.</li></ul>
+<h3><code>probierz_stado_evaluate_seo</code></h3>
+<p>SIDE-EFFECTING: submit the complete SEO evaluator to a Stado-selected dedicated host, materialize only the declared Brama and signing secrets, and fetch the immutable evidence bundle.</p>
+<ul><li><code>appId</code> (string, optional) — Manifest app ID; defaults to landing-page.</li><li><code>baseUrl</code> (string, required)</li><li><code>mode</code> (string, optional) — pull-request, release, nightly, or production.</li><li><code>policyPath</code> (string, optional)</li><li><code>briefPath</code> (string, optional)</li><li><code>primaryModel</code> (string, required)</li><li><code>secondaryModel</code> (string, required)</li><li><code>adjudicatorModel</code> (string, required)</li><li><code>agentId</code> (string, optional)</li><li><code>productionEvidencePath</code> (string, optional)</li><li><code>host</code> (string, optional) — Dedicated Stado host; defaults to stado:mini.</li><li><code>watch</code> (boolean, optional) — Default true; waits for completion and fetches results.</li></ul></main></body></html>

@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Receipt — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/receipt.md</p><h1>Receipt</h1>
+<p>How does evidence travel — to a release pipeline, another machine, an auditor — without becoming hearsay? As a receipt: a canonical, Ed25519-signed statement of exactly which runs, hashes, and policies stood behind one release, re-verified against the working tree at the moment of signing.</p>
+<h2>What it is</h2>
+<p>A JSON document, <code>kind: &quot;probierz-evidence-receipt&quot;</code>, schema version 3 (<code>urn:probierz:schema:evidence-receipt:v3</code> in <code>agent/receipt.mjs</code>), written once — <code>0600</code>, flag <code>wx</code>, no overwrite — to:</p>
+<pre data-language=""><code>test-results/receipts/&lt;appId&gt;/&lt;release&gt;/&lt;receiptId&gt;.json</code></pre>
+<p><code>receiptId</code> is the first 24 hex chars of SHA-256 over <code>canonical(payload) + &quot;\n&quot; + signature</code>. Canonicalization sorts object keys recursively and drops <code>undefined</code>, so the same facts always hash the same.</p>
+<h2>Fields</h2>
+<p>Payload (everything signed):</p>
+<p>| Field | Content | |---|---| | <code>appId</code>, <code>productId</code>, <code>release</code> | identity; <code>productId</code> falls back to <code>appId</code> | | <code>expectedHarnessSha</code>, <code>expectedSourceSha</code> | the identities the caller claims (64-hex, lowercase) | | <code>builds</code> | per-target build hash, refused if runs disagree per target | | <code>artifactPolicy</code> | manifest retention windows, sorted redaction keys, PII stance | | <code>secretScans</code> | per-run scan result recorded at signing time | | <code>issuedAt</code>, <code>policy</code> | timestamp; <code>minimumEvidence</code> + sorted <code>requiredJourneys</code> | | <code>verdict</code> | <code>passed</code>, <code>errors</code>, <code>coveredJourneys</code>, <code>missingJourneys</code> | | <code>runs[]</code> | per-run signed record: <code>runId</code>, <code>target</code>, <code>spec</code>, <code>journeys</code>, <code>journeyIdentities</code>, <code>status</code>, <code>evidenceLevel</code>, <code>kind</code>, full <code>harness</code>/<code>source</code>/<code>build</code> identities, 40-hex <code>sourceRevision</code>, <code>device</code>, timestamps, policy-relevant <code>conditions</code>, <code>protection</code>, <code>artifacts[]</code> hashes, report-typed <code>media</code> |</p>
+<p>Signing block (<code>signing</code>): <code>algorithm: &quot;Ed25519&quot;</code>, <code>publicKeyFingerprintSha256</code> (SHA-256 of the SPKI DER), <code>publicKeyPem</code>, <code>payloadSha256</code>, base64 <code>signature</code>.</p>
+<h2>What signing re-verifies</h2>
+<p><code>createReceipt</code> refuses to sign fiction. Before the signature is produced it checks — and records any failure in the receipt&#x27;s own verdict:</p>
+<ul><li>required inputs: `appId, release, expectedHarnessSha, and</li></ul>
+<p>expectedSourceSha are required<code>; both SHAs must be </code>lowercase SHA-256 values<code>; </code>at least one runId is required<code>; </code>PROBIERZ_RECEIPT_PRIVATE_KEY_FILE is required<code>; the key must be Ed25519 (</code>evidence private key must be Ed25519`);</p>
+<ul><li>freshness: the expected identities are recomputed from the <strong>current</strong></li></ul>
+<p>checkouts — <code>expected harness source is stale relative to the current Probierz checkout</code>, <code>expected app source is stale relative to the current product checkout</code>;</p>
+<ul><li>every artifact of every run re-hashed (`&lt;runId&gt;: artifact hash mismatch:</li></ul>
+<p>&lt;file&gt;<code>), or for protected runs the bundle re-hashed inside </code>test-results/.protected/&lt;appId&gt;<code> (</code>&lt;runId&gt;: protected artifact is missing or escapes its product root`);</p>
+<ul><li>a passing secret scan per run, executed now for plaintext runs</li></ul>
+<p>(<code>&lt;runId&gt;: plaintext secret scan is missing or has findings</code>);</p>
+<ul><li>per-run status/identity/build/level checks and per-target build</li></ul>
+<p>uniqueness, and journey coverage (<code>missing journey: &lt;j&gt;</code>).</p>
+<p>A receipt whose verdict fails is still written and returned — with exit 1 — so the failure list itself is signed and portable.</p>
+<h2>Verification and trust</h2>
+<p><code>probierz verify-receipt &lt;file&gt; [--public-key pem | --fingerprint sha256]</code> recomputes the canonical payload hash and checks the signature. Trust is explicit and separate from validity:</p>
+<ul><li>with <code>--public-key</code>, the supplied key is the trust anchor;</li><li>otherwise the <strong>embedded</strong> key is used, and it is trusted only when its</li></ul>
+<p>fingerprint equals <code>--fingerprint</code> or <code>PROBIERZ_RECEIPT_PUBLIC_KEY_FINGERPRINT</code>.</p>
+<p>Captured behavior (see the <a href="../walkthrough-gate-and-receipt.md">walkthrough</a>): a self-signed receipt with no trust anchor returns <code>&quot;valid&quot;: false, &quot;signatureValid&quot;: true, &quot;trusted&quot;: false</code> and exit 1; <code>valid</code> is true only when signature, trust, and payload hash all hold.</p>
+<h2>Who consumes it</h2>
+<ul><li>The <strong>release gate</strong>: <code>gate-evaluate &lt;app&gt; release … --receipt &lt;file&gt;</code></li></ul>
+<p>demands a valid, trusted receipt whose app, release, identities, builds, run IDs, verdict, and per-run canonical records agree with local evidence (see <a href="verdict.md">verdict</a> for the disagreement sentences).</p>
+<ul><li><strong>Publication</strong>: <code>probierz publication</code> and <code>publish-onboarding</code> accept</li></ul>
+<p>only a valid, trusted, passing receipt (<code>receipt is not valid, trusted, and passing</code>) and bind published assets to its signed artifact hashes (<code>assets[&lt;i&gt;] is not bound by the signed receipt</code>).</p>
+<ul><li>The <strong>SEO evaluator</strong> signs its own report with the same canonical</li></ul>
+<p>Ed25519 contract, so <code>verify-receipt</code> checks both.</p>
+<h2>Commands</h2>
+<pre data-language="bash"><code>export PROBIERZ_RECEIPT_PRIVATE_KEY_FILE=/path/ed25519.pem
+probierz receipt &lt;appId&gt; &lt;release&gt; &lt;harnessSha&gt; --source-sha &lt;sha&gt; \
+  --runs id1,id2 [--journeys a,b] [--minimum E2|E3]
+probierz verify-receipt &lt;file&gt; [--public-key pub.pem | --fingerprint &lt;sha256&gt;]</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="gate.md">gate</a></strong> — the decision machine; the receipt is portable</li></ul>
+<p>input to its release mode.</p>
+<ul><li><strong>A run manifest</strong> — mutable-by-completion local state; the receipt is a</li></ul>
+<p>signed snapshot that re-verified it.</p>
+<ul><li><strong>An encrypted bundle</strong> (<code>.pev</code>) — confidentiality at rest; a receipt is</li></ul>
+<p>integrity plus attribution, and they compose (receipts record bundle hashes).</p></main></body></html>

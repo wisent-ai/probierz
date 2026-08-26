@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Run — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/run.md</p><h1>Run</h1>
+<p>Every claim Probierz makes ultimately points at one run: a single execution of one target&#x27;s suite, under recorded conditions, that leaves one directory of bound evidence behind. A run is not &quot;the tests passed&quot; — it is a durable record whose status is derived from a report that must prove it belongs to this run.</p>
+<h2>What it is</h2>
+<p>One invocation of <code>probierz run &lt;target&gt;</code> (or the same path through <code>ci</code>, <code>matrix</code>, the MCP <code>probierz_run</code> / <code>probierz_start_run</code> tools, or a remote Stado job). It owns one directory:</p>
+<pre data-language=""><code>test-results/&lt;appId&gt;/&lt;target&gt;/&lt;YYYY-MM-DD&gt;/&lt;runId&gt;/
+  run-manifest.json   # schemaVersion 2 — the binding record
+  report.json         # the framework report, stamped with the run&#x27;s own ID
+  analysis.json       # normalized totals, media, diagnostics
+  timeline.json       # merged event timeline
+  performance.json    # process sampler output
+  stdout.log stderr.log
+  media/ frames/ diagnostics/</code></pre>
+<p>The <code>runId</code> is the start timestamp plus a random UUID (<code>2026-08-24T22-06-02-464Z-a5bf2f0c-…</code>); <code>:</code> in a target name becomes <code>-</code> in the directory path (<code>mobile:ios</code> → <code>mobile-ios</code>). The manifest is written *before* anything spawns and updated atomically (<code>write to .tmp</code>, <code>rename</code>) as the run progresses, so a crash mid-run still leaves a readable record.</p>
+<h2>Fields</h2>
+<p><code>run-manifest.json</code> records at start (all from <code>agent/runner.mjs</code>):</p>
+<p>| Field | Content | |---|---| | <code>runId</code>, <code>appId</code>, <code>kind</code>, <code>target</code>, <code>spec</code> | identity; <code>kind</code> is <code>adhoc</code> unless <code>PROBIERZ_RUN_KIND</code> or a matrix profile says <code>pull-request</code> / <code>release</code> / <code>nightly</code> | | <code>harness</code> | Probierz&#x27;s own source identity: <code>gitSha</code>, <code>dirty</code>, <code>worktreeSha256</code>, combined <code>sha256</code> | | <code>source</code> | the same identity per manifest-declared app repository, plus one combined <code>sha256</code> | | <code>build</code> | SHA-256 of the artifact under test: first of <code>PROBIERZ_BUILD_PATH</code>, <code>APP_IOS</code>, <code>MAC_APP_PATH</code>, <code>ELECTRON_APP_MAIN</code>, else the harness <code>package-lock.json</code> | | <code>appManifest</code> | manifest file, owner, and the journeys this run covers | | <code>host</code>, <code>device</code> | hostname, platform, release, arch, Node version; <code>IOS_DEVICE</code>/<code>ANDROID_DEVICE</code> and runtime when set | | <code>conditions</code> | the requested environment, values under sensitive key names replaced with <code>[REDACTED:&lt;key&gt;]</code> | | <code>paths</code>, <code>resources</code> | artifact locations and held resource locks |</p>
+<p>At completion it gains <code>status</code>, <code>completedAt</code>, <code>exitCode</code>, <code>signal</code>, <code>timedOut</code>, <code>canceled</code>, <code>durationMs</code>, <code>reportValidation</code>, <code>cleanup</code>, <code>performance</code>, <code>platformDiagnostics</code>, <code>evidence</code>, <code>analysisPath</code>, and <code>artifacts[]</code> — relative path, SHA-256, and byte size of every file the run left behind (the manifest itself excluded).</p>
+<h2>Lifecycle</h2>
+<p><code>status</code> in the manifest moves through exactly these states:</p>
+<pre data-language=""><code>preflight ──▶ blocked            (toolchain not ready, or resource lock refused)
+    │
+    ├───────▶ canceled           (AbortSignal before or during the spawn)
+    │
+    ▼
+running ────▶ failed             (non-zero exit, timeout, seed failure,
+    │                             report missing/foreign, spawn failure)
+    ▼
+executed ───▶ passed | failed    (completeRun applies the analysis verdict)</code></pre>
+<ul><li><strong>Blocked</strong> runs record the exact failing preflight checks (or the</li></ul>
+<p>conflicting resource lock owner) and never spawn. The CLI exits <code>3</code>.</p>
+<ul><li><strong>Seed hooks</strong>: a manifest <code>data.seed</code> command runs first; if it fails the</li></ul>
+<p>run is recorded <code>failed</code> with <code>setupError: &quot;seed failed: &lt;detail&gt;&quot;</code> and <code>data.cleanup</code> is attempted as rollback. A seed may return <code>{&quot;env&quot;: {...}}</code> on its last stdout line to inject conditions.</p>
+<ul><li><strong>Spawn</strong>: <code>npm run &lt;script&gt;</code> for the target, in its own process group,</li></ul>
+<p>20-minute default timeout (<code>--timeout MS</code>), SIGTERM then SIGKILL after a 5-second grace. Output streams are secret-redacted, timestamped, and persisted with mode <code>0600</code>.</p>
+<ul><li><strong>Pass condition</strong> (<code>agent/runner.mjs</code>): exit code 0 AND not timed out AND</li></ul>
+<p>not canceled AND <code>reportValidation.ok</code> AND cleanup ok. Then <code>completeRun</code> additionally requires a valid analysis (see <a href="evidence.md">evidence</a>); either gate failing flips the final status to <code>failed</code> with explicit <code>evidence.errors</code>.</p>
+<h2>Report identity, not process exit</h2>
+<p><code>reportValidation</code> refuses a report that:</p>
+<ul><li>does not exist — <code>&quot;report missing&quot;</code>;</li><li>is older than the run start — <code>&quot;report predates run start&quot;</code>;</li><li>carries another run&#x27;s stamp — `&quot;report run ID mismatch: expected &lt;id&gt;, got</li></ul>
+<p>&lt;id|missing&gt;&quot;`;</p>
+<ul><li>cannot be parsed — <code>&quot;report unreadable: &lt;reason&gt;&quot;</code>.</li></ul>
+<p>Suites receive <code>PROBIERZ_REPORT_PATH</code> and must stamp <code>report.probierz.runId</code> with the <code>PROBIERZ_RUN_ID</code> they were given. A green child process with a stale or foreign report is a <strong>failed</strong> run.</p>
+<h2>Resource locks</h2>
+<p>Targets that own real devices serialize through directory locks under <code>test-results/.locks/</code> (<code>agent/locks.mjs</code>): <code>mobile:ios</code> and <code>mobile:android</code> lock <code>device:...</code> plus <code>port:4723</code>, <code>desktop:mac</code>/<code>win</code> lock the host app. A held lock blocks the run with <code>resource locked: &lt;resource&gt; by run &lt;id&gt; (pid &lt;pid&gt;)</code>; <code>--resource-wait MS</code> polls every 250 ms instead of failing immediately. Stale locks (dead pid, 30 s grace) are reclaimed automatically. <code>web</code>, <code>electron</code>, and <code>tui</code> need no locks.</p>
+<h2>Asynchronous runs</h2>
+<p>The MCP server also runs this lifecycle detached: <code>probierz_start_run</code> returns a <code>runId</code> immediately, <code>probierz_run_status</code> reports queued/running/blocked/passed/failed/canceled, <code>probierz_cancel_run</code> aborts the whole process tree. The job table is an in-process <code>Map</code> in <code>agent/control.mjs</code> — it does not survive a server restart, but the run directories on disk do. There is no persistent run queue or intake daemon on this branch; see <a href="../limitations.md">limitations</a>.</p>
+<h2>Invariants</h2>
+<ul><li>A run directory is never reused; every attempt gets a fresh <code>runId</code>.</li><li>The manifest exists from before the spawn; there is no such thing as a run</li></ul>
+<p>that &quot;left nothing&quot; — blocked and canceled runs are first-class records.</p>
+<ul><li>Secret-looking condition values (`auth|cookie|credential|email|gmail|key|</li></ul>
+<p>otp|password|secret|session|token`) never reach the persisted manifest or logs unredacted.</p>
+<ul><li>Artifact hashes are computed after completion; anything later mutated in</li></ul>
+<p>the directory is caught by gates and receipts re-hashing.</p>
+<h2>Commands</h2>
+<pre data-language="bash"><code>probierz run tui --app &lt;appId&gt; [--record] [--spec f] [--timeout MS] [KEY=VALUE...]
+probierz analyze &lt;report.json&gt; [artifactsDir]
+probierz history &lt;appId&gt;            # projections over run manifests
+probierz compare &lt;left&gt; &lt;right&gt; &lt;appId&gt;</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="journey.md">journey</a></strong> — the declared behavior a run covers; one run</li></ul>
+<p>may cover several journeys.</p>
+<ul><li><strong>An <a href="evidence.md">evidence item</a></strong> — the graded strength of what a run</li></ul>
+<p>proved; the run is the record, the level is the grade.</p>
+<ul><li><strong>A <a href="verdict.md">verdict</a></strong> — a gate&#x27;s decision over one or more runs.</li></ul></main></body></html>
