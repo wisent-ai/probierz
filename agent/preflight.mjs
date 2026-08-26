@@ -21,12 +21,6 @@ const require = createRequire(import.meta.url);
 const NATIVE_CAPTURE_SOURCE = path.join(ROOT, "packages", "desktop-native", "tools", "screen-capture-kit.swift");
 const NATIVE_CAPTURE_BINARY = path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit");
 const PROBE_MS = 15000;
-const CUA_TREE_PROBE_MS = 15000;
-// get_window_state answers with a base64 screenshot beside the AX walk, so a
-// real window's reply is megabytes. The default 1 MiB spawnSync buffer kills
-// the probe on a granted host and the missing grant it then reports is the
-// buffer, not TCC.
-const CUA_PROBE_MAX_BUFFER = 33554432;
 const CUA_SOCKET = path.join(os.homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 
 // A binary is present if it runs and exits cleanly. `args` is its cheapest
@@ -81,47 +75,20 @@ function appiumDriverInstalled(name, env = process.env) {
   }
 }
 // The daemon owns the Accessibility grant; a launchd worker cannot inspect
-// another process's TCC state with AXIsProcessTrusted. Probe one real window
-// through the daemon instead. This is the exact capability a journey needs,
-// without walking an unbounded inventory or trusting the caller's TCC state.
+// another process's TCC state with AXIsProcessTrusted. Ask the daemon for its
+// own permission state. Requiring an existing window tree here is circular:
+// preflight runs before the journey launches the app it will inspect.
 function cuaAccessibilityGranted() {
   try {
-    const listed = spawnSync("cua-driver", ["call", "list_windows", "{}", "--socket", CUA_SOCKET], {
+    const result = spawnSync("cua-driver", ["call", "check_permissions", JSON.stringify({
+      prompt: false,
+    }), "--socket", CUA_SOCKET], {
       encoding: "utf8",
       timeout: PROBE_MS,
-      maxBuffer: CUA_PROBE_MAX_BUFFER,
     });
-    if (listed.status !== 0) return false;
-    const data = JSON.parse(String(listed.stdout || "{}"));
-    const windows = data.windows || [];
-    const candidates = [
-      ...windows.filter((candidate) => candidate?.is_on_screen && candidate.title),
-      ...windows.filter((candidate) => candidate?.pid && candidate?.window_id),
-    ].slice(0, 5);
-    // A bounded walk that comes back with elements IS the grant: an ungranted
-    // daemon cannot enumerate another process's AX children at all. The walk is
-    // capped because an unbounded one on a browser window costs more than the
-    // probe budget, and no role name is matched — the driver reports a window's
-    // own root role, so requiring AXApplication here failed on granted hosts.
-    return candidates.some((win) => {
-      const state = spawnSync("cua-driver", ["call", "get_window_state", JSON.stringify({
-        pid: win.pid,
-        window_id: win.window_id,
-        max_elements: 40,
-        max_depth: 6,
-      }), "--socket", CUA_SOCKET], {
-        encoding: "utf8",
-        timeout: CUA_TREE_PROBE_MS,
-        maxBuffer: CUA_PROBE_MAX_BUFFER,
-      });
-      if (state.status !== 0) return false;
-      try {
-        const walked = JSON.parse(String(state.stdout || "{}"));
-        return Array.isArray(walked.elements) && walked.elements.length > 0;
-      } catch {
-        return false;
-      }
-    });
+    if (result.status !== 0) return false;
+    const data = JSON.parse(String(result.stdout || "{}"));
+    return (data?.permissions?.accessibility ?? data?.accessibility) === true;
   } catch {
     return false;
   }

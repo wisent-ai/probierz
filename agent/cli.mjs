@@ -78,7 +78,7 @@ function usage() {
       "  probierz errors [appId...] [--text]  fast all-app failure view without repository violation scans",
       "  probierz intake serve [--bind 127.0.0.1:9790]  listen for wisent-errors failure envelopes from desktop apps (bearer: PROBIERZ_INTAKE_TOKEN or ~/.probierz/intake-token)",
       "  probierz failures [--service s] [--limit N] [--json]  the intake failure index: counts by service and error_code plus the newest envelopes (exit 0 always)",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] [--script apps/<id>/remote/x.sh]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -610,8 +610,8 @@ async function main() {
               script: scriptPath,
             }
           : null;
-    if (scriptPath && provision?.kind !== "node-source") {
-      throw configError("--script requires --node-source (custom app jobs run from app sources)");
+    if (scriptPath && !["node-source", "cargo-release"].includes(provision?.kind)) {
+      throw configError("--script requires --node-source or --cargo-release (custom app jobs run from app sources)");
     }
     const result = await submitRemoteRun({
       target,

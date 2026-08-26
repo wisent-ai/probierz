@@ -47,6 +47,8 @@ apps/oko/*
 !apps/brama/
 apps/brama/*
 !apps/brama/probierz.yaml
+!apps/brama/remote/
+!apps/brama/remote/functional-suite.sh
 !apps/stado/
 apps/stado/*
 !apps/stado/probierz.yaml

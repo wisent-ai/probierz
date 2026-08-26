@@ -4,7 +4,6 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const commandTimeoutMs = 15_000;
-const probeTimeoutMs = 5_000;
 const startupTimeoutMs = 60_000;
 const socket = path.join(homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 const daemonLog = path.join(path.dirname(socket), "probierz-daemon.log");
@@ -25,42 +24,30 @@ function call(tool, args = {}, timeout = commandTimeoutMs) {
 }
 
 function probe() {
-  const listed = call("list_windows");
-  if (listed.status !== 0) return null;
-  let payload;
+  const checked = call("check_permissions", { prompt: false });
+  if (checked.status !== 0) return null;
   try {
-    payload = JSON.parse(String(listed.stdout || "{}"));
+    const payload = JSON.parse(String(checked.stdout || "{}"));
+    return (payload?.permissions?.accessibility ?? payload?.accessibility) === true
+      ? (payload.permissions ?? payload)
+      : null;
   } catch {
     return null;
   }
-  const windows = payload.windows || [];
-  const candidates = [
-    ...windows.filter((candidate) => candidate?.is_on_screen && candidate.title),
-    ...windows.filter((candidate) => candidate?.pid && candidate?.window_id),
-  ].slice(0, 5);
-  for (const window of candidates) {
-    const state = call(
-      "get_window_state",
-      { pid: window.pid, window_id: window.window_id },
-      probeTimeoutMs,
-    );
-    if (state.status === 0 && String(state.stdout || "").includes("AXApplication")) return window;
-  }
-  return null;
 }
 
 function waitForProbe() {
   const deadline = Date.now() + startupTimeoutMs;
   while (Date.now() < deadline) {
-    const window = probe();
-    if (window) return window;
+    const permissions = probe();
+    if (permissions) return permissions;
     sleep(250);
   }
   return null;
 }
 
-let window = existsSync(socket) ? probe() : null;
-if (!window) {
+let permissions = existsSync(socket) ? probe() : null;
+if (!permissions) {
   run(["stop", "--socket", socket]);
   rmSync(socket, { force: true });
   mkdirSync(path.dirname(socket), { recursive: true });
@@ -68,7 +55,7 @@ if (!window) {
 
   const launched = spawnSync(
     "/usr/bin/open",
-    ["-n", "-g", "-a", "CuaDriver", "--args", "serve", "--socket", socket],
+    ["-n", "-g", "-a", "CuaDriver", "--args", "server", "--socket", socket],
     { encoding: "utf8", timeout: commandTimeoutMs },
   );
   if (launched.status !== 0) {
@@ -85,12 +72,12 @@ if (!window) {
     process.stderr.write(`CuaDriver did not create ${socket}${detail ? `:\n${detail}` : "\n"}`);
     process.exit(1);
   }
-  window = waitForProbe();
+  permissions = waitForProbe();
 }
 
-if (!window) {
-  process.stderr.write("Probierz CuaDriver daemon cannot read a live Accessibility tree\n");
+if (!permissions) {
+  process.stderr.write("Probierz CuaDriver daemon cannot use macOS Accessibility\n");
   process.exit(1);
 }
 
-process.stdout.write(`${JSON.stringify({ ready: true, socket, pid: window.pid, windowId: window.window_id })}\n`);
+process.stdout.write(`${JSON.stringify({ ready: true, socket, permissions })}\n`);
