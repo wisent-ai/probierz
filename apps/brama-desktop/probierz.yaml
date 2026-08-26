@@ -24,6 +24,7 @@ surfaces:
     journeys: [critical-operations]
     conditions:
       PROBIERZ_DATA_STATE: fresh
+      BRAMA_LOCAL_RUNTIME: "1"
     device:
       platform: macOS
       minimumVersion: "14"
