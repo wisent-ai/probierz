@@ -54,7 +54,7 @@ journeys:
       - The Stado-selected macOS worker starts from fresh Brama Desktop state
       - Both provider credentials are collision-resistant synthetic values and must never be accepted as evidence for a real provider call
     publication:
-      screenId: brama-private-runtime-operational
+      screenId: brama-provider-key-deleted
       artifactKinds: [screenshot]
       minimumEvidence: E3
       redactionRequired: true
