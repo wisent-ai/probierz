@@ -38,20 +38,20 @@ journeys:
   critical-operations:
     owner: Brama Desktop maintainers
     timeoutMs: 300000
-    description: Start the exact Brama Desktop bundle on a dedicated macOS host, prove the bundled Brama runtime becomes operational without Stado or Skarbiec, and add then remove a uniquely named local model source without exposing its credential.
-    value: An operator can launch Brama Desktop, observe its private runtime, and complete the local Keychain model-source lifecycle.
+    description: Start the exact Brama Desktop bundle on a dedicated macOS host, prove the bundled Brama runtime becomes operational, complete add-replace-delete for a Keychain provider key, and complete add-replace-delete for a route alias through the native UI.
+    value: An operator can launch Brama Desktop and complete both mutable standalone administration lifecycles without exposing either provider key.
     journeyId: critical-operations
-    journeyVersion: 2026-08-11.1
+    journeyVersion: 2026-08-25.1
     journeyVersionId: DD6681C9-E023-47D8-B213-CC62D579931C
-    firstSuccessFact: private_runtime_and_model_source_lifecycle_verified
+    firstSuccessFact: provider_key_and_route_alias_lifecycles_verified
     completionEvidence:
-      state: the bundled runtime is operational and the uniquely named model source is absent after removal
-      event: the real native UI completed startup, add, bundled-runtime restart, and remove actions
+      state: the replacement provider key became the exact durable Keychain value, then the key and uniquely named alias were both absent after deletion
+      event: the real native UI completed add, replace, and delete actions for both resources
       productArtifact: the exact Brama.app bundle and its bundled brama-runtime executable
     requiredConditions:
       - The tested ai.wisent.brama.desktop bundle is built from the mapped Brama Desktop source revision
-      - The Stado-selected macOS worker runs the app with a collision-resistant model-source identity
-      - The test source credential is synthetic and must never be accepted as release evidence for a real provider call
+      - The Stado-selected macOS worker starts from fresh Brama Desktop state
+      - Both provider credentials are collision-resistant synthetic values and must never be accepted as evidence for a real provider call
     publication:
       screenId: brama-private-runtime-operational
       artifactKinds: [screenshot]
