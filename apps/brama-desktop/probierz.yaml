@@ -32,7 +32,7 @@ surfaces:
       primary: appium-mac2
   desktop:cua:
     spec: brama-desktop-*.spec.mjs
-    journeys: [subscription-pool-screen]
+    journeys: [critical-operations, subscription-pool-screen]
     conditions:
       CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop/.build/Brama.app/Contents/MacOS/Brama
 journeys:
@@ -71,7 +71,7 @@ artifacts:
   pii: unlikely
 matrix:
   release:
-    targets: [desktop:mac]
+    targets: [desktop:cua]
     record: true
     timeoutMs: 600000
     maximumParallel: 1
@@ -80,12 +80,12 @@ matrix:
 pullRequestPolicy:
   minimumEvidence: E3
   requiredJourneys: [critical-operations]
-  requiredTargets: [desktop:mac]
+  requiredTargets: [desktop:cua]
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E3
   requiredJourneys: [critical-operations]
-  requiredTargets: [desktop:mac]
+  requiredTargets: [desktop:cua]
   requiredMatrixProfile: release
   requireProtectedArtifacts: true
   requireSecretScan: true
