@@ -190,22 +190,15 @@ function packRepo(appIds) {
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
   const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
-  const args = [
-    "-czf",
-    file,
-    "--exclude=target",
-    "--exclude=target-*",
-    "--exclude=*/target",
-    "--exclude=*/target-*",
-    "--exclude=node_modules",
-    "--exclude=*/node_modules",
-    "--exclude=.build",
-    "--exclude=*/.build",
-    "--exclude=.wisent-output",
-    "--exclude=*/.wisent-output",
-    ".",
-  ];
-  const packed = sh("tar", args, { cwd: repoRoot });
+  // Remote evidence is bound to one Git revision. Archive exactly HEAD rather
+  // than walking the working tree: ignored build trees can be unreadable, and
+  // uncommitted files have no source identity the verdict could honestly name.
+  const packed = sh("git", [
+    "archive",
+    "--format=tar.gz",
+    `--output=${file}`,
+    "HEAD",
+  ], { cwd: repoRoot });
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
   return { file, hash };
 }
