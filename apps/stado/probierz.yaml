@@ -58,6 +58,12 @@ repositories:
           - service-unowned-processes
           - service-ensure
       - paths:
+          - stado-rs/src/cli/storage.rs
+          - stado-rs/src/dashboard/mod.rs
+          - stado-rs/tests/channel/**
+          - .github/workflows/version-check.yml
+        journeys: [public-release-channel]
+      - paths:
           - desktop/StadoDesktop/Sources/Stado/ReleasesView.swift
         journeys: [releases-screen]
       - paths:
@@ -108,6 +114,7 @@ surfaces:
       - service-converge
       - service-unowned-processes
       - service-ensure
+      - public-release-channel
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: release-logs}
         journeys: [release-logs]
@@ -127,6 +134,8 @@ surfaces:
         journeys: [service-ensure]
       - when: {PROBIERZ_JOURNEY: azure-subscription-recovery}
         journeys: [azure-subscription-recovery]
+      - when: {PROBIERZ_JOURNEY: public-release-channel}
+        journeys: [public-release-channel]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/stado-rs/target/release/stado
 journeys:
@@ -161,6 +170,11 @@ journeys:
     timeoutMs: 240000
     description: Read a release candidate's own stdout and stderr off the target host and tell a log that is missing from one that is present and empty from one that was read.
     value: An operator diagnosing a candidate that died in ninety seconds sees the reason the candidate itself wrote, instead of guessing from a rollout phase.
+  public-release-channel:
+    owner: Stado maintainers
+    timeoutMs: 1200000
+    description: Through the public HTTPS control origin, use the built Stado binary to stat and download one retained native release manifest and archive, verify the archive digest, extract it, and execute the released binary.
+    value: The route installers and version gates depend on is proven from outside the loopback listener, so a running dashboard or configured Funnel cannot be mistaken for a working release channel.
   release-doctor:
     owner: Stado maintainers
     timeoutMs: 240000
