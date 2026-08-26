@@ -390,13 +390,29 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
   });
   rmSync(requestFile, { force: true });
-  let jobId = null;
+  let payload = null;
   try {
-    const payload = JSON.parse(submit.stdout);
-    jobId = payload?.ok ? payload.result?.job?.job_id || null : null;
+    payload = JSON.parse(submit.stdout);
   } catch {
     // A queue that answers with something other than its own protocol is a
     // queue that is not working; the text lands on the log line below.
+  }
+  let jobId = payload?.ok ? payload.result?.job?.job_id || null : null;
+  if (!jobId) {
+    const submitted = /^job ([0-9a-f]{8,}) was submitted but its idempotency record could not be finalized:/.exec(
+      String(payload?.error?.message || ""),
+    );
+    if (submitted) {
+      const status = sh(STADO_BIN, ["machine", "status", submitted[1]], {
+        env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      });
+      try {
+        const confirmed = JSON.parse(status.stdout);
+        if (confirmed?.ok && confirmed.result?.job?.job_id === submitted[1]) jobId = submitted[1];
+      } catch {
+        // Fall through to the original submit failure with its complete evidence.
+      }
+    }
   }
   if (jobId) return { jobId, failure: null };
   // The raw submit output is the operator's evidence, so it is logged in full
