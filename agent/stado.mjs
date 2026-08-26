@@ -190,7 +190,21 @@ function packRepo(appIds) {
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
   const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
-  const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
+  const args = [
+    "-czf",
+    file,
+    "--exclude=target",
+    "--exclude=target-*",
+    "--exclude=*/target",
+    "--exclude=*/target-*",
+    "--exclude=node_modules",
+    "--exclude=*/node_modules",
+    "--exclude=.build",
+    "--exclude=*/.build",
+    "--exclude=.wisent-output",
+    "--exclude=*/.wisent-output",
+    ".",
+  ];
   const packed = sh("tar", args, { cwd: repoRoot });
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
   return { file, hash };
