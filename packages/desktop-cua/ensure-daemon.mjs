@@ -1,7 +1,7 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const commandTimeoutMs = 15_000;
 const probeTimeoutMs = 5_000;
@@ -65,19 +65,18 @@ if (!window) {
   rmSync(socket, { force: true });
   mkdirSync(path.dirname(socket), { recursive: true });
   rmSync(daemonLog, { force: true });
-  const logFd = openSync(daemonLog, "a", 0o600);
 
-
-  const launched = spawn(
-    cuaDriver,
-    ["serve", "--socket", socket],
-    {
-      detached: true,
-      stdio: ["ignore", logFd, logFd],
-    },
+  const launched = spawnSync(
+    "/usr/bin/open",
+    ["-n", "-g", "-a", "CuaDriver", "--args", "serve", "--socket", socket],
+    { encoding: "utf8", timeout: commandTimeoutMs },
   );
-  closeSync(logFd);
-  launched.unref();
+  if (launched.status !== 0) {
+    process.stderr.write(
+      `CuaDriver app launch failed: ${String(launched.stderr || launched.stdout || "").trim()}\n`,
+    );
+    process.exit(1);
+  }
 
   const deadline = Date.now() + startupTimeoutMs;
   while (Date.now() < deadline && !existsSync(socket)) sleep(100);
