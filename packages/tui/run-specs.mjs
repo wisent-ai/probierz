@@ -11,15 +11,22 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SPECS_DIR = path.join(HERE, "specs");
 const artifacts = process.env.PROBIERZ_ARTIFACTS || "test-results";
 const reportPath = process.env.PROBIERZ_REPORT_PATH || path.join(artifacts, "report.json");
-const filter = process.env.PROBIERZ_SPEC ? path.basename(process.env.PROBIERZ_SPEC) : null;
-// Manifests may pin one exact file or a glob ("skarbiec-*.spec.mjs") for
-// apps whose journeys author one spec per journey.
+const requestedSpec = process.env.PROBIERZ_SPEC ? path.resolve(process.env.PROBIERZ_SPEC) : null;
+const filter = requestedSpec ? path.basename(requestedSpec) : null;
+// An application manifest may own its test in the product repository. Keep
+// that file there and execute the exact absolute path Probierz was given;
+// internal harness specs still use a basename or glob under specs/.
+const externalSpec = requestedSpec && existsSync(requestedSpec) && path.dirname(requestedSpec) !== SPECS_DIR
+  ? requestedSpec
+  : null;
 const globPrefix = filter?.includes("*") ? filter.slice(0, filter.indexOf("*")) : null;
 
-const files = readdirSync(SPECS_DIR)
-  .filter((name) => name.endsWith(".spec.mjs"))
-  .filter((name) => !filter || (globPrefix !== null ? name.startsWith(globPrefix) : name === filter))
-  .sort();
+const files = externalSpec
+  ? [externalSpec]
+  : readdirSync(SPECS_DIR)
+    .filter((name) => name.endsWith(".spec.mjs"))
+    .filter((name) => !filter || (globPrefix !== null ? name.startsWith(globPrefix) : name === filter))
+    .sort()
 
 // Row errors keep the failure headline AND the state dump: head for the
 // "what was expected" line, tail for the final app state, so a long tree
@@ -34,12 +41,13 @@ const captureErrors = [];
 
 const rows = [];
 for (const file of files) {
-  const title = file.replace(/\.spec\.mjs$/, "");
+  const specPath = path.isAbsolute(file) ? file : path.join(SPECS_DIR, file);
+  const title = path.basename(file).replace(/\.spec\.mjs$/, "");
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const mediaManifestPath = path.join(artifacts, ".media", `${title}.json`);
   rmSync(mediaManifestPath, { force: true });
-  const child = spawnSync(process.execPath, [path.join(SPECS_DIR, file)], {
+  const child = spawnSync(process.execPath, [specPath], {
     encoding: "utf8",
     env: {
       ...process.env,
