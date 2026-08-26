@@ -20,6 +20,7 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+const STATUS_CALL_TIMEOUT_MS = Number("15000");
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
     reference: "vault://wisent/probierz/model-router-token",
@@ -434,6 +435,7 @@ async function watchJob(jobId, hostDef) {
   while (Date.now() < deadline) {
     const out = sh(STADO_BIN, ["machine", "status", jobId], {
       env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      timeout: STATUS_CALL_TIMEOUT_MS,
     });
     let payload = null;
     try { payload = JSON.parse(out.stdout); } catch {}
