@@ -1,0 +1,42 @@
+schemaVersion: 1
+appId: echo-docs
+productId: echo
+owner: Echo maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-landing
+    mappings:
+      - paths:
+          - src/lib/docs/echo.mjs
+          - src/app/docs/**
+          - tests/docs/**
+          - package.json
+          - package-lock.json
+        journeys: [document-every-capability]
+
+surfaces:
+  tui:
+    spec: echo-docs-capabilities.spec.mjs
+    journeys: [document-every-capability]
+
+journeys:
+  document-every-capability:
+    owner: Echo maintainers
+    timeoutMs: 180000
+    value: The real Echo documentation site publishes every capability and a canonical reference page for every CLI command.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [document-every-capability]
+  requiredTargets: [tui]
+  requireSecretScan: true
