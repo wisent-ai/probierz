@@ -11,6 +11,7 @@ repositories:
           - src/lib/api/mobile-analytics/**
           - tests/analytics/**
           - package.json
+          - next.config.ts
           - package-lock.json
         journeys: [analytics-collectors]
 

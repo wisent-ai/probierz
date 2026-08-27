@@ -13,6 +13,7 @@ repositories:
           - tests/capabilities/**
           - package.json
           - package-lock.json
+          - next.config.ts
         journeys: [capability-catalogue]
 
 surfaces:
