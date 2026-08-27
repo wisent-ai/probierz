@@ -45,6 +45,11 @@ repositories:
           - stado-rs/src/cli/service.rs
         journeys: [service-converge, service-unowned-processes, service-ensure]
       - paths:
+          - stado-rs/src/cli/egress.rs
+          - stado-rs/tests/egress/**
+          - README.md
+        journeys: [mobile-egress]
+      - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/deploy/host_channel.rs
           - docs/cli.md
@@ -114,6 +119,7 @@ surfaces:
       - service-converge
       - service-unowned-processes
       - service-ensure
+      - mobile-egress
       - public-release-channel
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: release-logs}
@@ -132,6 +138,8 @@ surfaces:
         journeys: [service-unowned-processes]
       - when: {PROBIERZ_JOURNEY: service-ensure}
         journeys: [service-ensure]
+      - when: {PROBIERZ_JOURNEY: mobile-egress}
+        journeys: [mobile-egress]
       - when: {PROBIERZ_JOURNEY: azure-subscription-recovery}
         journeys: [azure-subscription-recovery]
       - when: {PROBIERZ_JOURNEY: public-release-channel}
@@ -210,6 +218,11 @@ journeys:
     timeoutMs: 300000
     description: Assert the unit a host must be running, idempotently - refused without a reason, installed where absent, and reported already_correct with nothing touched when the host already runs it.
     value: An operator has one command that can be run twice, or from a script, to make a host run what it is supposed to run.
+  mobile-egress:
+    owner: Stado maintainers
+    timeoutMs: 1200000
+    description: On a Stado-selected host with a trusted phone tether, run the built Stado loopback proxy on that interface and require public IP intelligence to identify the realized exit as mobile, not hosting, and not a public proxy.
+    value: Weles can use a phone exit managed by the normal Stado service lifecycle without mistaking a configured interface or listening port for proof that browser traffic leaves through a mobile carrier.
   releases-screen:
     owner: Stado Desktop maintainers
     timeoutMs: 300000
