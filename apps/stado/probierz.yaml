@@ -50,6 +50,16 @@ repositories:
           - README.md
         journeys: [mobile-egress]
       - paths:
+          - stado-rs/src/cli/builds.rs
+          - stado-rs/src/scheduler/builds.rs
+          - stado-rs/tests/builds/**
+        journeys: [native-build]
+      - paths:
+          - stado-rs/src/cli/release_submit.rs
+          - stado-rs/tests/ci-cd/**
+          - stado-rs/tests/channel/**
+        journeys: [release-pipeline, public-release-channel]
+      - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/deploy/host_channel.rs
           - docs/cli.md
@@ -120,6 +130,8 @@ surfaces:
       - service-unowned-processes
       - service-ensure
       - mobile-egress
+      - native-build
+      - release-pipeline
       - public-release-channel
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: release-logs}
@@ -140,6 +152,10 @@ surfaces:
         journeys: [service-ensure]
       - when: {PROBIERZ_JOURNEY: mobile-egress}
         journeys: [mobile-egress]
+      - when: {PROBIERZ_JOURNEY: native-build}
+        journeys: [native-build]
+      - when: {PROBIERZ_JOURNEY: release-pipeline}
+        journeys: [release-pipeline]
       - when: {PROBIERZ_JOURNEY: azure-subscription-recovery}
         journeys: [azure-subscription-recovery]
       - when: {PROBIERZ_JOURNEY: public-release-channel}
@@ -223,6 +239,16 @@ journeys:
     timeoutMs: 1200000
     description: On a Stado-selected host with a trusted phone tether, run the built Stado loopback proxy on that interface and require public IP intelligence to identify the realized exit as mobile, not hosting, and not a public proxy.
     value: Weles can use a phone exit managed by the normal Stado service lifecycle without mistaking a configured interface or listening port for proof that browser traffic leaves through a mobile carrier.
+  native-build:
+    owner: Stado maintainers
+    timeoutMs: 1200000
+    description: Write a native build recipe, let the coordinator observe the public Git branch, let a real platform-matching Stado worker claim and execute the job, and download the artifact whose bytes the recipe produced.
+    value: A recipe, queued job, and successful process exit are not mistaken for a build until the declared artifact is present and readable from canonical Stado results.
+  release-pipeline:
+    owner: Stado maintainers
+    timeoutMs: 1800000
+    description: Build committed source on a real Stado worker, qualify it, read the signing key through a real isolated Skarbiec grant, sign and publish immutable candidate bytes, install them, and execute the installed binary.
+    value: Build, signing, publication, and delivery are proven as one release path without replacing Skarbiec or stopping at a generated manifest.
   releases-screen:
     owner: Stado Desktop maintainers
     timeoutMs: 300000
