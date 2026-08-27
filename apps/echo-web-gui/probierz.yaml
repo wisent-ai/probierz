@@ -1,0 +1,54 @@
+schemaVersion: 1
+appId: echo-web-gui
+productId: echo
+owner: Echo maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web
+    mappings:
+      - paths:
+          - src/app/(dashboard)/(tools)/capabilities/**
+          - src/lib/product-capabilities.ts
+          - src/components/layout/Sidebar.tsx
+          - src/app/(dashboard)/layout.tsx
+          - tests/capabilities/**
+          - package.json
+          - package-lock.json
+          - next.config.ts
+        journeys: [capability-catalogue]
+
+surfaces:
+  tui:
+    spec: echo-web-capability-catalogue.spec.mjs
+    journeys: [capability-catalogue]
+    env:
+      ECHO_GUI_TEST_ENV: ECHO_GUI_TEST_ENV
+
+journeys:
+  capability-catalogue:
+    owner: Echo maintainers
+    timeoutMs: 180000
+    value: A real approved administrator opens the protected capability catalogue and can reach every Echo operator workspace and its documentation.
+    prerequisites:
+      requiredEnvironment:
+        - name: ECHO_GUI_TEST_ENV
+          kind: secret-file
+          requirement: Absolute path to an Echo environment file containing the Supabase URL, anon key, and service-role key.
+      data:
+        requirement: The test creates and removes its own temporary approved administrator in the real Echo project.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, SUPABASE_SERVICE_ROLE_KEY]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [capability-catalogue]
+  requiredTargets: [tui]
+  requireSecretScan: true

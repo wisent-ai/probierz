@@ -1,0 +1,53 @@
+schemaVersion: 1
+appId: echo-web
+productId: echo
+owner: Echo maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web
+    mappings:
+      - paths:
+          - src/app/api/analytics/**
+          - src/lib/analytics/**
+          - src/lib/api/mobile-analytics/**
+          - tests/analytics/**
+          - package.json
+          - next.config.ts
+          - package-lock.json
+        journeys: [analytics-collectors]
+
+surfaces:
+  tui:
+    spec: echo-web-analytics-collectors.spec.mjs
+    journeys: [analytics-collectors]
+    env:
+      ECHO_ANALYTICS_TEST_ENV: ECHO_ANALYTICS_TEST_ENV
+
+journeys:
+  analytics-collectors:
+    owner: Echo maintainers
+    timeoutMs: 120000
+    value: Real web and mobile events are accepted, persisted once, and invalid clients are refused.
+    prerequisites:
+      requiredEnvironment:
+        - name: ECHO_ANALYTICS_TEST_ENV
+          kind: secret-file
+          requirement: Absolute path to an Echo environment file containing NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; ECHO_ANALYTICS_TEST_BASE_URL may override the production Echo API.
+      data:
+        requirement: The configured deployment and Supabase project must belong to the same Echo environment.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, SUPABASE_SERVICE_ROLE_KEY]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [analytics-collectors]
+  requiredTargets: [tui]
+  requireSecretScan: true

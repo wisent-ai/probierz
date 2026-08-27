@@ -1,0 +1,52 @@
+schemaVersion: 1
+appId: echo
+productId: echo
+owner: Echo maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo
+    mappings:
+      - paths:
+          - cli.mjs
+          - lib.mjs
+          - mcp.mjs
+          - tests/capabilities.test.mjs
+          - package.json
+          - package-lock.json
+        journeys: [read-every-capability]
+
+surfaces:
+  tui:
+    spec: echo-read-every-capability.spec.mjs
+    journeys: [read-every-capability]
+    env:
+      ECHO_TEST_ENV: ECHO_TEST_ENV
+
+journeys:
+  read-every-capability:
+    owner: Echo maintainers
+    timeoutMs: 180000
+    value: Every documented Echo capability is queryable through the real read-only CLI against the real Echo database, while sensitive columns and invalid windows are refused.
+    prerequisites:
+      requiredEnvironment:
+        - name: ECHO_TEST_ENV
+          kind: secret-file
+          requirement: Absolute path to an Echo environment file containing NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
+      data:
+        requirement: The configured Supabase project must be the real Echo database.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, SUPABASE_SERVICE_ROLE_KEY]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [read-every-capability]
+  requiredTargets: [tui]
+  requireSecretScan: true
