@@ -1,0 +1,55 @@
+schemaVersion: 1
+appId: skrzynka
+productId: skrzynka
+owner: skrzynka maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka
+    mappings:
+      - paths:
+          - src/**
+          - tests/mailboxes/**
+          - Cargo.toml
+          - Cargo.lock
+        journeys:
+          - mailbox-lifecycle
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka-landing
+    mappings:
+      - paths:
+          - src/lib/docs/**
+          - tests/docs/**
+        journeys:
+          - mailbox-lifecycle
+
+surfaces:
+  tui:
+    spec: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka/tests/mailboxes/*.probierz.spec.mjs
+    journeys:
+      - mailbox-lifecycle
+
+journeys:
+  mailbox-lifecycle:
+    owner: skrzynka maintainers
+    timeoutMs: 600000
+    description: An operator adds an account from a real isolated Skarbiec vault, disables and enables the same account, and removes only local state after explicit confirmation.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredJourneys:
+    - mailbox-lifecycle
+  requiredTargets: [tui]
+  requireSecretScan: false
+
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys:
+    - mailbox-lifecycle
+  requiredTargets: [tui]
+  requireSecretScan: true
