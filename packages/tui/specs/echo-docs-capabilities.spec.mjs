@@ -70,5 +70,5 @@ await mkdir(join(evidencePath, '..'), { recursive: true });
 await writeFile(evidencePath, `${JSON.stringify({
   command: 'npm run test:docs',
   repository,
-  assertions: ['capability catalogue', '17 canonical CLI command pages', 'CLI index links'],
+  assertions: ['capability catalogue', '17 canonical CLI command pages', 'CLI index links', 'traffic analytics decision guide'],
 }, null, 2)}\n`, { mode: 0o600 });
