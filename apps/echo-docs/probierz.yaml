@@ -22,7 +22,7 @@ journeys:
   document-every-capability:
     owner: Echo maintainers
     timeoutMs: 180000
-    value: The real Echo documentation site publishes every capability and a canonical reference page for every CLI command.
+    value: The real Echo documentation site publishes every capability, a canonical reference page for every CLI command, and a bounded traffic analytics decision guide.
 
 artifacts:
   retain:
