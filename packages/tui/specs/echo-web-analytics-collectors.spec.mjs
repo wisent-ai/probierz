@@ -64,7 +64,7 @@ const baseUrl = `http://127.0.0.1:${port}`;
 const logs = [];
 const app = spawn('npm', ['run', 'dev', '--', '--hostname', '127.0.0.1', '--port', String(port)], {
   cwd: repository,
-  env: { ...process.env, ...configured },
+  env: { ...process.env, ...configured, ECHO_NEXT_DIST_DIR: '.next-probierz-analytics' },
   stdio: ['ignore', 'pipe', 'pipe'],
   detached: true,
 });
@@ -76,7 +76,7 @@ try {
   await waitUntilReady(baseUrl, app, logs);
   result = spawnSync('npm', ['run', 'test:analytics'], {
     cwd: repository,
-    env: { ...process.env, ...configured, ECHO_ANALYTICS_TEST_BASE_URL: baseUrl },
+    env: { ...process.env, ...configured, ECHO_ANALYTICS_TEST_BASE_URL: baseUrl, ECHO_NEXT_DIST_DIR: '.next-probierz-analytics' },
     encoding: 'utf8',
     timeout: 120000,
   });

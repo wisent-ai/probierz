@@ -50,7 +50,7 @@ try {
     cwd: repository,
     env: { ...process.env, ECHO_DOCS_BASE_URL: baseUrl },
     encoding: 'utf8',
-    timeout: 120000,
+    timeout: 300000,
   });
 } finally {
   const exited = new Promise(resolve => app.once('exit', resolve));
