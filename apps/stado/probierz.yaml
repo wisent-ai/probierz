@@ -60,6 +60,9 @@ repositories:
           - stado-rs/tests/channel/**
         journeys: [release-pipeline, public-release-channel]
       - paths:
+          - stado-rs/tests/platform-matrix/**
+        journeys: [platform-matrix]
+      - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/deploy/host_channel.rs
           - docs/cli.md
@@ -132,6 +135,7 @@ surfaces:
       - mobile-egress
       - native-build
       - release-pipeline
+      - platform-matrix
       - public-release-channel
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: release-logs}
@@ -156,6 +160,8 @@ surfaces:
         journeys: [native-build]
       - when: {PROBIERZ_JOURNEY: release-pipeline}
         journeys: [release-pipeline]
+      - when: {PROBIERZ_JOURNEY: platform-matrix}
+        journeys: [platform-matrix]
       - when: {PROBIERZ_JOURNEY: azure-subscription-recovery}
         journeys: [azure-subscription-recovery]
       - when: {PROBIERZ_JOURNEY: public-release-channel}
@@ -249,6 +255,11 @@ journeys:
     timeoutMs: 1800000
     description: Build committed source on a real Stado worker, qualify it, read the signing key through a real isolated Skarbiec grant, sign and publish immutable candidate bytes, install them, and execute the installed binary.
     value: Build, signing, publication, and delivery are proven as one release path without replacing Skarbiec or stopping at a generated manifest.
+  platform-matrix:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    description: On the live darwin-arm64 and linux-amd64 fleet workers, clone the exact Stado revision and run the native build and complete signed release journeys with a real isolated Skarbiec.
+    value: Both supported release platforms produce readable build artifacts and complete signing, publication, installation, and execution instead of inheriting confidence from a macOS-only run.
   releases-screen:
     owner: Stado Desktop maintainers
     timeoutMs: 300000
