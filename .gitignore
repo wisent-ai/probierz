@@ -44,3 +44,6 @@ apps/oko/*
 !apps/oko/seed.mjs
 !apps/oko/otp-broker.mjs
 !apps/oko/otp-broker.d.mts
+!apps/skrzynka/
+apps/skrzynka/*
+!apps/skrzynka/probierz.yaml

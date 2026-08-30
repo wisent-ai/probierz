@@ -2,15 +2,63 @@ schemaVersion: 1
 appId: skrzynka
 productId: skrzynka
 owner: skrzynka maintainers
+
+# What changed here and why.
+#
+# Two defects in this manifest, both of which let a change to skrzynka reach
+# main with nothing that touched it.
+#
+# 1. `surfaces.tui.spec` was
+#    `/Users/.../skrzynka/tests/mailboxes/*.probierz.spec.mjs`. It reads as "the
+#    product owns its test", which packages/tui/run-specs.mjs does support -- but
+#    only for an exact absolute path it can `existsSync`. A glob fails that test,
+#    so the runner fell through to its internal specs directory and derived
+#    `globPrefix = ""` from the basename, which matches EVERY name. This app's
+#    surface therefore selected all 42 harness specs belonging to other products
+#    and never the skrzynka spec it names. Replaced with `skrzynka-*.spec.mjs`,
+#    which resolves to exactly the three specs below.
+#
+# 2. Every path under `src/**` mapped to `mailbox-lifecycle` alone. That journey
+#    adds, disables, enables and removes a mailbox; it does not execute a line of
+#    the Gmail authorization broker. So a change to src/gmail.rs was "covered" by
+#    a test that cannot observe it. The two journeys added below cover what that
+#    single journey never did: that the crate still builds from its committed
+#    dependency versions, and that the authorization-failure diagnosis still
+#    holds.
+
 repositories:
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka
     mappings:
+      # Anything that can change what the binary is re-proves all three.
       - paths:
           - src/**
-          - tests/mailboxes/**
           - Cargo.toml
           - Cargo.lock
         journeys:
+          - crate-builds
+          - oauth-failure-diagnosis
+          - mailbox-lifecycle
+      # The authorization diagnosis lives in these three files: the broker and
+      # its unit tests, the error type the code travels through, and the command
+      # that decides which sentence an operator is shown.
+      - paths:
+          - src/gmail.rs
+          - src/error.rs
+          - src/main.rs
+        journeys:
+          - oauth-failure-diagnosis
+      - paths:
+          - tests/**
+        journeys:
+          - crate-builds
+          - oauth-failure-diagnosis
+          - mailbox-lifecycle
+      - paths:
+          - scripts/**
+          - examples/**
+          - README.md
+        journeys:
+          - crate-builds
           - mailbox-lifecycle
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka-landing
     mappings:
@@ -21,35 +69,82 @@ repositories:
           - mailbox-lifecycle
 
 surfaces:
+  # `tui` is the only entry in agent/runner.mjs's TARGETS table that drives a
+  # command line, and it runs each spec as a plain node process where exit zero
+  # is the verdict. That is what these three specs are. There is no target for
+  # "run a cargo command", and inventing a surface key would name a runner that
+  # does not exist.
   tui:
-    spec: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka/tests/mailboxes/*.probierz.spec.mjs
+    spec: skrzynka-*.spec.mjs
     journeys:
+      - crate-builds
+      - oauth-failure-diagnosis
       - mailbox-lifecycle
 
 journeys:
+  crate-builds:
+    owner: skrzynka maintainers
+    timeoutMs: 900000
+    description: 'The crate compiles from its committed dependency versions, including its test targets, and the binary it produces reports its own version.'
+    value: 'A drifted Cargo.lock is caught here rather than by whoever next tries to build a release, which is the defect that stopped every job in wisent-ai/weles until 2026-08-30.'
+  oauth-failure-diagnosis:
+    owner: skrzynka maintainers
+    timeoutMs: 900000
+    description: 'The four unit tests pinned to a real captured Google landing URL run and pass by name, so a Gmail authorization Google refuses is still reported as GMAIL_OAUTH_REDIRECT_NOT_REGISTERED with the client id, the redirect URI presented, and the setting that fixes it.'
+    value: 'Before this, a refused authorization spent its whole ten-minute lifetime reporting only GMAIL_OAUTH_FLOW_EXPIRED, and the real cause was reachable only by decoding an authError payload out of a browser URL by hand.'
   mailbox-lifecycle:
     owner: skrzynka maintainers
-    timeoutMs: 600000
-    description: An operator adds an account from a real isolated Skarbiec vault, disables and enables the same account, and removes only local state after explicit confirmation.
+    timeoutMs: 900000
+    description: 'An operator adds an account from a real isolated Skarbiec vault, disables and enables the same account, and removes only local state after explicit confirmation.'
+    value: 'The assertions stay next to the code they describe, in the product repository; this journey is the name that makes them run.'
+
+# The journey that is deliberately absent, recorded rather than quietly
+# missing.
+#
+# There is no journey for a live loopback Gmail authorization COMPLETING, and
+# there cannot be an honest one today. Completing that flow requires a real
+# human interaction with a real Google consent screen for a real account: an
+# account chooser, a scope grant, and a redirect back to the loopback listener.
+# Probierz can drive a browser, but it cannot hold a Google account's consent,
+# and a journey that stubbed the consent screen would prove only that the stub
+# answers -- which is exactly the shape of this product's own bug: a flow that
+# reported a timeout because nobody had ever seen what Google actually replied.
+#
+# What the absence costs, stated so nobody has to rediscover it:
+# `oauth-failure-diagnosis` covers how a REFUSAL is reported, and nothing here
+# covers a SUCCESS. Until the OAuth client has a loopback redirect URI
+# registered and an account exists whose consent can be replayed unattended, a
+# successful authorization is verified by a person and by nothing in this
+# manifest.
 
 artifacts:
   retain:
     pullRequestDays: 14
     nightlyDays: 30
     adhocDays: 7
-  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
-  pii: unlikely
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, CLIENT_SECRET, REFRESH_TOKEN]
+  pii: likely
 
 pullRequestPolicy:
   minimumEvidence: E2
   requiredJourneys:
+    - crate-builds
+    - oauth-failure-diagnosis
     - mailbox-lifecycle
   requiredTargets: [tui]
+  # Unchanged from what this manifest already declared. `requireSecretScan`
+  # reads `run.protection.secretScan`, which exists only after
+  # `probierz protect <app> <run> --key-file`; this fleet operates artifact
+  # protection at release time and holds exactly one protected bundle. The
+  # repository is still scanned before merge with `probierz secret-scan`, which
+  # is a different instrument and not one this field can consume.
   requireSecretScan: false
 
 releasePolicy:
   minimumEvidence: E2
   requiredJourneys:
+    - crate-builds
+    - oauth-failure-diagnosis
     - mailbox-lifecycle
   requiredTargets: [tui]
   requireSecretScan: true
