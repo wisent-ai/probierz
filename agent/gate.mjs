@@ -153,7 +153,9 @@ export async function evaluateGate({
         }
       }
     }
-    if (policy.requireSecretScan && !run.protection?.secretScan?.passed) errors.push(`${run.runId}: passing pre-upload secret scan is missing`);
+    if (policy.requireSecretScan && mode !== "release" && !run.protection?.secretScan?.passed) {
+      errors.push(`${run.runId}: passing pre-upload secret scan is missing`);
+    }
   }
   const sourceHashes = [...new Set(runs.map((run) => run.source?.sha256).filter(Boolean))];
   if (runs.length && sourceHashes.length !== 1) errors.push(`runs do not identify one exact app source (${sourceHashes.length} source hashes)`);
@@ -197,6 +199,11 @@ export async function evaluateGate({
         if (!sameSet(receipt.runIds, runIds)) errors.push("receipt run IDs do not match gate run IDs");
         if (!receipt.verdict?.passed) errors.push("receipt verdict is not passed");
         for (const run of runs) {
+          const scan = receipt.secretScans?.[run.runId];
+          if (policy.requireSecretScan
+              && (!scan?.passed || (Array.isArray(scan.findings) && scan.findings.length > 0))) {
+            errors.push(`${run.runId}: signed pre-upload secret scan is missing or has findings`);
+          }
           const signed = receipt.runs.find((candidate) => candidate.runId === run.runId);
           if (!signed || canonical(signed) !== canonical(signedReceiptRun(run, manifest))) {
             errors.push(`${run.runId}: local policy evidence differs from the signed receipt`);
