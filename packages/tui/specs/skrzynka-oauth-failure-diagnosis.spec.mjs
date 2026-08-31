@@ -35,6 +35,8 @@ const REQUIRED = [
   'gmail::tests::a_landing_url_without_an_error_carries_no_code',
   'gmail::tests::the_operands_come_from_the_url_that_was_handed_out',
   'gmail::tests::the_refusal_names_the_client_the_uri_and_the_setting',
+  'gmail::tests::google_imap_password_rejected_names_mailbox_and_credential_item',
+  'gmail::tests::google_imap_password_rejected_enforces_gmail_host_boundary',
 ];
 
 const run = spawnSync('cargo', ['test', '--locked', '--bins', '--', '--nocapture'], {
