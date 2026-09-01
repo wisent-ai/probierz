@@ -10,6 +10,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# release build output (WISENT_OUTPUT_DIR)
+.wisent-output/
+
 # Playwright
 test-results/
 playwright-report/
