@@ -1,6 +1,36 @@
 {
   "schema_version": 1,
   "product": "probierz",
-  "releases": false,
-  "reason": "package.json marks this workspace private, and deploy/ only schedules the source checkout in place; the repository defines no published artifact or durable release channel."
+  "releases": true,
+  "version_source": {
+    "kind": "regex",
+    "path": "package.json",
+    "pattern": "(?m)^\\s*\"version\"\\s*:\\s*\"(?<version>[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\"\\s*,"
+  },
+  "platforms": {
+    "darwin-arm64": {
+      "runner_platform": "darwin-arm64",
+      "quality": [],
+      "build": {
+        "argv": ["bash", "release/stado-build.sh"]
+      },
+      "stage": {
+        "bin/probierz": "bin/probierz",
+        "bin/probierz-mcp": "bin/probierz-mcp",
+        "evidence/DIGESTS": "evidence/DIGESTS"
+      }
+    }
+  },
+  "runtime": {
+    "binary": "bin/probierz",
+    "launcher": "bin/probierz",
+    "config_schema": 1,
+    "state_schema": 1,
+    "minimum_stado_version": "0.13.19",
+    "rollback_compatible_with": []
+  },
+  "promotion": {
+    "channels": ["candidate", "stable"],
+    "reconcile": true
+  }
 }
