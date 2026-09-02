@@ -467,7 +467,12 @@ not create static product banners; those belong to `wisent-asset-generator`.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
   the configured object store. A failed remote run invokes the same bounded
-  Brama repair worker before its evidence bundle returns.
+  Brama repair worker before its evidence bundle returns. The submitter
+  measures the source identity of the harness and of every manifest repository
+  and ships it as `inputs/source-identity.json`; the worker records that answer
+  and marks the run `sourceIdentityOrigin: "submitter"`, because a worker holds
+  a snapshot of the source and not the checkouts. `--app-repo` names the tree
+  that is packed, and the identity is measured on that tree.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).

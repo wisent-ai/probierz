@@ -190,14 +190,72 @@ function sourceIdentity(app) {
   };
 }
 
-export function appSourceIdentity(appId) {
+const SHA256 = /^[0-9a-f]{64}$/;
+
+/**
+ * The source identity a remote submitter measured and shipped with the job.
+ *
+ * A worker holds a snapshot of the source, not the checkouts: the app tarball
+ * is `git archive HEAD` and carries no `.git`, the manifest's repository roots
+ * are absolute paths on the submitter's machine, and the harness tarball
+ * carries `.git` but not the `.gitignore` that tells source from
+ * `node_modules`. Recomputing an identity there could only describe the copy,
+ * and in practice it did not describe anything: it killed the run with
+ * "source inventory failed". The submitter measured the thing that is actually
+ * under test, so its answer travels with the job and every reader of the
+ * identity — the run manifest, the SEO evaluation, an onboarding spec — takes
+ * that answer instead of hashing what is on the worker's disk.
+ */
+function submittedSourceIdentity(appId = null) {
+  const file = process.env.PROBIERZ_SOURCE_IDENTITY;
+  if (!file) return null;
+  const reject = (detail) => new FailureError({
+    point: "run.source",
+    code: CODE.CONFIG,
+    detail: `${file}: ${detail}`,
+    message: `PROBIERZ_SOURCE_IDENTITY does not carry a usable source identity (${detail}), so this run cannot name the source it tested.`,
+  });
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    throw reject(error instanceof Error ? error.message : "unreadable");
+  }
+  if (parsed?.schemaVersion !== 1) throw reject("schemaVersion must be 1");
+  if (!SHA256.test(parsed.harness?.worktreeSha256 || "")) throw reject("harness worktreeSha256 is missing");
+  for (const repository of parsed.app?.repositories || []) {
+    if (!SHA256.test(repository?.worktreeSha256 || "")) {
+      throw reject(`repository ${repository?.name || "?"} has no worktreeSha256`);
+    }
+  }
+  // One job carries one app's identity. Anything else is measured here, where
+  // the answer would at least be about the right application.
+  if (appId && parsed.appId && parsed.appId !== appId) return null;
+  return parsed;
+}
+
+/**
+ * `primaryRoot` replaces the manifest's primary repository root for one call.
+ * A remote submission may stage a checkout other than the one the manifest
+ * records — a release worktree, a branch under review — and the verdict has to
+ * name the tree that was packed, not the tree the manifest remembers.
+ */
+export function appSourceIdentity(appId, { primaryRoot = null } = {}) {
+  const submitted = submittedSourceIdentity(appId);
+  if (submitted) return submitted;
+  const manifest = loadAppManifest(appId);
+  const repositories = primaryRoot
+    ? manifest.repositories.map((repository, index) =>
+      (index === Number("0") ? { ...repository, root: primaryRoot } : repository))
+    : manifest.repositories;
   return {
     schemaVersion: 1,
+    appId,
     harness: repositoryIdentity(ROOT, "probierz", null, {
       excludeRuntimeSecrets: true,
       includePackageLock: true,
     }),
-    app: sourceIdentity({ manifest: loadAppManifest(appId) }),
+    app: sourceIdentity({ manifest: { ...manifest, repositories } }),
   };
 }
 
@@ -418,8 +476,9 @@ export async function runSurface(target, opts = {}) {
   const build = buildIdentity(requestedEnv);
   const kind = segment(opts.kind || requestedEnv.PROBIERZ_RUN_KIND, "adhoc");
   const runJourneys = app ? surfaceJourneys(app.surface, requestedEnv) : [];
-  const source = sourceIdentity(app);
-  const harness = repositoryIdentity(ROOT, "probierz", null, {
+  const submitted = submittedSourceIdentity(appId);
+  const source = submitted ? submitted.app : sourceIdentity(app);
+  const harness = submitted ? submitted.harness : repositoryIdentity(ROOT, "probierz", null, {
     excludeRuntimeSecrets: true,
     includePackageLock: true,
   });
@@ -450,6 +509,7 @@ export async function runSurface(target, opts = {}) {
     startedAt: startedDate.toISOString(),
     harness,
     source,
+    sourceIdentityOrigin: submitted ? "submitter" : "runner",
     build,
     appVersion: requestedEnv.PROBIERZ_APP_VERSION || null,
     appManifest: app ? {

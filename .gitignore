@@ -58,3 +58,7 @@ apps/stado/*
 !apps/skarbiec-desktop/
 apps/skarbiec-desktop/*
 !apps/skarbiec-desktop/probierz.yaml
+!apps/wisent-components/
+apps/wisent-components/*
+!apps/wisent-components/probierz.yaml
+!apps/wisent-components/figma-parity.sh
