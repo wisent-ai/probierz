@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest } from "./apps.mjs";
 import { appSourceIdentity } from "./runner.mjs";
-import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
+import { CODE, EXIT_RETRY, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -21,6 +21,12 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+// An input upload rides through a control-plane restart rather than failing
+// the submission: six attempts, five seconds further apart each time, so a
+// redeploy has about a minute and a half to come back before an operator is
+// told the store is down.
+const UPLOAD_ATTEMPTS = Number("6");
+const UPLOAD_BACKOFF_MS = Number("5000");
 const STATUS_CALL_TIMEOUT_MS = Number("15000");
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
@@ -242,14 +248,29 @@ function manifestRepoRoot(appId) {
   return match ? match[1].trim() : null;
 }
 
+/** Sleep without a timer: `upload` is synchronous, and so is everything that
+ * calls it. */
+function pause(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(Number("4"))), Number("0"), Number("0"), ms);
+}
+
 function upload(localFile, name) {
   const destination = `${stateUri("inputs")}/${name}`;
-  const out = sh(STADO_BIN, ["storage", "put", destination, localFile]);
-  // The local path is diagnostic; it rides the log line, not the message.
-  if (out.status !== Number("0")) {
-    throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile})` });
+  let out;
+  for (let attempt = Number("1"); ; attempt += Number("1")) {
+    out = sh(STADO_BIN, ["storage", "put", destination, localFile]);
+    if (out.status === Number("0")) return destination;
+    // A multi-megabyte input goes up in 128 KB chunks, and the object store
+    // restarts under it whenever the control plane redeploys: one chunk of
+    // sixty-eight answers "infrastructure we depend on is unreachable" and the
+    // whole submission dies. Exit 69 is the queue's own word for "not your
+    // fault, try later" — so try later, here, instead of returning a verdict
+    // of "outage" to an operator who can only run the same command again.
+    if (out.status !== EXIT_RETRY || attempt >= UPLOAD_ATTEMPTS) break;
+    pause(attempt * UPLOAD_BACKOFF_MS);
   }
-  return destination;
+  // The local path is diagnostic; it rides the log line, not the message.
+  throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile}, ${UPLOAD_ATTEMPTS} attempts)` });
 }
 
 function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, modelRouterUrl = null, record = false }) {
