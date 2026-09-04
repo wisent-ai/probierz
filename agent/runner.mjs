@@ -181,24 +181,28 @@ function sha256Path(value) {
 }
 
 
-function sourceIdentity(app) {
+function sourceIdentity(app, primaryRoot = null) {
   if (!app) return null;
   const repositories = app.manifest.repositories.map((repository, index) =>
-    repositoryIdentity(repository.root, path.basename(repository.root), index));
+    repositoryIdentity(
+      index === Number("0") && primaryRoot ? path.resolve(primaryRoot) : repository.root,
+      path.basename(repository.root),
+      index,
+    ));
   return {
     sha256: createHash("sha256").update(JSON.stringify(repositories.map(({ index, sha256 }) => ({ index, sha256 })))).digest("hex"),
     repositories,
   };
 }
 
-export function appSourceIdentity(appId) {
+export function appSourceIdentity(appId, { primaryRoot = null } = {}) {
   return {
     schemaVersion: 1,
     harness: repositoryIdentity(ROOT, "probierz", null, {
       excludeRuntimeSecrets: true,
       includePackageLock: true,
     }),
-    app: sourceIdentity({ manifest: loadAppManifest(appId) }),
+    app: sourceIdentity({ manifest: loadAppManifest(appId) }, primaryRoot),
   };
 }
 
@@ -410,7 +414,7 @@ export async function runSurface(target, opts = {}) {
   const build = buildIdentity(requestedEnv);
   const kind = segment(opts.kind || requestedEnv.PROBIERZ_RUN_KIND, "adhoc");
   const runJourneys = app ? surfaceJourneys(app.surface, requestedEnv) : [];
-  const source = sourceIdentity(app);
+  const source = sourceIdentity(app, opts.appRepo);
   const harness = repositoryIdentity(ROOT, "probierz", null, {
     excludeRuntimeSecrets: true,
     includePackageLock: true,

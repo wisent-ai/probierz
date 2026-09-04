@@ -121,6 +121,7 @@ const TOOLS = [
       target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
       record: { type: "boolean", description: "Force video + trace + screenshot capture on." },
       appId: { type: "string", description: "Product identifier used in the run-scoped artifact path and manifest." },
+      appRepo: { type: "string", description: "Primary product checkout to measure instead of the manifest's usual root; the selected binary and spec must belong to it." },
       env: { type: "object", description: "Condition env vars, e.g. { BASE_URL, APP_IOS, PROBIERZ_LOCALE, PROBIERZ_COLOR_SCHEME }." },
       timeoutMs: { type: "number", description: "Kill the run after this many ms (default 20 min)." },
       resourceWaitMs: { type: "number", description: "Wait this long for a busy device/port lease; 0 fails fast." },
@@ -293,7 +294,10 @@ const TOOLS = [
   {
     name: "probierz_source_identity",
     description: "Compute exact path-independent harness and app source SHA-256 identities.",
-    inputSchema: objectSchema({ appId: { type: "string" } }, ["appId"]),
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      appRepo: { type: "string", description: "Primary product checkout to measure instead of the manifest's usual root." },
+    }, ["appId"]),
   },
   {
     name: "probierz_gate_status",
@@ -557,7 +561,9 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_source_identity") {
-    return textResult(appSourceIdentity(asString(args.appId, "appId")));
+    return textResult(appSourceIdentity(asString(args.appId, "appId"), {
+      primaryRoot: typeof args.appRepo === "string" ? args.appRepo : null,
+    }));
   }
   if (name === "probierz_history") {
     return textResult(runHistory({
@@ -753,6 +759,7 @@ async function callTool(name, args) {
     const target = asString(args.target, "target");
     const result = await runSurface(target, {
       appId: typeof args.appId === "string" ? args.appId : undefined,
+      appRepo: typeof args.appRepo === "string" ? args.appRepo : undefined,
       env: args.env && typeof args.env === "object" ? args.env : {},
       record: Boolean(args.record),
       timeoutMs: Number(args.timeoutMs) || Number("0"),

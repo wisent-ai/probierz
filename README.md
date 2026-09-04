@@ -467,6 +467,11 @@ not create static product banners; those belong to `wisent-asset-generator`.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
   the configured object store.
+- **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
+  and `probierz run TARGET --app APP --app-repo /path/to/worktree --spec /path/to/spec`
+  bind their evidence to the selected primary checkout without changing the
+  application manifest. Other declared repositories keep their own identities.
+  Select a binary and product-owned spec built from that same checkout.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
