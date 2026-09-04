@@ -89,7 +89,6 @@ export function fixtureRegistry({ target = {}, releaseControl = null } = {}) {
         kind: 'local',
         hostnames: [thisHostname()],
         release_platform: 'darwin-arm64',
-        slots: 2,
         role: 'interactive',
         notes: 'Probierz journey fixture host. This machine, scoped to a temp HOME.',
         ...target,
@@ -289,14 +288,29 @@ export async function openFleetFixture(slug) {
      * are the agent's vocabulary, which is exactly what `host gates` reports
      * back verbatim.
      */
-    publishCapacity: (diag, { freeSlots = 1, publishedAt = new Date().toISOString() } = {}) =>
+    publishCapacity: (
+      diag,
+      {
+        availableCpuCores = 2,
+        acceptingJobs = availableCpuCores > 0,
+        publishedAt = new Date().toISOString(),
+      } = {},
+    ) =>
       writeJson(join(store, 'capacity', `local-${thisHostname()}.json`), {
         consumer_id: `local-${thisHostname()}`,
         kind: 'local',
-        free_slots: { cpu: freeSlots },
+        accepting_jobs: acceptingJobs,
+        running_jobs: 0,
+        total_cpu_cores: 4,
+        available_cpu_cores: availableCpuCores,
+        available_accelerators: {},
+        free_ram_gb: 8,
+        total_ram_gb: 16,
+        free_vram_gb: 0,
+        total_vram_gb: 0,
         published_at: publishedAt,
         diag,
-        stado_version: '0.7.5',
+        stado_version: '0.15.10',
       }),
 
     /** One host release state document for the fixture product. */

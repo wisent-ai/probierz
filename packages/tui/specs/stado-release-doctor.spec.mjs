@@ -156,7 +156,10 @@ try {
 
   // 4. An unresolved disk gate blocks even at the desired version: this is the
   //    state in which the host claims nothing at all.
-  await fixture.publishCapacity({ ...healthyGates, disk_pressure_unresolved: true }, { freeSlots: 0 });
+  await fixture.publishCapacity(
+    { ...healthyGates, disk_pressure_unresolved: true },
+    { availableCpuCores: 0, acceptingJobs: false },
+  );
   await fixture.writeReleaseState(
     settledState({ version: DESIRED, digest: DESIRED_DIGEST, releaseDir: join(installRoot, DESIRED) }),
   );

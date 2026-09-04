@@ -3,7 +3,7 @@ appId: stado
 productId: stado
 owner: Stado Desktop maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado
     mappings:
       - paths:
           - desktop/StadoDesktop/Sources/Stado/StadoApp.swift
@@ -43,6 +43,7 @@ repositories:
       - paths:
           - stado-rs/src/deploy/service.rs
           - stado-rs/src/cli/service.rs
+          - stado-rs/tests/service/**
         journeys: [service-converge, service-unowned-processes, service-ensure]
       - paths:
           - stado-rs/src/cli/egress.rs
@@ -119,7 +120,7 @@ surfaces:
       - when: {PROBIERZ_JOURNEY: services-screen}
         journeys: [services-screen]
     conditions:
-      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
+      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
   tui:
     spec: stado-*.spec.mjs
     journeys:
@@ -167,7 +168,7 @@ surfaces:
       - when: {PROBIERZ_JOURNEY: public-release-channel}
         journeys: [public-release-channel]
     conditions:
-      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/stado-rs/target/release/stado
+      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
 journeys:
   onboarding-first-use:
     owner: Stado Desktop maintainers
@@ -183,7 +184,7 @@ journeys:
       event: authorized_job_completed is emitted by the completed-job observation hook
       productArtifact: the exact authorized job ID is visible in the Jobs completed-outcomes table
     requiredConditions:
-      - The installed ai.wisent.stado build is produced from the mapped wisent-compute source revision
+      - The installed ai.wisent.stado build is produced from the mapped Stado source revision
       - A dedicated authenticated subject has fresh onboarding progress and read access to a real Stado dashboard snapshot
       - PROBIERZ_STADO_COMPLETED_JOB_ID identifies an authorized completed job visible in that snapshot
     publication:
@@ -218,8 +219,8 @@ journeys:
   host-gates:
     owner: Stado maintainers
     timeoutMs: 240000
-    description: Say why a host is claiming nothing, in the blocker words its own agent publishes, with the disk policy behind them and its declared slots against its published free ones.
-    value: A host that has stopped claiming work is visible as that, instead of as a healthy host with an empty queue.
+    description: Say why a host is claiming no work, in the blocker words its own agent publishes, with the disk policy behind them and live CPU, memory and accelerator capacity beside the work already running.
+    value: A host that has stopped claiming work is visible as that, instead of as a healthy host with an empty queue or a machine constrained by an operator-set worker count.
   host-reclaim:
     owner: Stado maintainers
     timeoutMs: 300000

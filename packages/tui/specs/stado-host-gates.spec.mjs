@@ -46,7 +46,7 @@ try {
 
   // 1. A host that is claiming: no blockers, and a zero exit so
   //    `stado host reclaim … && stado host gates …` is a usable sentence.
-  await fixture.publishCapacity(claiming, { freeSlots: 2 });
+  await fixture.publishCapacity(claiming, { availableCpuCores: 2 });
   const healthy = await gates();
   assert.equal(healthy.status, 0, `a claiming host must exit zero: ${healthy.output}`);
   assert.equal(healthy.json.host, FIXTURE_HOST);
@@ -56,19 +56,22 @@ try {
   assert.equal(healthy.json.disk.target_free_gb, 20);
   assert.equal(healthy.json.disk.policy_mode, 'enforce');
   assert.ok(typeof healthy.json.disk.free_gb === 'number', 'the host did not report its free space');
-  assert.equal(healthy.json.capacity.slots_declared, 2);
-  assert.equal(healthy.json.capacity.free_slots, 2);
+  assert.equal(healthy.json.capacity.accepting_jobs, true);
+  assert.equal(healthy.json.capacity.available_cpu_cores, 2);
   assert.ok(healthy.json.capacity.published_at, 'a live publication has no timestamp');
   assert.ok(healthy.json.capacity.age_seconds !== null, 'a live publication has no age');
 
   // 2. The incident: the agent publishes `disk_pressure_unresolved` and fails
   //    admission closed. The word comes back exactly as the agent published it.
-  await fixture.publishCapacity({ ...claiming, disk_pressure_unresolved: true }, { freeSlots: 0 });
+  await fixture.publishCapacity(
+    { ...claiming, disk_pressure_unresolved: true },
+    { availableCpuCores: 0, acceptingJobs: false },
+  );
   const blocked = await gates();
   assert.notEqual(blocked.status, 0, 'a host that is claiming nothing must not exit zero');
   assert.equal(blocked.json.claiming, false);
   assert.deepEqual(blocked.json.blockers, ['disk_pressure_unresolved']);
-  assert.equal(blocked.json.capacity.free_slots, 0);
+  assert.equal(blocked.json.capacity.available_cpu_cores, 0);
   const blockedText = await fixture.invoke(['host', 'gates', FIXTURE_HOST]);
   assert.notEqual(blockedText.status, 0);
   assert.match(blockedText.output, /claiming: no/);
