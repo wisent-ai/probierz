@@ -74,7 +74,7 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--env K=V ...] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -530,15 +530,22 @@ async function main() {
     const appId = value("--app");
     if (!appId) throw configError("stado run needs --app <appId>");
     const envFlags = {};
-    for (const flag of rest.filter((entry) => entry.startsWith("--env="))) {
-      const [key, val] = flag.slice("--env=".length).split("=", 2);
-      if (key && val !== undefined) envFlags[key] = val;
+    for (let index = 0; index < rest.length; index += 1) {
+      const flag = rest[index];
+      if (flag !== "--env" && !flag.startsWith("--env=")) continue;
+      const assignment = flag === "--env" ? rest[++index] : flag.slice("--env=".length);
+      const equals = assignment?.indexOf("=") ?? -1;
+      const key = assignment?.slice(0, equals);
+      if (equals < 1 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+        throw configError("--env needs NAME=VALUE with a valid environment variable name");
+      }
+      envFlags[key] = assignment.slice(equals + 1);
     }
     const scriptPath = value("--script") || null;
     const provision = rest.includes("--cargo-release")
-      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
+      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml", env: envFlags }
       : value("--app-bundle-path")
-        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
+        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path"), env: envFlags }
         : rest.includes("--node-source")
           ? {
               kind: "node-source",
@@ -547,6 +554,9 @@ async function main() {
               script: scriptPath,
             }
           : null;
+    if (!provision && Object.keys(envFlags).length) {
+      throw configError("--env requires --cargo-release, --app-bundle-path or --node-source");
+    }
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
     }

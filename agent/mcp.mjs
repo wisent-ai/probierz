@@ -355,6 +355,7 @@ const TOOLS = [
       host: { type: "string", description: "stado:gcp|azure|aws|any|spot|local|t4" },
       cargoRelease: { type: "boolean", description: "Build the app binary on the worker with cargo (needs appRepo)." },
       appRepo: { type: "string" },
+      env: { type: "object", description: "Non-secret execution conditions for a cargoRelease job; credentials use the app manifest's secretRefs." },
       watch: { type: "boolean", description: "Default true; waits for completion and fetches results." },
     }, ["target", "appId"]),
   },
@@ -662,13 +663,14 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_stado_run") {
+    if (args.env && args.cargoRelease !== true) throw new Error("cargoRelease is required when env is supplied");
     return textResult(await submitRemoteRun({
       target: asString(args.target, "target"),
       appId: asString(args.appId, "appId"),
       spec: typeof args.spec === "string" ? args.spec : null,
       host: typeof args.host === "string" ? args.host : "stado:gcp",
       provision: args.cargoRelease === true
-        ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId") }
+        ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId"), env: args.env && typeof args.env === "object" ? args.env : {} }
         : null,
       appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
       watch: args.watch !== false,

@@ -306,9 +306,17 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
-    for (const [key, value] of Object.entries(provision.env ?? {})) {
-      lines.push(`export ${key}=${JSON.stringify(String(value))}`);
+  }
+  for (const [key, value] of Object.entries(provision?.env ?? {})) {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      throw new FailureError({
+        point: "stado.submit",
+        code: CODE.CONFIG,
+        detail: `invalid environment variable name: ${key}`,
+        message: "Remote environment keys must be valid variable names.",
+      });
     }
+    lines.push(`export ${key}=${shellQuote(String(value))}`);
   }
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,

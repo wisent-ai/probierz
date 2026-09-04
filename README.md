@@ -478,6 +478,10 @@ not create static product banners; those belong to `wisent-asset-generator`.
   repository and ships `inputs/source-identity.json`; the worker records it
   with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
   `--app-repo` selects the product tree that is packed and measured.
+  `stado run --env NAME=VALUE` supplies non-secret execution conditions for
+  Cargo, native-bundle and Node-source jobs; `--env=NAME=VALUE` is equivalent.
+  Values are passed literally, including embedded `=` characters. Credentials
+  continue to use the manifest's scoped `secretRefs`, not command arguments.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
