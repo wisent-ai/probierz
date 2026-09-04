@@ -921,6 +921,7 @@ async function main() {
     const opts = parseRunArgs(rest.slice(Number("1")));
     const result = await runSurface(target, {
       appId: opts.appId,
+      appRepo: opts.appRepo,
       env: opts.env,
       record: opts.record,
       timeoutMs: opts.timeoutMs,
