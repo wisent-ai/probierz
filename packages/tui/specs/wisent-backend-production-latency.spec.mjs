@@ -9,7 +9,7 @@ const artifacts = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 
 const credential = spawnSync('skarbiec', ['get', 'wisent-backend-supabase'], {
   encoding: 'utf8',
-  timeout: 30000,
+  timeout: 120000,
 });
 assert.ifError(credential.error);
 assert.equal(credential.status, 0, credential.stderr || 'Skarbiec could not read wisent-backend-supabase');
