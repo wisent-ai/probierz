@@ -64,7 +64,7 @@ function usage() {
       "  probierz list                 every test surface + run script",
       "  probierz apps                 registered products, targets, and journeys",
       "  probierz app <appId>          validated product manifest",
-      "  probierz source-identity <appId>  exact harness and app source SHA-256",
+      "  probierz source-identity <appId> [--app-repo path]  exact harness and selected app source SHA-256",
       "  probierz specs [surface]      spec files on disk (optional surface filter)",
       "  probierz accessibility <appId>  validate stable IDs and native selectors",
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
@@ -307,9 +307,17 @@ async function main() {
     return;
   }
   if (cmd === "source-identity") {
+    validateAuthorOptions(rest, {
+      positionalCount: Number("1"),
+      valueFlags: ["--app-repo"],
+      booleanFlags: [],
+    });
     const appId = rest[Number("0")];
     if (!appId) throw configError("source-identity needs an app ID");
-    out(appSourceIdentity(appId));
+    const repoIndex = rest.indexOf("--app-repo");
+    out(appSourceIdentity(appId, {
+      primaryRoot: repoIndex === -1 ? null : rest[repoIndex + 1],
+    }));
     return;
   }
   if (cmd === "accessibility") {

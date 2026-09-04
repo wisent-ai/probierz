@@ -473,6 +473,11 @@ not create static product banners; those belong to `wisent-asset-generator`.
   and marks the run `sourceIdentityOrigin: "submitter"`, because a worker holds
   a snapshot of the source and not the checkouts. `--app-repo` names the tree
   that is packed, and the identity is measured on that tree.
+  `probierz source-identity APP --app-repo /absolute/worktree` exposes the
+  same selection without submitting a remote job. Pass its retained JSON file
+  as `PROBIERZ_SOURCE_IDENTITY` when running a product-owned spec from that
+  worktree; the run records the selected source, not the manifest's usual
+  checkout.
   Authoring applies the surface's matching single-journey override before
   executing its candidate, including on a remote worker. Native `desktop:cua`
   authoring returns the accepted spec alongside the manifest and evidence.
