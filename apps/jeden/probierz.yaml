@@ -86,11 +86,11 @@ matrix:
 pullRequestPolicy:
   minimumEvidence: E2
   requiredTargets: [tui]
-  requiredJourneys: [onboarding-first-use]
+  requiredJourneys: [onboarding-first-use, task-contract-lifecycle]
 releasePolicy:
   minimumEvidence: E2
   requiredTargets: [tui]
-  requiredJourneys: [onboarding-first-use]
+  requiredJourneys: [onboarding-first-use, task-contract-lifecycle]
   requiredMatrixProfile: onboarding
   requireProtectedArtifacts: false
   requireSecretScan: true

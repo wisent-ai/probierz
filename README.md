@@ -470,6 +470,10 @@ not create static product banners; those belong to `wisent-asset-generator`.
   Authoring applies the surface's matching single-journey override before
   executing its candidate, including on a remote worker. Native `desktop:cua`
   authoring returns the accepted spec alongside the manifest and evidence.
+  Every run exports `PROBIERZ_TOOLKIT_ROOT` for product-owned specs that use the
+  toolkit's real drivers. Remote source provisioning exports `PROBIERZ_APP_SOURCE`
+  as the staged product checkout; native application bundles keep their source
+  beside the bundle, under the `-src` directory.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
