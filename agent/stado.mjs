@@ -256,6 +256,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     const targetPrefix = manifestDir === "." ? "" : `${manifestDir}/`;
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       `cargo build --release --manifest-path "$JOB_ROOT/work/${provision.appId}/${manifestPath}"`,
@@ -267,12 +268,20 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export MAC_APP_PATH="$JOB_ROOT/work/${provision.appId}/${provision.bundleName}"`,
       `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
+      `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}-src"`,
+    );
+  }
+  if (provision?.kind === "app-bundle" && target === "desktop:cua") {
+    lines.push(
+      'CUA_EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$MAC_APP_PATH/Contents/Info.plist")',
+      'export CUA_APP_EXECUTABLE="$MAC_APP_PATH/Contents/MacOS/$CUA_EXECUTABLE"',
     );
   }
   if (provision?.kind === "node-source") {
     // Generic JS app sources are staged as immutable job inputs.
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
     for (const [key, value] of Object.entries(provision.env ?? {})) {
       lines.push(`export ${key}=${JSON.stringify(String(value))}`);

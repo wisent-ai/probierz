@@ -11,11 +11,13 @@ repositories:
           - stado-rs/src/providers/local/agent.rs
           - stado-rs/src/providers/local/helpers.rs
           - stado-rs/src/queue/capacity.rs
+          - stado-rs/src/deploy/host_gui_automation.rs
           - desktop/StadoDesktop/Sources/Stado/HostsView.swift
           - desktop/StadoDesktop/Sources/Stado/OperationsModels.swift
           - docs/cli.md
           - docs/configuration.md
-          - desktop/StadoDesktop/tests/fleet/WorkerNodeCapacityTests.swift
+          - stado-rs/tests/host_dynamic_capacity/**
+          - desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs
           - desktop/StadoDesktop/scripts/bundle.sh
         journeys: [host-dynamic-capacity]
       - paths:
