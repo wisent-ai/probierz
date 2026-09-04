@@ -25,16 +25,22 @@ repositories:
           - stado-rs/src/queue/runs.rs
           - stado-rs/tests/run_history/**
         journeys: [run-retention]
+      - paths:
+          - stado-rs/src/cli/release_submit.rs
+          - stado-rs/tests/ci-cd/**
+        journeys: [release-pipeline]
 
 surfaces:
   tui:
     spec: stado-host-gates.spec.mjs
-    journeys: [host-dynamic-capacity, run-retention]
+    journeys: [host-dynamic-capacity, run-retention, release-pipeline]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
         journeys: [host-dynamic-capacity]
       - when: {PROBIERZ_JOURNEY: run-retention}
         journeys: [run-retention]
+      - when: {PROBIERZ_JOURNEY: release-pipeline}
+        journeys: [release-pipeline]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -50,6 +56,11 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 600000
     value: The coordinator retains and reaps the exact terminal result of a migrated durable run whose historical job predates submission-linkage fields, while conflicting linkage remains refused.
+  release-pipeline:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    description: Build committed source on a real worker, sign through an isolated real Skarbiec grant, publish and install the release, then retry a cancelled build under a distinct job and execute the installed binary.
+    value: Neither a generated command nor an archive alone counts as delivery; the normal release and cancelled-build retry must both install and run the actual product.
 
 artifacts:
   retain:
@@ -64,6 +75,6 @@ pullRequestPolicy:
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity, run-retention]
+  requiredJourneys: [host-dynamic-capacity, run-retention, release-pipeline]
   requiredTargets: [tui, desktop:cua]
   requireSecretScan: true
