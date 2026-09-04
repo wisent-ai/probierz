@@ -145,6 +145,7 @@ function requireGuiReady(hostDef, target) {
   }
   const status = sh(STADO_BIN, ["host", "gui-automation", "status", hostDef.target], {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    timeout: STATUS_CALL_TIMEOUT_MS,
   });
   if (status.status !== Number("0")) {
     throw remoteFailure("stado.preflight", `Reading GUI readiness for ${hostDef.target} failed`, status);
