@@ -16,6 +16,7 @@ repositories:
           - docs/cli.md
           - docs/configuration.md
           - desktop/StadoDesktop/tests/fleet/WorkerNodeCapacityTests.swift
+          - desktop/StadoDesktop/scripts/bundle.sh
         journeys: [host-dynamic-capacity]
       - paths:
           - stado-rs/src/monitor/reap.rs
