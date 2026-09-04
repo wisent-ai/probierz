@@ -11,12 +11,11 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { loadAppManifest } from "./apps.mjs";
 import { runHistory } from "./history.mjs";
+import { draftStructuredArtifact } from "./model-router.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const CLI = path.join(HERE, "cli.mjs");
-const MODELS = new Set(["codex", "kimi"]);
-const MODEL_BUDGET_MS = Number("3600000");
 const PROBE_CHARS = Number("9000");
 const BODY_CHARS = Number("1500");
 
@@ -37,7 +36,7 @@ function specExtension(target) {
   return ".e2e.ts";
 }
 
-export { probeWeb, probeNative, probeTui, probeCua, draftWithModel };
+export { probeWeb, probeNative, probeTui, probeCua };
 
 async function probeWeb(baseUrl) {
   const { chromium } = await import("playwright");
@@ -113,14 +112,29 @@ async function probeTui(command) {
   }
 }
 
-async function probeCua(bundleId) {
+function cuaExecutablePath(appPath) {
+  if (!appPath || !appPath.endsWith(".app")) return null;
+  const plist = path.join(appPath, "Contents", "Info.plist");
+  const result = spawnSync(
+    "/usr/libexec/PlistBuddy",
+    ["-c", "Print :CFBundleExecutable", plist],
+    { encoding: "utf8" },
+  );
+  const executable = String(result.stdout || "").trim();
+  return result.status === Number("0") && executable
+    ? path.join(appPath, "Contents", "MacOS", executable)
+    : null;
+}
+
+async function probeCua(appPath) {
   const { launchCuaApp, launchCuaProcess, snapshotTree, quitApp } = await import("../packages/desktop-cua/driver.mjs");
-  // CUA_APP_EXECUTABLE switches the probe to a direct-process launch with the
-  // author's environment (e.g. TAMA_TEST_IDENTITY=1 for gated debug builds).
-  const app = process.env.CUA_APP_EXECUTABLE ? launchCuaProcess({}) : launchCuaApp({ bundleId });
+  const executable = process.env.CUA_APP_EXECUTABLE || cuaExecutablePath(appPath);
+  const app = executable
+    ? launchCuaProcess({ executable })
+    : launchCuaApp({ bundleId: appPath });
   try {
     const tree = snapshotTree(app.pid, app.windowId);
-    return [`kind: desktop:cua`, `app: ${process.env.CUA_APP_EXECUTABLE || bundleId}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
+    return [`kind: desktop:cua`, `app: ${executable || appPath}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
   } finally {
     quitApp(app.pid);
   }
@@ -188,14 +202,13 @@ function styleGuide(target) {
   ].join("\n");
 }
 
-function buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath }) {
+function buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures }) {
   const lines = [
     `Write an e2e journey spec for the app "${appId}" (target ${target}), journey "${journey}".`,
     `Journey goal: ${desc}`,
     "",
-    `Create EXACTLY ONE file at this path and nothing else: ${stagedPath}`,
-    "Use your file-writing capability (apply_patch/shell) to create it on disk; do not print the spec as chat output.",
-    "",
+    "Return the complete contents of exactly one self-contained spec through the submit_probierz_spec tool.",
+    "Do not use Markdown fences, modify files, or return any other artifact.",
     "Probe of the real app (use these selectors; anything else must be discovered by the spec itself):",
     probe,
     "",
@@ -212,21 +225,18 @@ function buildBrief({ appId, journey, target, desc, probe, round, rounds, previo
   } else {
     lines.push("", `Round ${round} of ${rounds}.`);
   }
-  lines.push("", "Write only that one file, then stop.");
+  lines.push("", "Call submit_probierz_spec exactly once with the complete spec, then stop.");
   return lines.join("\n");
 }
 
-function draftWithModel(model, brief, cwd) {
-  if (model === "kimi") {
-    return spawnSync("kimi", ["-p", brief, "--yolo"], { cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216") });
-  }
-  return spawnSync("codex", ["exec", "--skip-git-repo-check", "--sandbox", "workspace-write", brief], {
-    cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216"),
-  });
-}
 
-function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
+function runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath }) {
   const env = { ...process.env };
+  const surface = loadAppManifest(appId).surfaces[target];
+  const selection = (surface.journeyOverrides || []).find(
+    (override) => override.journeys.length === 1 && override.journeys[0] === journey,
+  );
+  if (selection) Object.assign(env, selection.when);
   if (baseUrl) env.BASE_URL = baseUrl;
   if (appPath && target.startsWith("mobile:")) {
     env.APP_IOS = appPath;
@@ -234,7 +244,9 @@ function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
   } else if (appPath && target === "tui") {
     env.TUI_CMD = appPath;
   } else if (appPath && target === "desktop:cua") {
-    env.CUA_BUNDLE_ID = appPath;
+    const executable = cuaExecutablePath(appPath);
+    if (executable) env.CUA_APP_EXECUTABLE = executable;
+    else env.CUA_BUNDLE_ID = appPath;
   } else if (appPath) {
     env.MAC_APP_PATH = appPath;
   }
@@ -273,8 +285,7 @@ function acceptSpec({ appId, journey, target, stagedPath, mappingPaths }) {
   return { spec: finalPath, manifest: manifest.file };
 }
 
-export async function authorSpec({ appId, journey, target, desc, baseUrl = null, appPath = null, mappingPaths = [], model = "codex", rounds = Number("3"), dryRun = false }) {
-  if (!MODELS.has(model)) throw new Error(`unsupported model: ${model}`);
+export async function authorSpec({ appId, journey, target, desc, baseUrl = null, appPath = null, mappingPaths = [], rounds = Number("3"), dryRun = false }) {
   if (!TARGET_SPEC_DIRS[target]) throw new Error(`unsupported target: ${target}`);
   const manifest = loadAppManifest(appId);
   if (!manifest.surfaces[target]) throw new Error(`app ${appId} has no ${target} surface`);
@@ -288,13 +299,24 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
   let previousSpec = null;
   let failures = [];
   for (let round = 1; round <= rounds; round += 1) {
-    const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath });
+    const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures });
     if (dryRun) return { ok: true, dryRun: true, brief, stagedPath };
-    const drafted = draftWithModel(model, brief, path.dirname(stagedPath));
-    if (!existsSync(stagedPath)) {
-      return { ok: false, reason: "model did not write the staged spec", agentExit: drafted.status, agentStderr: String(drafted.stderr || "").slice(0, Number("600")) };
+    rmSync(stagedPath, { force: true });
+    try {
+      const drafted = await draftStructuredArtifact({
+        brief,
+        toolName: "submit_probierz_spec",
+        description: "Submit the complete Probierz journey spec for the current authoring round.",
+      });
+      writeFileSync(stagedPath, drafted.content);
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "Stado model-router authoring failed",
+        detail: error instanceof Error ? error.message : String(error),
+      };
     }
-    const run = runStagedSpec({ appId, target, stagedPath, baseUrl, appPath });
+    const run = runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath });
     if (run.status === "passed") {
       const accepted = acceptSpec({ appId, journey, target, stagedPath, mappingPaths });
       return { ok: true, journey, target, spec: accepted.spec, manifest: accepted.manifest, runId: run.runId, rounds: round };

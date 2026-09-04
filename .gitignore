@@ -62,3 +62,9 @@ apps/skarbiec-desktop/*
 apps/wisent-components/*
 !apps/wisent-components/probierz.yaml
 !apps/wisent-components/figma-parity.sh
+!apps/jeden/
+apps/jeden/*
+!apps/jeden/probierz.yaml
+!apps/jeden-desktop/
+apps/jeden-desktop/*
+!apps/jeden-desktop/probierz.yaml
