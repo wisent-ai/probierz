@@ -356,12 +356,18 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
     return lines.join("\n");
   }
+  const runConditions = [
+    "PROBIERZ_RUN_KIND=pull-request",
+    target === "tui" ? 'TUI_CMD="$TUI_CMD"' : null,
+    provision ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
+    target === "desktop:cua" ? 'CUA_APP_EXECUTABLE="$CUA_APP_EXECUTABLE"' : null,
+  ].filter(Boolean).join(" ");
   lines.push(
     // Evidence must survive a failing run: capture the exit code, tar and
     // upload whatever test-results exist, then re-emit the run's status so
     // the job's success/failure still reflects the tests.
     "set +e",
-    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} PROBIERZ_RUN_KIND=pull-request`,
+    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} ${runConditions}`,
     "PROBIERZ_RUN_RC=$?",
     "set -e",
     `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
