@@ -23,8 +23,8 @@ const source = sourceIdentity();
 const fixture = await openFleetFixture(slug);
 const diskPolicy = {
   mode: 'enforce',
-  low_free_gb: 10,
-  target_free_gb: 20,
+  low_free_gb: 1,
+  target_free_gb: 2,
   check_interval_seconds: 300,
   max_bytes_per_pass: 21474836480,
   max_items_per_pass: 50,
@@ -52,8 +52,8 @@ try {
   assert.equal(healthy.json.host, FIXTURE_HOST);
   assert.equal(healthy.json.claiming, true);
   assert.deepEqual(healthy.json.blockers, []);
-  assert.equal(healthy.json.disk.low_watermark_gb, 10, 'the declared watermark is not reported');
-  assert.equal(healthy.json.disk.target_free_gb, 20);
+  assert.equal(healthy.json.disk.low_watermark_gb, 1, 'the declared watermark is not reported');
+  assert.equal(healthy.json.disk.target_free_gb, 2);
   assert.equal(healthy.json.disk.policy_mode, 'enforce');
   assert.ok(typeof healthy.json.disk.free_gb === 'number', 'the host did not report its free space');
   assert.equal(healthy.json.capacity.accepting_jobs, true);
