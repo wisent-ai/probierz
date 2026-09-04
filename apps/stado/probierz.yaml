@@ -1,0 +1,48 @@
+schemaVersion: 1
+appId: stado
+productId: stado
+owner: Stado maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado
+    mappings:
+      - paths:
+          - stado-rs/src/cli/host.rs
+          - stado-rs/src/deploy/host_gates.rs
+          - stado-rs/src/providers/local/agent.rs
+          - stado-rs/src/providers/local/helpers.rs
+          - stado-rs/src/queue/capacity.rs
+          - desktop/StadoDesktop/Sources/Stado/HostsView.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsModels.swift
+          - docs/cli.md
+          - docs/configuration.md
+        journeys: [host-dynamic-capacity]
+
+surfaces:
+  tui:
+    spec: stado-host-gates.spec.mjs
+    journeys: [host-dynamic-capacity]
+    conditions:
+      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
+
+journeys:
+  host-dynamic-capacity:
+    owner: Stado maintainers
+    timeoutMs: 240000
+    value: A host reports live CPU, memory, disk, accelerator, and active-workload capacity without exposing or enforcing a fixed worker-slot count.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 30
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [host-dynamic-capacity]
+  requiredTargets: [tui]
+  requireSecretScan: true

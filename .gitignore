@@ -50,3 +50,6 @@ apps/oko/*
 !apps/skrzynka/
 apps/skrzynka/*
 !apps/skrzynka/probierz.yaml
+!apps/stado/
+apps/stado/*
+!apps/stado/probierz.yaml
