@@ -11,12 +11,11 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { loadAppManifest } from "./apps.mjs";
 import { runHistory } from "./history.mjs";
+import { draftStructuredArtifact } from "./model-router.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const CLI = path.join(HERE, "cli.mjs");
-const MODELS = new Set(["codex", "kimi"]);
-const MODEL_BUDGET_MS = Number("3600000");
 const PROBE_CHARS = Number("9000");
 const BODY_CHARS = Number("1500");
 
@@ -37,7 +36,7 @@ function specExtension(target) {
   return ".e2e.ts";
 }
 
-export { probeWeb, probeNative, probeTui, probeCua, draftWithModel };
+export { probeWeb, probeNative, probeTui, probeCua };
 
 async function probeWeb(baseUrl) {
   const { chromium } = await import("playwright");
@@ -193,8 +192,8 @@ function buildBrief({ appId, journey, target, desc, probe, round, rounds, previo
     `Write an e2e journey spec for the app "${appId}" (target ${target}), journey "${journey}".`,
     `Journey goal: ${desc}`,
     "",
-    `Create EXACTLY ONE file at this path and nothing else: ${stagedPath}`,
-    "Use your file-writing capability (apply_patch/shell) to create it on disk; do not print the spec as chat output.",
+    `Produce the complete contents for this spec path: ${stagedPath}`,
+    "Call submit_probierz_spec exactly once with those contents; do not modify files or return prose.",
     "",
     "Probe of the real app (use these selectors; anything else must be discovered by the spec itself):",
     probe,
@@ -212,18 +211,10 @@ function buildBrief({ appId, journey, target, desc, probe, round, rounds, previo
   } else {
     lines.push("", `Round ${round} of ${rounds}.`);
   }
-  lines.push("", "Write only that one file, then stop.");
+  lines.push("", "Submit only that one spec, then stop.");
   return lines.join("\n");
 }
 
-function draftWithModel(model, brief, cwd) {
-  if (model === "kimi") {
-    return spawnSync("kimi", ["-p", brief, "--yolo"], { cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216") });
-  }
-  return spawnSync("codex", ["exec", "--skip-git-repo-check", "--sandbox", "workspace-write", brief], {
-    cwd, encoding: "utf8", timeout: MODEL_BUDGET_MS, maxBuffer: Number("16777216"),
-  });
-}
 
 function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
   const env = { ...process.env };
@@ -273,8 +264,7 @@ function acceptSpec({ appId, journey, target, stagedPath, mappingPaths }) {
   return { spec: finalPath, manifest: manifest.file };
 }
 
-export async function authorSpec({ appId, journey, target, desc, baseUrl = null, appPath = null, mappingPaths = [], model = "codex", rounds = Number("3"), dryRun = false }) {
-  if (!MODELS.has(model)) throw new Error(`unsupported model: ${model}`);
+export async function authorSpec({ appId, journey, target, desc, baseUrl = null, appPath = null, mappingPaths = [], rounds = Number("3"), dryRun = false }) {
   if (!TARGET_SPEC_DIRS[target]) throw new Error(`unsupported target: ${target}`);
   const manifest = loadAppManifest(appId);
   if (!manifest.surfaces[target]) throw new Error(`app ${appId} has no ${target} surface`);
@@ -290,9 +280,19 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
   for (let round = 1; round <= rounds; round += 1) {
     const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath });
     if (dryRun) return { ok: true, dryRun: true, brief, stagedPath };
-    const drafted = draftWithModel(model, brief, path.dirname(stagedPath));
-    if (!existsSync(stagedPath)) {
-      return { ok: false, reason: "model did not write the staged spec", agentExit: drafted.status, agentStderr: String(drafted.stderr || "").slice(0, Number("600")) };
+    try {
+      const drafted = await draftStructuredArtifact({
+        brief,
+        toolName: "submit_probierz_spec",
+        description: "Submit the complete Probierz journey spec for the current authoring round.",
+      });
+      writeFileSync(stagedPath, drafted.content);
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "Stado model-router authoring failed",
+        detail: error instanceof Error ? error.message : String(error),
+      };
     }
     const run = runStagedSpec({ appId, target, stagedPath, baseUrl, appPath });
     if (run.status === "passed") {
