@@ -474,6 +474,10 @@ not create static product banners; those belong to `wisent-asset-generator`.
   toolkit's real drivers. Remote source provisioning exports `PROBIERZ_APP_SOURCE`
   as the staged product checkout; native application bundles keep their source
   beside the bundle, under the `-src` directory.
+  The submitter measures the source identity of the harness and every manifest
+  repository and ships `inputs/source-identity.json`; the worker records it
+  with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
+  `--app-repo` selects the product tree that is packed and measured.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).

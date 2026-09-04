@@ -3,13 +3,38 @@ import { existsSync, lstatSync, readFileSync, readlinkSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { CODE, FailureError } from "./failure.mjs";
+
+/**
+ * The tracked and untracked files of one repository, from git.
+ *
+ * Git is asked rather than the filesystem walked because the answer has to be
+ * the source, not the build: `--exclude-standard` is what separates the two.
+ * When git cannot answer, this is not a detail to swallow — a run that cannot
+ * name its source cannot honestly claim to have tested a revision — so it
+ * fails, and it says which of the two things went wrong. A root that is absent
+ * is almost always a manifest root read on a machine that is not the one it
+ * was written on; a remote job ships its source identity instead of recomputing
+ * it there (PROBIERZ_SOURCE_IDENTITY).
+ */
 function gitPaths(root) {
   const listed = spawnSync(
     "git",
     ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-    { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
   );
-  if (listed.status !== Number("0")) throw new Error(`source inventory failed for ${root}`);
+  if (listed.status !== Number("0")) {
+    const present = existsSync(root);
+    const reason = listed.error?.message || listed.stderr?.trim() || `git exited ${listed.status}`;
+    throw new FailureError({
+      point: "run.source",
+      code: present ? CODE.CONFIG : CODE.NOT_FOUND,
+      detail: `git ls-files in ${root}: ${reason}`,
+      message: present
+        ? `The repository root "${root}" is not a Git checkout on this host, so this run cannot name the source it tested.`
+        : `The repository root "${root}" does not exist on this host. A manifest repository root is an absolute path on the machine that runs the suite; a remote job carries its source identity in PROBIERZ_SOURCE_IDENTITY instead of recomputing it on the worker.`,
+    });
+  }
   return listed.stdout.split("\0").filter(Boolean);
 }
 

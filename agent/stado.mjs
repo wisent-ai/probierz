@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest } from "./apps.mjs";
+import { appSourceIdentity } from "./runner.mjs";
 import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -208,6 +209,26 @@ function packAppBundle(appId, bundlePath) {
   return { file, hash, bundleName };
 }
 
+/**
+ * The exact source identity of this submission, measured here and carried to
+ * the worker.
+ *
+ * A worker cannot measure it: the manifest's repository roots are absolute
+ * paths on this machine, the app tarball is `git archive HEAD` and has no
+ * `.git`, and the harness tarball carries `.git` but not the `.gitignore` that
+ * separates source from `node_modules`. Every one of those made the run die
+ * with "source inventory failed" instead of a verdict. The submitter is the
+ * machine that holds the checkouts, so the submitter answers, and the run
+ * records the answer with `sourceIdentityOrigin: "submitter"`.
+ */
+function packSourceIdentity(appId, appRepo = null) {
+  const identity = appSourceIdentity(appId, { primaryRoot: appRepo });
+  const hash = createHash("sha256").update(JSON.stringify(identity)).digest("hex").slice(0, Number("12"));
+  const file = path.join(tmpdir(), `${appId}-source-${hash}.json`);
+  writeFileSync(file, `${JSON.stringify(identity, null, Number("2"))}\n`);
+  return { file, hash };
+}
+
 function manifestRepoRoot(appId) {
   const manifest = path.join(ROOT, "apps", appId, "probierz.yaml");
   if (!existsSync(manifest)) return null;
@@ -225,7 +246,7 @@ function upload(localFile, name) {
   return destination;
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null, record = false }) {
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, modelRouterUrl = null, record = false }) {
   // Remote jobs may receive secret_env values. Shell xtrace would copy any
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
@@ -291,15 +312,13 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   }
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,
+    // The submitter measured the source; the worker records that answer rather
+    // than hashing checkouts it does not have. This replaces rewriting the
+    // manifest's repository roots to the staged copies, which only ever
+    // produced an identity of the copy — and, for a target with no staged app
+    // source, produced nothing at all and killed the run.
+    'export PROBIERZ_SOURCE_IDENTITY="$JOB_ROOT/inputs/source-identity.json"',
   );
-  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source") {
-    // The manifest ships the submitter's absolute repo root; on the worker
-    // the sources live under /tmp/w, so rewrite it before the run.
-    const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
-    lines.push(
-      `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
-    );
-  }
   if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
     const appiumEnvironment = target === "desktop:mac" ? "appium-2-mac2-2.2.2" : "appium-2";
     lines.push(`export APPIUM_HOME="$HOME/.cache/probierz/${appiumEnvironment}"`);
@@ -326,8 +345,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     return lines.join("\n");
   }
   if (mode === "author") {
-    // Remote authoring returns the verified spec, manifest, and run artifacts
-    // with the submitter-local repository root restored.
+    // Remote authoring returns the verified spec, the manifest and the run
+    // artifacts. The manifest's repository roots are no longer rewritten on
+    // the worker, so there is nothing to restore before it travels back.
     if (!modelRouterUrl) throw new Error("remote authoring needs STADO_MODEL_ROUTER_URL");
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
@@ -352,7 +372,6 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       "PROBIERZ_RC=$?",
       "set -e",
       "mkdir -p test-results",
-      `perl -pi -e "s|^  - root: .*|  - root: ${(sourceRoot || "").replace(/\//g, "\\/")}|" apps/${appId}/probierz.yaml`,
       `tar -czf "$JOB_ROOT/output/probierz-author-${hash}.tar.gz" test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
       "exit $PROBIERZ_RC",
     );
@@ -475,7 +494,7 @@ function provisionInputs({ appId, provision, appRepo }) {
         message: "Remote installed-TUI authoring needs --app-path <absolute-path>.",
       });
     }
-    return { sourceRoot: null, inputs };
+    return inputs;
   }
   if (provision?.kind === "cargo-release" || provision?.kind === "node-source") {
     if (!appRepo) {
@@ -503,7 +522,7 @@ function provisionInputs({ appId, provision, appRepo }) {
       stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
       relative_path: `inputs/${appId}.tar.gz`,
     };
-    return { sourceRoot: appRepo, inputs };
+    return inputs;
   }
   if (provision?.kind === "app-bundle") {
     if (!provision.bundlePath || !existsSync(provision.bundlePath)) {
@@ -534,9 +553,9 @@ function provisionInputs({ appId, provision, appRepo }) {
       stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
       relative_path: `inputs/${appId}.tar.gz`,
     };
-    return { sourceRoot: sourceRepo, inputs };
+    return inputs;
   }
-  return { sourceRoot: null, inputs };
+  return inputs;
 }
 
 function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryModel, secondaryModel, adjudicatorModel, agentId, routerUrl, productionEvidence, signatureRequired, hash, platform = "linux" }) {
@@ -703,8 +722,13 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     });
   }
   requireGuiReady(hostDef, target);
+  // Measured before anything is uploaded: a submission whose source cannot be
+  // named is a submission whose verdict would mean nothing, and finding that
+  // out here costs nothing, while finding it out on the worker costs the job.
+  const identity = packSourceIdentity(appId, appRepo);
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
@@ -713,7 +737,8 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
-    ...provisioned.inputs,
+    source: { stado_uri: identityUri, relative_path: "inputs/source-identity.json" },
+    ...provisioned,
   };
   const { jobId, failure } = submitMachine(
     hostDef,
@@ -766,13 +791,15 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   }
   requireGuiReady(hostDef, target);
   const modelRouterUrl = stadoModelRouterUrl();
+  const identity = packSourceIdentity(appId, appRepo);
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({
     target, appId, spec: null, provision, hash: packedRepo.hash,
     platform: hostDef.platform, mode: "author",
-    author: { journey, desc }, sourceRoot: provisioned.sourceRoot, modelRouterUrl,
+    author: { journey, desc }, modelRouterUrl,
   });
   const scriptFile = path.join(tmpdir(), `probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
@@ -780,7 +807,8 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
-    ...provisioned.inputs,
+    source: { stado_uri: identityUri, relative_path: "inputs/source-identity.json" },
+    ...provisioned,
   };
   const { jobId, failure } = submitMachine(
     hostDef,

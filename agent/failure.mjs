@@ -182,6 +182,7 @@ const POINTS = {
   "objects.list": { service: SERVICE.OBJECTS, impact: IMPACT.FLEET_HEALTH },
   "objects.read": { service: SERVICE.OBJECTS, impact: IMPACT.FLEET_HEALTH },
   "model.route": { service: SERVICE.MODEL_ROUTER, impact: IMPACT.AUTHORING },
+  "run.source": { service: SERVICE.HARNESS, impact: IMPACT.LOCAL_RUN },
   "run.spawn": { service: SERVICE.HARNESS, impact: IMPACT.LOCAL_RUN },
   "run.report": { service: SERVICE.HARNESS, impact: IMPACT.LOCAL_RUN },
   "cli.unknown": { service: SERVICE.CLI, impact: IMPACT.CLI },
