@@ -15,6 +15,7 @@ repositories:
           - desktop/StadoDesktop/Sources/Stado/OperationsModels.swift
           - docs/cli.md
           - docs/configuration.md
+          - desktop/StadoDesktop/tests/fleet/WorkerNodeCapacityTests.swift
         journeys: [host-dynamic-capacity]
       - paths:
           - stado-rs/src/monitor/reap.rs
@@ -33,6 +34,9 @@ surfaces:
         journeys: [run-retention]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
+  desktop:cua:
+    spec: stado-hosts-screen.spec.mjs
+    journeys: [host-dynamic-capacity]
 
 journeys:
   host-dynamic-capacity:
@@ -58,5 +62,5 @@ pullRequestPolicy:
 releasePolicy:
   minimumEvidence: E2
   requiredJourneys: [host-dynamic-capacity, run-retention]
-  requiredTargets: [tui]
+  requiredTargets: [tui, desktop:cua]
   requireSecretScan: true
