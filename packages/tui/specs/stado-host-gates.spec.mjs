@@ -72,7 +72,8 @@ try {
   assert.ok(healthy.json.capacity.age_seconds !== null, 'a live publication has no age');
 
   // 2. The incident: the agent publishes `disk_pressure_unresolved` and fails
-  //    admission closed. The word comes back exactly as the agent published it.
+  //    admission closed. The host also names the declared janitor that has no
+  //    completed pass, without losing the agent's own blocker.
   await fixture.publishCapacity(
     { ...claiming, disk_pressure_unresolved: true },
     { availableCpuCores: 0, acceptingJobs: false },
@@ -80,7 +81,7 @@ try {
   const blocked = await gates();
   assert.notEqual(blocked.status, 0, 'a host that is claiming nothing must not exit zero');
   assert.equal(blocked.json.claiming, false);
-  assert.deepEqual(blocked.json.blockers, ['disk_pressure_unresolved']);
+  assert.deepEqual(blocked.json.blockers, ['disk_pressure_unresolved', 'disk_cleanup_stalled']);
   assert.equal(blocked.json.capacity.available_cpu_cores, 0);
   const blockedText = await fixture.invoke(['host', 'gates', FIXTURE_HOST]);
   assert.notEqual(blockedText.status, 0);
