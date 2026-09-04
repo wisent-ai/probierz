@@ -130,7 +130,7 @@ try {
   await fixture.registry(fixtureRegistry({ target: { disk_cleanup: diskPolicy, pinned_only: true } }));
   await fixture.publishCapacity(claiming);
   const pinned = await gates();
-  assert.ok(pinned.json.blockers.includes('pinned_only'), JSON.stringify(pinned.json.blockers));
+  assert.ok(pinned.json.notes.includes('pinned_only'), JSON.stringify(pinned.json.notes));
 
   await recordTrace({
     slug,
@@ -143,7 +143,7 @@ try {
       queuePaused: paused.json.blockers,
       stalePublication: { blockers: stale.json.blockers, ageSeconds: stale.json.capacity.age_seconds },
       noPublication: silent.json.blockers,
-      pinnedOnly: pinned.json.blockers,
+      pinnedOnly: pinned.json.notes,
     },
     contracts: [
       'a claiming host reports no blockers and exits zero',
