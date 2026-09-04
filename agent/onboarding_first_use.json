@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "product_id": "probierz",
+  "journey_id": "first-use",
+  "journey_version": "2026-09-03.1",
+  "entry_screen_id": "choose-one-journey",
+  "first_success_fact": "passing_quality_evidence_written",
+  "published_at": "2026-09-03T00:00:00Z",
+  "source_revision": "probierz-first-use-2026-09-03.1",
+  "screens": [
+    {
+      "screen_id": "choose-one-journey",
+      "screen_kind": "explanation",
+      "title_key": "probierz.first_use.choose.title",
+      "body_key": "probierz.first_use.choose.body",
+      "required": true,
+      "actions": ["advance"],
+      "transitions": [
+        {
+          "next_screen_id": "read-the-evidence",
+          "reason_code": "journey_selected",
+          "priority": 10
+        }
+      ],
+      "presentation": {
+        "title": "Start with one declared journey",
+        "body": "Probierz runs evidence for a product, surface and user journey declared in an application manifest. Begin with `probierz apps`, then inspect one registration with `probierz app APP_ID`; its surface names the target and spec you can run instead of guessing either."
+      }
+    },
+    {
+      "screen_id": "read-the-evidence",
+      "screen_kind": "explanation",
+      "title_key": "probierz.first_use.evidence.title",
+      "body_key": "probierz.first_use.evidence.body",
+      "required": true,
+      "actions": ["advance"],
+      "transitions": [
+        {
+          "next_screen_id": "receipts-follow-runs",
+          "reason_code": "evidence_model_explained",
+          "priority": 10
+        }
+      ],
+      "presentation": {
+        "title": "A completed run leaves quality evidence",
+        "body": "The first durable result is a run manifest, not a claim that a suite passed. Probierz binds the report, analysis, source and build identities, conditions and artifact hashes into that record, then reports a pass or fail without averaging failures away."
+      }
+    },
+    {
+      "screen_id": "receipts-follow-runs",
+      "screen_kind": "explanation",
+      "title_key": "probierz.first_use.receipts.title",
+      "body_key": "probierz.first_use.receipts.body",
+      "required": true,
+      "actions": ["advance"],
+      "transitions": [
+        {
+          "next_screen_id": "produce-evidence",
+          "reason_code": "receipt_sequence_explained",
+          "priority": 10
+        }
+      ],
+      "presentation": {
+        "title": "Release receipts come after recorded runs",
+        "body": "A release gate consumes exact run IDs and identities. Once the required journeys have qualifying evidence, `probierz receipt` signs the resulting verdict for a release; it cannot replace the underlying run records or turn missing evidence green."
+      }
+    },
+    {
+      "screen_id": "produce-evidence",
+      "screen_kind": "guided_query",
+      "title_key": "probierz.first_use.run.title",
+      "body_key": "probierz.first_use.run.body",
+      "required": true,
+      "completion_evidence": {
+        "kind": "fact",
+        "fact": "passing_quality_evidence_written",
+        "operator": "eq",
+        "value": true
+      },
+      "actions": ["run"],
+      "transitions": [],
+      "presentation": {
+        "title": "Produce your first evidence record",
+        "body": "Run one declared spec on its target with `probierz run TARGET --app APP_ID --spec SPEC`. When the command succeeds and Probierz writes a passing evidence block into the run manifest, this journey is complete. A failed run remains honest, actionable evidence, but the release gate stays red and this first-success step stays open.",
+        "command": "probierz run TARGET --app APP_ID --spec SPEC",
+        "result": "A passing JSON run result with its run ID, evidence checks and run-manifest path"
+      }
+    }
+  ],
+  "analytics_contract": {
+    "contract_version": "1",
+    "surface": "cli_first_use",
+    "exposure_event": "onboarding_step_viewed",
+    "primary_action_event": "onboarding_step_completed",
+    "completion_event": "onboarding_completed",
+    "first_success_event": "onboarding_first_success_observed"
+  }
+}

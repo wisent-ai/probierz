@@ -45,6 +45,7 @@ import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
+import { runOnboarding } from "./onboarding.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,6 +60,7 @@ function usage() {
   process.stderr.write(
     [
       "usage:",
+      "  probierz onboarding [--reset]  show the first-run walkthrough; reset recorded progress and evidence to replay",
       "  probierz list                 every test surface + run script",
       "  probierz apps                 registered products, targets, and journeys",
       "  probierz app <appId>          validated product manifest",
@@ -282,6 +284,10 @@ async function main() {
 
   if (!cmd || cmd === "help" || cmd === "-h" || cmd === "--help") {
     usage();
+    return;
+  }
+  if (cmd === "onboarding") {
+    runOnboarding(rest);
     return;
   }
   if (cmd === "list") {

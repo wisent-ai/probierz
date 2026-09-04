@@ -27,6 +27,7 @@ import { collectPlatformDiagnostics, startPerformanceSampler } from "./collect.m
 import { acquireResourcesWait, resourcesFor } from "./locks.mjs";
 import { repositoryIdentity } from "./source-identity.mjs";
 import { CODE, failureFrom, failureSummary } from "./failure.mjs";
+import { recordPassingQualityEvidenceWritten } from "./onboarding.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // probierz/agent -> probierz project root.
@@ -333,6 +334,7 @@ export function completeRun(run, analysis, analysisError = null) {
     analysisPath,
     artifacts: artifactHashes(run.artifactsDir, run.manifestPath),
   });
+  if (passed) recordPassingQualityEvidenceWritten();
   return { ...run, passed, analysisPath, evidence };
 }
 
