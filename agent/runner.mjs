@@ -573,6 +573,7 @@ export async function runSurface(target, opts = {}) {
     ...requestedEnv,
     PROBIERZ_APP_ID: appId,
     PROBIERZ_RUN_ID: runId,
+    PROBIERZ_TOOLKIT_ROOT: ROOT,
     PROBIERZ_ARTIFACTS: artifactsDir,
     PROBIERZ_REPORT_PATH: reportPath,
     PROBIERZ_JOURNEYS: runJourneys.join(","),
