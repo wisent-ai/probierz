@@ -467,6 +467,9 @@ not create static product banners; those belong to `wisent-asset-generator`.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
   the configured object store.
+  Authoring applies the surface's matching single-journey override before
+  executing its candidate, including on a remote worker. Native `desktop:cua`
+  authoring returns the accepted spec alongside the manifest and evidence.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).

@@ -66,6 +66,7 @@ const TARGET_SPEC_DIRS_REL = {
   "mobile:android": "packages/mobile/test/specs",
   "desktop:mac": "packages/desktop-native/test/specs",
   "desktop:win": "packages/desktop-native/test/specs",
+  "desktop:cua": "packages/desktop-cua/specs",
   tui: "packages/tui/specs",
 };
 
