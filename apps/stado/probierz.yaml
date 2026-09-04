@@ -16,11 +16,21 @@ repositories:
           - docs/cli.md
           - docs/configuration.md
         journeys: [host-dynamic-capacity]
+      - paths:
+          - stado-rs/src/monitor/reap.rs
+          - stado-rs/src/queue/runs.rs
+          - stado-rs/tests/run_history/**
+        journeys: [run-retention]
 
 surfaces:
   tui:
     spec: stado-host-gates.spec.mjs
-    journeys: [host-dynamic-capacity]
+    journeys: [host-dynamic-capacity, run-retention]
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
+        journeys: [host-dynamic-capacity]
+      - when: {PROBIERZ_JOURNEY: run-retention}
+        journeys: [run-retention]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
 
@@ -29,6 +39,10 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 240000
     value: A host reports live CPU, memory, disk, accelerator, and active-workload capacity without exposing or enforcing a fixed worker-slot count.
+  run-retention:
+    owner: Stado maintainers
+    timeoutMs: 600000
+    value: The coordinator retains and reaps the exact terminal result of a migrated durable run whose historical job predates submission-linkage fields, while conflicting linkage remains refused.
 
 artifacts:
   retain:
@@ -43,6 +57,6 @@ pullRequestPolicy:
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity]
+  requiredJourneys: [host-dynamic-capacity, run-retention]
   requiredTargets: [tui]
   requireSecretScan: true
