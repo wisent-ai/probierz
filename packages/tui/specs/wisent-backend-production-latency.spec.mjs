@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
-const repository = '/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-backend';
+const canonicalRepository = '/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-backend';
+const repository = existsSync(canonicalRepository)
+  ? canonicalRepository
+  : resolve(process.cwd(), '../wisent-backend');
 const script = join(repository, 'tests/chat/production_latency.py');
 const artifacts = process.env.PROBIERZ_ARTIFACTS || 'test-results';
 
