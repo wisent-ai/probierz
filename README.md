@@ -279,6 +279,12 @@ This waits for the original job and imports its retained report without
 changing the recorded source identities or executing another workload.
 The MCP equivalent is `probierz_stado_resume`.
 
+Remote Cargo provisioning builds the selected binary from its source directory
+with the locked dependency graph, so the repository's Rust toolchain is honored.
+An existing Rust installation is not upgraded by provisioning. Unless explicitly
+overridden with `--timeout`, the runner uses the sum of the selected journeys'
+declared time budgets, with the default budget for journeys that omit one.
+
 ### Evaluate a figure
 
 ```bash
