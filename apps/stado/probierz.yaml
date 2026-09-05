@@ -17,6 +17,7 @@ repositories:
           - docs/cli.md
           - docs/configuration.md
           - stado-rs/tests/host_dynamic_capacity/**
+          - stado-rs/tests/capacity/**
           - desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs
           - desktop/StadoDesktop/scripts/bundle.sh
         journeys: [host-dynamic-capacity]
@@ -67,8 +68,8 @@ surfaces:
 journeys:
   host-dynamic-capacity:
     owner: Stado maintainers
-    timeoutMs: 240000
-    value: A host reports live CPU, memory, disk, accelerator, and active-workload capacity without exposing or enforcing a fixed worker-slot count.
+    timeoutMs: 600000
+    value: A host reports live resources without fixed slots, registry writes remove retired caps, and a real worker admits two concurrent jobs despite legacy limits of one and records both completions.
   run-retention:
     owner: Stado maintainers
     timeoutMs: 600000
