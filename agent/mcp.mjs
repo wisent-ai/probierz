@@ -325,12 +325,13 @@ const TOOLS = [
   },
   {
     name: "probierz_author_spec",
-    description: "SIDE-EFFECTING: use the authenticated Stado model router to draft one journey spec from a probe of the real app, verify it with an actual run, and keep it on green (registers the journey in the app manifest).",
+    description: "SIDE-EFFECTING: draft one product-owned journey spec from a real app probe, verify it through Probierz, and register the toolkit symlink only on green.",
     inputSchema: objectSchema({
       appId: { type: "string" },
       journey: { type: "string" },
-      target: { type: "string", description: "web|electron|mobile:ios|mobile:android|desktop:mac|desktop:win|tui" },
+      target: { type: "string", description: "web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui" },
       desc: { type: "string", description: "Journey goal in one or two sentences." },
+      area: { type: "string", description: "Product tests/<area> directory; defaults to the complete journey identifier." },
       baseUrl: { type: "string" },
       appPath: { type: "string" },
       rounds: { type: "number" },
@@ -668,6 +669,7 @@ async function callTool(name, args) {
       journey: asString(args.journey, "journey"),
       target: asString(args.target, "target"),
       desc: asString(args.desc, "desc"),
+      area: typeof args.area === "string" ? args.area : asString(args.journey, "journey"),
       baseUrl: typeof args.baseUrl === "string" ? args.baseUrl : null,
       appPath: typeof args.appPath === "string" ? args.appPath : null,
       rounds: typeof args.rounds === "number" ? args.rounds : Number("3"),

@@ -5,11 +5,12 @@
 // checkout is private), the job script provisions node and the app's binary
 // on the worker, and results are persisted under stado://probierz/results.
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync, closeSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { installAcceptedSpec } from "./author-spec.mjs";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { appSourceIdentity } from "./runner.mjs";
@@ -82,7 +83,7 @@ function conservativeWatchBudget(appId) {
   );
   let provisionBudget = Number("0");
   for (const target of Object.keys(manifest.surfaces)) {
-    if (target in TARGET_SPEC_DIRS_REL || target === "desktop:cua") {
+    if (target in TARGET_REGISTRATION_DIRS_REL || target === "desktop:cua") {
       provisionBudget = Math.max(provisionBudget, provisioningBudget(target, { kind: "cargo-release" }));
     }
   }
@@ -192,9 +193,9 @@ function remoteRunSecretEnv(appId, names = Object.keys(REMOTE_SECRET_ENV)) {
   }
   return secretEnv;
 }
-// Worker-relative spec dirs per target (mirror of TARGET_SPEC_DIRS in
-// author-spec.mjs) so author-mode evidence tarballs include the new spec.
-const TARGET_SPEC_DIRS_REL = {
+// Worker-relative toolkit registration dirs. Accepted implementations are
+// transported through retained authoring artifacts and installed in products.
+const TARGET_REGISTRATION_DIRS_REL = {
   web: "packages/web/tests",
   electron: "packages/electron/tests",
   "mobile:ios": "packages/mobile/test/specs",
@@ -204,6 +205,28 @@ const TARGET_SPEC_DIRS_REL = {
   "desktop:cua": "packages/desktop-cua/specs",
   tui: "packages/tui/specs",
 };
+
+function registeredSpecExtension(target) {
+  if (target === "web" || target === "electron") return ".spec.ts";
+  if (target === "tui" || target === "desktop:cua") return ".spec.mjs";
+  return ".e2e.ts";
+}
+
+function productSpecExtension(target) {
+  return target === "tui" || target === "desktop:cua" ? "mjs" : "ts";
+}
+
+function safeAuthorName(value, label) {
+  const clean = String(value || "").trim();
+  if (!/^[a-z0-9][a-z0-9._-]*$/i.test(clean)) {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      message: `${label} must be one safe path name: ${value}`,
+    });
+  }
+  return clean;
+}
 
 function stateUri(kind) {
   return `stado://probierz/${kind}`;
@@ -514,6 +537,54 @@ function manifestRepoRoot(appId) {
   return match ? match[1].trim() : null;
 }
 
+function submittingProductRoot(appId, appRepo = null) {
+  return path.resolve(appRepo || loadAppManifest(appId).repositories[Number("0")].root);
+}
+
+function authorSubmissionFile(jobId) {
+  if (!/^job-[0-9a-f]{24}$/.test(jobId || "")) {
+    throw new Error(`invalid remote authoring job ID: ${jobId}`);
+  }
+  return path.join(ROOT, "test-results", ".remote", jobId, "authoring-submission.json");
+}
+
+function saveAuthorSubmission({
+  jobId,
+  appId,
+  journey,
+  area,
+  target,
+  productRoot,
+  sourceSha256,
+  harnessSha256,
+  installedSourceSha256 = null,
+}) {
+  const file = authorSubmissionFile(jobId);
+  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  writeFileSync(file, `${JSON.stringify({
+    schemaVersion: Number("1"),
+    jobId,
+    appId,
+    journey,
+    area,
+    target,
+    productRoot,
+    sourceSha256,
+    harnessSha256,
+    installedSourceSha256,
+  }, null, Number("2"))}\n`, { mode: 0o600 });
+  return file;
+}
+
+function readAuthorSubmission(jobId) {
+  const file = authorSubmissionFile(jobId);
+  if (!existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    return parsed?.schemaVersion === Number("1") && parsed.jobId === jobId ? { ...parsed, file } : null;
+  } catch {
+    return null;
+  }
 /** Sleep without a timer: `upload` is synchronous, and so is everything that
  * calls it. */
 function pause(ms) {
@@ -622,6 +693,12 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
   }
+  if (mode === "author" && (!provision || provision.kind === "installed-tui")) {
+    lines.push(
+      `mkdir -p "$JOB_ROOT/work/${appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${appId}.tar.gz" -C "$JOB_ROOT/work/${appId}"`,
+      `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${appId}"`,
+    );
+  }
   for (const [key, value] of environment) {
     lines.push(`export ${key}=${shellQuote(value)}`);
   }
@@ -634,10 +711,14 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // source, produced nothing at all and killed the run.
     'export PROBIERZ_SOURCE_IDENTITY="$JOB_ROOT/inputs/source-identity.json"',
   );
-  if (mode !== "run" && ["app-bundle", "cargo-release", "native-binary", "node-source"].includes(provision?.kind)) {
-    // Authoring and custom scripts read the staged source path from the
-    // manifest; ordinary runs use --app-repo without changing their source.
-    const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
+  if (mode === "author" || (mode !== "run" && ["app-bundle", "cargo-release", "native-binary", "node-source"].includes(provision?.kind))) {
+    // Authoring and custom scripts read staged source from the worker's
+    // manifest. Ordinary runs retain the submitting source identity without
+    // rewriting their source, and the submitter's manifest is updated only
+    // from an accepted authoring receipt after the product bytes return.
+    const srcDir = provision?.kind === "app-bundle"
+      ? `$JOB_ROOT/work/${provision.appId}-src`
+      : `$JOB_ROOT/work/${provision?.appId || appId}`;
     lines.push(
       `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
     );
@@ -666,8 +747,8 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     return lines.join("\n");
   }
   if (mode === "author") {
-    // Remote authoring returns the verified spec, manifest, and run artifacts.
-    // Source-backed authoring uses the staged manifest root installed above.
+    // Remote authoring returns retained run evidence plus receipt-bound accepted
+    // bytes; only the submitter installs the product spec and local manifest.
     if (!modelRouterUrl) throw new Error("remote authoring needs STADO_MODEL_ROUTER_URL");
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
@@ -675,6 +756,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       "export PROBIERZ_MODEL_AGENT_ID=probierz",
       ': "${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}"',
     );
+    lines.push(`export PROBIERZ_AUTHOR_RECEIPT_ID=${shellQuote(author.receiptId || hash)}`);
     if (["mobile:ios", "mobile:android", "desktop:mac", "desktop:win"].includes(target)) {
       lines.push(
         "pkill -f '[a]ppium.*--port 4723' >/dev/null 2>&1 || true",
@@ -686,13 +768,16 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
         "nc -z 127.0.0.1 4723",
       );
     }
+    const appPathArgument = target === "web"
+      ? ""
+      : ` --app-path "${target === "tui" ? "$TUI_CMD" : "$MAC_APP_PATH"}"`;
     lines.push(
       "set +e",
-      `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)} --app-path "${target === "tui" ? "$TUI_CMD" : "$MAC_APP_PATH"}"`,
+      `node agent/cli.mjs author-spec ${shellQuote(appId)} ${shellQuote(author.journey)} --area ${shellQuote(author.area)} --target ${shellQuote(target)} --desc ${shellQuote(author.desc)}${appPathArgument}`,
       "PROBIERZ_RC=$?",
       "set -e",
       "mkdir -p test-results",
-      `tar -czf "$JOB_ROOT/output/probierz-author-${hash}.tar.gz" test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
+      `tar -czf "$JOB_ROOT/output/probierz-author-${hash}.tar.gz" test-results`,
       "exit $PROBIERZ_RC",
     );
     return lines.join("\n");
@@ -890,7 +975,7 @@ async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
   };
 }
 
-function provisionInputs({ appId, provision, appRepo }) {
+function provisionInputs({ appId, provision, appRepo, sourceRequired = false }) {
   const inputs = {};
   if (provision?.kind === "installed-tui") {
     if (!provision.path || !path.isAbsolute(provision.path)) {
@@ -900,6 +985,13 @@ function provisionInputs({ appId, provision, appRepo }) {
         detail: `installed TUI path must be absolute: ${provision.path || "(empty)"}`,
         message: "Remote installed-TUI authoring needs --app-path <absolute-path>.",
       });
+    }
+    if (sourceRequired) {
+      const source = packAppSource(appId, submittingProductRoot(appId, appRepo));
+      inputs.app = {
+        stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
+        relative_path: `inputs/${appId}.tar.gz`,
+      };
     }
     return inputs;
   }
@@ -969,21 +1061,20 @@ function provisionInputs({ appId, provision, appRepo }) {
       stado_uri: upload(bundle.file, `${appId}-app-${bundle.hash}.tar.gz`),
       relative_path: `inputs/${appId}-app.tar.gz`,
     };
-    const sourceRepo = appRepo || manifestRepoRoot(appId);
-    if (!sourceRepo) {
-      throw new FailureError({
-        point: "stado.pack",
-        code: CODE.CONFIG,
-        detail: `app-bundle needs the app source repo for ${appId}`,
-        message: `Remote app-bundle runs need the app source repo: pass --app-repo, or set repositories[0].root in apps/${appId}/probierz.yaml.`,
-      });
-    }
+    const sourceRepo = submittingProductRoot(appId, appRepo || manifestRepoRoot(appId));
     const source = packAppSource(appId, sourceRepo);
     inputs.app = {
       stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
       relative_path: `inputs/${appId}.tar.gz`,
     };
     return inputs;
+  }
+  if (sourceRequired) {
+    const source = packAppSource(appId, submittingProductRoot(appId, appRepo));
+    inputs.app = {
+      stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
+      relative_path: `inputs/${appId}.tar.gz`,
+    };
   }
   return inputs;
 }
@@ -1143,7 +1234,11 @@ function missingRunEvidenceFailure(jobId, detail) {
 }
 
 function fetchRunEvidence(jobId, hostDef) {
-  const destDir = path.join(ROOT, "test-results", ".remote", jobId);
+  const jobDir = path.join(ROOT, "test-results", ".remote", jobId);
+  // Recovery can be repeated. Keep the source receipt and every earlier
+  // collection, but download into a staging directory so a failed transfer
+  // never replaces retained evidence.
+  mkdirSync(jobDir, { recursive: true });
   const stagingDir = workPath(`artifacts-${jobId}-${Date.now()}-${process.pid}`);
   mkdirSync(stagingDir, { recursive: true });
   let committed = false;
@@ -1161,36 +1256,219 @@ function fetchRunEvidence(jobId, hostDef) {
       const upstream = payload?.error;
       if (upstream?.code === "NO_ARTIFACTS" && upstream.retryable === false) {
         process.stderr.write(`probierz-remote-artifacts ${JSON.stringify({ jobId, error: upstream })}\n`);
-        return { resultsDir: null, manifest: null, artifactError: upstream };
+        return { resultsDir: null, manifest: null, authorReceipt: null, artifactError: upstream };
       }
       throw remoteFailure("stado.download", "Downloading the worker's retained artifacts failed", downloaded);
     }
     const artifacts = payload.result?.artifacts || [];
+    if (!artifacts.length) return null;
     const artifact = artifacts.find(({ relative_path: relativePath }) =>
       /^probierz-(?:run|author|seo)-.*\.tar\.gz$/.test(String(relativePath || "")));
-    let manifest = null;
+    let entries = [];
+    let artifactRelative = null;
     if (artifact) {
-      const tarball = path.join(stagingDir, artifact.relative_path);
-      const listed = sh("tar", ["-tzf", tarball], { cwd: ROOT });
+      artifactRelative = String(artifact.relative_path || "");
+      const stagedTarball = path.resolve(stagingDir, artifactRelative);
+      if (stagedTarball === stagingDir || !stagedTarball.startsWith(`${stagingDir}${path.sep}`)) {
+        throw new FailureError({
+          point: "stado.download",
+          code: CODE.CONFIG,
+          message: `Remote evidence named an artifact outside its collection directory: ${artifact.relative_path}`,
+        });
+      }
+      const listed = sh("tar", ["-tzf", stagedTarball], { cwd: ROOT });
       if (listed.status !== Number("0")) throw localFailure("stado.download", "Listing the retained evidence archive failed", listed);
-      const manifestEntry = listed.stdout.split("\n").find((entry) => entry.endsWith("/run-manifest.json"));
-      const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
-      if (untar.status !== Number("0")) throw localFailure("stado.download", "Extracting the retained evidence failed", untar);
-      if (manifestEntry) {
-        try {
-          manifest = JSON.parse(readFileSync(path.join(ROOT, manifestEntry), "utf8"));
-        } catch {}
+      entries = listed.stdout.split("\n").filter(Boolean);
+      for (const entry of entries) {
+        const normalized = entry.replace(/^\.\/+/, "");
+        const resolved = path.resolve(ROOT, normalized);
+        if (
+          (normalized !== "test-results" && !normalized.startsWith("test-results/"))
+          || resolved === ROOT
+          || !resolved.startsWith(`${ROOT}${path.sep}`)
+        ) {
+          throw new FailureError({
+            point: "stado.download",
+            code: CODE.CONFIG,
+            message: `Remote evidence contains an unsafe retained path: ${entry}`,
+          });
+        }
       }
     }
-    if (!artifacts.length) return null;
+
+    const destDir = mkdtempSync(path.join(jobDir, "collection-"));
     rmSync(destDir, { recursive: true, force: true });
-    mkdirSync(path.dirname(destDir), { recursive: true });
     renameSync(stagingDir, destDir);
     committed = true;
-    return { resultsDir: destDir, manifest };
+    if (!artifactRelative) {
+      return { resultsDir: destDir, manifest: null, authorReceipt: null };
+    }
+
+    const tarball = path.resolve(destDir, artifactRelative);
+    const manifestEntries = entries.filter((entry) => entry.endsWith("/run-manifest.json"));
+    const authorReceiptEntry = entries.find((entry) => entry.endsWith("/accepted.json"));
+    const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
+    if (untar.status !== Number("0")) throw localFailure("stado.download", "Extracting the retained evidence failed", untar);
+    let authorReceipt = null;
+    let authorReceiptFile = null;
+    if (authorReceiptEntry) {
+      authorReceiptFile = path.resolve(ROOT, authorReceiptEntry);
+      try {
+        authorReceipt = JSON.parse(readFileSync(authorReceiptFile, "utf8"));
+      } catch {}
+    }
+    let manifest = null;
+    for (const manifestEntry of manifestEntries) {
+      try {
+        const candidate = JSON.parse(readFileSync(path.resolve(ROOT, manifestEntry), "utf8"));
+        if (!authorReceipt?.runId || candidate.runId === authorReceipt.runId) {
+          manifest = candidate;
+          break;
+        }
+      } catch {}
+    }
+    return { resultsDir: destDir, manifest, authorReceipt, authorReceiptFile };
   } finally {
     if (!committed) rmSync(stagingDir, { recursive: true, force: true });
   }
+}
+
+function restoreRemoteAuthoring(jobId, retained, expectedAppId = null, required = false) {
+  const receipt = retained?.authorReceipt;
+  if (!receipt) {
+    if (required) {
+      throw new FailureError({
+        point: "stado.download",
+        code: CODE.CONFIG,
+        message: `Job ${jobId} completed authoring without a usable accepted-spec receipt.`,
+      });
+    }
+    return null;
+  }
+  const submission = readAuthorSubmission(jobId);
+  if (!submission) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned an authored spec, but this checkout has no source-bound submission receipt.`,
+    });
+  }
+  const expectedProductRelative = path.posix.join(
+    "tests",
+    submission.area,
+    `${submission.journey}.probierz.spec.${productSpecExtension(submission.target)}`,
+  );
+  const expectedRegistrationRelative = path.posix.join(
+    TARGET_REGISTRATION_DIRS_REL[submission.target] || "",
+    `${submission.appId}-${submission.journey}${registeredSpecExtension(submission.target)}`,
+  );
+  if (
+    receipt.schemaVersion !== Number("1")
+    || receipt.appId !== submission.appId
+    || receipt.journey !== submission.journey
+    || receipt.area !== submission.area
+    || receipt.target !== submission.target
+    || receipt.spec?.relativePath !== expectedProductRelative
+    || receipt.registration?.relativePath !== expectedRegistrationRelative
+    || !Array.isArray(receipt.mappingPaths)
+    || receipt.mappingPaths.length !== Number("0")
+    || !retained.manifest
+    || retained.manifest.runId !== receipt.runId
+    || retained.manifest.appId !== receipt.appId
+    || retained.manifest.target !== receipt.target
+    || retained.manifest.source?.sha256 !== submission.sourceSha256
+    || retained.manifest.harness?.sha256 !== submission.harnessSha256
+    || retained.manifest.sourceIdentityOrigin !== "submitter"
+    || retained.manifest.status !== "passed"
+    || (expectedAppId && receipt.appId !== expectedAppId)
+  ) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned authoring metadata that does not match its submitting checkout.`,
+    });
+  }
+  if (
+    !receipt.sourceSha256
+    || receipt.sourceSha256 !== submission.sourceSha256
+    || !receipt.harnessSha256
+    || receipt.harnessSha256 !== submission.harnessSha256
+  ) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned an authored spec for a different source identity.`,
+    });
+  }
+  const currentSourceSha256 = appSourceIdentity(submission.appId, {
+    primaryRoot: submission.productRoot,
+  }).app?.sha256;
+  const expectedLocalSourceSha256 = submission.installedSourceSha256 || submission.sourceSha256;
+  if (!currentSourceSha256 || currentSourceSha256 !== expectedLocalSourceSha256) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} cannot publish into a checkout whose source changed after submission.`,
+    });
+  }
+  const artifactRoot = path.resolve(ROOT, "test-results");
+  const acceptedArtifact = path.resolve(ROOT, String(receipt.spec?.artifact || ""));
+  if (
+    acceptedArtifact === artifactRoot
+    || !acceptedArtifact.startsWith(`${artifactRoot}${path.sep}`)
+    || !existsSync(acceptedArtifact)
+  ) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned an authored spec outside retained Probierz artifacts.`,
+    });
+  }
+  const content = readFileSync(acceptedArtifact);
+  const digest = createHash("sha256").update(content).digest("hex");
+  if (content.length !== Number(receipt.spec.bytes) || digest !== receipt.spec.sha256) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned authored spec bytes that do not match its receipt.`,
+    });
+  }
+  const installed = installAcceptedSpec({
+    appId: receipt.appId,
+    journey: receipt.journey,
+    area: receipt.area,
+    target: receipt.target,
+    content,
+    mappingPaths: Array.isArray(receipt.mappingPaths) ? receipt.mappingPaths : [],
+    productRoot: submission.productRoot,
+  });
+  const productRelative = path.relative(submission.productRoot, installed.spec).split(path.sep).join("/");
+  const registrationRelative = path.relative(ROOT, installed.registration).split(path.sep).join("/");
+  if (productRelative !== receipt.spec.relativePath || registrationRelative !== receipt.registration?.relativePath) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} returned authored paths that do not match the local registration contract.`,
+    });
+  }
+  const installedSourceSha256 = appSourceIdentity(submission.appId, {
+    primaryRoot: submission.productRoot,
+  }).app?.sha256;
+  if (!installedSourceSha256) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: `Job ${jobId} installed an authored spec, but its product source identity is unavailable.`,
+    });
+  }
+  saveAuthorSubmission({ ...submission, installedSourceSha256 });
+  return {
+    productSpec: installed.spec,
+    registration: installed.registration,
+    appManifest: installed.manifest,
+    authorReceipt: retained.authorReceiptFile,
+    sourceReceipt: submission.file,
+  };
 }
 
 export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
@@ -1258,7 +1536,20 @@ export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
       ),
     };
   }
-  return { ...result, state: state === "uploaded" ? "completed" : state, collected: true, resultsDir: retained.resultsDir, manifest: retained.manifest };
+  const authored = restoreRemoteAuthoring(
+    jobId,
+    retained,
+    appId,
+    ["uploaded", "completed"].includes(state) && Boolean(readAuthorSubmission(jobId)),
+  );
+  return {
+    ...result,
+    state: state === "uploaded" ? "completed" : state,
+    collected: true,
+    resultsDir: retained.resultsDir,
+    manifest: retained.manifest,
+    ...(authored || {}),
+  };
 }
 
 function captureRemoteLogs(jobId, hostDef, directory) {
@@ -1492,6 +1783,13 @@ export async function resumeRemoteRun({ jobId, host = "stado:any" }) {
     result.runId = retained.manifest.runId;
     result.appId = retained.manifest.appId;
     result.target = retained.manifest.target;
+    const authored = restoreRemoteAuthoring(
+      jobId,
+      retained,
+      retained.manifest.appId,
+      result.state === "completed" && Boolean(readAuthorSubmission(jobId)),
+    );
+    if (authored) Object.assign(result, authored);
   } else if (result.state === "completed") {
     result.state = "evidence-unavailable";
     result.failure = missingRunEvidenceFailure(
@@ -1602,7 +1900,16 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   return result;
 }
 
-export async function submitRemoteAuthor({ appId, journey, target, desc, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+export async function submitRemoteAuthor({ appId, journey, target, desc, area = null, host = "stado:gcp", provision = null, appRepo = null, watch = true }) {
+  const selectedJourney = safeAuthorName(journey, "journey");
+  const selectedArea = safeAuthorName(area || selectedJourney, "authoring area");
+  if (!TARGET_REGISTRATION_DIRS_REL[target]) {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      message: `Remote authoring does not support target "${target}".`,
+    });
+  }
   const hostDef = listHosts().find((entry) => entry.host === host);
   if (!hostDef || hostDef.kind !== "stado") {
     throw new FailureError({
@@ -1614,16 +1921,18 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   }
   requireGuiReady(hostDef, target);
   const modelRouterUrl = stadoModelRouterUrl();
-  const identity = packSourceIdentity(appId, appRepo);
+  const productRoot = submittingProductRoot(appId, appRepo);
+  const identity = packSourceIdentity(appId, productRoot);
   requireImmutableNativeProvision({ target, provision, appRepo, identity });
+  const sourceIdentity = JSON.parse(readFileSync(identity.file, "utf8"));
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
-  const provisioned = provisionInputs({ appId, provision, appRepo });
+  const provisioned = provisionInputs({ appId, provision, appRepo: productRoot, sourceRequired: true });
   const script = runScript({
     target, appId, spec: null, provision, hash: packedRepo.hash,
     platform: hostDef.platform, mode: "author",
-    author: { journey, desc }, modelRouterUrl,
+    author: { journey: selectedJourney, area: selectedArea, desc, receiptId: `remote-${randomUUID()}` }, modelRouterUrl,
   });
   const scriptFile = workPath(`probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
@@ -1648,12 +1957,23 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     jobId,
     target,
     appId,
-    journey,
+    journey: selectedJourney,
+    area: selectedArea,
     submitted: Boolean(jobId),
     watchBudgetMs,
     ...submissionIdentityMetadata({ receiptDir, identity, provision, inputObjects }),
   };
   if (!jobId) return { ...result, state: "submit-failed", failure };
+  result.sourceReceipt = saveAuthorSubmission({
+    jobId,
+    appId,
+    journey: selectedJourney,
+    area: selectedArea,
+    target,
+    productRoot,
+    sourceSha256: sourceIdentity.app.sha256,
+    harnessSha256: sourceIdentity.harness.sha256,
+  });
   if (!watch) return { ...result, state: "queued", failure: null };
   const watched = await watchJob(jobId, hostDef, watchBudgetMs);
   result.state = watched.state;
@@ -1672,6 +1992,8 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
         `artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
       );
     } else if (watched.state === "completed") {
+      const authored = restoreRemoteAuthoring(jobId, retained, appId, true);
+      if (authored) Object.assign(result, authored);
       result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
     }
   }
