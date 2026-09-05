@@ -11,16 +11,81 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
-import { loadAppManifest } from "./apps.mjs";
+import { loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 import { repositorySourceFiles } from "./source-identity.mjs";
+import { SETUP_STEP_TIMEOUT_MS, setupSteps } from "./preflight.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
-const WATCH_BUDGET_MS = Number("3600000");
+const WATCH_BUDGET_ENV = "PROBIERZ_WATCH_BUDGET_MS";
+
+function positiveBudget(value) {
+  const budget = Number(value);
+  return Number.isFinite(budget) && budget > Number("0") ? Math.ceil(budget) : null;
+}
+
+function provisioningBudget(target, provision) {
+  // The remote dependency install and every target setup command receive the
+  // same per-step allowance that `probierz setup` publicly promises. A source
+  // Cargo build is one additional provisioning step.
+  const setupCount = target === "tui" ? Number("0") : setupSteps(target).length;
+  const sourceBuildCount = provision?.kind === "cargo-release" ? Number("1") : Number("0");
+  return (Number("1") + setupCount + sourceBuildCount) * SETUP_STEP_TIMEOUT_MS;
+}
+
+function selectedRunBudget({ appId, target, environment, provision }) {
+  const manifest = loadAppManifest(appId);
+  const surface = manifest.surfaces[target];
+  if (!surface) throw new Error(`app ${appId} has no ${target} surface`);
+  const selectedEnvironment = {
+    ...(surface.conditions || {}),
+    ...Object.fromEntries(environment),
+  };
+  for (const [targetName, sourceName] of Object.entries(surface.env || {})) {
+    const value = selectedEnvironment[sourceName] ?? process.env[sourceName];
+    if (value !== undefined) {
+      selectedEnvironment[sourceName] = value;
+      selectedEnvironment[targetName] = value;
+    }
+  }
+  const journeys = surfaceJourneys(surface, selectedEnvironment);
+  const journeyBudget = journeys.reduce(
+    (total, journey) => total + Number(manifest.journeys[journey].timeoutMs),
+    Number("0"),
+  );
+  return journeyBudget + provisioningBudget(target, provision);
+}
+
+function conservativeWatchBudget() {
+  let journeyBudget = Number("0");
+  let provisionBudget = Number("0");
+  for (const entry of readdirSync(path.join(ROOT, "apps"), { withFileTypes: true })) {
+    if (!entry.isDirectory() || !existsSync(path.join(ROOT, "apps", entry.name, "probierz.yaml"))) continue;
+    const manifest = loadAppManifest(entry.name);
+    for (const journey of Object.values(manifest.journeys)) {
+      journeyBudget = Math.max(journeyBudget, positiveBudget(journey.timeoutMs) || Number("0"));
+    }
+    for (const target of Object.keys(manifest.surfaces)) {
+      try {
+        provisionBudget = Math.max(provisionBudget, provisioningBudget(target, { kind: "cargo-release" }));
+      } catch {
+        // A product-only surface not supported by the remote bridge does not
+        // narrow the legacy fallback for the supported surfaces.
+      }
+    }
+  }
+  return journeyBudget + provisionBudget;
+}
+
+function budgetFromJob(job) {
+  const escaped = WATCH_BUDGET_ENV.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(job?.command || "").match(new RegExp(`(?:^|\\s)${escaped}=(\\d+)(?:\\s|$)`));
+  return positiveBudget(match?.[Number("1")]);
+}
 
 function workPath(name) {
   const directory = path.join(homedir(), ".stado", "work", "probierz");
@@ -439,11 +504,14 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   return lines.join("\n");
 }
 
-function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
+function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, requestedWatchBudgetMs = null) {
+  const watchBudgetMs = positiveBudget(requestedWatchBudgetMs) || conservativeWatchBudget();
   const requestFile = workPath(`probierz-machine-${hash}.json`);
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
-    command: "bash inputs/run.sh",
+    // `machine status` preserves the command, so the submitted budget remains
+    // recoverable by a later `stado resume` without trusting today's manifest.
+    command: `${WATCH_BUDGET_ENV}=${watchBudgetMs} bash inputs/run.sh`,
     output_uri: stateUri("results"),
     input_objects: inputObjects,
     secret_env: secretEnv,
@@ -462,21 +530,30 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
     // A queue that answers with something other than its own protocol is a
     // queue that is not working; the text lands on the log line below.
   }
-  if (jobId) return { jobId, failure: null };
+  if (jobId) return { jobId, watchBudgetMs, failure: null };
   // The raw submit output is the operator's evidence, so it is logged in full
   // by `remoteFailure`; the caller gets the verdict, not the transcript.
-  return { jobId: null, failure: failureSummary(remoteFailure("stado.submit", "The stado queue did not accept the job", submit)) };
+  return {
+    jobId: null,
+    watchBudgetMs,
+    failure: failureSummary(remoteFailure("stado.submit", "The stado queue did not accept the job", submit)),
+  };
 }
 
 /**
  * A `machine status` call that itself fails is a blip until it is a pattern.
- * Three consecutive failures is the queue being unreachable, and waiting out
- * the full hour to say so would be the silence this contract forbids.
+ * Three consecutive failures is the queue being unreachable, regardless of
+ * how long the submitted run contract allows the job to execute.
  */
 const STATUS_FAILURE_TOLERANCE = Number("3");
 
-async function watchJob(jobId, hostDef) {
-  const deadline = Date.now() + WATCH_BUDGET_MS;
+async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
+  const requestedBudget = positiveBudget(requestedWatchBudgetMs);
+  let watchBudgetMs = requestedBudget || conservativeWatchBudget();
+  let budgetSource = requestedBudget ? "submitted" : "legacy fallback";
+  let deadline = Date.now() + watchBudgetMs;
+  let resolvedBudget = false;
+  let anchoredStartAt = null;
   let consecutiveStatusFailures = Number("0");
   while (Date.now() < deadline) {
     const out = sh(STADO_BIN, ["machine", "status", jobId], {
@@ -485,24 +562,46 @@ async function watchJob(jobId, hostDef) {
     let payload = null;
     try { payload = JSON.parse(out.stdout); } catch {}
     const answered = Boolean(payload?.ok);
+    const job = answered ? payload.result?.job : null;
+    if (answered && !resolvedBudget) {
+      const savedBudget = budgetFromJob(job);
+      if (savedBudget) {
+        watchBudgetMs = savedBudget;
+        budgetSource = "saved submission";
+      }
+      const submittedAt = Date.parse(String(job?.created_at || ""));
+      deadline = Number.isFinite(submittedAt)
+        ? submittedAt + watchBudgetMs
+        : Date.now() + watchBudgetMs;
+      resolvedBudget = true;
+    }
+    const startedAt = Date.parse(String(job?.started_at || ""));
+    if (answered && startedAt !== anchoredStartAt && Number.isFinite(startedAt)) {
+      // Queue wait is bounded from submission above, but once work starts the
+      // declared budget belongs wholly to provisioning plus execution.
+      deadline = startedAt + watchBudgetMs;
+      anchoredStartAt = startedAt;
+    }
     if (!answered) {
       consecutiveStatusFailures += Number("1");
       if (consecutiveStatusFailures >= STATUS_FAILURE_TOLERANCE) {
         return {
           state: "unreachable",
+          watchBudgetMs,
           failure: failureSummary(remoteFailure("stado.watch", `The stado queue stopped answering about job ${jobId}`, out)),
         };
       }
     } else {
       consecutiveStatusFailures = Number("0");
     }
-    const state = String(answered ? payload.result?.job?.state || "" : "").toLowerCase();
+    const state = String(job?.state || "").toLowerCase();
     // A job the fleet failed or cancelled is a run result, not an outage: the
     // queue did its part. The worker's own text is the operator's evidence.
     if (["failed", "cancelled"].includes(state)) {
-      const detail = String(payload.result?.job?.error || `worker reported ${state}`);
+      const detail = String(job?.error || `worker reported ${state}`);
       return {
         state: "failed",
+        watchBudgetMs,
         failure: failureSummary(new FailureError({
           point: "stado.worker",
           code: CODE.UNKNOWN,
@@ -511,15 +610,20 @@ async function watchJob(jobId, hostDef) {
         })),
       };
     }
-    if (["uploaded", "completed"].includes(state)) return { state: "completed", failure: null };
-    await new Promise((resolve) => { setTimeout(resolve, WATCH_INTERVAL_MS); });
+    if (["uploaded", "completed"].includes(state)) {
+      return { state: "completed", watchBudgetMs, failure: null };
+    }
+    if (Date.now() < deadline) {
+      await new Promise((resolve) => { setTimeout(resolve, WATCH_INTERVAL_MS); });
+    }
   }
   return {
     state: "watch-timeout",
+    watchBudgetMs,
     failure: failureSummary(failureFrom({
       point: "stado.watch",
       error: `watching job ${jobId} timed out`,
-      detail: `no terminal state within ${WATCH_BUDGET_MS}ms`,
+      detail: `no terminal state within the ${watchBudgetMs}ms ${budgetSource} watch budget`,
       action: `Job ${jobId} was still running when probierz stopped waiting`,
     })),
   };
@@ -711,12 +815,21 @@ export async function submitRemoteSeo({
   }
   const secretNames = ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"];
   if (profile.requireSignature) secretNames.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
-  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "seo", inputObjects, remoteModelSecretEnv(secretNames));
-  const result = { host, jobId, appId, mode, submitted: Boolean(jobId) };
+  const requestedWatchBudgetMs = conservativeWatchBudget();
+  const { jobId, watchBudgetMs, failure } = submitMachine(
+    hostDef,
+    packedRepo.hash,
+    "seo",
+    inputObjects,
+    remoteModelSecretEnv(secretNames),
+    requestedWatchBudgetMs,
+  );
+  const result = { host, jobId, appId, mode, submitted: Boolean(jobId), watchBudgetMs };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId, hostDef);
+  const watched = await watchJob(jobId, hostDef, watchBudgetMs);
   result.state = watched.state;
+  result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
   if (watched.state === "completed") result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "seo");
   return result;
@@ -819,6 +932,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     });
   }
   requireGuiReady(hostDef, target);
+  const requestedWatchBudgetMs = selectedRunBudget({ appId, target, environment, provision });
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
@@ -831,20 +945,22 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
     ...provisioned.inputs,
   };
-  const { jobId, failure } = submitMachine(
+  const { jobId, watchBudgetMs, failure } = submitMachine(
     hostDef,
     packedRepo.hash,
     "run",
     inputObjects,
     remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
+    requestedWatchBudgetMs,
   );
-  const result = { host, jobId, target, appId, submitted: Boolean(jobId) };
+  const result = { host, jobId, target, appId, submitted: Boolean(jobId), watchBudgetMs };
   // `failure` replaces the raw submit transcript that used to travel here: the
   // transcript is on the log line, the verdict is what a caller can act on.
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId, hostDef);
+  const watched = await watchJob(jobId, hostDef, watchBudgetMs);
   result.state = watched.state;
+  result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
@@ -898,18 +1014,21 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
     ...provisioned.inputs,
   };
-  const { jobId, failure } = submitMachine(
+  const requestedWatchBudgetMs = conservativeWatchBudget();
+  const { jobId, watchBudgetMs, failure } = submitMachine(
     hostDef,
     packedRepo.hash,
     "author",
     inputObjects,
     remoteModelSecretEnv(["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
+    requestedWatchBudgetMs,
   );
-  const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
+  const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId), watchBudgetMs };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
-  const watched = await watchJob(jobId, hostDef);
+  const watched = await watchJob(jobId, hostDef, watchBudgetMs);
   result.state = watched.state;
+  result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "author");
