@@ -26,6 +26,7 @@ repositories:
       - paths:
           - stado-rs/src/monitor/reap.rs
           - stado-rs/src/queue/runs.rs
+          - stado-rs/src/queue/storage.rs
           - stado-rs/tests/run_history/**
         journeys: [run-retention]
       - paths:
@@ -75,7 +76,7 @@ journeys:
   run-retention:
     owner: Stado maintainers
     timeoutMs: 600000
-    value: The coordinator retains and reaps the exact terminal result of a migrated durable run whose historical job predates submission-linkage fields, while conflicting linkage remains refused.
+    value: The coordinator retains and reaps a migrated terminal result, preserves settled cancellation history after its run manifest is removed, and refuses missing history for an unretired transition.
   disk-cleanup:
     owner: Stado maintainers
     timeoutMs: 600000

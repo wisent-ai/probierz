@@ -21,6 +21,7 @@ const require = createRequire(import.meta.url);
 const NATIVE_CAPTURE_SOURCE = path.join(ROOT, "packages", "desktop-native", "tools", "screen-capture-kit.swift");
 const NATIVE_CAPTURE_BINARY = path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit");
 const PROBE_MS = 15000;
+export const SETUP_STEP_TIMEOUT_MS = 30 * 60 * 1000;
 const CUA_SOCKET = path.join(os.homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 
 // A binary is present if it runs and exits cleanly. `args` is its cheapest
@@ -351,7 +352,7 @@ export function runSetup(target, opts = {}) {
     const r = spawnSync(step.command, step.args, {
       cwd: step.cwd,
       encoding: "utf8",
-      timeout: Number(opts.timeoutMs) || 30 * 60 * 1000,
+      timeout: Number(opts.timeoutMs) || SETUP_STEP_TIMEOUT_MS,
     });
     const ok = r.status === 0;
     done.push({ step: step.name, command: `${step.command} ${step.args.join(" ")}`, ok, exitCode: r.status === null ? -1 : r.status });
