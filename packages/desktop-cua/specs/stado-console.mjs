@@ -362,8 +362,12 @@ export function assertAbsent(view, needles, why) {
 // Launch the console the manifest points at and wait for its shell. A window
 // that is still asking for a backend has no fleet state to assert against, so
 // that state fails here rather than as a missing field later.
-export function launchConsole() {
-  const app = launchCuaProcess({ executable: process.env.CUA_APP_EXECUTABLE });
+export function launchConsole({ env = {}, args = [] } = {}) {
+  const app = launchCuaProcess({
+    executable: process.env.CUA_APP_EXECUTABLE,
+    env,
+    args,
+  });
   const view = waitForScreen(app.pid, app.windowId, /AX\w*Button \(Posture/, Number("60000"));
   assertAbsent(
     view,
