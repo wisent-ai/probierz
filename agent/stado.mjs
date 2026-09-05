@@ -7,7 +7,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
@@ -20,6 +20,13 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+
+function workPath(name) {
+  const directory = path.join(homedir(), ".stado", "work", "probierz");
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  return path.join(directory, name);
+}
+
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
     reference: "vault://wisent/probierz/model-router-token",
@@ -169,7 +176,7 @@ function requireGuiReady(hostDef, target) {
 
 function packRepo(appIds) {
   const hash = createHash("sha256").update(`${Date.now()}-${Math.random()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `probierz-${hash}.tar.gz`);
+  const file = workPath(`probierz-${hash}.tar.gz`);
   const includes = ["agent", "packages", "apps", "package.json", "package-lock.json", "tsconfig.base.json", ".git"];
   const args = ["-czf", file, ...includes.filter((entry) => existsSync(path.join(ROOT, entry)))];
   const packed = sh("tar", args, { cwd: ROOT });
@@ -189,7 +196,7 @@ function packRepo(appIds) {
 
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
+  const file = workPath(`${appId}-${hash}.tar.gz`);
   const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
   const packed = sh("tar", args, { cwd: repoRoot });
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
@@ -199,7 +206,7 @@ function packAppSource(appId, repoRoot) {
 function packAppBundle(appId, bundlePath) {
   const bundleName = path.basename(bundlePath);
   const hash = createHash("sha256").update(`${appId}-app-${Date.now()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `${appId}-app-${hash}.tar.gz`);
+  const file = workPath(`${appId}-app-${hash}.tar.gz`);
   // -C into the bundle's parent so the tarball root is <Bundle>.app itself.
   const packed = sh("tar", ["-czf", file, "-C", path.dirname(bundlePath), bundleName]);
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} application bundle failed`, packed);
@@ -378,7 +385,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
 }
 
 function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
-  const requestFile = path.join(tmpdir(), `probierz-machine-${hash}.json`);
+  const requestFile = workPath(`probierz-machine-${hash}.json`);
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
     command: "bash inputs/run.sh",
@@ -634,7 +641,7 @@ export async function submitRemoteSeo({
     adjudicatorModel, agentId, routerUrl, productionEvidence: Boolean(productionEvidencePath),
     signatureRequired: profile.requireSignature, hash: packedRepo.hash, platform: hostDef.platform,
   });
-  const scriptFile = path.join(tmpdir(), `probierz-seo-${packedRepo.hash}.sh`);
+  const scriptFile = workPath(`probierz-seo-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
@@ -719,7 +726,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record, environment });
-  const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
+  const scriptFile = workPath(`probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);
   const inputObjects = {
@@ -786,7 +793,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     platform: hostDef.platform, mode: "author",
     author: { journey, desc }, sourceRoot: provisioned.sourceRoot, modelRouterUrl,
   });
-  const scriptFile = path.join(tmpdir(), `probierz-author-${packedRepo.hash}.sh`);
+  const scriptFile = workPath(`probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `author-${packedRepo.hash}.sh`);
   const inputObjects = {
