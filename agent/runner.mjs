@@ -345,7 +345,7 @@ export function completeRun(run, analysis, analysisError = null) {
 // Spawn a real run. opts:
 //   env        extra condition vars (BASE_URL, APP_IOS, PROBIERZ_LOCALE, ...)
 //   record     force video/trace/screenshot capture on (sets PROBIERZ_RECORD=1)
-//   timeoutMs  kill the run after this long (default 20 min)
+//   timeoutMs  override selected journey budgets (20 min fallback)
 //   spec       run only this one spec (path/substring); scopes a run to e.g.
 //              a single app's suite instead of every spec in the package
 //   force      skip the preflight gate and spawn even if the toolchain looks
@@ -610,7 +610,11 @@ export async function runSurface(target, opts = {}) {
 
   const command = `npm run ${t.script}${spec && !bykAuth ? ` (PROBIERZ_SPEC=${spec})` : ""}`;
   const wanted = Number(opts.timeoutMs);
-  const timeoutMs = wanted > Number("0") ? wanted : DEFAULT_TIMEOUT_MS;
+  const journeyBudget = runJourneys.reduce((total, journey) => {
+    const declared = Number(app.manifest.journeys[journey]?.timeoutMs);
+    return total + (declared > Number("0") ? declared : DEFAULT_TIMEOUT_MS);
+  }, Number("0"));
+  const timeoutMs = wanted > Number("0") ? wanted : journeyBudget || DEFAULT_TIMEOUT_MS;
   updateManifest(baseRun, { status: "running", command, timeoutMs });
   updateManifest(baseRun, { dataSeeded });
 
