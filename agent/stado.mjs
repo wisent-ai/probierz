@@ -190,9 +190,16 @@ function requireGuiReady(hostDef, target) {
       .filter((parts) => parts.length >= Number("3"))
       .map((parts) => [parts[Number("1")], parts.slice(Number("2")).join("\t")]),
   );
-  if (fields.get("gui-ready") !== "yes") {
-    const consoleOwner = fields.get("console") || "unknown";
-    const accessibility = fields.get("accessibility") || "unknown";
+  const consoleOwner = fields.get("console") || "unknown";
+  const accessibility = fields.get("accessibility") || "unknown";
+  // The worker's setup owns daemon startup. Requiring its socket here would
+  // prevent that setup from repairing an absent daemon, even with GUI access.
+  const guiAccess = !["", "root", "loginwindow", "unknown"].includes(consoleOwner)
+    && fields.get("accessibility-user") === consoleOwner
+    && fields.get("automated-session-declared") === "yes"
+    && fields.get("cua-driver-app") === "present"
+    && accessibility === "granted";
+  if (!guiAccess) {
     throw new FailureError({
       point: "stado.preflight",
       code: CODE.CONFIG,
