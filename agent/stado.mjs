@@ -32,21 +32,19 @@ function positiveBudget(value) {
   return Number.isFinite(budget) && budget > Number("0") ? Math.ceil(budget) : null;
 }
 
-function needsStadoDesktopCli(target, provision, environment = []) {
-  if (target !== "desktop:cua" || provision?.kind !== "app-bundle" || provision.appId !== "stado") {
-    return false;
-  }
-  const selected = environment.find(([name]) => name === "PROBIERZ_JOURNEY")?.[Number("1")];
-  return selected === undefined || selected === "service-convergence";
+function needsStadoDesktopCli(target, provision) {
+  return target === "desktop:cua"
+    && provision?.kind === "app-bundle"
+    && provision.appId === "stado";
 }
 
-function provisioningBudget(target, provision, environment = []) {
+function provisioningBudget(target, provision) {
   // The remote dependency install and every target setup command receive the
   // same per-step allowance that `probierz setup` publicly promises. A source
   // Cargo build is one additional provisioning step.
   const setupCount = target === "tui" ? Number("0") : setupSteps(target).length;
   const sourceBuildCount = provision?.kind === "cargo-release"
-    || needsStadoDesktopCli(target, provision, environment)
+    || needsStadoDesktopCli(target, provision)
     ? Number("1")
     : Number("0");
   return (Number("1") + setupCount + sourceBuildCount) * SETUP_STEP_TIMEOUT_MS;
@@ -72,7 +70,7 @@ function selectedRunBudget({ appId, target, environment, provision }) {
     (total, journey) => total + Number(manifest.journeys[journey].timeoutMs),
     Number("0"),
   );
-  return journeyBudget + provisioningBudget(target, provision, Object.entries(selectedEnvironment));
+  return journeyBudget + provisioningBudget(target, provision);
 }
 
 function conservativeWatchBudget(appId) {
@@ -676,13 +674,14 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       'CUA_EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$MAC_APP_PATH/Contents/Info.plist")',
       'export CUA_APP_EXECUTABLE="$MAC_APP_PATH/Contents/MacOS/$CUA_EXECUTABLE"',
     );
-    if (needsStadoDesktopCli(target, provision, environment)) {
+    if (needsStadoDesktopCli(target, provision)) {
       lines.push(
         "export PATH=\"$HOME/.cargo/bin:$PATH\"",
         "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
         'export CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/stado-rs/target"',
         '(cd "$PROBIERZ_APP_SOURCE/stado-rs" && cargo build --locked --bin stado)',
         'export PROBIERZ_STADO_BIN="$CARGO_TARGET_DIR/debug/stado"',
+        'export PATH="$CARGO_TARGET_DIR/debug:$PATH"',
       );
     }
   }
