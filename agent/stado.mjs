@@ -88,7 +88,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", target: "charless-mac-mini", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
-    { host: "stado:ubuntu", kind: "stado", platform: "linux", target: "ubuntu-server", request: { provider: "local", pin_to_provider: true, pinned_host: "local-ubuntu-server" }, description: "stado queue, dedicated Ubuntu consumer" },
+    { host: "stado:ubuntu", kind: "stado", platform: "linux", target: "ubuntu-server-rtx-pro-6000", request: { provider: "local", pin_to_provider: true, pinned_host: "local-ubuntu-server" }, description: "stado queue, dedicated Ubuntu consumer" },
     { host: "stado:macbook", kind: "stado", platform: "darwin", target: "lukasz-macbook", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
