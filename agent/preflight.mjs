@@ -21,7 +21,6 @@ const require = createRequire(import.meta.url);
 const NATIVE_CAPTURE_SOURCE = path.join(ROOT, "packages", "desktop-native", "tools", "screen-capture-kit.swift");
 const NATIVE_CAPTURE_BINARY = path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit");
 const PROBE_MS = 15000;
-const CUA_TREE_PROBE_MS = 5000;
 const CUA_SOCKET = path.join(os.homedir(), "Library", "Caches", "cua-driver", "probierz.sock");
 
 // A binary is present if it runs and exits cleanly. `args` is its cheapest
@@ -75,32 +74,19 @@ function appiumDriverInstalled(name, env = process.env) {
     return false;
   }
 }
-// The daemon owns the Accessibility grant; a launchd worker cannot inspect
-// another process's TCC state with AXIsProcessTrusted. Probe one real window
-// through the daemon instead. This is the exact capability a journey needs,
-// without walking an unbounded inventory or trusting the caller's TCC state.
-function cuaAccessibilityGranted() {
+// Ask the serving daemon, not the launchd client's TCC identity. This status
+// route never requests permissions or captures an unrelated application's UI.
+export function cuaPermissions(driver = "cua-driver") {
   try {
-    const listed = spawnSync("cua-driver", ["call", "list_windows", "{}", "--socket", CUA_SOCKET], {
+    const result = spawnSync(driver, ["call", "check_permissions", '{"prompt":false}', "--socket", CUA_SOCKET], {
       encoding: "utf8",
       timeout: PROBE_MS,
     });
-    if (listed.status !== 0) return false;
-    const data = JSON.parse(String(listed.stdout || "{}"));
-    const windows = data.windows || [];
-    const candidates = [
-      ...windows.filter((candidate) => candidate?.is_on_screen && candidate.title),
-      ...windows.filter((candidate) => candidate?.pid && candidate?.window_id),
-    ].slice(0, 5);
-    return candidates.some((win) => {
-      const state = spawnSync("cua-driver", ["call", "get_window_state", JSON.stringify({
-        pid: win.pid,
-        window_id: win.window_id,
-      }), "--socket", CUA_SOCKET], { encoding: "utf8", timeout: CUA_TREE_PROBE_MS });
-      return state.status === 0 && String(state.stdout || "").includes("AXApplication");
-    });
+    if (result.status !== 0) return null;
+    const permissions = JSON.parse(String(result.stdout || "{}"));
+    return typeof permissions.accessibility === "boolean" ? permissions : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -265,11 +251,15 @@ function checksFor(target, env = process.env) {
     ];
   }
   if (target === "desktop:cua") {
+    const permissions = cuaPermissions();
     return [
       { name: "macOS host", ok: os.platform() === "darwin", own: false, hint: "the cua-driver drives the macOS Accessibility API" },
       { name: "logged-in macOS console session", ok: hasConsoleSession(), own: false, hint: "select a dedicated macOS host with an active GUI login session" },
       { name: "cua-driver binary", ok: hasBinary("cua-driver", ["--version"]), own: false, hint: "install cua-driver (macOS Accessibility driver)" },
-      { name: "cua-driver accessibility", ok: cuaAccessibilityGranted(), own: true, hint: "grant CuaDriver in System Settings > Privacy & Security > Accessibility (once per host)" },
+      { name: "cua-driver daemon", ok: permissions !== null, own: true, hint: setupHint(target) },
+      ...(permissions ? [
+        { name: "cua-driver accessibility", ok: permissions.accessibility, own: false, hint: "CuaDriver needs an existing Accessibility grant on the selected host" },
+      ] : []),
     ];
   }
   return null;
