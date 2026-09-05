@@ -317,6 +317,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
+      `readonly PROBIERZ_CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/${targetPrefix}target"`,
+      'export CARGO_TARGET_DIR="$PROBIERZ_CARGO_TARGET_DIR"',
+      'trap \'rm -rf -- "$PROBIERZ_CARGO_TARGET_DIR"\' EXIT',
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
       `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bin ${shellQuote(provision.binary || provision.appId)})`,

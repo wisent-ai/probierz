@@ -284,6 +284,8 @@ with the locked dependency graph, so the repository's Rust toolchain is honored.
 An existing Rust installation is not upgraded by provisioning. Unless explicitly
 overridden with `--timeout`, the runner uses the sum of the selected journeys'
 declared time budgets, with the default budget for journeys that omit one.
+The staged Cargo output belongs only to that job and is removed on exit,
+including failed runs; retained reports and source identities are preserved.
 
 ### Evaluate a figure
 
