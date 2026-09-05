@@ -9,8 +9,15 @@ repositories:
           - stado-rs/src/deploy/host_gui_automation.rs
           - stado-rs/src/cli/host.rs
           - stado-rs/src/cli/identity.rs
-          - stado-rs/tests/apple_challenge/preparation.probierz.spec.mjs
+          - stado-rs/tests/apple_challenge/**
+          - stado-rs/src/dashboard/operator_auth.rs
+          - stado-rs/src/dashboard/operator_console.rs
         journeys: [apple-challenge-preparation]
+      - paths:
+          - desktop/StadoDesktop/tests/apple_challenge/**
+          - desktop/StadoDesktop/Sources/Stado/FleetControlStore.swift
+          - desktop/StadoDesktop/Sources/Stado/HostsView.swift
+        journeys: [apple-challenge-desktop]
       - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/cli/submit.rs
@@ -86,6 +93,9 @@ surfaces:
   desktop:cua:
     spec: stado-hosts-screen.spec.mjs
     journeys: [host-dynamic-capacity]
+    journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: apple-challenge-desktop}
+        journeys: [apple-challenge-desktop]
 
 journeys:
   host-dynamic-capacity:
@@ -119,13 +129,21 @@ journeys:
     value: A real launchd unit whose cached definition runs a private Stado image is reloaded in its observed domain after its plist names the delivered root, the replacement maps that root file, and repeated convergence does not restart it again.
   apple-challenge-preparation:
     owner: Stado maintainers
-    timeoutMs: 600000
+    timeoutMs: 900000
     description: Prepare and observe the signed Apple challenge helper on one explicitly named Stado-managed Mac without starting Apple sign-in, CuaDriver, a browser, or notifications.
     value: The real Darwin ARM64 host runs prompt-free Apple-only Accessibility preparation, observes the signed helper file state, and reports fresh GUI-automation status from the same host.
     prerequisites:
       platform: The selected Stado target must be a real Darwin ARM64 host.
       host: STADO_APPLE_PREPARATION_HOST must explicitly name that target; there is no default or simulated substitute.
       safety: The journey must not start Apple sign-in, CuaDriver, a browser, or notifications.
+  apple-challenge-desktop:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    description: Prepare the registered Apple helper from the real Stado Desktop Hosts screen through its configured native API, using only already-authorized CUA access.
+    value: The selected real host reports prompt-free Apple helper readiness and the native screen retains its complete result or exact refusal; no Apple authentication or permission grant is attempted.
+    prerequisites:
+      host: STADO_APPLE_PREPARATION_HOST explicitly names the registered Apple host.
+      desktop: The selected dedicated Mac must already have CuaDriver access and a configured real Stado API.
 
 artifacts:
   retain:
