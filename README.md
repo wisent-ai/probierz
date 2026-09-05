@@ -521,6 +521,11 @@ not create static product banners; those belong to `wisent-asset-generator`.
   `probierz stado collect <job-id> --app <id> --host stado:mini` (also
   `probierz_stado_collect` over MCP) returns the current state immediately and
   retrieves a terminal job's retained evidence without submitting or running it again.
+  A job cancelled before its worker starts remains `cancelled`; the result keeps
+  the exact Stado job and source-input metadata and marks run evidence as not
+  required, without asking the artifact store for output the worker never made.
+  A structured, non-retryable `NO_ARTIFACTS` response for evidence that was
+  required is reported as missing evidence, not as an object-store outage.
   GUI readiness has its own 30-minute audit deadline; an expired audit means
   readiness is unknown and no GUI job was submitted, not that the host is down.
 - **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`

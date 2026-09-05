@@ -658,6 +658,23 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, reques
  */
 const STATUS_FAILURE_TOLERANCE = Number("3");
 
+function terminalJobFailure(jobId, state, job) {
+  const reported = job?.error;
+  const detail = reported
+    ? (typeof reported === "string" ? reported : JSON.stringify(reported))
+    : state === "cancelled" && !job?.started_at
+      ? "cancelled before the worker started; no run evidence was produced"
+      : `worker reported ${state}`;
+  return failureSummary(new FailureError({
+    point: "stado.worker",
+    code: CODE.UNKNOWN,
+    detail,
+    message: state === "cancelled" && !job?.started_at
+      ? `Job ${jobId} was cancelled before a worker started; no run evidence was produced.`
+      : `Job ${jobId} ${state} on the remote host: ${detail}`,
+  }));
+}
+
 async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
   const requestedBudget = positiveBudget(requestedWatchBudgetMs);
   let watchBudgetMs = requestedBudget;
@@ -706,22 +723,29 @@ async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
     }
     const state = String(job?.state || "").toLowerCase();
     // A job the fleet failed or cancelled is a run result, not an outage: the
-    // queue did its part. The worker's own text is the operator's evidence.
+    // queue did its part. Preserve cancellation as its own terminal state so
+    // evidence collection cannot turn it into a worker failure or object-store
+    // outage.
     if (["failed", "cancelled"].includes(state)) {
-      const detail = String(job?.error || `worker reported ${state}`);
       return {
-        state: "failed",
+        state,
+        source: job?.resolved_input_artifacts?.source || null,
+        job,
         watchBudgetMs,
-        failure: failureSummary(new FailureError({
-          point: "stado.worker",
-          code: CODE.UNKNOWN,
-          detail,
-          message: `Job ${jobId} ${state} on the remote host: ${detail}`,
-        })),
+        failure: terminalJobFailure(jobId, state, job),
+        ...(state === "cancelled" && !job?.started_at
+          ? { evidence: { required: false, collected: false, reason: "cancelled-before-start", retryable: false } }
+          : {}),
       };
     }
     if (["uploaded", "completed"].includes(state)) {
-      return { state: "completed", watchBudgetMs, failure: null };
+      return {
+        state: "completed",
+        job,
+        source: job?.resolved_input_artifacts?.source || null,
+        watchBudgetMs,
+        failure: null,
+      };
     }
     if (Date.now() < deadline) {
       await new Promise((resolve) => { setTimeout(resolve, WATCH_INTERVAL_MS); });
@@ -941,11 +965,31 @@ export async function submitRemoteSeo({
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
+  if (watched.job) result.job = watched.job;
+  if (watched.evidence) result.evidence = watched.evidence;
   if (["completed", "failed"].includes(watched.state)) {
     const retained = fetchRunEvidence(jobId, hostDef);
     if (retained) result.resultsDir = retained.resultsDir;
+    if (retained?.artifactError) result.artifactError = retained.artifactError;
+    if (watched.state === "completed" && !retained?.resultsDir) {
+      result.state = "evidence-unavailable";
+      result.failure = missingRunEvidenceFailure(
+        jobId,
+        `artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
+      );
+    }
   }
   return result;
+}
+
+function missingRunEvidenceFailure(jobId, detail) {
+  return failureSummary(failureFrom({
+    point: "stado.download",
+    error: Object.assign(new Error("required run evidence is missing"), { failureCode: CODE.NOT_FOUND }),
+    detail: `job=${jobId}; ${detail}`,
+    action: `Job ${jobId} completed without the required Probierz run evidence`,
+    fallbackCode: CODE.NOT_FOUND,
+  }));
 }
 
 function fetchRunEvidence(jobId, hostDef) {
@@ -962,6 +1006,12 @@ function fetchRunEvidence(jobId, hostDef) {
     throw remoteFailure("stado.download", "The queue returned invalid artifact metadata", downloaded);
   }
   if (!payload?.ok || downloaded.status !== Number("0")) {
+    const upstream = payload?.error;
+    if (upstream?.code === "NO_ARTIFACTS" && upstream.retryable === false) {
+      rmSync(destDir, { recursive: true, force: true });
+      process.stderr.write(`probierz-remote-artifacts ${JSON.stringify({ jobId, error: upstream })}\n`);
+      return { resultsDir: null, manifest: null, artifactError: upstream };
+    }
     throw remoteFailure("stado.download", "Downloading the worker's retained artifacts failed", downloaded);
   }
   const artifacts = payload.result?.artifacts || [];
@@ -1006,17 +1056,47 @@ export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
   } catch {
     throw remoteFailure("stado.watch", `Reading job ${jobId} returned invalid status`, status);
   }
-  const state = String(payload?.result?.job?.state || "").toLowerCase();
+  const job = payload?.result?.job;
+  const state = String(job?.state || "").toLowerCase();
   if (!payload.ok || !state) throw remoteFailure("stado.watch", `Reading job ${jobId} returned no state`, status);
-  const result = { host, jobId, appId, state, submitted: true, collected: false };
+  const result = {
+    host,
+    jobId,
+    appId,
+    state,
+    submitted: true,
+    collected: false,
+    job,
+    source: job?.resolved_input_artifacts?.source || null,
+  };
   if (!["uploaded", "completed", "failed", "cancelled"].includes(state)) return result;
+  if (state === "cancelled" && !job?.started_at) {
+    return {
+      ...result,
+      failure: terminalJobFailure(jobId, state, job),
+      evidence: { required: false, collected: false, reason: "cancelled-before-start", retryable: false },
+    };
+  }
   const retained = fetchRunEvidence(jobId, hostDef);
   if (!retained?.manifest || retained.manifest.appId !== appId) {
-    throw new FailureError({
-      point: "stado.download",
-      code: CODE.NOT_FOUND,
-      message: `Job ${jobId} did not return a Probierz run manifest for ${appId}.`,
-    });
+    const terminalState = state === "uploaded" ? "completed" : state;
+    if (terminalState !== "completed") {
+      return {
+        ...result,
+        state: terminalState,
+        artifactError: retained?.artifactError || null,
+        failure: terminalJobFailure(jobId, terminalState, job),
+      };
+    }
+    return {
+      ...result,
+      state: "evidence-unavailable",
+      artifactError: retained?.artifactError || null,
+      failure: missingRunEvidenceFailure(
+        jobId,
+        `app=${appId}; artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
+      ),
+    };
   }
   return { ...result, state: state === "uploaded" ? "completed" : state, collected: true, resultsDir: retained.resultsDir, manifest: retained.manifest };
 }
@@ -1043,18 +1123,17 @@ export async function resumeRemoteRun({ jobId, host = "stado:any" }) {
   if (!["completed", "failed"].includes(result.state)) return result;
   const retained = fetchRunEvidence(jobId, hostDef);
   if (retained) result.resultsDir = retained.resultsDir;
+  if (retained?.artifactError) result.artifactError = retained.artifactError;
   if (retained?.manifest) {
     result.runId = retained.manifest.runId;
     result.appId = retained.manifest.appId;
     result.target = retained.manifest.target;
   } else if (result.state === "completed") {
     result.state = "evidence-unavailable";
-    result.failure = failureSummary(new FailureError({
-      point: "stado.download",
-      code: CODE.NOT_FOUND,
-      detail: `could not recover a retained run-manifest.json for completed job ${jobId}`,
-      message: `Job ${jobId} completed, but its Probierz run evidence could not be recovered.`,
-    }));
+    result.failure = missingRunEvidenceFailure(
+      jobId,
+      `artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
+    );
   }
   return result;
 }
@@ -1119,9 +1198,19 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
+  if (watched.job) result.job = watched.job;
+  if (watched.evidence) result.evidence = watched.evidence;
   if (["completed", "failed"].includes(watched.state)) {
     const retained = fetchRunEvidence(jobId, hostDef);
     if (retained) result.resultsDir = retained.resultsDir;
+    if (retained?.artifactError) result.artifactError = retained.artifactError;
+    if (watched.state === "completed" && !retained?.resultsDir) {
+      result.state = "evidence-unavailable";
+      result.failure = missingRunEvidenceFailure(
+        jobId,
+        `artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
+      );
+    }
     if (watched.state === "failed") {
       const preflight = retained?.manifest?.preflight;
       if (preflight?.ready === false) {
@@ -1187,10 +1276,21 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
+  if (watched.job) result.job = watched.job;
+  if (watched.evidence) result.evidence = watched.evidence;
   if (["completed", "failed"].includes(watched.state)) {
     const retained = fetchRunEvidence(jobId, hostDef);
     if (retained) result.resultsDir = retained.resultsDir;
-    if (watched.state === "completed") result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
+    if (retained?.artifactError) result.artifactError = retained.artifactError;
+    if (watched.state === "completed" && !retained?.resultsDir) {
+      result.state = "evidence-unavailable";
+      result.failure = missingRunEvidenceFailure(
+        jobId,
+        `artifact_error=${JSON.stringify(retained?.artifactError || null)}`,
+      );
+    } else if (watched.state === "completed") {
+      result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
+    }
   }
   return result;
 }
