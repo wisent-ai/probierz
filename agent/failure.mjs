@@ -177,6 +177,7 @@ const POINTS = {
   "stado.submit": { service: SERVICE.STADO_QUEUE, impact: IMPACT.REMOTE_RUN },
   "stado.watch": { service: SERVICE.STADO_QUEUE, impact: IMPACT.REMOTE_RUN },
   "stado.worker": { service: SERVICE.HARNESS, impact: IMPACT.REMOTE_RUN },
+  "stado.preflight": { service: SERVICE.HARNESS, impact: IMPACT.REMOTE_RUN },
   "stado.pack": { service: SERVICE.HARNESS, impact: IMPACT.REMOTE_RUN },
   "objects.config": { service: SERVICE.OBJECTS, impact: IMPACT.FLEET_HEALTH },
   "objects.list": { service: SERVICE.OBJECTS, impact: IMPACT.FLEET_HEALTH },

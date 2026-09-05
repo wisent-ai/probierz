@@ -482,6 +482,13 @@ not create static product banners; those belong to `wisent-asset-generator`.
   Cargo, native-bundle and Node-source jobs; `--env=NAME=VALUE` is equivalent.
   Values are passed literally, including embedded `=` characters. Credentials
   continue to use the manifest's scoped `secretRefs`, not command arguments.
+  Submission requests and responses remain under `test-results/.remote/`;
+  stderr prints the request receipt and accepted job ID before watching.
+  `probierz stado collect <job-id> --app <id> --host stado:mini` (also
+  `probierz_stado_collect` over MCP) retrieves an existing job's retained
+  evidence after an interrupted watch, without submitting or running it again.
+  GUI readiness has its own 30-minute audit deadline; an expired audit means
+  readiness is unknown and no GUI job was submitted, not that the host is down.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).

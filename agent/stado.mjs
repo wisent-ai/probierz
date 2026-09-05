@@ -22,7 +22,8 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
-const STATUS_CALL_TIMEOUT_MS = Number("15000");
+const STATUS_CALL_TIMEOUT_MS = Number("180000");
+const GUI_STATUS_CALL_TIMEOUT_MS = Number("1800000");
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
     reference: "vault://wisent/probierz/model-router-token",
@@ -101,7 +102,7 @@ function sh(command, args, options = {}) {
   // `error` carries the spawn failure itself (a missing `stado` binary), which
   // neither stream reports and which classifies very differently from a
   // command that ran and refused.
-  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null };
+  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null, signal: out.signal || null };
 }
 
 /**
@@ -146,10 +147,19 @@ function requireGuiReady(hostDef, target) {
       message: `The selected host "${hostDef.host}" cannot prove a usable macOS GUI session.`,
     });
   }
+  const started = Date.now();
   const status = sh(STADO_BIN, ["host", "gui-automation", "status", hostDef.target], {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
-    timeout: STATUS_CALL_TIMEOUT_MS,
+    timeout: GUI_STATUS_CALL_TIMEOUT_MS,
   });
+  if (status.error?.code === "ETIMEDOUT") {
+    throw new FailureError({
+      point: "stado.preflight",
+      code: CODE.TIMEOUT,
+      detail: `target=${hostDef.target}; deadline_ms=${GUI_STATUS_CALL_TIMEOUT_MS}; elapsed_ms=${Date.now() - started}; signal=${status.signal}; terminated_before_gui_job_submission=true; ${processText(status)}`,
+      message: `The GUI readiness audit for ${hostDef.target} exceeded its deadline. Readiness is unknown; no GUI job was submitted.`,
+    });
+  }
   if (status.status !== Number("0")) {
     throw remoteFailure("stado.preflight", `Reading GUI readiness for ${hostDef.target} failed`, status);
   }
@@ -404,7 +414,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
 }
 
 function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
-  const requestFile = path.join(tmpdir(), `probierz-machine-${hash}.json`);
+  const receiptDir = path.join(ROOT, "test-results", ".remote", `probierz-${kind}-${hash}`);
+  mkdirSync(receiptDir, { recursive: true });
+  const requestFile = path.join(receiptDir, "request.json");
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
     command: "bash inputs/run.sh",
@@ -414,10 +426,17 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
     ...(hostDef.request || {}),
   };
   writeFileSync(requestFile, JSON.stringify(request));
+  console.error(`probierz-remote-request ${JSON.stringify({ requestId: request.client_request_id, requestFile })}`);
   const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile], {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
   });
-  rmSync(requestFile, { force: true });
+  writeFileSync(path.join(receiptDir, "submission.json"), JSON.stringify({
+    status: submit.status,
+    signal: submit.signal,
+    error: submit.error ? { code: submit.error.code, message: submit.error.message } : null,
+    stdout: submit.stdout,
+    stderr: submit.stderr,
+  }, null, Number("2")));
   let jobId = null;
   try {
     const payload = JSON.parse(submit.stdout);
@@ -426,7 +445,10 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
     // A queue that answers with something other than its own protocol is a
     // queue that is not working; the text lands on the log line below.
   }
-  if (jobId) return { jobId, failure: null };
+  if (jobId) {
+    console.error(`probierz-remote-job ${JSON.stringify({ jobId, requestId: request.client_request_id, receiptDir })}`);
+    return { jobId, failure: null };
+  }
   // The raw submit output is the operator's evidence, so it is logged in full
   // by `remoteFailure`; the caller gets the verdict, not the transcript.
   return { jobId: null, failure: failureSummary(remoteFailure("stado.submit", "The stado queue did not accept the job", submit)) };
@@ -445,6 +467,7 @@ async function watchJob(jobId, hostDef) {
   while (Date.now() < deadline) {
     const out = sh(STADO_BIN, ["machine", "status", jobId], {
       env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      timeout: Math.max(Number("1"), Math.min(STATUS_CALL_TIMEOUT_MS, deadline - Date.now())),
     });
     let payload = null;
     try { payload = JSON.parse(out.stdout); } catch {}
@@ -686,7 +709,7 @@ export async function submitRemoteSeo({
   return result;
 }
 
-function fetchFailedRun(jobId, hostDef) {
+function fetchRunArtifacts(jobId, hostDef) {
   const destDir = path.join(ROOT, "test-results", ".remote", jobId);
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
@@ -715,6 +738,39 @@ function fetchFailedRun(jobId, hostDef) {
     } catch {}
   }
   return { resultsDir: destDir, manifest };
+}
+
+export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
+  const hostDef = listHosts().find((entry) => entry.host === host && entry.kind === "stado");
+  if (!hostDef || !/^job-[0-9a-f]{24}$/.test(jobId || "")) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: "Collection requires a canonical Stado job ID and a known Stado host.",
+    });
+  }
+  loadAppManifest(appId);
+  const status = sh(STADO_BIN, ["machine", "status", jobId], {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    timeout: STATUS_CALL_TIMEOUT_MS,
+  });
+  if (status.status !== Number("0")) {
+    throw remoteFailure("stado.watch", `Reading job ${jobId} failed`, status);
+  }
+  const payload = JSON.parse(status.stdout);
+  const state = String(payload?.result?.job?.state || "").toLowerCase();
+  if (!payload.ok || !state) throw remoteFailure("stado.watch", `Reading job ${jobId} returned no state`, status);
+  const result = { host, jobId, appId, state, submitted: true, collected: false };
+  if (!["uploaded", "completed", "failed", "cancelled"].includes(state)) return result;
+  const retained = fetchRunArtifacts(jobId, hostDef);
+  if (!retained?.manifest || retained.manifest.appId !== appId) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.NOT_FOUND,
+      message: `Job ${jobId} did not return a Probierz run manifest for ${appId}.`,
+    });
+  }
+  return { ...result, state: state === "uploaded" ? "completed" : state, collected: true, resultsDir: retained.resultsDir, manifest: retained.manifest };
 }
 
 export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false }) {
@@ -765,7 +821,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
   }
   if (watched.state === "failed") {
-    const retained = fetchFailedRun(jobId, hostDef);
+    const retained = fetchRunArtifacts(jobId, hostDef);
     if (retained) {
       result.resultsDir = retained.resultsDir;
       const preflight = retained.manifest?.preflight;

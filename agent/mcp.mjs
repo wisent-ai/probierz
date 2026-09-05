@@ -29,7 +29,7 @@ import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
+import { submitRemoteRun, submitRemoteSeo, collectRemoteRun } from "./stado.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 
@@ -360,6 +360,15 @@ const TOOLS = [
     }, ["target", "appId"]),
   },
   {
+    name: "probierz_stado_collect",
+    description: "Download an existing Stado job's retained Probierz evidence without submitting or rerunning the job.",
+    inputSchema: objectSchema({
+      jobId: { type: "string" },
+      appId: { type: "string" },
+      host: { type: "string", description: "The original Stado host; defaults to stado:mini." },
+    }, ["jobId", "appId"]),
+  },
+  {
     name: "probierz_stado_evaluate_seo",
     description: "SIDE-EFFECTING: submit the complete SEO evaluator to a Stado-selected dedicated host, materialize only the declared Brama and signing secrets, and fetch the immutable evidence bundle.",
     inputSchema: objectSchema({
@@ -674,6 +683,13 @@ async function callTool(name, args) {
         : null,
       appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
       watch: args.watch !== false,
+    }));
+  }
+  if (name === "probierz_stado_collect") {
+    return textResult(collectRemoteRun({
+      jobId: asString(args.jobId, "jobId"),
+      appId: asString(args.appId, "appId"),
+      host: typeof args.host === "string" ? args.host : "stado:mini",
     }));
   }
   if (name === "probierz_stado_evaluate_seo") {
