@@ -85,11 +85,11 @@ journeys:
   native-build:
     owner: Stado maintainers
     timeoutMs: 3600000
-    value: A native Stado release binary builds from the selected application source on its target platform and executes successfully.
+    value: A declared build recipe checks out a public Git ref on a matching worker, uploads build-output.txt, and the CLI downloads and verifies its bytes.
   platform-matrix:
     owner: Stado maintainers
     timeoutMs: 7200000
-    value: Sequential Linux and macOS native-build legs both build and execute Stado from the same selected application source.
+    value: Both darwin-arm64 and linux-amd64 run the native build-artifact journey and complete the signed release and cancelled-build retry, installing and executing ci-release-probe from one Stado source revision.
 
 secretRefs:
   STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
