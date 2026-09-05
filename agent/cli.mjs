@@ -475,7 +475,7 @@ async function main() {
       if (!appId) throw configError("stado collect needs --app <appId>");
       const result = collectRemoteRun({ jobId: rest[1], appId, host: value("--host") || "stado:mini" });
       out(result);
-      if (result.collected) remoteExit(result);
+      if (result.collected || ["failed", "cancelled", "evidence-unavailable"].includes(result.state)) remoteExit(result);
       return;
     }
     if (sub === "resume") {
