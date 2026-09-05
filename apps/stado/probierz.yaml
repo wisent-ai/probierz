@@ -39,6 +39,15 @@ repositories:
           - stado-rs/tests/ci-cd/**
         journeys: [release-pipeline]
       - paths:
+          - stado-rs/src/self_update.rs
+          - stado-rs/src/deploy/service.rs
+          - stado-rs/src/deploy/service_label_print.rs
+          - stado-rs/src/cli/service_refresh_image.rs
+          - stado-rs/src/release_unit_image.rs
+          - stado-rs/src/cli/release_cmd.rs
+          - stado-rs/tests/native_readers/**
+        journeys: [native-readers]
+      - paths:
           - stado-rs/tests/builds/**
         journeys: [native-build]
       - paths:
@@ -62,6 +71,8 @@ surfaces:
         journeys: [native-build]
       - when: {PROBIERZ_JOURNEY: platform-matrix}
         journeys: [platform-matrix]
+      - when: {PROBIERZ_JOURNEY: native-readers}
+        journeys: [native-readers]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -94,6 +105,10 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 7200000
     value: Both darwin-arm64 and linux-amd64 run the native build-artifact journey and complete the signed release and cancelled-build retry, installing and executing ci-release-probe from one Stado source revision.
+  native-readers:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    value: A real launchd unit whose cached definition runs a private Stado image is reloaded in its observed domain after its plist names the delivered root, the replacement maps that root file, and repeated convergence does not restart it again.
 
 artifacts:
   retain:
