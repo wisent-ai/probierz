@@ -1921,7 +1921,10 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, area = 
     });
   }
   requireGuiReady(hostDef, target);
-  const modelRouterUrl = stadoModelRouterUrl();
+  const surface = loadAppManifest(appId).surfaces[target];
+  const modelRouterUrl = stadoModelRouterUrl(
+    surface?.conditions?.STADO_MODEL_ROUTER_URL ?? process.env.STADO_MODEL_ROUTER_URL,
+  );
   const productRoot = submittingProductRoot(appId, appRepo);
   const identity = packSourceIdentity(appId, productRoot);
   requireImmutableNativeProvision({ target, provision, appRepo, identity });
