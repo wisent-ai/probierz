@@ -1,3 +1,5 @@
+import { createHash, createHmac } from "node:crypto";
+
 // Authenticated, provider-neutral model authoring through the Stado router.
 // Product code receives only the router-scoped bearer; provider credentials
 // remain inside the router runtime.
@@ -77,41 +79,49 @@ export async function draftStructuredArtifact({ brief, toolName, description }) 
   if (typeof description !== "string" || !description.trim()) throw new Error("model-router artifact description is required");
 
   const endpoint = `${stadoModelRouterUrl()}/v1/chat/completions`;
+  const agentId = requiredEnvironment("PROBIERZ_MODEL_AGENT_ID");
+  const agentSecret = requiredEnvironment("PROBIERZ_MODEL_AGENT_SECRET");
+  const body = JSON.stringify({
+    model: ROUTER_SELECTOR,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    temperature: Number("0.1"),
+    messages: [
+      {
+        role: "system",
+        content: `You are a Probierz authoring worker. Produce the requested artifact, then call ${toolName} exactly once with the complete file contents. Do not modify files or return prose.`,
+      },
+      { role: "user", content: brief },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: toolName,
+          description,
+          parameters: {
+            type: "object",
+            properties: {
+              content: { type: "string", description: "Complete artifact contents, without Markdown fences." },
+            },
+            required: ["content"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ],
+  });
+  const timestamp = String(Math.floor(Date.now() / Number("1000")));
+  const digest = createHash("sha256").update(body).digest("hex");
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${routerToken()}`,
       "Content-Type": "application/json",
+      "x-agent-id": agentId,
+      "x-agent-timestamp": timestamp,
+      "x-agent-signature": createHmac("sha256", agentSecret).update(`${agentId}:${timestamp}:${digest}`).digest("hex"),
     },
-    body: JSON.stringify({
-      model: ROUTER_SELECTOR,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      temperature: Number("0.1"),
-      messages: [
-        {
-          role: "system",
-          content: `You are a Probierz authoring worker. Produce the requested artifact, then call ${toolName} exactly once with the complete file contents. Do not modify files or return prose.`,
-        },
-        { role: "user", content: brief },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: toolName,
-            description,
-            parameters: {
-              type: "object",
-              properties: {
-                content: { type: "string", description: "Complete artifact contents, without Markdown fences." },
-              },
-              required: ["content"],
-              additionalProperties: false,
-            },
-          },
-        },
-      ],
-    }),
+    body,
     signal: AbortSignal.timeout(MODEL_BUDGET_MS),
   });
   const raw = await response.text();
