@@ -6,13 +6,14 @@
 // on the worker, and results are persisted under stado://probierz/results.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest } from "./apps.mjs";
 import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
+import { repositorySourceFiles } from "./source-identity.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -87,6 +88,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", target: "charless-mac-mini", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
+    { host: "stado:ubuntu", kind: "stado", platform: "linux", target: "ubuntu-server", request: { provider: "local", pin_to_provider: true, pinned_host: "local-ubuntu-server" }, description: "stado queue, dedicated Ubuntu consumer" },
     { host: "stado:macbook", kind: "stado", platform: "darwin", target: "lukasz-macbook", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
@@ -167,13 +169,38 @@ function requireGuiReady(hostDef, target) {
   }
 }
 
+function workFile(name) {
+  const directory = path.join(homedir(), ".stado", "work", "probierz");
+  mkdirSync(directory, { recursive: true });
+  return path.join(directory, name);
+}
+
+function packSource(repoRoot, file, extraPaths = []) {
+  const workspace = mkdtempSync(workFile("source-"));
+  const snapshot = path.join(workspace, "checkout");
+  try {
+    const cloned = sh("git", ["clone", "--no-checkout", "--no-local", "--single-branch", repoRoot, snapshot]);
+    if (cloned.status !== 0) throw localFailure("stado.pack", `Copying the Git source identity for ${repoRoot} failed`, cloned);
+    const indexed = sh("git", ["-C", snapshot, "reset", "--mixed", "HEAD"]);
+    if (indexed.status !== 0) throw localFailure("stado.pack", `Preparing the source index for ${repoRoot} failed`, indexed);
+    for (const relative of repositorySourceFiles(repoRoot, { includePackageLock: true })) {
+      const destination = path.join(snapshot, relative);
+      mkdirSync(path.dirname(destination), { recursive: true });
+      cpSync(path.join(repoRoot, relative), destination, { verbatimSymlinks: true });
+    }
+    for (const relative of extraPaths) {
+      cpSync(path.join(repoRoot, relative), path.join(snapshot, relative), { recursive: true, verbatimSymlinks: true });
+    }
+    const packed = sh("tar", ["-czf", file, "."], { cwd: snapshot });
+    if (packed.status !== 0) throw localFailure("stado.pack", `Packing ${repoRoot} failed`, packed);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
 function packRepo(appIds) {
   const hash = createHash("sha256").update(`${Date.now()}-${Math.random()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `probierz-${hash}.tar.gz`);
-  const includes = ["agent", "packages", "apps", "package.json", "package-lock.json", "tsconfig.base.json", ".git"];
-  const args = ["-czf", file, ...includes.filter((entry) => existsSync(path.join(ROOT, entry)))];
-  const packed = sh("tar", args, { cwd: ROOT });
-  if (packed.status !== Number("0")) throw localFailure("stado.pack", "Packing the probierz checkout failed", packed);
+  const file = workFile(`probierz-${hash}.tar.gz`);
   for (const appId of appIds) {
     if (!existsSync(path.join(ROOT, "apps", appId))) {
       throw new FailureError({
@@ -184,22 +211,21 @@ function packRepo(appIds) {
       });
     }
   }
+  packSource(ROOT, file, appIds.map((appId) => `apps/${appId}`));
   return { file, hash };
 }
 
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
-  const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
-  const packed = sh("tar", args, { cwd: repoRoot });
-  if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
+  const file = workFile(`${appId}-${hash}.tar.gz`);
+  packSource(repoRoot, file);
   return { file, hash };
 }
 
 function packAppBundle(appId, bundlePath) {
   const bundleName = path.basename(bundlePath);
   const hash = createHash("sha256").update(`${appId}-app-${Date.now()}`).digest("hex").slice(0, Number("12"));
-  const file = path.join(tmpdir(), `${appId}-app-${hash}.tar.gz`);
+  const file = workFile(`${appId}-app-${hash}.tar.gz`);
   // -C into the bundle's parent so the tarball root is <Bundle>.app itself.
   const packed = sh("tar", ["-czf", file, "-C", path.dirname(bundlePath), bundleName]);
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} application bundle failed`, packed);
@@ -290,9 +316,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,
   );
-  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source") {
-    // The manifest ships the submitter's absolute repo root; on the worker
-    // the sources live under /tmp/w, so rewrite it before the run.
+  if (mode !== "run" && (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source")) {
+    // Authoring and custom scripts read the staged source path from the
+    // manifest; ordinary runs use --app-repo without changing their source.
     const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
     lines.push(
       `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
@@ -303,7 +329,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(`export APPIUM_HOME="$HOME/.cache/probierz/${appiumEnvironment}"`);
   }
   lines.push(
-    "npm install --no-audit --no-fund --loglevel=error",
+    "npm ci --no-audit --no-fund --loglevel=error",
     // Fresh worker: provision the target's host-level deps (appium drivers,
     // native helpers) exactly as a local `probierz setup <target>` would.
     `node agent/cli.mjs setup ${target}`,
@@ -356,10 +382,11 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
     return lines.join("\n");
   }
+  const hasAppSource = ["app-bundle", "cargo-release", "node-source"].includes(provision?.kind);
   const runConditions = [
     "PROBIERZ_RUN_KIND=pull-request",
-    target === "tui" ? 'TUI_CMD="$TUI_CMD"' : null,
-    provision ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
+    target === "tui" && provision?.kind !== "node-source" ? 'TUI_CMD="$TUI_CMD"' : null,
+    hasAppSource ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
     target === "desktop:cua" ? 'CUA_APP_EXECUTABLE="$CUA_APP_EXECUTABLE"' : null,
     ...environment.map(([key, value]) => shellQuote(`${key}=${value}`)),
   ].filter(Boolean).join(" ");
@@ -368,7 +395,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // upload whatever test-results exist, then re-emit the run's status so
     // the job's success/failure still reflects the tests.
     "set +e",
-    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} ${runConditions}`,
+    `node agent/cli.mjs run ${target} --app ${appId}${hasAppSource ? ' --app-repo "$PROBIERZ_APP_SOURCE"' : ""}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} ${runConditions}`,
     "PROBIERZ_RUN_RC=$?",
     "set -e",
     `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
@@ -378,7 +405,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
 }
 
 function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}) {
-  const requestFile = path.join(tmpdir(), `probierz-machine-${hash}.json`);
+  const requestFile = workFile(`probierz-machine-${hash}.json`);
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
     command: "bash inputs/run.sh",
@@ -634,7 +661,7 @@ export async function submitRemoteSeo({
     adjudicatorModel, agentId, routerUrl, productionEvidence: Boolean(productionEvidencePath),
     signatureRequired: profile.requireSignature, hash: packedRepo.hash, platform: hostDef.platform,
   });
-  const scriptFile = path.join(tmpdir(), `probierz-seo-${packedRepo.hash}.sh`);
+  const scriptFile = workFile(`probierz-seo-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
@@ -719,7 +746,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record, environment });
-  const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
+  const scriptFile = workFile(`probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);
   const inputObjects = {
@@ -786,7 +813,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     platform: hostDef.platform, mode: "author",
     author: { journey, desc }, sourceRoot: provisioned.sourceRoot, modelRouterUrl,
   });
-  const scriptFile = path.join(tmpdir(), `probierz-author-${packedRepo.hash}.sh`);
+  const scriptFile = workFile(`probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `author-${packedRepo.hash}.sh`);
   const inputObjects = {
