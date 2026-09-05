@@ -442,7 +442,58 @@ function packSourceIdentity(appId, appRepo = null) {
   const hash = createHash("sha256").update(JSON.stringify(identity)).digest("hex").slice(0, Number("12"));
   const file = workPath(`${appId}-source-${hash}.json`);
   writeFileSync(file, `${JSON.stringify(identity, null, Number("2"))}\n`);
-  return { file, hash };
+  return { ...identity, file, hash };
+}
+
+function requireImmutableNativeProvision({ target, provision, appRepo, identity }) {
+  if (provision?.kind !== "native-binary") return;
+  if (target !== "tui") {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      detail: `native-binary provisioning requested for target ${target}`,
+      message: "--app-binary-path is supported only for remote TUI runs and authoring.",
+    });
+  }
+  if (!appRepo) {
+    throw new FailureError({
+      point: "stado.pack",
+      code: CODE.CONFIG,
+      detail: "native-binary provisioning needs the app source repository",
+      message: "Remote native-binary provisioning needs --app-repo <path>.",
+    });
+  }
+  const primarySource = identity.app?.repositories?.find(({ index }) => index === Number("0"));
+  if (!primarySource?.gitSha || primarySource.dirty) {
+    throw new FailureError({
+      point: "stado.pack",
+      code: CODE.CONFIG,
+      detail: `git_sha=${primarySource?.gitSha || "(missing)"}; dirty=${primarySource?.dirty ?? "unknown"}`,
+      message: "--app-binary-path requires --app-repo to be a clean committed source checkout.",
+    });
+  }
+}
+
+function submissionIdentityMetadata({ receiptDir, identity, provision, inputObjects }) {
+  const sourceIdentityPath = path.join(receiptDir, "source-identity.json");
+  cpSync(identity.file, sourceIdentityPath);
+  const primarySource = identity.app?.repositories?.find(({ index }) => index === Number("0"));
+  const binary = provision?.kind === "native-binary"
+    ? {
+      name: provision.binaryName,
+      sha256: provision.binarySha256,
+      sourceRevision: primarySource?.gitSha || null,
+      input: inputObjects.binary.relative_path,
+    }
+    : null;
+  const binaryIdentityPath = binary ? path.join(receiptDir, "binary-identity.json") : null;
+  if (binaryIdentityPath) writeFileSync(binaryIdentityPath, `${JSON.stringify(binary, null, Number("2"))}\n`);
+  return {
+    receiptDir,
+    sourceIdentityPath,
+    sourceRevision: primarySource?.gitSha || null,
+    ...(binary ? { binary, binaryIdentityPath } : {}),
+  };
 }
 
 function manifestRepoRoot(appId) {
@@ -563,7 +614,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // source, produced nothing at all and killed the run.
     'export PROBIERZ_SOURCE_IDENTITY="$JOB_ROOT/inputs/source-identity.json"',
   );
-  if (mode !== "run" && (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source")) {
+  if (mode !== "run" && ["app-bundle", "cargo-release", "native-binary", "node-source"].includes(provision?.kind)) {
     // Authoring and custom scripts read the staged source path from the
     // manifest; ordinary runs use --app-repo without changing their source.
     const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
@@ -1345,6 +1396,27 @@ export function cancelRemoteRun({ jobId, host = "stado:any", reason }) {
     failure: evidenceFailure,
     reason: job.started_at ? null : "cancelled-before-start",
   };
+  const evaluationFailure = cancelled
+    ? terminalJobFailure(jobId, state, job)
+    : failureSummary(new FailureError({
+      point: "stado.worker",
+      code: CODE.UNKNOWN,
+      detail: `machine cancellation returned terminal state ${state || "(empty)"}`,
+      message: `Job ${jobId} is ${state || "in an unknown state"} and was not cancelled.`,
+    }));
+  const cancellationFailure = !cancelled
+    ? evaluationFailure
+    : logs.failure
+      || evidence.failure
+      || (evidence.required && !evidence.collected
+        ? failureSummary(new FailureError({
+          point: "stado.download",
+          code: CODE.NOT_FOUND,
+          detail: `job=${jobId}; artifact_error=${JSON.stringify(evidence.artifactError || null)}`,
+          message: `Cancellation of job ${jobId} succeeded, but its required worker evidence was not retained.`,
+        }))
+        : null);
+  const cancellationSucceeded = cancelled && !cancellationFailure;
   return {
     host,
     jobId,
@@ -1352,6 +1424,8 @@ export function cancelRemoteRun({ jobId, host = "stado:any", reason }) {
     state,
     cancelled,
     passed: false,
+    cancellationSucceeded,
+    cancellationFailure,
     reason: cancellationReason,
     cancellationRoot,
     attemptId,
@@ -1367,14 +1441,7 @@ export function cancelRemoteRun({ jobId, host = "stado:any", reason }) {
     logFailure: logs.failure,
     evidence,
     ...(retained?.resultsDir ? { resultsDir: retained.resultsDir } : {}),
-    failure: cancelled
-      ? terminalJobFailure(jobId, state, job)
-      : failureSummary(new FailureError({
-        point: "stado.worker",
-        code: CODE.UNKNOWN,
-        detail: `machine cancellation returned terminal state ${state || "(empty)"}`,
-        message: `Job ${jobId} is ${state || "in an unknown state"} and was not cancelled.`,
-      })),
+    failure: evaluationFailure,
   };
 }
 
@@ -1438,30 +1505,12 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
       message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
     });
   }
-  if (provision?.kind === "native-binary" && target !== "tui") {
-    throw new FailureError({
-      point: "stado.submit",
-      code: CODE.CONFIG,
-      detail: `native-binary provisioning requested for target ${target}`,
-      message: "--app-binary-path is supported only for remote TUI runs.",
-    });
-  }
   requireGuiReady(hostDef, target);
   // Measured before anything is uploaded: a submission whose source cannot be
   // named is a submission whose verdict would mean nothing, and finding that
   // out here costs nothing, while finding it out on the worker costs the job.
   const identity = packSourceIdentity(appId, appRepo);
-  if (provision?.kind === "native-binary") {
-    const primarySource = identity.app?.repositories?.find(({ index }) => index === Number("0"));
-    if (!primarySource?.gitSha || primarySource.dirty) {
-      throw new FailureError({
-        point: "stado.pack",
-        code: CODE.CONFIG,
-        detail: `git_sha=${primarySource?.gitSha || "(missing)"}; dirty=${primarySource?.dirty ?? "unknown"}`,
-        message: "--app-binary-path requires --app-repo to be a clean committed source checkout.",
-      });
-    }
-  }
+  requireImmutableNativeProvision({ target, provision, appRepo, identity });
   const requestedWatchBudgetMs = selectedRunBudget({ appId, target, environment, provision });
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
@@ -1485,17 +1534,6 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
     requestedWatchBudgetMs,
   );
-  const sourceIdentityPath = path.join(receiptDir, "source-identity.json");
-  cpSync(identity.file, sourceIdentityPath);
-  const binary = provision?.kind === "native-binary"
-    ? {
-      name: provision.binaryName,
-      sha256: provision.binarySha256,
-      input: inputObjects.binary.relative_path,
-    }
-    : null;
-  const binaryIdentityPath = binary ? path.join(receiptDir, "binary-identity.json") : null;
-  if (binaryIdentityPath) writeFileSync(binaryIdentityPath, `${JSON.stringify(binary, null, Number("2"))}\n`);
   const result = {
     host,
     jobId,
@@ -1503,9 +1541,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     appId,
     submitted: Boolean(jobId),
     watchBudgetMs,
-    receiptDir,
-    sourceIdentityPath,
-    ...(binary ? { binary, binaryIdentityPath } : {}),
+    ...submissionIdentityMetadata({ receiptDir, identity, provision, inputObjects }),
   };
   // `failure` replaces the raw submit transcript that used to travel here: the
   // transcript is on the log line, the verdict is what a caller can act on.
@@ -1559,6 +1595,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   requireGuiReady(hostDef, target);
   const modelRouterUrl = stadoModelRouterUrl();
   const identity = packSourceIdentity(appId, appRepo);
+  requireImmutableNativeProvision({ target, provision, appRepo, identity });
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
@@ -1578,7 +1615,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     ...provisioned,
   };
   const requestedWatchBudgetMs = conservativeWatchBudget(appId);
-  const { jobId, watchBudgetMs, failure } = submitMachine(
+  const { jobId, watchBudgetMs, receiptDir, failure } = submitMachine(
     hostDef,
     packedRepo.hash,
     "author",
@@ -1586,7 +1623,16 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     remoteModelSecretEnv(["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
     requestedWatchBudgetMs,
   );
-  const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId), watchBudgetMs };
+  const result = {
+    host,
+    jobId,
+    target,
+    appId,
+    journey,
+    submitted: Boolean(jobId),
+    watchBudgetMs,
+    ...submissionIdentityMetadata({ receiptDir, identity, provision, inputObjects }),
+  };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
   const watched = await watchJob(jobId, hostDef, watchBudgetMs);

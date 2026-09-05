@@ -79,7 +79,7 @@ function usage() {
       "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
       "  probierz stado cancel <jobId> --host <host> --reason <reason>  cancel the original Stado job and retain its receipt, logs, identity, and available evidence",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
-      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
+      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --app-binary-path f --app-repo r | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -148,6 +148,41 @@ function validateAuthorOptions(args, { positionalCount, valueFlags, booleanFlags
     }
     throw configError(arg.startsWith("--") ? `unknown option: ${arg}` : `unexpected argument: ${arg}`);
   }
+}
+
+function selectRemoteProvision(args, appId, { allowInstalledTui = false, allowNodeSource = false } = {}) {
+  const value = (flag) => {
+    const index = args.indexOf(flag);
+    return index === -1 ? null : args[index + Number("1")];
+  };
+  const candidates = [
+    allowInstalledTui && args.includes("--app-path")
+      ? { flag: "--app-path", provision: { kind: "installed-tui", appId, path: value("--app-path") } }
+      : null,
+    args.includes("--app-binary-path")
+      ? { flag: "--app-binary-path", provision: { kind: "native-binary", appId, binaryPath: value("--app-binary-path") } }
+      : null,
+    args.includes("--cargo-release")
+      ? { flag: "--cargo-release", provision: { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" } }
+      : null,
+    args.includes("--app-bundle-path")
+      ? { flag: "--app-bundle-path", provision: { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") } }
+      : null,
+    allowNodeSource && args.includes("--node-source")
+      ? { flag: "--node-source", provision: { kind: "node-source", appId, script: value("--script") } }
+      : null,
+  ].filter(Boolean);
+  if (candidates.length > Number("1")) {
+    throw configError(`remote application provisioning options are mutually exclusive: ${candidates.map(({ flag }) => flag).join(", ")}`);
+  }
+  if ((args.includes("--binary") || args.includes("--cargo-manifest")) && !args.includes("--cargo-release")) {
+    throw configError("--binary and --cargo-manifest require --cargo-release");
+  }
+  const appRepo = value("--app-repo");
+  if (args.includes("--app-binary-path") && (!appRepo || appRepo.startsWith("--"))) {
+    throw configError("--app-binary-path requires --app-repo <path>");
+  }
+  return candidates[Number("0")]?.provision || null;
 }
 
 
@@ -487,7 +522,9 @@ async function main() {
         reason,
       });
       out(result);
-      remoteExit(result);
+      if (!result.cancellationSucceeded) {
+        remoteExit({ ...result, failure: result.cancellationFailure || result.failure });
+      }
       return;
     }
     if (sub === "collect") {
@@ -515,7 +552,7 @@ async function main() {
     if (sub === "author") {
       validateAuthorOptions(rest, {
         positionalCount: Number("3"),
-        valueFlags: ["--target", "--desc", "--app-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
+        valueFlags: ["--target", "--desc", "--app-path", "--app-binary-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
         booleanFlags: ["--cargo-release", "--no-watch"],
       });
       const appId = rest[1];
@@ -527,15 +564,12 @@ async function main() {
       const desc = value("--desc");
       if (!target) throw configError("stado author needs --target <t>");
       if (!desc) throw configError("stado author needs --desc <journey goal>");
-      const provision = value("--app-path")
-        ? { kind: "installed-tui", appId, path: value("--app-path") }
-        : value("--app-bundle-path")
-          ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-          : rest.includes("--cargo-release")
-            ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-            : null;
-      if (target === "tui" && !["installed-tui", "cargo-release"].includes(provision?.kind)) {
-        throw configError("stado author --target tui needs --app-path <installed-command> or --cargo-release --app-repo <path> [--binary <name>]");
+      const provision = selectRemoteProvision(rest, appId, { allowInstalledTui: true });
+      if (provision?.kind === "native-binary" && target !== "tui") {
+        throw configError("--app-binary-path is supported only for remote TUI authoring");
+      }
+      if (target === "tui" && !["installed-tui", "native-binary", "cargo-release"].includes(provision?.kind)) {
+        throw configError("stado author --target tui needs --app-path <installed-command>, --app-binary-path <file> --app-repo <path>, or --cargo-release --app-repo <path> [--binary <name>]");
       }
       const result = await submitRemoteAuthor({
         appId,
@@ -604,15 +638,7 @@ async function main() {
     if (appBinaryPath && target !== "tui") {
       throw configError("--app-binary-path is supported only for remote TUI runs");
     }
-    const provision = appBinaryPath
-      ? { kind: "native-binary", appId, binaryPath: appBinaryPath }
-      : rest.includes("--cargo-release")
-        ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-        : value("--app-bundle-path")
-          ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-          : rest.includes("--node-source")
-            ? { kind: "node-source", appId, script: scriptPath }
-            : null;
+    const provision = selectRemoteProvision(rest, appId, { allowNodeSource: true });
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
     }

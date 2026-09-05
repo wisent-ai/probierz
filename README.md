@@ -289,24 +289,34 @@ declared time budgets, with the default budget for journeys that omit one.
 The staged Cargo output belongs only to that job and is removed on exit,
 including failed runs; retained reports and source identities are preserved.
 
-To run an already signed native Stado executable against its exact, clean,
-committed product source without rebuilding or consulting a mutable installation:
+To run or author with an already signed native Stado executable against its
+exact, clean, committed product source without rebuilding or consulting a
+mutable installation:
 
 ```bash
 node agent/cli.mjs stado run tui --app stado \
   --host stado:mini \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
+
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+node agent/cli.mjs stado author stado <journey> \
+  --target tui --desc "<journey goal>" \
+  --host stado:mini \
+  --app-binary-path /absolute/path/to/signed/stado \
+  --app-repo /absolute/path/to/the/matching/stado/source
 ```
 
-Probierz uploads the executable and selected committed source as separate
-immutable job inputs, copies the executable into job-owned storage, and uses
-the ordinary TUI runner. The run receipt records `binary-identity.json` with
-the executable SHA-256 and `source-identity.json` with the existing source
-identity. The run manifest's `build` identity hashes the staged executable.
-Probierz does not
-invent or assert build provenance: the caller supplies the signed release
-binary and its source binding.
+Both commands use the same provisioning path. Probierz uploads the executable
+and selected committed source as separate immutable job inputs, copies the
+executable into job-owned storage, and uses the ordinary TUI runner and
+authoring loop. Native provisioning does not invoke Cargo or rebuild the
+application; a selected journey can still run its own declared commands. The
+submission receipt records `binary-identity.json` with the executable SHA-256 and
+`source-identity.json` with the existing source identity and exact primary
+revision. Nested authoring and run evidence hashes the staged executable as its
+`build` identity. Probierz does not invent or assert build provenance: the
+caller supplies the signed release binary and its source binding.
 
 Cancel an existing job without submitting replacement work:
 
@@ -320,8 +330,11 @@ Stado's machine cancellation API accepts the job ID only. Probierz retains the
 required reason locally with the original job, exact cancellation receipt,
 canonical log pages, and available worker evidence. Each request uses a distinct
 `test-results/.remote/cancellations/<jobId>/<attemptId>/` directory; downloaded
-worker artifacts remain under `test-results/.remote/<jobId>/`. A cancellation
-always has `passed: false` and never becomes a passing run verdict.
+worker artifacts remain under `test-results/.remote/<jobId>/`. A successful
+cancellation command exits zero when cancellation receipts, logs, and any
+required worker artifacts were retained. The cancelled evaluation itself still
+has `state: "cancelled"`, `passed: false`, and its failure details. A failed
+cancellation or missing required evidence exits nonzero.
 
 ### Evaluate a figure
 
@@ -549,9 +562,12 @@ not create static product banners; those belong to `wisent-asset-generator`.
   repository and ships `inputs/source-identity.json`; the worker records it
   with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
   `--app-repo` selects the product tree that is packed and measured.
-  For native TUI releases, `--app-binary-path FILE --app-repo REPO` stages the
-  executable and exact source separately, runs the job-owned executable, and
-  records its SHA-256 beside the existing submitter source identity.
+  For native TUI releases, `--app-binary-path FILE --app-repo REPO` gives
+  `stado run tui` and `stado author ... --target tui` the same immutable
+  executable and exact source inputs without a provisioning-time Cargo build,
+  and records the source revision and executable SHA-256 in submission metadata
+  and nested run evidence. A selected journey can still invoke its own declared
+  commands.
   `stado run --env NAME=VALUE` supplies non-secret execution conditions for
   remote jobs; `--env=NAME=VALUE` is equivalent.
   Values are passed literally, including embedded `=` characters. Credentials
@@ -569,7 +585,9 @@ not create static product banners; those belong to `wisent-asset-generator`.
   `probierz stado cancel <job-id> --host <host> --reason <reason>` retains the
   original job identity, actual machine cancellation receipt, canonical logs,
   and available evidence under `test-results/.remote/cancellations/<job-id>/`
-  and `test-results/.remote/<job-id>/`. Cancelled never means passed.
+  and `test-results/.remote/<job-id>/`. The command exits 0 when cancellation
+  and required evidence retention succeed; the evaluation remains cancelled,
+  non-passing, and keeps its failure details.
   GUI readiness has its own 30-minute audit deadline; an expired audit means
   readiness is unknown and no GUI job was submitted, not that the host is down.
 - **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
