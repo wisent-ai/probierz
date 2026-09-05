@@ -120,9 +120,9 @@ export function listHosts() {
     { host: "stado:any", kind: "stado", request: {}, description: "stado queue, any consumer with capacity" },
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
-    dedicatedStadoHost({ host: "stado:mini", target: "charless-mac-mini", consumer: "local-Charless-Mac-mini.local", platform: "darwin", description: "stado queue, dedicated Mac mini consumer" }),
+    dedicatedStadoHost({ host: "stado:mini", target: "charless-mac-mini", consumer: "local-charless-mac-mini.local", platform: "darwin", description: "stado queue, dedicated Mac mini consumer" }),
     dedicatedStadoHost({ host: "stado:ubuntu", target: "ubuntu-server-rtx-pro-6000", consumer: "local-ubuntu-server", platform: "linux", description: "stado queue, dedicated Ubuntu consumer" }),
-    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", consumer: "local-Lukaszs-MacBook-Pro-5485.local", platform: "darwin", apiUrl: "http://127.0.0.1:18765", description: "stado queue, dedicated MacBook consumer" }),
+    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", consumer: "local-lukaszs-macbook-pro-5485.local", platform: "darwin", apiUrl: "http://127.0.0.1:18765", description: "stado queue, dedicated MacBook consumer" }),
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -317,6 +317,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     lines.push(
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
+      `readonly PROBIERZ_CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/${targetPrefix}target"`,
+      'export CARGO_TARGET_DIR="$PROBIERZ_CARGO_TARGET_DIR"',
+      'trap \'rm -rf -- "$PROBIERZ_CARGO_TARGET_DIR"\' EXIT',
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
       `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bin ${shellQuote(provision.binary || provision.appId)})`,
