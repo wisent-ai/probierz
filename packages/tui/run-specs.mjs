@@ -58,6 +58,8 @@ for (const file of files) {
     maxBuffer: Number("33554432"),
   });
   const duration = Date.now() - started;
+  if (child.stdout) process.stdout.write(child.stdout);
+  if (child.stderr) process.stderr.write(child.stderr);
   const status = child.status === 0 ? "passed" : "failed";
   let media = [];
   if (existsSync(mediaManifestPath)) {

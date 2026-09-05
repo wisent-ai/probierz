@@ -30,11 +30,15 @@ repositories:
           - stado-rs/src/providers/local/disk_cleanup/**
           - stado-rs/tests/cleanup/**
         journeys: [disk-cleanup]
+      - paths:
+          - stado-rs/src/cli/release_submit.rs
+          - stado-rs/tests/ci-cd/**
+        journeys: [release-pipeline]
 
 surfaces:
   tui:
     spec: stado-host-gates.spec.mjs
-    journeys: [host-dynamic-capacity, run-retention, disk-cleanup]
+    journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
         journeys: [host-dynamic-capacity]
@@ -42,6 +46,8 @@ surfaces:
         journeys: [run-retention]
       - when: {PROBIERZ_JOURNEY: disk-cleanup}
         journeys: [disk-cleanup]
+      - when: {PROBIERZ_JOURNEY: release-pipeline}
+        journeys: [release-pipeline]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -61,6 +67,11 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 600000
     value: The disk janitor previews without mutation, enforces only tagged-cache deletion, preserves recovery state through live locks, resumes after predecessor lock release, and refuses contradictory watch modes.
+  release-pipeline:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    description: Build committed source on a real worker, sign through an isolated real Skarbiec grant, publish and install the release, then retry a cancelled build under a distinct job and execute the installed binary.
+    value: Neither a generated command nor an archive alone counts as delivery; the normal release and cancelled-build retry must both install and run the actual product.
 
 artifacts:
   retain:
@@ -75,6 +86,6 @@ pullRequestPolicy:
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup]
+  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
   requiredTargets: [tui, desktop:cua]
   requireSecretScan: true
