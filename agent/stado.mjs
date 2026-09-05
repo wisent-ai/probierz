@@ -392,7 +392,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // Then use the node already on the box when present, else fetch the
     // darwin-arm64 tarball.
     lines.push(
-      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
+      "export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o "$TMPDIR/node.tar.gz" && tar -xzf "$TMPDIR/node.tar.gz" -C "$TMPDIR" && export PATH="$TMPDIR/node-${NODE_VERSION}-darwin-arm64/bin:$PATH"; }`,
     );
   } else {
@@ -740,7 +740,7 @@ function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryMode
   const lines = ["set -euo pipefail", 'JOB_ROOT="$PWD"', "mkdir -p output work"];
   if (platform === "darwin") {
     lines.push(
-      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
+      "export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
     );
   } else {
