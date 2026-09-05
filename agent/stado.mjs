@@ -60,25 +60,58 @@ function selectedRunBudget({ appId, target, environment, provision }) {
   return journeyBudget + provisioningBudget(target, provision);
 }
 
-function conservativeWatchBudget() {
-  let journeyBudget = Number("0");
+function conservativeWatchBudget(appId) {
+  const manifest = loadAppManifest(appId);
+  const journeyBudget = Object.values(manifest.journeys).reduce(
+    (total, journey) => total + positiveBudget(journey.timeoutMs),
+    Number("0"),
+  );
   let provisionBudget = Number("0");
-  for (const entry of readdirSync(path.join(ROOT, "apps"), { withFileTypes: true })) {
-    if (!entry.isDirectory() || !existsSync(path.join(ROOT, "apps", entry.name, "probierz.yaml"))) continue;
-    const manifest = loadAppManifest(entry.name);
-    for (const journey of Object.values(manifest.journeys)) {
-      journeyBudget = Math.max(journeyBudget, positiveBudget(journey.timeoutMs) || Number("0"));
-    }
-    for (const target of Object.keys(manifest.surfaces)) {
-      try {
-        provisionBudget = Math.max(provisionBudget, provisioningBudget(target, { kind: "cargo-release" }));
-      } catch {
-        // A product-only surface not supported by the remote bridge does not
-        // narrow the legacy fallback for the supported surfaces.
-      }
+  for (const target of Object.keys(manifest.surfaces)) {
+    if (target in TARGET_SPEC_DIRS_REL || target === "desktop:cua") {
+      provisionBudget = Math.max(provisionBudget, provisioningBudget(target, { kind: "cargo-release" }));
     }
   }
   return journeyBudget + provisionBudget;
+}
+
+function legacyWatchBudget(job, hostDef) {
+  const directory = mkdtempSync(workPath("watch-contract-"));
+  const options = {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+  };
+  try {
+    const file = path.join(directory, "job.json");
+    const prefix = job.state === "queued" ? "queue" : job.state;
+    const downloaded = sh(STADO_BIN, ["storage", "get", stateUri(`${prefix}/${job.job_id}.json`), file], options);
+    if (downloaded.status !== Number("0")) {
+      throw remoteFailure("stado.watch", "Reading the original run inputs failed", downloaded);
+    }
+    const original = JSON.parse(readFileSync(file, "utf8"));
+    const inputs = original.resolved_input_artifacts || {};
+    const appInput = String(inputs.app?.relative_path || "").match(/^inputs\/([a-z0-9][a-z0-9._-]*)\.tar\.gz$/i);
+    let appId = appInput?.[Number("1")];
+    if (!appId && inputs.script?.stado_uri) {
+      const scriptFile = path.join(directory, "run.sh");
+      const scriptDownload = sh(STADO_BIN, ["storage", "get", inputs.script.stado_uri, scriptFile], options);
+      if (scriptDownload.status !== Number("0")) {
+        throw remoteFailure("stado.watch", "Reading the original run command failed", scriptDownload);
+      }
+      const script = readFileSync(scriptFile, "utf8");
+      appId = script.match(/(?:--app|author-spec)\s+['"]?([a-z0-9][a-z0-9._-]*)/i)?.[Number("1")];
+    }
+    if (!appId) {
+      throw new FailureError({
+        point: "stado.watch",
+        code: CODE.CONFIG,
+        detail: `job ${job.job_id} has neither a saved watch budget nor identifiable application inputs`,
+        message: "The original run contract cannot be recovered from this job.",
+      });
+    }
+    return conservativeWatchBudget(appId);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 }
 
 function budgetFromJob(job) {
@@ -505,7 +538,8 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
 }
 
 function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, requestedWatchBudgetMs = null) {
-  const watchBudgetMs = positiveBudget(requestedWatchBudgetMs) || conservativeWatchBudget();
+  const watchBudgetMs = positiveBudget(requestedWatchBudgetMs);
+  if (!watchBudgetMs) throw new Error("remote submission requires a positive watch budget");
   const requestFile = workPath(`probierz-machine-${hash}.json`);
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
@@ -549,9 +583,9 @@ const STATUS_FAILURE_TOLERANCE = Number("3");
 
 async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
   const requestedBudget = positiveBudget(requestedWatchBudgetMs);
-  let watchBudgetMs = requestedBudget || conservativeWatchBudget();
-  let budgetSource = requestedBudget ? "submitted" : "legacy fallback";
-  let deadline = Date.now() + watchBudgetMs;
+  let watchBudgetMs = requestedBudget;
+  let budgetSource = requestedBudget ? "submitted" : "original run";
+  let deadline = Date.now() + (watchBudgetMs || SETUP_STEP_TIMEOUT_MS);
   let resolvedBudget = false;
   let anchoredStartAt = null;
   let consecutiveStatusFailures = Number("0");
@@ -563,12 +597,10 @@ async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
     try { payload = JSON.parse(out.stdout); } catch {}
     const answered = Boolean(payload?.ok);
     const job = answered ? payload.result?.job : null;
-    if (answered && !resolvedBudget) {
+    if (answered && !resolvedBudget && !["failed", "cancelled", "completed", "uploaded"].includes(job?.state)) {
       const savedBudget = budgetFromJob(job);
-      if (savedBudget) {
-        watchBudgetMs = savedBudget;
-        budgetSource = "saved submission";
-      }
+      watchBudgetMs = savedBudget || requestedBudget || legacyWatchBudget(job, hostDef);
+      budgetSource = savedBudget ? "saved submission" : requestedBudget ? "submitted" : "original application fallback";
       const submittedAt = Date.parse(String(job?.created_at || ""));
       deadline = Number.isFinite(submittedAt)
         ? submittedAt + watchBudgetMs
@@ -815,7 +847,7 @@ export async function submitRemoteSeo({
   }
   const secretNames = ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"];
   if (profile.requireSignature) secretNames.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
-  const requestedWatchBudgetMs = conservativeWatchBudget();
+  const requestedWatchBudgetMs = conservativeWatchBudget(appId);
   const { jobId, watchBudgetMs, failure } = submitMachine(
     hostDef,
     packedRepo.hash,
@@ -1014,7 +1046,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
     ...provisioned.inputs,
   };
-  const requestedWatchBudgetMs = conservativeWatchBudget();
+  const requestedWatchBudgetMs = conservativeWatchBudget(appId);
   const { jobId, watchBudgetMs, failure } = submitMachine(
     hostDef,
     packedRepo.hash,
