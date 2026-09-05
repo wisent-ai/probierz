@@ -583,6 +583,8 @@ function readAuthorSubmission(jobId) {
   } catch {
     return null;
   }
+}
+
 /** Sleep without a timer: `upload` is synchronous, and so is everything that
  * calls it. */
 function pause(ms) {
