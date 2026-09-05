@@ -497,14 +497,14 @@ async function watchJob(jobId, hostDef) {
     // A job the fleet failed or cancelled is a run result, not an outage: the
     // queue did its part. The worker's own text is the operator's evidence.
     if (["failed", "cancelled"].includes(state)) {
-      const detail = (out.stdout || out.stderr).slice(Number("0"), Number("500"));
+      const detail = String(payload.result?.job?.error || `worker reported ${state}`);
       return {
         state: "failed",
         failure: failureSummary(new FailureError({
           point: "stado.worker",
           code: CODE.UNKNOWN,
           detail,
-          message: `Job ${jobId} ${state} on the remote host; its retained evidence describes the failure.`,
+          message: `Job ${jobId} ${state} on the remote host: ${detail}`,
         })),
       };
     }
@@ -732,9 +732,11 @@ function fetchRunEvidence(jobId, hostDef) {
   } catch {
     return null;
   }
-  const artifact = (payload?.result?.artifacts || []).find(({ relative_path: relativePath }) =>
+  if (!payload?.ok || downloaded.status !== Number("0")) return null;
+  const artifacts = payload.result?.artifacts || [];
+  const artifact = artifacts.find(({ relative_path: relativePath }) =>
     /^probierz-run-.*\.tar\.gz$/.test(String(relativePath || "")));
-  if (!artifact) return null;
+  if (!artifact) return artifacts.length ? { resultsDir: destDir, manifest: null } : null;
   const tarball = path.join(destDir, artifact.relative_path);
   const listed = sh("tar", ["-tzf", tarball], { cwd: ROOT });
   if (listed.status !== Number("0")) return null;
@@ -771,8 +773,8 @@ export async function resumeRemoteRun({ jobId, host = "stado:any" }) {
   const result = { host, jobId, submitted: false, ...await watchJob(jobId, hostDef) };
   if (!["completed", "failed"].includes(result.state)) return result;
   const retained = fetchRunEvidence(jobId, hostDef);
+  if (retained) result.resultsDir = retained.resultsDir;
   if (retained?.manifest) {
-    result.resultsDir = retained.resultsDir;
     result.runId = retained.manifest.runId;
     result.appId = retained.manifest.appId;
     result.target = retained.manifest.target;
@@ -907,6 +909,9 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   if (watched.state === "completed") {
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "author");
     result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
+  } else if (watched.state === "failed") {
+    const retained = fetchRunEvidence(jobId, hostDef);
+    if (retained) result.resultsDir = retained.resultsDir;
   }
   return result;
 }
