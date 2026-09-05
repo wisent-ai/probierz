@@ -268,8 +268,10 @@ selected worktrees with portable Git metadata, keeps staging under
 `~/.stado/work/probierz`, and records the actual source revision and file hashes
 on the worker without rewriting the application manifest.
 
-If the watcher loses connectivity or reaches its waiting limit, resume the
-existing job instead of submitting the run again:
+If the watcher loses connectivity, resume the existing job instead of submitting
+the run again. If Probierz's own watch budget expires while Stado still answers,
+the result is `watch-expired` and recommends the same resume command; it is not
+reported as an infrastructure outage and no local bypass is recommended:
 
 ```bash
 node agent/cli.mjs stado resume <jobId> --host stado:ubuntu
@@ -286,6 +288,53 @@ overridden with `--timeout`, the runner uses the sum of the selected journeys'
 declared time budgets, with the default budget for journeys that omit one.
 The staged Cargo output belongs only to that job and is removed on exit,
 including failed runs; retained reports and source identities are preserved.
+
+To run or author with an already signed native Stado executable against its
+exact, clean, committed product source without rebuilding or consulting a
+mutable installation:
+
+```bash
+node agent/cli.mjs stado run tui --app stado \
+  --host stado:mini \
+  --app-binary-path /absolute/path/to/signed/stado \
+  --app-repo /absolute/path/to/the/matching/stado/source
+
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+node agent/cli.mjs stado author stado <journey> \
+  --target tui --desc "<journey goal>" \
+  --host stado:mini \
+  --app-binary-path /absolute/path/to/signed/stado \
+  --app-repo /absolute/path/to/the/matching/stado/source
+```
+
+Both commands use the same provisioning path. Probierz uploads the executable
+and selected committed source as separate immutable job inputs, copies the
+executable into job-owned storage, and uses the ordinary TUI runner and
+authoring loop. Native provisioning does not invoke Cargo or rebuild the
+application; a selected journey can still run its own declared commands. The
+submission receipt records `binary-identity.json` with the executable SHA-256 and
+`source-identity.json` with the existing source identity and exact primary
+revision. Nested authoring and run evidence hashes the staged executable as its
+`build` identity. Probierz does not invent or assert build provenance: the
+caller supplies the signed release binary and its source binding.
+
+Cancel an existing job without submitting replacement work:
+
+```bash
+node agent/cli.mjs stado cancel <jobId> \
+  --host stado:mini \
+  --reason "operator-requested cancellation"
+```
+
+Stado's machine cancellation API accepts the job ID only. Probierz retains the
+required reason locally with the original job, exact cancellation receipt,
+canonical log pages, and available worker evidence. Each request uses a distinct
+`test-results/.remote/cancellations/<jobId>/<attemptId>/` directory; downloaded
+worker artifacts remain under `test-results/.remote/<jobId>/`. A successful
+cancellation command exits zero when cancellation receipts, logs, and any
+required worker artifacts were retained. The cancelled evaluation itself still
+has `state: "cancelled"`, `passed: false`, and its failure details. A failed
+cancellation or missing required evidence exits nonzero.
 
 ### Evaluate a figure
 
@@ -500,7 +549,8 @@ not create static product banners; those belong to `wisent-asset-generator`.
   gate evaluation and enforcement remain distinct commands.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
-  the configured object store.
+  the configured object store; `probierz stado resume`, `collect`, and `cancel`
+  operate on the original job without submitting replacement work.
   Authoring applies the surface's matching single-journey override before
   executing its candidate, including on a remote worker. Native `desktop:cua`
   authoring returns the accepted spec alongside the manifest and evidence.
@@ -512,6 +562,12 @@ not create static product banners; those belong to `wisent-asset-generator`.
   repository and ships `inputs/source-identity.json`; the worker records it
   with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
   `--app-repo` selects the product tree that is packed and measured.
+  For native TUI releases, `--app-binary-path FILE --app-repo REPO` gives
+  `stado run tui` and `stado author ... --target tui` the same immutable
+  executable and exact source inputs without a provisioning-time Cargo build,
+  and records the source revision and executable SHA-256 in submission metadata
+  and nested run evidence. A selected journey can still invoke its own declared
+  commands.
   `stado run --env NAME=VALUE` supplies non-secret execution conditions for
   remote jobs; `--env=NAME=VALUE` is equivalent.
   Values are passed literally, including embedded `=` characters. Credentials
@@ -521,6 +577,17 @@ not create static product banners; those belong to `wisent-asset-generator`.
   `probierz stado collect <job-id> --app <id> --host stado:mini` (also
   `probierz_stado_collect` over MCP) returns the current state immediately and
   retrieves a terminal job's retained evidence without submitting or running it again.
+  A job cancelled before its worker starts remains `cancelled`; the result keeps
+  the exact Stado job and source-input metadata and marks run evidence as not
+  required, without asking the artifact store for output the worker never made.
+  A structured, non-retryable `NO_ARTIFACTS` response for evidence that was
+  required is reported as missing evidence, not as an object-store outage.
+  `probierz stado cancel <job-id> --host <host> --reason <reason>` retains the
+  original job identity, actual machine cancellation receipt, canonical logs,
+  and available evidence under `test-results/.remote/cancellations/<job-id>/`
+  and `test-results/.remote/<job-id>/`. The command exits 0 when cancellation
+  and required evidence retention succeed; the evaluation remains cancelled,
+  non-passing, and keeps its failure details.
   GUI readiness has its own 30-minute audit deadline; an expired audit means
   readiness is unknown and no GUI job was submitted, not that the host is down.
 - **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`

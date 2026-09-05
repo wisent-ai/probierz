@@ -62,3 +62,6 @@ apps/jeden-desktop/*
 !apps/stado-docs/
 apps/stado-docs/*
 !apps/stado-docs/probierz.yaml
+!apps/weles-apple/
+apps/weles-apple/*
+!apps/weles-apple/probierz.yaml
