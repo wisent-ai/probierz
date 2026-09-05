@@ -91,10 +91,6 @@ journeys:
     timeoutMs: 7200000
     value: Both darwin-arm64 and linux-amd64 run the native build-artifact journey and complete the signed release and cancelled-build retry, installing and executing ci-release-probe from one Stado source revision.
 
-secretRefs:
-  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
-  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
-
 artifacts:
   retain:
     pullRequestDays: 14
