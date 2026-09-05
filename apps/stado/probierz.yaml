@@ -6,6 +6,19 @@ repositories:
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23
     mappings:
       - paths:
+          - stado-rs/src/deploy/host_gui_automation.rs
+          - stado-rs/src/cli/host.rs
+          - stado-rs/src/cli/identity.rs
+          - stado-rs/tests/apple_challenge/**
+          - stado-rs/src/dashboard/operator_auth.rs
+          - stado-rs/src/dashboard/operator_console.rs
+        journeys: [apple-challenge-preparation]
+      - paths:
+          - desktop/StadoDesktop/tests/apple_challenge/**
+          - desktop/StadoDesktop/Sources/Stado/FleetControlStore.swift
+          - desktop/StadoDesktop/Sources/Stado/HostsView.swift
+        journeys: [apple-challenge-desktop]
+      - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/cli/submit.rs
           - stado-rs/src/cli/schedule.rs
@@ -97,6 +110,8 @@ surfaces:
         journeys: [native-readers]
       - when: {PROBIERZ_JOURNEY: service-convergence}
         journeys: [service-convergence]
+      - when: {PROBIERZ_JOURNEY: apple-challenge-preparation}
+        journeys: [apple-challenge-preparation]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23/stado-rs/target/release/stado
   desktop:cua:
@@ -107,6 +122,8 @@ surfaces:
         journeys: [host-dynamic-capacity]
       - when: {PROBIERZ_JOURNEY: service-convergence}
         journeys: [service-convergence]
+      - when: {PROBIERZ_JOURNEY: apple-challenge-desktop}
+        journeys: [apple-challenge-desktop]
 
 journeys:
   host-dynamic-capacity:
@@ -143,6 +160,23 @@ journeys:
     timeoutMs: 1200000
     description: Exercise authenticated nonlocal Services convergence through the real Stado dashboard and an isolated real Skarbiec on the actual hostname, then drive the product Services screen without a Wisent session through a dedicated owner-only local registry API token file and the same source-built CLI, retaining its failed receipt across refresh.
     value: Read and apply actions remain independently grantable for nonlocal callers; selected and host-wide reports preserve their complete exit-code envelope; failed delivery protects existing bytes; and the graphical local client resolves its real Skarbiec-backed credential from an owner-only file to reach a target deliberately unavailable to CLI fallback, without an account operation or stale installed CLI.
+  apple-challenge-preparation:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    description: Prepare and observe the signed Apple challenge helper on one explicitly named Stado-managed Mac without starting Apple sign-in, CuaDriver, a browser, or notifications.
+    value: The real Darwin ARM64 host runs prompt-free Apple-only Accessibility preparation, observes the signed helper file state, and reports fresh GUI-automation status from the same host.
+    prerequisites:
+      platform: The selected Stado target must be a real Darwin ARM64 host.
+      host: STADO_APPLE_PREPARATION_HOST must explicitly name that target; there is no default or simulated substitute.
+      safety: The journey must not start Apple sign-in, CuaDriver, a browser, or notifications.
+  apple-challenge-desktop:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    description: Prepare the registered Apple helper from the real Stado Desktop Hosts screen through its configured native API, using only already-authorized CUA access.
+    value: The selected real host reports prompt-free Apple helper readiness and the native screen retains its complete result or exact refusal; no Apple authentication or permission grant is attempted.
+    prerequisites:
+      host: STADO_APPLE_PREPARATION_HOST explicitly names the registered Apple host.
+      desktop: The selected dedicated Mac must already have CuaDriver access and a configured real Stado API.
 
 artifacts:
   retain:

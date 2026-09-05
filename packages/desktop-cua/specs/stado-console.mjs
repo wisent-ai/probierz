@@ -65,6 +65,10 @@ export function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+export function readPromptFreeCuaReadiness() {
+  return cuaCall("check_permissions", { prompt: false });
+}
+
 function matches(tree, needle) {
   if (typeof needle === "function") return Boolean(needle(tree));
   return needle instanceof RegExp ? needle.test(tree) : tree.includes(needle);

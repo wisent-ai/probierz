@@ -6,23 +6,26 @@ import * as consoleHarness from './stado-console.mjs';
 
 const source = process.env.PROBIERZ_APP_SOURCE;
 assert.ok(source, 'PROBIERZ_APP_SOURCE must identify the staged Stado source');
-const productSpecs = new Map([
+const productJourneys = new Map([
   ['host-dynamic-capacity', {
-    file: 'desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs',
+    path: 'desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs',
     run: 'runHostsDynamicCapacityJourney',
   }],
   ['service-convergence', {
-    file: 'desktop/StadoDesktop/tests/service/ServicesConvergence.probierz.mjs',
+    path: 'desktop/StadoDesktop/tests/service/ServicesConvergence.probierz.mjs',
     run: 'runServicesConvergenceJourney',
+  }],
+  ['apple-challenge-desktop', {
+    path: 'desktop/StadoDesktop/tests/apple_challenge/AppleChallengePreparation.probierz.mjs',
+    run: 'runAppleChallengePreparationJourney',
   }],
 ]);
 const journeys = (process.env.PROBIERZ_JOURNEYS || '').split(',').filter(Boolean);
 assert.ok(journeys.length > 0, 'PROBIERZ_JOURNEYS must name the journeys selected by Probierz');
-
 for (const journey of journeys) {
-  const product = productSpecs.get(journey);
-  assert.ok(product, `Unmapped Stado desktop journey selected by Probierz: ${journey}`);
-  const module = await import(pathToFileURL(resolve(source, product.file)).href);
-  assert.equal(typeof module[product.run], 'function', `${product.file} must export ${product.run}`);
-  await module[product.run]({ ...consoleHarness, quitApp });
+  const entry = productJourneys.get(journey);
+  assert.ok(entry, `Unmapped Stado desktop journey selected by Probierz: ${journey}`);
+  const product = await import(pathToFileURL(resolve(source, entry.path)).href);
+  assert.equal(typeof product[entry.run], 'function', `${entry.path} must export ${entry.run}`);
+  await product[entry.run]({ ...consoleHarness, quitApp });
 }
