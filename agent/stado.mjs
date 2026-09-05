@@ -104,7 +104,7 @@ function dedicatedStadoHost({ host, target, consumer, platform, description, api
       provider: "local",
       pin_to_provider: true,
       // The queue matches a worker consumer, not the registry target id.
-      pinned_host: consumer,
+      pinned_host: consumer.toLowerCase(),
     },
     description,
   };
