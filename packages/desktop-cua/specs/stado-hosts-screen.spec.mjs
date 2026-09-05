@@ -11,6 +11,10 @@ const productJourneys = new Map([
     path: 'desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs',
     run: 'runHostsDynamicCapacityJourney',
   }],
+  ['service-convergence', {
+    path: 'desktop/StadoDesktop/tests/service/ServicesConvergence.probierz.mjs',
+    run: 'runServicesConvergenceJourney',
+  }],
   ['apple-challenge-desktop', {
     path: 'desktop/StadoDesktop/tests/apple_challenge/AppleChallengePreparation.probierz.mjs',
     run: 'runAppleChallengePreparationJourney',
@@ -22,5 +26,6 @@ for (const journey of journeys) {
   const entry = productJourneys.get(journey);
   assert.ok(entry, `Unmapped Stado desktop journey selected by Probierz: ${journey}`);
   const product = await import(pathToFileURL(resolve(source, entry.path)).href);
+  assert.equal(typeof product[entry.run], 'function', `${entry.path} must export ${entry.run}`);
   await product[entry.run]({ ...consoleHarness, quitApp });
 }

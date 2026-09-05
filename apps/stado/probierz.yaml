@@ -3,7 +3,7 @@ appId: stado
 productId: stado
 owner: Stado maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23
     mappings:
       - paths:
           - stado-rs/src/deploy/host_gui_automation.rs
@@ -50,6 +50,7 @@ repositories:
       - paths:
           - stado-rs/src/cli/release_submit.rs
           - stado-rs/tests/ci-cd/**
+          - stado-rs/tests/support/skarbiec.rs
         journeys: [release-pipeline]
       - paths:
           - stado-rs/src/self_update.rs
@@ -61,6 +62,27 @@ repositories:
           - stado-rs/tests/native_readers/**
         journeys: [native-readers]
       - paths:
+          - stado-rs/src/cli/service_converge.rs
+          - stado-rs/src/dashboard/mod.rs
+          - stado-rs/src/dashboard/registry_policy.rs
+          - stado-rs/src/config.rs
+          - stado-rs/src/deploy/host_channel.rs
+          - stado-rs/src/queue/runs.rs
+          - stado-rs/Cargo.toml
+          - stado-rs/tests/service_convergence/**
+          - stado-rs/tests/support/skarbiec.rs
+          - desktop/StadoDesktop/Sources/Stado/ConsoleView.swift
+          - desktop/StadoDesktop/Sources/Stado/FleetControl.swift
+          - desktop/StadoDesktop/Sources/Stado/FleetControlStore.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsClient.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsModels.swift
+          - desktop/StadoDesktop/Sources/Stado/OperationsStore.swift
+          - desktop/StadoDesktop/Sources/Stado/ServicesView.swift
+          - desktop/StadoDesktop/Sources/Stado/SettingsView.swift
+          - desktop/StadoDesktop/Package.swift
+          - desktop/StadoDesktop/tests/service/ServicesConvergence.probierz.mjs
+        journeys: [service-convergence]
+      - paths:
           - stado-rs/tests/builds/**
         journeys: [native-build]
       - paths:
@@ -70,7 +92,7 @@ repositories:
 surfaces:
   tui:
     spec: stado-journeys.spec.mjs
-    journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
+    journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline, service-convergence]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
         journeys: [host-dynamic-capacity]
@@ -86,14 +108,20 @@ surfaces:
         journeys: [platform-matrix]
       - when: {PROBIERZ_JOURNEY: native-readers}
         journeys: [native-readers]
+      - when: {PROBIERZ_JOURNEY: service-convergence}
+        journeys: [service-convergence]
       - when: {PROBIERZ_JOURNEY: apple-challenge-preparation}
         journeys: [apple-challenge-preparation]
     conditions:
-      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
+      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23/stado-rs/target/release/stado
   desktop:cua:
     spec: stado-hosts-screen.spec.mjs
-    journeys: [host-dynamic-capacity]
+    journeys: [host-dynamic-capacity, service-convergence]
     journeyOverrides:
+      - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
+        journeys: [host-dynamic-capacity]
+      - when: {PROBIERZ_JOURNEY: service-convergence}
+        journeys: [service-convergence]
       - when: {PROBIERZ_JOURNEY: apple-challenge-desktop}
         journeys: [apple-challenge-desktop]
 
@@ -127,6 +155,11 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 900000
     value: A real launchd unit whose cached definition runs a private Stado image is reloaded in its observed domain after its plist names the delivered root, the replacement maps that root file, and repeated convergence does not restart it again.
+  service-convergence:
+    owner: Stado maintainers
+    timeoutMs: 1200000
+    description: Exercise authenticated nonlocal Services convergence through the real Stado dashboard and an isolated real Skarbiec on the actual hostname, then drive the product Services screen without a Wisent session through a dedicated owner-only local registry API token file and the same source-built CLI, retaining its failed receipt across refresh.
+    value: Read and apply actions remain independently grantable for nonlocal callers; selected and host-wide reports preserve their complete exit-code envelope; failed delivery protects existing bytes; and the graphical local client resolves its real Skarbiec-backed credential from an owner-only file to reach a target deliberately unavailable to CLI fallback, without an account operation or stale installed CLI.
   apple-challenge-preparation:
     owner: Stado maintainers
     timeoutMs: 900000
@@ -158,6 +191,6 @@ pullRequestPolicy:
   requireSecretScan: false
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
+  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline, service-convergence]
   requiredTargets: [tui, desktop:cua]
   requireSecretScan: false
