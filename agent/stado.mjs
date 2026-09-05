@@ -46,6 +46,15 @@ const REMOTE_SECRET_ENV = {
   },
 };
 
+function remoteModelSecretEnv(names) {
+  const secretEnv = {};
+  for (const name of names) {
+    const { item, field } = REMOTE_SECRET_ENV[name];
+    secretEnv[name] = { item, field };
+  }
+  return secretEnv;
+}
+
 function remoteRunSecretEnv(appId, names = Object.keys(REMOTE_SECRET_ENV)) {
   const configured = loadAppManifest(appId).secretRefs || {};
   const secretEnv = {};
@@ -84,7 +93,7 @@ function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\"'\"'")}'`;
 }
 
-function dedicatedStadoHost({ host, target, platform, description, apiUrl = null }) {
+function dedicatedStadoHost({ host, target, consumer, platform, description, apiUrl = null }) {
   return {
     host,
     kind: "stado",
@@ -94,9 +103,8 @@ function dedicatedStadoHost({ host, target, platform, description, apiUrl = null
     request: {
       provider: "local",
       pin_to_provider: true,
-      // Stado accepts the canonical registry target here and resolves it
-      // against the worker identity; hostnames belong to the registry.
-      pinned_host: target,
+      // The queue matches a worker consumer, not the registry target id.
+      pinned_host: consumer,
     },
     description,
   };
@@ -112,9 +120,9 @@ export function listHosts() {
     { host: "stado:any", kind: "stado", request: {}, description: "stado queue, any consumer with capacity" },
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
-    dedicatedStadoHost({ host: "stado:mini", target: "charless-mac-mini", platform: "darwin", description: "stado queue, dedicated Mac mini consumer" }),
-    dedicatedStadoHost({ host: "stado:ubuntu", target: "ubuntu-server-rtx-pro-6000", platform: "linux", description: "stado queue, dedicated Ubuntu consumer" }),
-    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", platform: "darwin", apiUrl: "http://127.0.0.1:18765", description: "stado queue, dedicated MacBook consumer" }),
+    dedicatedStadoHost({ host: "stado:mini", target: "charless-mac-mini", consumer: "local-Charless-Mac-mini.local", platform: "darwin", description: "stado queue, dedicated Mac mini consumer" }),
+    dedicatedStadoHost({ host: "stado:ubuntu", target: "ubuntu-server-rtx-pro-6000", consumer: "local-ubuntu-server", platform: "linux", description: "stado queue, dedicated Ubuntu consumer" }),
+    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", consumer: "local-Lukaszs-MacBook-Pro-5485.local", platform: "darwin", apiUrl: "http://127.0.0.1:18765", description: "stado queue, dedicated MacBook consumer" }),
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -693,7 +701,7 @@ export async function submitRemoteSeo({
   }
   const secretNames = ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"];
   if (profile.requireSignature) secretNames.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
-  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "seo", inputObjects, remoteRunSecretEnv(appId, secretNames));
+  const { jobId, failure } = submitMachine(hostDef, packedRepo.hash, "seo", inputObjects, remoteModelSecretEnv(secretNames));
   const result = { host, jobId, appId, mode, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
   if (!watch) return { ...result, state: "queued", failure: null };
@@ -843,7 +851,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
     packedRepo.hash,
     "author",
     inputObjects,
-    remoteRunSecretEnv(appId, ["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
+    remoteModelSecretEnv(["STADO_MODEL_ROUTER_TOKEN", "PROBIERZ_MODEL_AGENT_SECRET"]),
   );
   const result = { host, jobId, target, appId, journey, submitted: Boolean(jobId) };
   if (!jobId) return { ...result, state: "submit-failed", failure };
