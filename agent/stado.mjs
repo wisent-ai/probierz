@@ -14,6 +14,7 @@ import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest } from "./apps.mjs";
 import { appSourceIdentity } from "./runner.mjs";
 import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
+import { repositorySourceFiles } from "./source-identity.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -21,6 +22,7 @@ const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
 const WATCH_BUDGET_MS = Number("3600000");
+const STATUS_CALL_TIMEOUT_MS = Number("15000");
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
     reference: "vault://wisent/probierz/model-router-token",
@@ -193,8 +195,9 @@ function packRepo(appIds) {
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
   const file = path.join(tmpdir(), `${appId}-${hash}.tar.gz`);
-  const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
-  const packed = sh("tar", args, { cwd: repoRoot });
+  const files = repositorySourceFiles(repoRoot);
+  const args = ["-czf", file, "--null", "-T", "-"];
+  const packed = sh("tar", args, { cwd: repoRoot, input: files.join("\0") });
   if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
   return { file, hash };
 }
@@ -213,13 +216,8 @@ function packAppBundle(appId, bundlePath) {
  * The exact source identity of this submission, measured here and carried to
  * the worker.
  *
- * A worker cannot measure it: the manifest's repository roots are absolute
- * paths on this machine, the app tarball is `git archive HEAD` and has no
- * `.git`, and the harness tarball carries `.git` but not the `.gitignore` that
- * separates source from `node_modules`. Every one of those made the run die
- * with "source inventory failed" instead of a verdict. The submitter is the
- * machine that holds the checkouts, so the submitter answers, and the run
- * records the answer with `sourceIdentityOrigin: "submitter"`.
+ * Workers receive archives, not the original checkouts. Measure the source
+ * identity on the submitter and retain it with sourceIdentityOrigin "submitter".
  */
 function packSourceIdentity(appId, appRepo = null) {
   const identity = appSourceIdentity(appId, { primaryRoot: appRepo });
