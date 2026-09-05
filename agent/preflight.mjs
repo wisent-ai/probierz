@@ -321,7 +321,7 @@ export function setupSteps(target) {
       command: process.execPath,
       args: [path.join(ROOT, "packages", "desktop-cua", "ensure-daemon.mjs")],
       cwd: ROOT,
-      skipWhen: () => cuaAccessibilityGranted(),
+      skipWhen: () => cuaPermissions()?.accessibility === true,
     }],
     tui: [npmInstall],
   };
