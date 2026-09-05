@@ -268,6 +268,17 @@ selected worktrees with portable Git metadata, keeps staging under
 `~/.stado/work/probierz`, and records the actual source revision and file hashes
 on the worker without rewriting the application manifest.
 
+If the watcher loses connectivity or reaches its waiting limit, resume the
+existing job instead of submitting the run again:
+
+```bash
+node agent/cli.mjs stado resume <jobId> --host stado:ubuntu
+```
+
+This waits for the original job and imports its retained report without
+changing the recorded source identities or executing another workload.
+The MCP equivalent is `probierz_stado_resume`.
+
 ### Evaluate a figure
 
 ```bash

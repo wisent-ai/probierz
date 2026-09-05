@@ -40,7 +40,7 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
+import { listHosts, resumeRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
@@ -75,6 +75,7 @@ function usage() {
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
       "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env=K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -463,11 +464,25 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (!["run", "author", "seo"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
+    if (!["run", "resume", "author", "seo"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
     };
+    if (sub === "resume") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("2"),
+        valueFlags: ["--host"],
+        booleanFlags: [],
+      });
+      const result = await resumeRemoteRun({
+        jobId: rest[1],
+        host: value("--host") || "stado:any",
+      });
+      out(result);
+      remoteExit(result);
+      return;
+    }
     if (sub === "author") {
       validateAuthorOptions(rest, {
         positionalCount: Number("3"),

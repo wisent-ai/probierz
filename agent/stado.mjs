@@ -719,7 +719,7 @@ export async function submitRemoteSeo({
   return result;
 }
 
-function fetchFailedRun(jobId, hostDef) {
+function fetchRunEvidence(jobId, hostDef) {
   const destDir = path.join(ROOT, "test-results", ".remote", jobId);
   rmSync(destDir, { recursive: true, force: true });
   mkdirSync(destDir, { recursive: true });
@@ -748,6 +748,44 @@ function fetchFailedRun(jobId, hostDef) {
     } catch {}
   }
   return { resultsDir: destDir, manifest };
+}
+
+export async function resumeRemoteRun({ jobId, host = "stado:any" }) {
+  if (typeof jobId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(jobId)) {
+    throw new FailureError({
+      point: "stado.watch",
+      code: CODE.CONFIG,
+      detail: "job ID must be one non-empty identifier without path separators",
+      message: "Resuming remote evidence needs a valid existing Stado job ID.",
+    });
+  }
+  const hostDef = listHosts().find((entry) => entry.host === host);
+  if (!hostDef || hostDef.kind !== "stado") {
+    throw new FailureError({
+      point: "stado.watch",
+      code: CODE.NOT_FOUND,
+      detail: `unknown stado host: ${host}`,
+      message: `No such stado host: "${host}". Run \`probierz hosts\` for the list.`,
+    });
+  }
+  const result = { host, jobId, submitted: false, ...await watchJob(jobId, hostDef) };
+  if (!["completed", "failed"].includes(result.state)) return result;
+  const retained = fetchRunEvidence(jobId, hostDef);
+  if (retained?.manifest) {
+    result.resultsDir = retained.resultsDir;
+    result.runId = retained.manifest.runId;
+    result.appId = retained.manifest.appId;
+    result.target = retained.manifest.target;
+  } else if (result.state === "completed") {
+    result.state = "evidence-unavailable";
+    result.failure = failureSummary(new FailureError({
+      point: "stado.download",
+      code: CODE.NOT_FOUND,
+      detail: `could not recover a retained run-manifest.json for completed job ${jobId}`,
+      message: `Job ${jobId} completed, but its Probierz run evidence could not be recovered.`,
+    }));
+  }
+  return result;
 }
 
 export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false, environment = [] }) {
@@ -805,7 +843,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
   }
   if (watched.state === "failed") {
-    const retained = fetchFailedRun(jobId, hostDef);
+    const retained = fetchRunEvidence(jobId, hostDef);
     if (retained) {
       result.resultsDir = retained.resultsDir;
       const preflight = retained.manifest?.preflight;
