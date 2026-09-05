@@ -730,19 +730,21 @@ function fetchRunEvidence(jobId, hostDef) {
   try {
     payload = JSON.parse(downloaded.stdout);
   } catch {
-    return null;
+    throw remoteFailure("stado.download", "The queue returned invalid artifact metadata", downloaded);
   }
-  if (!payload?.ok || downloaded.status !== Number("0")) return null;
+  if (!payload?.ok || downloaded.status !== Number("0")) {
+    throw remoteFailure("stado.download", "Downloading the worker's retained artifacts failed", downloaded);
+  }
   const artifacts = payload.result?.artifacts || [];
   const artifact = artifacts.find(({ relative_path: relativePath }) =>
     /^probierz-run-.*\.tar\.gz$/.test(String(relativePath || "")));
   if (!artifact) return artifacts.length ? { resultsDir: destDir, manifest: null } : null;
   const tarball = path.join(destDir, artifact.relative_path);
   const listed = sh("tar", ["-tzf", tarball], { cwd: ROOT });
-  if (listed.status !== Number("0")) return null;
+  if (listed.status !== Number("0")) throw localFailure("stado.download", "Listing the retained run archive failed", listed);
   const manifestEntry = listed.stdout.split("\n").find((entry) => entry.endsWith("/run-manifest.json"));
   const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
-  if (untar.status !== Number("0")) return null;
+  if (untar.status !== Number("0")) throw localFailure("stado.download", "Extracting the retained run evidence failed", untar);
   let manifest = null;
   if (manifestEntry) {
     try {
