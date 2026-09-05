@@ -73,6 +73,10 @@ journeys:
     description: Build committed source on a real worker, sign through an isolated real Skarbiec grant, publish and install the release, then retry a cancelled build under a distinct job and execute the installed binary.
     value: Neither a generated command nor an archive alone counts as delivery; the normal release and cancelled-build retry must both install and run the actual product.
 
+secretRefs:
+  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
+  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
+
 artifacts:
   retain:
     pullRequestDays: 14
