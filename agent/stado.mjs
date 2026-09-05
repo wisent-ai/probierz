@@ -236,7 +236,7 @@ function sh(command, args, options = {}) {
   // `error` carries the spawn failure itself (a missing `stado` binary), which
   // neither stream reports and which classifies very differently from a
   // command that ran and refused.
-  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null };
+  return { command, args, status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null };
 }
 
 /**
@@ -258,6 +258,16 @@ function exitText(out) {
  * downgraded into a shrug the operator ignores.
  */
 function remoteFailure(point, action, out) {
+  // The bounded failure summary can end inside a URL before the actual cause.
+  process.stderr.write(`probierz-process-failure ${JSON.stringify({
+    failure_point: point,
+    command: out.command || STADO_BIN,
+    args: out.args || [],
+    exit_code: out.status,
+    stdout: out.stdout,
+    stderr: out.stderr,
+    error: out.error?.message || null,
+  })}\n`);
   return failureFrom({
     point,
     error: processText(out) || null,
