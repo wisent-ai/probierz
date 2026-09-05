@@ -1,8 +1,8 @@
 import { createHash, createHmac } from "node:crypto";
 
-// Authenticated, provider-neutral model authoring through the Stado router.
-// Product code receives only the router-scoped bearer; provider credentials
-// remain inside the router runtime.
+// Authenticated, provider-neutral model authoring through Brama.
+// Product code receives only router-scoped credentials; provider credentials
+// remain inside Brama.
 
 const HTTP_OK = Number("200");
 const HTTP_REDIRECT = Number("300");
