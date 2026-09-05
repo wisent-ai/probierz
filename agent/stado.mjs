@@ -223,11 +223,11 @@ function upload(localFile, name) {
   return destination;
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null, record = false }) {
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null, record = false, environment = [] }) {
   // Remote jobs may receive secret_env values. Shell xtrace would copy any
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
-  lines.push('JOB_ROOT="$PWD"', "mkdir -p output work");
+  lines.push('JOB_ROOT="$PWD"', "mkdir -p output work", 'export TMPDIR="$JOB_ROOT/work"');
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
     // so put homebrew on PATH first (stado and node live there on the mini).
@@ -235,13 +235,13 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // darwin-arm64 tarball.
     lines.push(
       "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
-      `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
+      `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o "$TMPDIR/node.tar.gz" && tar -xzf "$TMPDIR/node.tar.gz" -C "$TMPDIR" && export PATH="$TMPDIR/node-${NODE_VERSION}-darwin-arm64/bin:$PATH"; }`,
     );
   } else {
     lines.push(
-      `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz`,
-      "tar -xJf /tmp/node.tar.xz -C /tmp",
-      `export PATH=/tmp/node-${NODE_VERSION}-linux-x64/bin:$PATH`,
+      `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o "$TMPDIR/node.tar.xz"`,
+      'tar -xJf "$TMPDIR/node.tar.xz" -C "$TMPDIR"',
+      `export PATH="$TMPDIR/node-${NODE_VERSION}-linux-x64/bin:$PATH"`,
     );
   }
   lines.push(
@@ -283,9 +283,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
-    for (const [key, value] of Object.entries(provision.env ?? {})) {
-      lines.push(`export ${key}=${JSON.stringify(String(value))}`);
-    }
+  }
+  for (const [key, value] of environment) {
+    lines.push(`export ${key}=${shellQuote(value)}`);
   }
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,
@@ -361,6 +361,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     target === "tui" ? 'TUI_CMD="$TUI_CMD"' : null,
     provision ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
     target === "desktop:cua" ? 'CUA_APP_EXECUTABLE="$CUA_APP_EXECUTABLE"' : null,
+    ...environment.map(([key, value]) => shellQuote(`${key}=${value}`)),
   ].filter(Boolean).join(" ");
   lines.push(
     // Evidence must survive a failing run: capture the exit code, tar and
@@ -690,7 +691,20 @@ function fetchFailedRun(jobId, hostDef) {
   return { resultsDir: destDir, manifest };
 }
 
-export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false }) {
+export async function submitRemoteRun({ target, appId, spec = null, host = "stado:gcp", provision = null, appRepo = null, watch = true, mode = "run", record = false, environment = [] }) {
+  if (!Array.isArray(environment) || environment.some((assignment) =>
+    !Array.isArray(assignment) || assignment.length !== Number("2")
+      || typeof assignment[Number("0")] !== "string"
+      || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(assignment[Number("0")])
+      || typeof assignment[Number("1")] !== "string"
+      || assignment[Number("1")].includes("\0"))) {
+    throw new FailureError({
+      point: "stado.submit",
+      code: CODE.CONFIG,
+      detail: "environment must contain NAME=VALUE assignments with valid environment names and no NUL bytes",
+      message: "Invalid remote environment assignment.",
+    });
+  }
   const hostDef = listHosts().find((entry) => entry.host === host);
   if (!hostDef || hostDef.kind !== "stado") {
     throw new FailureError({
@@ -704,7 +718,7 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
-  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record });
+  const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record, environment });
   const scriptFile = path.join(tmpdir(), `probierz-run-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
   const scriptUri = upload(scriptFile, `run-${packedRepo.hash}.sh`);

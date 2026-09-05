@@ -216,7 +216,7 @@ function buildBrief({ appId, journey, target, desc, probe, round, rounds, previo
 }
 
 
-function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
+function runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath }) {
   const env = { ...process.env };
   if (baseUrl) env.BASE_URL = baseUrl;
   if (appPath && target.startsWith("mobile:")) {
@@ -229,16 +229,23 @@ function runStagedSpec({ appId, target, stagedPath, baseUrl, appPath }) {
   } else if (appPath) {
     env.MAC_APP_PATH = appPath;
   }
-  const run = spawnSync(process.execPath, [CLI, "run", target, "--app", appId, "--spec", stagedPath, "PROBIERZ_RUN_KIND=pull-request"], {
+  const run = spawnSync(process.execPath, [
+    CLI, "run", target, "--app", appId, "--spec", stagedPath,
+    "PROBIERZ_RUN_KIND=pull-request", `PROBIERZ_JOURNEY=${journey}`,
+  ], {
     encoding: "utf8",
     env,
     maxBuffer: Number("33554432"),
   });
-  const history = runHistory({ appId, limit: Number("5") });
-  const latest = history.runs[0] || null;
-  const result = { exit: run.status, runId: latest?.runId || null, status: latest?.status || "unknown", failures: [] };
-  if (latest?.manifestPath) {
-    const analysisFile = path.join(path.dirname(latest.manifestPath), "analysis.json");
+  let runId = null;
+  try {
+    runId = JSON.parse(run.stdout)?.runId || null;
+  } catch {}
+  const history = runHistory({ appId, limit: Number("20") });
+  const exact = history.runs.find((candidate) => candidate.runId === runId) || null;
+  const result = { exit: run.status, runId, status: exact?.status || "unknown", failures: [] };
+  if (exact?.manifestPath) {
+    const analysisFile = path.join(path.dirname(exact.manifestPath), "analysis.json");
     if (existsSync(analysisFile)) {
       try {
         const analysis = JSON.parse(readFileSync(analysisFile, "utf8"));
@@ -294,7 +301,7 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
         detail: error instanceof Error ? error.message : String(error),
       };
     }
-    const run = runStagedSpec({ appId, target, stagedPath, baseUrl, appPath });
+    const run = runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath });
     if (run.status === "passed") {
       const accepted = acceptSpec({ appId, journey, target, stagedPath, mappingPaths });
       return { ok: true, journey, target, spec: accepted.spec, manifest: accepted.manifest, runId: run.runId, rounds: round };

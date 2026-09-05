@@ -74,7 +74,7 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--env K=V ...] [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env=K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -529,10 +529,13 @@ async function main() {
     if (!target) throw configError("stado run needs a target (e.g. tui)");
     const appId = value("--app");
     if (!appId) throw configError("stado run needs --app <appId>");
-    const envFlags = {};
+    const environment = [];
     for (const flag of rest.filter((entry) => entry.startsWith("--env="))) {
-      const [key, val] = flag.slice("--env=".length).split("=", 2);
-      if (key && val !== undefined) envFlags[key] = val;
+      const assignment = flag.slice("--env=".length);
+      const separator = assignment.indexOf("=");
+      const key = separator < Number("0") ? assignment : assignment.slice(Number("0"), separator);
+      const val = separator < Number("0") ? "" : assignment.slice(separator + Number("1"));
+      if (key) environment.push([key, val]);
     }
     const scriptPath = value("--script") || null;
     const provision = rest.includes("--cargo-release")
@@ -540,12 +543,7 @@ async function main() {
       : value("--app-bundle-path")
         ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
         : rest.includes("--node-source")
-          ? {
-              kind: "node-source",
-              appId,
-              env: envFlags,
-              script: scriptPath,
-            }
+          ? { kind: "node-source", appId, script: scriptPath }
           : null;
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
@@ -558,6 +556,7 @@ async function main() {
       provision,
       appRepo: value("--app-repo") || null,
       watch: !rest.includes("--no-watch"),
+      environment,
       mode: scriptPath ? "script" : "run",
       record: rest.includes("--record"),
     });

@@ -25,16 +25,23 @@ repositories:
           - stado-rs/src/queue/runs.rs
           - stado-rs/tests/run_history/**
         journeys: [run-retention]
+      - paths:
+          - stado-rs/src/cli/disk_cleanup.rs
+          - stado-rs/src/providers/local/disk_cleanup/**
+          - stado-rs/tests/cleanup/**
+        journeys: [disk-cleanup]
 
 surfaces:
   tui:
     spec: stado-host-gates.spec.mjs
-    journeys: [host-dynamic-capacity, run-retention]
+    journeys: [host-dynamic-capacity, run-retention, disk-cleanup]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
         journeys: [host-dynamic-capacity]
       - when: {PROBIERZ_JOURNEY: run-retention}
         journeys: [run-retention]
+      - when: {PROBIERZ_JOURNEY: disk-cleanup}
+        journeys: [disk-cleanup]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -50,6 +57,10 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 600000
     value: The coordinator retains and reaps the exact terminal result of a migrated durable run whose historical job predates submission-linkage fields, while conflicting linkage remains refused.
+  disk-cleanup:
+    owner: Stado maintainers
+    timeoutMs: 600000
+    value: The disk janitor previews without mutation, enforces only tagged-cache deletion, preserves recovery state through live locks, resumes after predecessor lock release, and refuses contradictory watch modes.
 
 artifacts:
   retain:
@@ -64,6 +75,6 @@ pullRequestPolicy:
   requireSecretScan: true
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity, run-retention]
+  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup]
   requiredTargets: [tui, desktop:cua]
   requireSecretScan: true
