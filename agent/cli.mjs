@@ -40,7 +40,7 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
+import { cancelRemoteRun, listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
@@ -74,9 +74,10 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--app-binary-path f --app-repo p | --cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado collect <job-id> --app <id> [--host stado:mini]  collect an existing job's retained evidence without submitting or rerunning it",
       "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
+      "  probierz stado cancel <jobId> --host <host> --reason <reason>  cancel the original Stado job and retain its receipt, logs, identity, and available evidence",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -465,11 +466,30 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (!["run", "resume", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
+    if (!["run", "resume", "cancel", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado cancel <jobId> --host <host> --reason <reason> | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
     };
+    if (sub === "cancel") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("2"),
+        valueFlags: ["--host", "--reason"],
+        booleanFlags: [],
+      });
+      const host = value("--host");
+      const reason = value("--reason");
+      if (!host) throw configError("stado cancel needs --host <host>");
+      if (!reason) throw configError("stado cancel needs --reason <reason>");
+      const result = cancelRemoteRun({
+        jobId: rest[1],
+        host,
+        reason,
+      });
+      out(result);
+      remoteExit(result);
+      return;
+    }
     if (sub === "collect") {
       const appId = value("--app");
       if (!appId) throw configError("stado collect needs --app <appId>");
@@ -577,13 +597,22 @@ async function main() {
       environment.push([key, assignment.slice(equals + 1)]);
     }
     const scriptPath = value("--script") || null;
-    const provision = rest.includes("--cargo-release")
-      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-      : value("--app-bundle-path")
-        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-        : rest.includes("--node-source")
-          ? { kind: "node-source", appId, script: scriptPath }
-          : null;
+    const appBinaryPath = value("--app-binary-path");
+    if (rest.includes("--app-binary-path") && (!appBinaryPath || appBinaryPath.startsWith("--"))) {
+      throw configError("--app-binary-path needs a value");
+    }
+    if (appBinaryPath && target !== "tui") {
+      throw configError("--app-binary-path is supported only for remote TUI runs");
+    }
+    const provision = appBinaryPath
+      ? { kind: "native-binary", appId, binaryPath: appBinaryPath }
+      : rest.includes("--cargo-release")
+        ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
+        : value("--app-bundle-path")
+          ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
+          : rest.includes("--node-source")
+            ? { kind: "node-source", appId, script: scriptPath }
+            : null;
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
     }
