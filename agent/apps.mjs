@@ -184,11 +184,15 @@ export function loadAppManifest(appId) {
   return { ...document, file };
 }
 
-export function listApps() {
+function loadAppManifests() {
   if (!existsSync(APPS_ROOT)) return [];
   return readdirSync(APPS_ROOT, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(path.join(APPS_ROOT, entry.name, "probierz.yaml")))
-    .map((entry) => loadAppManifest(entry.name))
+    .map((entry) => loadAppManifest(entry.name));
+}
+
+export function listApps() {
+  return loadAppManifests()
     .map((manifest) => ({
       appId: manifest.appId,
       owner: manifest.owner,
@@ -214,10 +218,9 @@ function repositoryRelative(repository, file) {
   return relative === "" || (!relative.startsWith("../") && relative !== "..") ? relative : null;
 }
 
-export function affectedAppJourneys(files) {
+export function affectedAppJourneys(files, manifests = loadAppManifests()) {
   const matches = [];
-  for (const app of listApps()) {
-    const manifest = loadAppManifest(app.appId);
+  for (const manifest of manifests) {
     const journeyTargets = new Map();
     for (const [target, surface] of Object.entries(manifest.surfaces)) {
       for (const journey of surface.journeys) {

@@ -1,0 +1,96 @@
+schemaVersion: 1
+appId: jeden
+productId: jeden
+owner: jeden maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden
+    mappings:
+      - paths:
+          - "**"
+        journeys:
+          - onboarding-first-use
+          - model-routing
+          - settings-screen
+      - paths:
+          - "rust/agent/**"
+          - "rust/protocol.rs"
+          - "rust/cli/config/**"
+          - "rust/session/**"
+          - "tests/contracts/**"
+        journeys:
+          - task-contract-lifecycle
+surfaces:
+  tui:
+    spec: "jeden-*.spec.mjs"
+    journeys:
+      - onboarding-first-use
+      - model-routing
+      - settings-screen
+      - task-contract-lifecycle
+    env:
+      JEDEN_CONTRACT_JOURNEY: JEDEN_CONTRACT_JOURNEY
+      BRAMA_URL: STADO_MODEL_ROUTER_URL
+      BRAMA_TOKEN: STADO_MODEL_ROUTER_TOKEN
+      WISENT_APP_AGENT_ID: PROBIERZ_MODEL_AGENT_ID
+      WISENT_APP_AGENT_AUTH_SECRET: PROBIERZ_MODEL_AGENT_SECRET
+    conditions:
+      JEDEN_MODEL: codex/gpt-5.6-sol
+    journeyOverrides:
+      - when:
+          JEDEN_CONTRACT_JOURNEY: "1"
+        journeys: [task-contract-lifecycle]
+journeys:
+  onboarding-first-use:
+    owner: jeden maintainers
+    timeoutMs: 240000
+    description: Resume Jeden's first-use guide and complete it only after one real successful agent turn through the configured Brama route.
+    journeyId: first-use
+    journeyVersion: 2026-08-04.1
+    journeyVersionId: 10000000-0000-4000-8000-000000000005
+    firstSuccessFact: successful_agent_turn
+    publication:
+      screenId: first_success
+      artifactKinds: [trace]
+      minimumEvidence: E2
+      redactionRequired: true
+  model-routing:
+    owner: jeden maintainers
+    timeoutMs: 240000
+    description: Execute one real signed Jeden turn through Brama and require the selected model to return OK.
+  settings-screen:
+    owner: jeden maintainers
+    timeoutMs: 120000
+    description: Launching jeden shows its interactive UI, and typing /settings reveals the settings group headers.
+  task-contract-lifecycle:
+    owner: jeden maintainers
+    timeoutMs: 900000
+    description: Real Jeden CLI and RPC settings persist create/edit/reset changes; real Brama-backed tasks create, edit and remove an isolated file, and every task retains all seven report entries and its original task contract.
+secretRefs:
+  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
+  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: possible
+matrix:
+  onboarding:
+    targets: [tui]
+    record: false
+    timeoutMs: 240000
+    maximumParallel: 1
+    minimumCellEvidence: E2
+    maxCells: 1
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredTargets: [tui]
+  requiredJourneys: [onboarding-first-use, task-contract-lifecycle]
+releasePolicy:
+  minimumEvidence: E2
+  requiredTargets: [tui]
+  requiredJourneys: [onboarding-first-use, task-contract-lifecycle]
+  requiredMatrixProfile: onboarding
+  requireProtectedArtifacts: false
+  requireSecretScan: true

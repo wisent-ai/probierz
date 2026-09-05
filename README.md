@@ -532,6 +532,33 @@ not create static product banners; those belong to `wisent-asset-generator`.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
   the configured object store.
+  Authoring applies the surface's matching single-journey override before
+  executing its candidate, including on a remote worker. Native `desktop:cua`
+  authoring returns the accepted spec alongside the manifest and evidence.
+  Every run exports `PROBIERZ_TOOLKIT_ROOT` for product-owned specs that use the
+  toolkit's real drivers. Remote source provisioning exports `PROBIERZ_APP_SOURCE`
+  as the staged product checkout; native application bundles keep their source
+  beside the bundle, under the `-src` directory.
+  The submitter measures the source identity of the harness and every manifest
+  repository and ships `inputs/source-identity.json`; the worker records it
+  with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
+  `--app-repo` selects the product tree that is packed and measured.
+  `stado run --env NAME=VALUE` supplies non-secret execution conditions for
+  remote jobs; `--env=NAME=VALUE` is equivalent.
+  Values are passed literally, including embedded `=` characters. Credentials
+  continue to use the manifest's scoped `secretRefs`, not command arguments.
+  Submission requests and responses remain under `test-results/.remote/`;
+  stderr prints the request receipt and accepted job ID before watching.
+  `probierz stado collect <job-id> --app <id> --host stado:mini` (also
+  `probierz_stado_collect` over MCP) returns the current state immediately and
+  retrieves a terminal job's retained evidence without submitting or running it again.
+  A job cancelled before its worker starts remains `cancelled`; the result keeps
+  the exact Stado job and source-input metadata and marks run evidence as not
+  required, without asking the artifact store for output the worker never made.
+  A structured, non-retryable `NO_ARTIFACTS` response for evidence that was
+  required is reported as missing evidence, not as an object-store outage.
+  GUI readiness has its own 30-minute audit deadline; an expired audit means
+  readiness is unknown and no GUI job was submitted, not that the host is down.
 - **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
   and `probierz run TARGET --app APP --app-repo /path/to/worktree --spec /path/to/spec`
   bind their evidence to the selected primary checkout without changing the

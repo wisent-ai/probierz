@@ -6,6 +6,12 @@ repositories:
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado
     mappings:
       - paths:
+          - stado-rs/src/deploy/host_gui_automation.rs
+          - stado-rs/src/cli/host.rs
+          - stado-rs/src/cli/identity.rs
+          - stado-rs/tests/apple_challenge/preparation.probierz.spec.mjs
+        journeys: [apple-challenge-preparation]
+      - paths:
           - stado-rs/src/cli/host.rs
           - stado-rs/src/cli/submit.rs
           - stado-rs/src/cli/schedule.rs
@@ -73,6 +79,8 @@ surfaces:
         journeys: [platform-matrix]
       - when: {PROBIERZ_JOURNEY: native-readers}
         journeys: [native-readers]
+      - when: {PROBIERZ_JOURNEY: apple-challenge-preparation}
+        journeys: [apple-challenge-preparation]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -109,6 +117,15 @@ journeys:
     owner: Stado maintainers
     timeoutMs: 900000
     value: A real launchd unit whose cached definition runs a private Stado image is reloaded in its observed domain after its plist names the delivered root, the replacement maps that root file, and repeated convergence does not restart it again.
+  apple-challenge-preparation:
+    owner: Stado maintainers
+    timeoutMs: 600000
+    description: Prepare and observe the signed Apple challenge helper on one explicitly named Stado-managed Mac without starting Apple sign-in, CuaDriver, a browser, or notifications.
+    value: The real Darwin ARM64 host runs prompt-free Apple-only Accessibility preparation, observes the signed helper file state, and reports fresh GUI-automation status from the same host.
+    prerequisites:
+      platform: The selected Stado target must be a real Darwin ARM64 host.
+      host: STADO_APPLE_PREPARATION_HOST must explicitly name that target; there is no default or simulated substitute.
+      safety: The journey must not start Apple sign-in, CuaDriver, a browser, or notifications.
 
 artifacts:
   retain:

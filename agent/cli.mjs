@@ -40,7 +40,7 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, resumeRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
+import { listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
@@ -79,7 +79,8 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env=K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado collect <job-id> --app <id> [--host stado:mini]  collect an existing job's retained evidence without submitting or rerunning it",
       "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
@@ -524,11 +525,19 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (!["run", "resume", "author", "seo"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
+    if (!["run", "resume", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
     };
+    if (sub === "collect") {
+      const appId = value("--app");
+      if (!appId) throw configError("stado collect needs --app <appId>");
+      const result = collectRemoteRun({ jobId: rest[1], appId, host: value("--host") || "stado:mini" });
+      out(result);
+      if (result.collected || ["failed", "cancelled", "evidence-unavailable"].includes(result.state)) remoteExit(result);
+      return;
+    }
     if (sub === "resume") {
       validateAuthorOptions(rest, {
         positionalCount: Number("2"),
@@ -616,12 +625,16 @@ async function main() {
     const appId = value("--app");
     if (!appId) throw configError("stado run needs --app <appId>");
     const environment = [];
-    for (const flag of rest.filter((entry) => entry.startsWith("--env="))) {
-      const assignment = flag.slice("--env=".length);
-      const separator = assignment.indexOf("=");
-      const key = separator < Number("0") ? assignment : assignment.slice(Number("0"), separator);
-      const val = separator < Number("0") ? "" : assignment.slice(separator + Number("1"));
-      if (key) environment.push([key, val]);
+    for (let index = 0; index < rest.length; index += 1) {
+      const flag = rest[index];
+      if (flag !== "--env" && !flag.startsWith("--env=")) continue;
+      const assignment = flag === "--env" ? rest[++index] : flag.slice("--env=".length);
+      const equals = assignment?.indexOf("=") ?? -1;
+      const key = assignment?.slice(0, equals);
+      if (equals < 1 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+        throw configError("--env needs NAME=VALUE with a valid environment variable name");
+      }
+      environment.push([key, assignment.slice(equals + 1)]);
     }
     const scriptPath = value("--script") || null;
     const provision = rest.includes("--cargo-release")
