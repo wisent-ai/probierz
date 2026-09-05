@@ -70,7 +70,7 @@ function usage() {
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
-      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  draft through the authenticated Stado model router, verify with a real run, keep it green",
+      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--area name] [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  verify a product-owned tests/<area>/<journey>.probierz.spec.* and register its toolkit symlink",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
@@ -78,7 +78,7 @@ function usage() {
       "  probierz stado collect <job-id> --app <id> [--host stado:mini]  collect an existing job's retained evidence without submitting or rerunning it",
       "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
-      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
+      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--area name] [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host and return the accepted product file to the submitting checkout",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -495,7 +495,7 @@ async function main() {
     if (sub === "author") {
       validateAuthorOptions(rest, {
         positionalCount: Number("3"),
-        valueFlags: ["--target", "--desc", "--app-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
+        valueFlags: ["--target", "--desc", "--area", "--app-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
         booleanFlags: ["--cargo-release", "--no-watch"],
       });
       const appId = rest[1];
@@ -522,6 +522,7 @@ async function main() {
         journey,
         target,
         desc,
+        area: value("--area") || journey,
         host: value("--host") || "stado:gcp",
         provision,
         appRepo: value("--app-repo") || null,
@@ -645,7 +646,7 @@ async function main() {
   if (cmd === "author-spec") {
     validateAuthorOptions(rest, {
       positionalCount: Number("2"),
-      valueFlags: ["--desc", "--target", "--paths", "--base-url", "--app-path", "--rounds"],
+      valueFlags: ["--desc", "--target", "--area", "--paths", "--base-url", "--app-path", "--rounds"],
       booleanFlags: ["--dry-run"],
     });
     const appId = rest[0];
@@ -673,6 +674,7 @@ async function main() {
       journey,
       target,
       desc,
+      area: value("--area") || journey,
       baseUrl: value("--base-url") || null,
       appPath: value("--app-path") || null,
       mappingPaths,
