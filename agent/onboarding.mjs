@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { adoptProject } from "./project-adoption.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFINITION = path.join(HERE, "onboarding_first_use.json");
@@ -44,15 +45,30 @@ function screensInOrder(definition) {
 }
 
 function flagsFor(argv) {
-  const flags = { reset: false, json: false };
-  for (const arg of argv) {
+  const flags = { reset: false, json: false, replace: false, sourceRoot: undefined };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
     if (arg === "--reset") flags.reset = true;
     else if (arg === "--json") flags.json = true;
-    else {
+    else if (arg === "--replace") flags.replace = true;
+    else if (arg === "--source") {
+      flags.sourceRoot = argv[index + 1];
+      if (!flags.sourceRoot || flags.sourceRoot.startsWith("--")) {
+        const error = new Error("--source needs a repository path");
+        error.exitCode = 2;
+        throw error;
+      }
+      index += 1;
+    } else {
       const error = new Error(`unknown onboarding option: ${arg}`);
       error.exitCode = 2;
       throw error;
     }
+  }
+  if (flags.replace && !flags.sourceRoot) {
+    const error = new Error("--replace requires --source <repository>");
+    error.exitCode = 2;
+    throw error;
   }
   return flags;
 }
@@ -77,7 +93,10 @@ export function recordPassingQualityEvidenceWritten() {
       journey_id: definition.journey_id,
       journey_version: definition.journey_version,
       status: "completed",
-      evidence: { [definition.first_success_fact]: true },
+      evidence: {
+        ...(progress.evidence ?? {}),
+        [definition.first_success_fact]: true,
+      },
       completed_at: new Date().toISOString(),
     });
   } catch {
@@ -85,10 +104,13 @@ export function recordPassingQualityEvidenceWritten() {
   }
 }
 
-export function runOnboarding(argv) {
+export function runOnboarding(argv, projectRoot) {
   const flags = flagsFor(argv);
   const definition = readDefinition();
   const screens = screensInOrder(definition);
+  const adoption = flags.sourceRoot
+    ? adoptProject({ projectRoot, sourceRoot: flags.sourceRoot, replace: flags.replace })
+    : null;
 
   let progress = readProgress();
   let reset = false;
@@ -114,6 +136,27 @@ export function runOnboarding(argv) {
     });
   }
 
+  if (adoption && adoption.status !== "conflict") {
+    const adoptedProgress = readProgress() ?? {};
+    writeProgress({
+      ...adoptedProgress,
+      product_id: definition.product_id,
+      journey_id: definition.journey_id,
+      journey_version: definition.journey_version,
+      status: adoptedProgress.status ?? "in_progress",
+      evidence: {
+        ...(adoptedProgress.evidence ?? {}),
+        project_definitions_adopted: true,
+      },
+      adoption: {
+        source_root: adoption.sourceRoot,
+        source_digest: adoption.sourceDigest,
+        accepted_at: new Date().toISOString(),
+      },
+    });
+    progress = readProgress();
+  }
+
   const done = progress?.status === "completed";
 
   if (flags.json) {
@@ -125,6 +168,7 @@ export function runOnboarding(argv) {
       first_success_fact: definition.first_success_fact,
       status: done ? "completed" : "in_progress",
       reset,
+      adoption,
       screens: screens.map((screen) => ({
         screen_id: screen.screen_id,
         title: screen.presentation?.title ?? screen.title_key,
@@ -137,6 +181,18 @@ export function runOnboarding(argv) {
 
   if (reset) {
     emitLine("First-run walkthrough reset: walkthrough progress and its first-success evidence discarded, showing it again now.");
+    emitLine("");
+  }
+  if (adoption) {
+    if (adoption.status === "conflict") {
+      emitLine(`Existing project not adopted: ${adoption.conflicting} conflicting definition(s). No files changed.`);
+      for (const item of adoption.conflicts) emitLine(`       ${item.path}: ${item.reason}`);
+      emitLine("       Resolve the files or repeat with --replace after reviewing the conflicts.");
+      process.exitCode = 1;
+    } else {
+      emitLine(`Existing project ${adoption.status}: ${adoption.imported} imported, ${adoption.unchanged} unchanged, ${adoption.removed} removed.`);
+      emitLine("       Journey definitions were persisted but not run.");
+    }
     emitLine("");
   }
   for (const [index, screen] of screens.entries()) {

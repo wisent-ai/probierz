@@ -46,6 +46,8 @@ import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 import { runOnboarding } from "./onboarding.mjs";
+import { adoptProject, listProjectAdoptions } from "./project-adoption.mjs";
+import { startLocalAPI } from "./local-api.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,7 +62,10 @@ function usage() {
   process.stderr.write(
     [
       "usage:",
-      "  probierz onboarding [--reset]  show the first-run walkthrough; reset recorded progress and evidence to replay",
+      "  probierz onboarding [--reset] [--source <repository>] [--replace]  show first-run guidance and optionally adopt existing definitions without running them",
+      "  probierz project adopt --source <repository> [--replace]  validate and persist existing Probierz manifests and specs without running them",
+      "  probierz project adoptions  list durable project-adoption source identities",
+      "  probierz serve [--port N]  loopback API used by Probierz Desktop",
       "  probierz list                 every test surface + run script",
       "  probierz apps                 registered products, targets, and journeys",
       "  probierz app <appId>          validated product manifest",
@@ -116,6 +121,38 @@ function configError(message) {
   const error = new Error(message);
   error.exitCode = Number("2");
   return error;
+}
+
+function parseProjectAdoptArgs(args) {
+  let sourceRoot;
+  let replace = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--replace") replace = true;
+    else if (arg === "--source") {
+      sourceRoot = args[index + 1];
+      if (!sourceRoot || sourceRoot.startsWith("--")) throw configError("--source needs a repository path");
+      index += 1;
+    } else {
+      throw configError(arg.startsWith("--") ? `unknown project adoption option: ${arg}` : `unexpected project adoption argument: ${arg}`);
+    }
+  }
+  if (!sourceRoot) throw configError("project adopt needs --source <repository>");
+  return { sourceRoot, replace };
+}
+
+function parseServeArgs(args) {
+  let port = 0;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg !== "--port") throw configError(`unknown serve option: ${arg}`);
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith("--")) throw configError("--port needs a number");
+    port = Number(value);
+    if (!Number.isInteger(port) || port < 0 || port > 65535) throw configError("--port needs an integer from 0 through 65535");
+    index += 1;
+  }
+  return { port };
 }
 
 /**
@@ -291,7 +328,30 @@ async function main() {
     return;
   }
   if (cmd === "onboarding") {
-    runOnboarding(rest);
+    runOnboarding(rest, path.resolve(AGENT_DIR, ".."));
+    return;
+  }
+  if (cmd === "project") {
+    const operation = rest[0];
+    if (operation === "adopt") {
+      const result = adoptProject({
+        projectRoot: path.resolve(AGENT_DIR, ".."),
+        ...parseProjectAdoptArgs(rest.slice(1)),
+      });
+      out(result);
+      if (result.status === "conflict") process.exitCode = 1;
+      return;
+    }
+    if (operation === "adoptions") {
+      if (rest.length !== 1) throw configError("project adoptions accepts no options");
+      out(listProjectAdoptions({ projectRoot: path.resolve(AGENT_DIR, "..") }));
+      return;
+    }
+    throw configError("usage: probierz project adopt --source <repository> [--replace] | probierz project adoptions");
+  }
+  if (cmd === "serve") {
+    const { port } = parseServeArgs(rest);
+    await startLocalAPI({ projectRoot: path.resolve(AGENT_DIR, ".."), port });
     return;
   }
   if (cmd === "list") {

@@ -26,7 +26,7 @@ function requireValue(condition, message) {
   if (!condition) throw new Error(`invalid app manifest: ${message}`);
 }
 
-function validateManifest(document, file) {
+export function validateManifest(document, file) {
   requireValue(document && typeof document === "object", `${file} is not an object`);
   requireValue(document.schemaVersion === 1, `${file} schemaVersion must be 1`);
   requireValue(typeof document.appId === "string" && document.appId.length > 0, `${file} appId is required`);
