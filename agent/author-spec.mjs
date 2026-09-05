@@ -579,6 +579,7 @@ export async function authorSpec({
         brief,
         toolName: "submit_probierz_spec",
         description: "Submit the complete Probierz journey spec for the current authoring round.",
+        model: manifest.surfaces[target].conditions?.PROBIERZ_MODEL,
       });
       writeFileSync(stagedPath, drafted.content);
     } catch (error) {

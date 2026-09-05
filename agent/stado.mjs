@@ -1937,6 +1937,9 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, area = 
     target, appId, spec: null, provision, hash: packedRepo.hash,
     platform: hostDef.platform, mode: "author",
     author: { journey: selectedJourney, area: selectedArea, desc, receiptId: `remote-${randomUUID()}` }, modelRouterUrl,
+    environment: process.env.PROBIERZ_MODEL === undefined
+      ? []
+      : [["PROBIERZ_MODEL", process.env.PROBIERZ_MODEL]],
   });
   const scriptFile = workPath(`probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
