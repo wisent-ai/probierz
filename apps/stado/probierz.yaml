@@ -7,6 +7,8 @@ repositories:
     mappings:
       - paths:
           - stado-rs/src/cli/host.rs
+          - stado-rs/src/cli/submit.rs
+          - stado-rs/src/cli/schedule.rs
           - stado-rs/src/deploy/host_gates.rs
           - stado-rs/src/providers/local/agent.rs
           - stado-rs/src/providers/local/helpers.rs
