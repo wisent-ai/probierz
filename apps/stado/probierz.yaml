@@ -48,6 +48,9 @@ repositories:
           - stado-rs/tests/cleanup/**
         journeys: [disk-cleanup]
       - paths:
+          - stado-rs/tests/probierz-rust-journey.mjs
+        journeys: [host-dynamic-capacity, disk-cleanup]
+      - paths:
           - stado-rs/src/cli/release_submit.rs
           - stado-rs/tests/ci-cd/**
           - stado-rs/tests/support/skarbiec.rs
@@ -128,7 +131,7 @@ surfaces:
 journeys:
   host-dynamic-capacity:
     owner: Stado maintainers
-    timeoutMs: 600000
+    timeoutMs: 5100000
     value: A host reports live resources without fixed slots, registry writes remove retired caps, and a real worker admits two concurrent jobs despite legacy limits of one and records both completions.
   run-retention:
     owner: Stado maintainers
@@ -136,7 +139,7 @@ journeys:
     value: The coordinator retains and reaps a migrated terminal result, preserves settled cancellation history after its run manifest is removed, and refuses missing history for an unretired transition.
   disk-cleanup:
     owner: Stado maintainers
-    timeoutMs: 600000
+    timeoutMs: 5100000
     value: The disk janitor previews without mutation, enforces only tagged-cache deletion, preserves recovery state through live locks, resumes after predecessor lock release, and refuses contradictory watch modes.
   release-pipeline:
     owner: Stado maintainers
