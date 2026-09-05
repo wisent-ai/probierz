@@ -253,6 +253,21 @@ surfaces with their targets and environment requirements. `apps` returns the
 validated application manifests currently registered in the checkout. Neither
 command executes a test target.
 
+### Verify Stado public command documentation
+
+```bash
+node agent/cli.mjs stado run tui --app stado-docs \
+  --host stado:ubuntu --node-source \
+  --app-repo /absolute/path/stado-landing
+```
+
+This runs the existing website contract from `stado-landing/tests/docs/` on
+the dedicated Ubuntu host. It checks every generated command route and the
+complete public command index without opening a browser. Probierz copies the
+selected worktrees with portable Git metadata, keeps staging under
+`~/.stado/work/probierz`, and records the actual source revision and file hashes
+on the worker without rewriting the application manifest.
+
 ### Evaluate a figure
 
 ```bash
