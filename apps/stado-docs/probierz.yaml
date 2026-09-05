@@ -1,0 +1,27 @@
+schemaVersion: 1
+appId: stado-docs
+productId: stado
+owner: Stado maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-landing
+    mappings:
+      - paths:
+          - scripts/generate-cli-docs.mjs
+          - src/content/cli-commands.json
+          - src/pages/docs/**
+          - tests/docs/cli-commands.probierz.spec.mjs
+        journeys: [cli-command-pages]
+surfaces:
+  tui:
+    spec: stado-cli-docs.spec.mjs
+    journeys: [cli-command-pages]
+journeys:
+  cli-command-pages:
+    owner: Stado maintainers
+    timeoutMs: 600000
+    value: The public Stado CLI index links every generated command, and each route serves its documented invocation under its canonical URL.
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 30
