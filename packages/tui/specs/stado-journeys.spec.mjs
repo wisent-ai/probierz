@@ -15,20 +15,14 @@ const productSpecs = new Map([
   ['native-build', 'tests/builds/probierz.spec.mjs'],
   ['platform-matrix', 'tests/platform-matrix/probierz.spec.mjs'],
 ]);
-const defaultJourneys = [
-  'host-dynamic-capacity',
-  'run-retention',
-  'disk-cleanup',
-  'release-pipeline',
-];
-const selectedJourney = process.env.PROBIERZ_JOURNEY;
-const journeys = selectedJourney ? [selectedJourney] : defaultJourneys;
+const journeys = (process.env.PROBIERZ_JOURNEYS || '').split(',').filter(Boolean);
+assert.ok(journeys.length > 0, 'PROBIERZ_JOURNEYS must name the journeys selected by Probierz');
 
 for (const journey of journeys) {
   const relativeSpec = productSpecs.get(journey);
   assert.ok(
     relativeSpec,
-    `PROBIERZ_JOURNEY must be one of: ${[...productSpecs.keys()].join(', ')}`,
+    `Unmapped Stado journey selected by Probierz: ${journey}`,
   );
   await import(pathToFileURL(resolve(crate, relativeSpec)).href);
 }
