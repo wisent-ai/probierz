@@ -6,12 +6,13 @@
 // on the worker, and results are persisted under stado://probierz/results.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest, surfaceJourneys } from "./apps.mjs";
+import { appSourceIdentity } from "./runner.mjs";
 import { CODE, EXIT_RETRY, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 import { repositorySourceFiles } from "./source-identity.mjs";
 import { SETUP_STEP_TIMEOUT_MS, setupSteps } from "./preflight.mjs";
@@ -21,6 +22,8 @@ const ROOT = path.resolve(HERE, "..");
 const STADO_BIN = "stado";
 const NODE_VERSION = "v22.20.0";
 const WATCH_INTERVAL_MS = Number("30000");
+const STATUS_CALL_TIMEOUT_MS = Number("180000");
+const GUI_STATUS_CALL_TIMEOUT_MS = Number("1800000");
 const WATCH_BUDGET_ENV = "PROBIERZ_WATCH_BUDGET_MS";
 
 function positiveBudget(value) {
@@ -187,6 +190,7 @@ const TARGET_SPEC_DIRS_REL = {
   "mobile:android": "packages/mobile/test/specs",
   "desktop:mac": "packages/desktop-native/test/specs",
   "desktop:win": "packages/desktop-native/test/specs",
+  "desktop:cua": "packages/desktop-cua/specs",
   tui: "packages/tui/specs",
 };
 
@@ -236,7 +240,7 @@ function sh(command, args, options = {}) {
   // `error` carries the spawn failure itself (a missing `stado` binary), which
   // neither stream reports and which classifies very differently from a
   // command that ran and refused.
-  return { command, args, status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null };
+  return { command, args, status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null, signal: out.signal || null };
 }
 
 /**
@@ -291,9 +295,19 @@ function requireGuiReady(hostDef, target) {
       message: `The selected host "${hostDef.host}" cannot prove a usable macOS GUI session.`,
     });
   }
+  const started = Date.now();
   const status = sh(STADO_BIN, ["host", "gui-automation", "status", hostDef.target], {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    timeout: GUI_STATUS_CALL_TIMEOUT_MS,
   });
+  if (status.error?.code === "ETIMEDOUT") {
+    throw new FailureError({
+      point: "stado.preflight",
+      code: CODE.TIMEOUT,
+      detail: `target=${hostDef.target}; deadline_ms=${GUI_STATUS_CALL_TIMEOUT_MS}; elapsed_ms=${Date.now() - started}; signal=${status.signal}; terminated_before_gui_job_submission=true; ${processText(status)}`,
+      message: `The GUI readiness audit for ${hostDef.target} exceeded its deadline. Readiness is unknown; no GUI job was submitted.`,
+    });
+  }
   if (status.status !== Number("0")) {
     throw remoteFailure("stado.preflight", `Reading GUI readiness for ${hostDef.target} failed`, status);
   }
@@ -380,6 +394,21 @@ function packAppBundle(appId, bundlePath) {
   return { file, hash, bundleName };
 }
 
+/**
+ * The exact source identity of this submission, measured here and carried to
+ * the worker.
+ *
+ * Workers receive archives, not the original checkouts. Measure the source
+ * identity on the submitter and retain it with sourceIdentityOrigin "submitter".
+ */
+function packSourceIdentity(appId, appRepo = null) {
+  const identity = appSourceIdentity(appId, { primaryRoot: appRepo });
+  const hash = createHash("sha256").update(JSON.stringify(identity)).digest("hex").slice(0, Number("12"));
+  const file = workPath(`${appId}-source-${hash}.json`);
+  writeFileSync(file, `${JSON.stringify(identity, null, Number("2"))}\n`);
+  return { file, hash };
+}
+
 function manifestRepoRoot(appId) {
   const manifest = path.join(ROOT, "apps", appId, "probierz.yaml");
   if (!existsSync(manifest)) return null;
@@ -412,7 +441,7 @@ function upload(localFile, name) {
   throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile}, ${UPLOAD_ATTEMPTS} attempts)` });
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, sourceRoot = null, modelRouterUrl = null, record = false, environment = [] }) {
+function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, modelRouterUrl = null, record = false, environment = [] }) {
   // Remote jobs may receive secret_env values. Shell xtrace would copy any
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
@@ -481,6 +510,12 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   }
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,
+    // The submitter measured the source; the worker records that answer rather
+    // than hashing checkouts it does not have. This replaces rewriting the
+    // manifest's repository roots to the staged copies, which only ever
+    // produced an identity of the copy — and, for a target with no staged app
+    // source, produced nothing at all and killed the run.
+    'export PROBIERZ_SOURCE_IDENTITY="$JOB_ROOT/inputs/source-identity.json"',
   );
   if (mode !== "run" && (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source")) {
     // Authoring and custom scripts read the staged source path from the
@@ -514,8 +549,8 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     return lines.join("\n");
   }
   if (mode === "author") {
-    // Remote authoring returns the verified spec, manifest, and run artifacts
-    // with the submitter-local repository root restored.
+    // Remote authoring returns the verified spec, manifest, and run artifacts.
+    // Source-backed authoring uses the staged manifest root installed above.
     if (!modelRouterUrl) throw new Error("remote authoring needs STADO_MODEL_ROUTER_URL");
     lines.push(
       `export STADO_MODEL_ROUTER_URL=${shellQuote(modelRouterUrl)}`,
@@ -540,7 +575,6 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       "PROBIERZ_RC=$?",
       "set -e",
       "mkdir -p test-results",
-      `perl -pi -e "s|^  - root: .*|  - root: ${(sourceRoot || "").replace(/\//g, "\\/")}|" apps/${appId}/probierz.yaml`,
       `tar -czf "$JOB_ROOT/output/probierz-author-${hash}.tar.gz" test-results ${TARGET_SPEC_DIRS_REL[target]} apps/${appId}/probierz.yaml`,
       "exit $PROBIERZ_RC",
     );
@@ -571,7 +605,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
 function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, requestedWatchBudgetMs = null) {
   const watchBudgetMs = positiveBudget(requestedWatchBudgetMs);
   if (!watchBudgetMs) throw new Error("remote submission requires a positive watch budget");
-  const requestFile = workPath(`probierz-machine-${hash}.json`);
+  const receiptDir = path.join(ROOT, "test-results", ".remote", `probierz-${kind}-${hash}`);
+  mkdirSync(receiptDir, { recursive: true });
+  const requestFile = path.join(receiptDir, "request.json");
   const request = {
     client_request_id: `probierz-${kind}-${hash}`,
     // `machine status` preserves the command, so the submitted budget remains
@@ -583,10 +619,17 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, reques
     ...(hostDef.request || {}),
   };
   writeFileSync(requestFile, JSON.stringify(request));
+  console.error(`probierz-remote-request ${JSON.stringify({ requestId: request.client_request_id, requestFile })}`);
   const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile], {
     env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
   });
-  rmSync(requestFile, { force: true });
+  writeFileSync(path.join(receiptDir, "submission.json"), JSON.stringify({
+    status: submit.status,
+    signal: submit.signal,
+    error: submit.error ? { code: submit.error.code, message: submit.error.message } : null,
+    stdout: submit.stdout,
+    stderr: submit.stderr,
+  }, null, Number("2")));
   let jobId = null;
   try {
     const payload = JSON.parse(submit.stdout);
@@ -595,7 +638,10 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, reques
     // A queue that answers with something other than its own protocol is a
     // queue that is not working; the text lands on the log line below.
   }
-  if (jobId) return { jobId, watchBudgetMs, failure: null };
+  if (jobId) {
+    console.error(`probierz-remote-job ${JSON.stringify({ jobId, requestId: request.client_request_id, receiptDir })}`);
+    return { jobId, watchBudgetMs, failure: null };
+  }
   // The raw submit output is the operator's evidence, so it is logged in full
   // by `remoteFailure`; the caller gets the verdict, not the transcript.
   return {
@@ -623,6 +669,7 @@ async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
   while (Date.now() < deadline) {
     const out = sh(STADO_BIN, ["machine", "status", jobId], {
       env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      timeout: Math.max(Number("1"), Math.min(STATUS_CALL_TIMEOUT_MS, deadline - Date.now())),
     });
     let payload = null;
     try { payload = JSON.parse(out.stdout); } catch {}
@@ -703,7 +750,7 @@ function provisionInputs({ appId, provision, appRepo }) {
         message: "Remote installed-TUI authoring needs --app-path <absolute-path>.",
       });
     }
-    return { sourceRoot: null, inputs };
+    return inputs;
   }
   if (provision?.kind === "cargo-release" || provision?.kind === "node-source") {
     if (!appRepo) {
@@ -731,7 +778,7 @@ function provisionInputs({ appId, provision, appRepo }) {
       stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
       relative_path: `inputs/${appId}.tar.gz`,
     };
-    return { sourceRoot: appRepo, inputs };
+    return inputs;
   }
   if (provision?.kind === "app-bundle") {
     if (!provision.bundlePath || !existsSync(provision.bundlePath)) {
@@ -762,9 +809,9 @@ function provisionInputs({ appId, provision, appRepo }) {
       stado_uri: upload(source.file, `${appId}-${source.hash}.tar.gz`),
       relative_path: `inputs/${appId}.tar.gz`,
     };
-    return { sourceRoot: sourceRepo, inputs };
+    return inputs;
   }
-  return { sourceRoot: null, inputs };
+  return inputs;
 }
 
 function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryModel, secondaryModel, adjudicatorModel, agentId, routerUrl, productionEvidence, signatureRequired, hash, platform = "linux" }) {
@@ -894,7 +941,10 @@ export async function submitRemoteSeo({
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
-  if (watched.state === "completed") result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "seo");
+  if (["completed", "failed"].includes(watched.state)) {
+    const retained = fetchRunEvidence(jobId, hostDef);
+    if (retained) result.resultsDir = retained.resultsDir;
+  }
   return result;
 }
 
@@ -916,14 +966,14 @@ function fetchRunEvidence(jobId, hostDef) {
   }
   const artifacts = payload.result?.artifacts || [];
   const artifact = artifacts.find(({ relative_path: relativePath }) =>
-    /^probierz-run-.*\.tar\.gz$/.test(String(relativePath || "")));
+    /^probierz-(?:run|author|seo)-.*\.tar\.gz$/.test(String(relativePath || "")));
   if (!artifact) return artifacts.length ? { resultsDir: destDir, manifest: null } : null;
   const tarball = path.join(destDir, artifact.relative_path);
   const listed = sh("tar", ["-tzf", tarball], { cwd: ROOT });
-  if (listed.status !== Number("0")) throw localFailure("stado.download", "Listing the retained run archive failed", listed);
+  if (listed.status !== Number("0")) throw localFailure("stado.download", "Listing the retained evidence archive failed", listed);
   const manifestEntry = listed.stdout.split("\n").find((entry) => entry.endsWith("/run-manifest.json"));
   const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
-  if (untar.status !== Number("0")) throw localFailure("stado.download", "Extracting the retained run evidence failed", untar);
+  if (untar.status !== Number("0")) throw localFailure("stado.download", "Extracting the retained evidence failed", untar);
   let manifest = null;
   if (manifestEntry) {
     try {
@@ -931,6 +981,44 @@ function fetchRunEvidence(jobId, hostDef) {
     } catch {}
   }
   return { resultsDir: destDir, manifest };
+}
+
+export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
+  const hostDef = listHosts().find((entry) => entry.host === host && entry.kind === "stado");
+  if (!hostDef || !/^job-[0-9a-f]{24}$/.test(jobId || "")) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.CONFIG,
+      message: "Collection requires a canonical Stado job ID and a known Stado host.",
+    });
+  }
+  loadAppManifest(appId);
+  const status = sh(STADO_BIN, ["machine", "status", jobId], {
+    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    timeout: STATUS_CALL_TIMEOUT_MS,
+  });
+  if (status.status !== Number("0")) {
+    throw remoteFailure("stado.watch", `Reading job ${jobId} failed`, status);
+  }
+  let payload;
+  try {
+    payload = JSON.parse(status.stdout);
+  } catch {
+    throw remoteFailure("stado.watch", `Reading job ${jobId} returned invalid status`, status);
+  }
+  const state = String(payload?.result?.job?.state || "").toLowerCase();
+  if (!payload.ok || !state) throw remoteFailure("stado.watch", `Reading job ${jobId} returned no state`, status);
+  const result = { host, jobId, appId, state, submitted: true, collected: false };
+  if (!["uploaded", "completed", "failed", "cancelled"].includes(state)) return result;
+  const retained = fetchRunEvidence(jobId, hostDef);
+  if (!retained?.manifest || retained.manifest.appId !== appId) {
+    throw new FailureError({
+      point: "stado.download",
+      code: CODE.NOT_FOUND,
+      message: `Job ${jobId} did not return a Probierz run manifest for ${appId}.`,
+    });
+  }
+  return { ...result, state: state === "uploaded" ? "completed" : state, collected: true, resultsDir: retained.resultsDir, manifest: retained.manifest };
 }
 
 export async function resumeRemoteRun({ jobId, host = "stado:any" }) {
@@ -995,9 +1083,14 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
     });
   }
   requireGuiReady(hostDef, target);
+  // Measured before anything is uploaded: a submission whose source cannot be
+  // named is a submission whose verdict would mean nothing, and finding that
+  // out here costs nothing, while finding it out on the worker costs the job.
+  const identity = packSourceIdentity(appId, appRepo);
   const requestedWatchBudgetMs = selectedRunBudget({ appId, target, environment, provision });
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({ target, appId, spec, provision, hash: packedRepo.hash, platform: hostDef.platform, mode, record, environment });
   const scriptFile = workPath(`probierz-run-${packedRepo.hash}.sh`);
@@ -1006,7 +1099,8 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
-    ...provisioned.inputs,
+    source: { stado_uri: identityUri, relative_path: "inputs/source-identity.json" },
+    ...provisioned,
   };
   const { jobId, watchBudgetMs, failure } = submitMachine(
     hostDef,
@@ -1025,14 +1119,11 @@ export async function submitRemoteRun({ target, appId, spec = null, host = "stad
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
-  if (watched.state === "completed") {
-    result.resultsDir = fetchResults(packedRepo.hash, appId, jobId);
-  }
-  if (watched.state === "failed") {
+  if (["completed", "failed"].includes(watched.state)) {
     const retained = fetchRunEvidence(jobId, hostDef);
-    if (retained) {
-      result.resultsDir = retained.resultsDir;
-      const preflight = retained.manifest?.preflight;
+    if (retained) result.resultsDir = retained.resultsDir;
+    if (watched.state === "failed") {
+      const preflight = retained?.manifest?.preflight;
       if (preflight?.ready === false) {
         result.preflight = preflight;
         const missing = (preflight.missing || []).join(", ") || "target prerequisites";
@@ -1061,13 +1152,15 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   }
   requireGuiReady(hostDef, target);
   const modelRouterUrl = stadoModelRouterUrl();
+  const identity = packSourceIdentity(appId, appRepo);
   const packedRepo = packRepo([appId]);
   const repoUri = upload(packedRepo.file, `probierz-${packedRepo.hash}.tar.gz`);
+  const identityUri = upload(identity.file, `source-${appId}-${identity.hash}.json`);
   const provisioned = provisionInputs({ appId, provision, appRepo });
   const script = runScript({
     target, appId, spec: null, provision, hash: packedRepo.hash,
     platform: hostDef.platform, mode: "author",
-    author: { journey, desc }, sourceRoot: provisioned.sourceRoot, modelRouterUrl,
+    author: { journey, desc }, modelRouterUrl,
   });
   const scriptFile = workPath(`probierz-author-${packedRepo.hash}.sh`);
   writeFileSync(scriptFile, script);
@@ -1075,7 +1168,8 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   const inputObjects = {
     repo: { stado_uri: repoUri, relative_path: "inputs/probierz.tar.gz" },
     script: { stado_uri: scriptUri, relative_path: "inputs/run.sh" },
-    ...provisioned.inputs,
+    source: { stado_uri: identityUri, relative_path: "inputs/source-identity.json" },
+    ...provisioned,
   };
   const requestedWatchBudgetMs = conservativeWatchBudget(appId);
   const { jobId, watchBudgetMs, failure } = submitMachine(
@@ -1093,26 +1187,10 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   result.state = watched.state;
   result.watchBudgetMs = watched.watchBudgetMs;
   result.failure = watched.failure;
-  if (watched.state === "completed") {
-    result.resultsDir = fetchResults(packedRepo.hash, appId, jobId, "author");
-    result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
-  } else if (watched.state === "failed") {
+  if (["completed", "failed"].includes(watched.state)) {
     const retained = fetchRunEvidence(jobId, hostDef);
     if (retained) result.resultsDir = retained.resultsDir;
+    if (watched.state === "completed") result.specDir = TARGET_SPEC_DIRS_REL[target] || null;
   }
   return result;
-}
-
-export function fetchResults(hash, appId, jobId, kind = "run") {
-  const destDir = path.join(ROOT, "test-results", ".remote", jobId);
-  rmSync(destDir, { recursive: true, force: true });
-  mkdirSync(destDir, { recursive: true });
-  const tarball = path.join(destDir, "results.tar.gz");
-  const down = sh(STADO_BIN, ["storage", "get", `${stateUri("results")}/probierz-${kind}-${hash}.tar.gz`, tarball]);
-  if (down.status !== Number("0")) throw remoteFailure("stado.download", `Downloading the evidence for job ${jobId} failed`, down);
-  // Every remote archive is rooted at the repository: run archives contain
-  // test-results/, while author archives add accepted specs and the manifest.
-  const untar = sh("tar", ["-xzf", tarball, "-C", ROOT], { cwd: ROOT });
-  if (untar.status !== Number("0")) throw localFailure("stado.download", `Unpacking the evidence for job ${jobId} failed`, untar);
-  return destDir;
 }

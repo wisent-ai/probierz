@@ -29,7 +29,7 @@ import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { resumeRemoteRun, submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
+import { resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 
@@ -359,8 +359,18 @@ const TOOLS = [
       host: { type: "string", description: "stado:gcp|azure|aws|any|spot|local|t4" },
       cargoRelease: { type: "boolean", description: "Build the app binary on the worker with cargo (needs appRepo)." },
       appRepo: { type: "string" },
+      env: { type: "object", description: "Non-secret remote execution conditions; credentials use the app manifest's secretRefs." },
       watch: { type: "boolean", description: "Default true; waits for completion and fetches results." },
     }, ["target", "appId"]),
+  },
+  {
+    name: "probierz_stado_collect",
+    description: "Download an existing Stado job's retained Probierz evidence without submitting or rerunning the job.",
+    inputSchema: objectSchema({
+      jobId: { type: "string" },
+      appId: { type: "string" },
+      host: { type: "string", description: "The original Stado host; defaults to stado:mini." },
+    }, ["jobId", "appId"]),
   },
   {
     name: "probierz_stado_resume",
@@ -686,6 +696,14 @@ async function callTool(name, args) {
         : null,
       appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
       watch: args.watch !== false,
+      environment: args.env && typeof args.env === "object" ? Object.entries(args.env) : [],
+    }));
+  }
+  if (name === "probierz_stado_collect") {
+    return textResult(collectRemoteRun({
+      jobId: asString(args.jobId, "jobId"),
+      appId: asString(args.appId, "appId"),
+      host: typeof args.host === "string" ? args.host : "stado:mini",
     }));
   }
   if (name === "probierz_stado_resume") {

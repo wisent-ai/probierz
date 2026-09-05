@@ -53,6 +53,12 @@ apps/skrzynka/*
 !apps/stado/
 apps/stado/*
 !apps/stado/probierz.yaml
+!apps/jeden/
+apps/jeden/*
+!apps/jeden/probierz.yaml
+!apps/jeden-desktop/
+apps/jeden-desktop/*
+!apps/jeden-desktop/probierz.yaml
 !apps/stado-docs/
 apps/stado-docs/*
 !apps/stado-docs/probierz.yaml

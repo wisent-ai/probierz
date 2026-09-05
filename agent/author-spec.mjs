@@ -112,14 +112,29 @@ async function probeTui(command) {
   }
 }
 
-async function probeCua(bundleId) {
+function cuaExecutablePath(appPath) {
+  if (!appPath || !appPath.endsWith(".app")) return null;
+  const plist = path.join(appPath, "Contents", "Info.plist");
+  const result = spawnSync(
+    "/usr/libexec/PlistBuddy",
+    ["-c", "Print :CFBundleExecutable", plist],
+    { encoding: "utf8" },
+  );
+  const executable = String(result.stdout || "").trim();
+  return result.status === Number("0") && executable
+    ? path.join(appPath, "Contents", "MacOS", executable)
+    : null;
+}
+
+async function probeCua(appPath) {
   const { launchCuaApp, launchCuaProcess, snapshotTree, quitApp } = await import("../packages/desktop-cua/driver.mjs");
-  // CUA_APP_EXECUTABLE switches the probe to a direct-process launch with the
-  // author's environment (e.g. TAMA_TEST_IDENTITY=1 for gated debug builds).
-  const app = process.env.CUA_APP_EXECUTABLE ? launchCuaProcess({}) : launchCuaApp({ bundleId });
+  const executable = process.env.CUA_APP_EXECUTABLE || cuaExecutablePath(appPath);
+  const app = executable
+    ? launchCuaProcess({ executable })
+    : launchCuaApp({ bundleId: appPath });
   try {
     const tree = snapshotTree(app.pid, app.windowId);
-    return [`kind: desktop:cua`, `app: ${process.env.CUA_APP_EXECUTABLE || bundleId}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
+    return [`kind: desktop:cua`, `app: ${executable || appPath}`, "accessibility tree (cua-driver element_index rendering):", tree].join("\n").slice(0, PROBE_CHARS);
   } finally {
     quitApp(app.pid);
   }
@@ -187,14 +202,13 @@ function styleGuide(target) {
   ].join("\n");
 }
 
-function buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath }) {
+function buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures }) {
   const lines = [
     `Write an e2e journey spec for the app "${appId}" (target ${target}), journey "${journey}".`,
     `Journey goal: ${desc}`,
     "",
-    `Produce the complete contents for this spec path: ${stagedPath}`,
-    "Call submit_probierz_spec exactly once with those contents; do not modify files or return prose.",
-    "",
+    "Return the complete contents of exactly one self-contained spec through the submit_probierz_spec tool.",
+    "Do not use Markdown fences, modify files, or return any other artifact.",
     "Probe of the real app (use these selectors; anything else must be discovered by the spec itself):",
     probe,
     "",
@@ -211,13 +225,18 @@ function buildBrief({ appId, journey, target, desc, probe, round, rounds, previo
   } else {
     lines.push("", `Round ${round} of ${rounds}.`);
   }
-  lines.push("", "Submit only that one spec, then stop.");
+  lines.push("", "Call submit_probierz_spec exactly once with the complete spec, then stop.");
   return lines.join("\n");
 }
 
 
 function runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath }) {
   const env = { ...process.env };
+  const surface = loadAppManifest(appId).surfaces[target];
+  const selection = (surface.journeyOverrides || []).find(
+    (override) => override.journeys.length === 1 && override.journeys[0] === journey,
+  );
+  if (selection) Object.assign(env, selection.when);
   if (baseUrl) env.BASE_URL = baseUrl;
   if (appPath && target.startsWith("mobile:")) {
     env.APP_IOS = appPath;
@@ -225,7 +244,9 @@ function runStagedSpec({ appId, journey, target, stagedPath, baseUrl, appPath })
   } else if (appPath && target === "tui") {
     env.TUI_CMD = appPath;
   } else if (appPath && target === "desktop:cua") {
-    env.CUA_BUNDLE_ID = appPath;
+    const executable = cuaExecutablePath(appPath);
+    if (executable) env.CUA_APP_EXECUTABLE = executable;
+    else env.CUA_BUNDLE_ID = appPath;
   } else if (appPath) {
     env.MAC_APP_PATH = appPath;
   }
@@ -285,8 +306,9 @@ export async function authorSpec({ appId, journey, target, desc, baseUrl = null,
   let previousSpec = null;
   let failures = [];
   for (let round = 1; round <= rounds; round += 1) {
-    const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures, stagedPath });
+    const brief = buildBrief({ appId, journey, target, desc, probe, round, rounds, previousSpec, failures });
     if (dryRun) return { ok: true, dryRun: true, brief, stagedPath };
+    rmSync(stagedPath, { force: true });
     try {
       const drafted = await draftStructuredArtifact({
         brief,
