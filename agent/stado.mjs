@@ -271,7 +271,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
   }
   lines.push(
-    `mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
+    `mkdir -p "$JOB_ROOT/work/probierz" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
   );
   if (provision?.kind === "installed-tui") {
     lines.push(`export TUI_CMD=${shellQuote(provision.path)}`);
@@ -281,7 +281,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     const manifestDir = path.posix.dirname(manifestPath);
     const targetPrefix = manifestDir === "." ? "" : `${manifestDir}/`;
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
@@ -291,9 +291,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   }
   if (provision?.kind === "app-bundle") {
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export MAC_APP_PATH="$JOB_ROOT/work/${provision.appId}/${provision.bundleName}"`,
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}-src"`,
     );
   }
@@ -306,7 +306,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   if (provision?.kind === "node-source") {
     // Generic JS app sources are staged as immutable job inputs.
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
   }
@@ -328,12 +328,10 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     const appiumEnvironment = target === "desktop:mac" ? "appium-2-mac2-2.2.2" : "appium-2";
     lines.push(`export APPIUM_HOME="$HOME/.cache/probierz/${appiumEnvironment}"`);
   }
-  lines.push(
-    "npm ci --no-audit --no-fund --loglevel=error",
-    // Fresh worker: provision the target's host-level deps (appium drivers,
-    // native helpers) exactly as a local `probierz setup <target>` would.
-    `node agent/cli.mjs setup ${target}`,
-  );
+  lines.push("npm ci --no-audit --no-fund --loglevel=error");
+  // TUI setup only installs npm dependencies, already locked above. Other
+  // surfaces also need host drivers; every run still performs its preflight.
+  if (target !== "tui") lines.push(`node agent/cli.mjs setup ${target}`);
   if (mode === "script") {
     // Custom app job (e.g. game_asset_creator sculpt/eval): run an app-owned
     // script from the probierz checkout after provisioning. The script writes
@@ -580,7 +578,7 @@ function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryMode
     );
   }
   lines.push(
-    'mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"',
+    'mkdir -p "$JOB_ROOT/work/probierz" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"',
     'cd "$JOB_ROOT/work/probierz"',
     "npm ci --no-audit --no-fund --loglevel=error",
     "node agent/cli.mjs setup web",
