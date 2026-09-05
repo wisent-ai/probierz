@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { appSourceIdentity } from "./runner.mjs";
-import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
+import { CODE, EXIT_RETRY, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 import { repositorySourceFiles } from "./source-identity.mjs";
 import { SETUP_STEP_TIMEOUT_MS, setupSteps } from "./preflight.mjs";
 
@@ -128,6 +128,13 @@ function workPath(name) {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   return path.join(directory, name);
 }
+
+// An input upload rides through a control-plane restart rather than failing
+// the submission: six attempts, five seconds further apart each time, so a
+// redeploy has about a minute and a half to come back before an operator is
+// told the store is down.
+const UPLOAD_ATTEMPTS = Number("6");
+const UPLOAD_BACKOFF_MS = Number("5000");
 const REMOTE_SECRET_ENV = {
   STADO_MODEL_ROUTER_TOKEN: {
     reference: "vault://wisent/probierz/model-router-token",
@@ -233,7 +240,7 @@ function sh(command, args, options = {}) {
   // `error` carries the spawn failure itself (a missing `stado` binary), which
   // neither stream reports and which classifies very differently from a
   // command that ran and refused.
-  return { status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null, signal: out.signal || null };
+  return { command, args, status: out.status, stdout: String(out.stdout || ""), stderr: String(out.stderr || ""), error: out.error || null, signal: out.signal || null };
 }
 
 /**
@@ -255,6 +262,16 @@ function exitText(out) {
  * downgraded into a shrug the operator ignores.
  */
 function remoteFailure(point, action, out) {
+  // The bounded failure summary can end inside a URL before the actual cause.
+  process.stderr.write(`probierz-process-failure ${JSON.stringify({
+    failure_point: point,
+    command: out.command || STADO_BIN,
+    args: out.args || [],
+    exit_code: out.status,
+    stdout: out.stdout,
+    stderr: out.stderr,
+    error: out.error?.message || null,
+  })}\n`);
   return failureFrom({
     point,
     error: processText(out) || null,
@@ -399,14 +416,29 @@ function manifestRepoRoot(appId) {
   return match ? match[1].trim() : null;
 }
 
+/** Sleep without a timer: `upload` is synchronous, and so is everything that
+ * calls it. */
+function pause(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(Number("4"))), Number("0"), Number("0"), ms);
+}
+
 function upload(localFile, name) {
   const destination = `${stateUri("inputs")}/${name}`;
-  const out = sh(STADO_BIN, ["storage", "put", destination, localFile]);
-  // The local path is diagnostic; it rides the log line, not the message.
-  if (out.status !== Number("0")) {
-    throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile})` });
+  let out;
+  for (let attempt = Number("1"); ; attempt += Number("1")) {
+    out = sh(STADO_BIN, ["storage", "put", destination, localFile]);
+    if (out.status === Number("0")) return destination;
+    // A multi-megabyte input goes up in 128 KB chunks, and the object store
+    // restarts under it whenever the control plane redeploys: one chunk of
+    // sixty-eight answers "infrastructure we depend on is unreachable" and the
+    // whole submission dies. Exit 69 is the queue's own word for "not your
+    // fault, try later" — so try later, here, instead of returning a verdict
+    // of "outage" to an operator who can only run the same command again.
+    if (out.status !== EXIT_RETRY || attempt >= UPLOAD_ATTEMPTS) break;
+    pause(attempt * UPLOAD_BACKOFF_MS);
   }
-  return destination;
+  // The local path is diagnostic; it rides the log line, not the message.
+  throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile}, ${UPLOAD_ATTEMPTS} attempts)` });
 }
 
 function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, modelRouterUrl = null, record = false, environment = [] }) {
@@ -420,7 +452,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // Then use the node already on the box when present, else fetch the
     // darwin-arm64 tarball.
     lines.push(
-      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
+      "export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o "$TMPDIR/node.tar.gz" && tar -xzf "$TMPDIR/node.tar.gz" -C "$TMPDIR" && export PATH="$TMPDIR/node-${NODE_VERSION}-darwin-arm64/bin:$PATH"; }`,
     );
   } else {
@@ -786,7 +818,7 @@ function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryMode
   const lines = ["set -euo pipefail", 'JOB_ROOT="$PWD"', "mkdir -p output work"];
   if (platform === "darwin") {
     lines.push(
-      "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
+      "export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o /tmp/node.tar.gz && tar -xzf /tmp/node.tar.gz -C /tmp && export PATH=/tmp/node-${NODE_VERSION}-darwin-arm64/bin:$PATH; }`,
     );
   } else {
@@ -1162,4 +1194,3 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, host = 
   }
   return result;
 }
-
