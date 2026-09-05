@@ -25,3 +25,7 @@ artifacts:
     pullRequestDays: 14
     nightlyDays: 30
     adhocDays: 30
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredTargets: [tui]
+  requiredJourneys: [cli-command-pages]
