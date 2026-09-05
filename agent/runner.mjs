@@ -514,6 +514,9 @@ export async function runSurface(target, opts = {}) {
     PROBIERZ_JOURNEYS: runJourneys.join(","),
     PROBIERZ_NATIVE_CAPTURE_BIN: path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit"),
   };
+  // npm and its env-node shebang must resolve this runtime even when the
+  // caller invoked Node by absolute path outside a configured shell.
+  env.PATH = [path.dirname(process.execPath), env.PATH ?? env.Path ?? ""].join(path.delimiter);
   if (record) env.PROBIERZ_RECORD = "1";
   const spec = bykAuth ? "byk-auth.e2e.ts" : configuredSpec;
   if (spec && !bykAuth) env.PROBIERZ_SPEC = spec;

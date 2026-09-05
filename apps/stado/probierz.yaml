@@ -34,10 +34,16 @@ repositories:
           - stado-rs/src/cli/release_submit.rs
           - stado-rs/tests/ci-cd/**
         journeys: [release-pipeline]
+      - paths:
+          - stado-rs/tests/builds/**
+        journeys: [native-build]
+      - paths:
+          - stado-rs/tests/platform-matrix/**
+        journeys: [platform-matrix]
 
 surfaces:
   tui:
-    spec: stado-host-gates.spec.mjs
+    spec: stado-journeys.spec.mjs
     journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
@@ -48,6 +54,10 @@ surfaces:
         journeys: [disk-cleanup]
       - when: {PROBIERZ_JOURNEY: release-pipeline}
         journeys: [release-pipeline]
+      - when: {PROBIERZ_JOURNEY: native-build}
+        journeys: [native-build]
+      - when: {PROBIERZ_JOURNEY: platform-matrix}
+        journeys: [platform-matrix]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -72,6 +82,14 @@ journeys:
     timeoutMs: 3600000
     description: Build committed source on a real worker, sign through an isolated real Skarbiec grant, publish and install the release, then retry a cancelled build under a distinct job and execute the installed binary.
     value: Neither a generated command nor an archive alone counts as delivery; the normal release and cancelled-build retry must both install and run the actual product.
+  native-build:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    value: A declared build recipe checks out a public Git ref on a matching worker, uploads build-output.txt, and the CLI downloads and verifies its bytes.
+  platform-matrix:
+    owner: Stado maintainers
+    timeoutMs: 7200000
+    value: Both darwin-arm64 and linux-amd64 run the native build-artifact journey and complete the signed release and cancelled-build retry, installing and executing ci-release-probe from one Stado source revision.
 
 secretRefs:
   STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
