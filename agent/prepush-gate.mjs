@@ -56,7 +56,7 @@ function parseHookRefs(text) {
 export async function prepushGate({ repo, appId = null, base = null, head = null, runCi = false, ciArgs = [] } = {}) {
   const resolvedAppId = appId || inferAppId(repo);
   if (!resolvedAppId) return { ok: false, reason: `no probierz app manifest matches ${repo}` };
-  loadAppManifest(resolvedAppId);
+  const manifest = loadAppManifest(resolvedAppId);
   const resolvedHead = head || git(repo, ["rev-parse", "HEAD"]);
   const resolvedBase = base && base !== ZERO_SHA
     ? git(repo, ["rev-parse", base])
@@ -66,7 +66,7 @@ export async function prepushGate({ repo, appId = null, base = null, head = null
   }
   const files = gitLines(repo, ["diff", "--name-only", `${resolvedBase}..${resolvedHead}`])
     .map((file) => path.join(repo, file));
-  const affected = affectedAppJourneys(files).filter((match) => match.appId === resolvedAppId);
+  const affected = affectedAppJourneys(files, [manifest]);
   const journeys = [...new Set(affected.flatMap((match) => match.journeys))].sort();
   if (!journeys.length) {
     return { ok: true, appId: resolvedAppId, base: resolvedBase, head: resolvedHead, affectedJourneys: [], verdict: { passed: true, errors: [] }, note: "no affected journeys" };

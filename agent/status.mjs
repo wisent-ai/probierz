@@ -47,7 +47,7 @@ export function appStatus({ appId, baseRef = "origin/main", historyLimit = 1000 
         .map((file) => path.join(repository.root, file))
       : []
   ));
-  const affected = affectedAppJourneys(diffFiles);
+  const affected = affectedAppJourneys(diffFiles, [manifest]);
   const affectedJourneys = [...new Set(affected.flatMap((match) => match.journeys))].sort();
 
   const latestByJourney = new Map();
@@ -80,7 +80,8 @@ export function appStatus({ appId, baseRef = "origin/main", historyLimit = 1000 
   });
 
   const minimumEvidence = manifest.pullRequestPolicy?.minimumEvidence || "E2";
-  const evaluated = journeys.filter((journey) => journey.affected);
+  const requiredJourneys = new Set(manifest.pullRequestPolicy?.requiredJourneys || []);
+  const evaluated = journeys.filter((journey) => journey.affected || requiredJourneys.has(journey.journey));
   const blockingReasons = evaluated.flatMap((journey) => {
     const reasons = [];
     if (!journey.lastRun) reasons.push(`${journey.journey}: no runs recorded`);
