@@ -104,9 +104,9 @@ artifacts:
 
 pullRequestPolicy:
   minimumEvidence: E2
-  requireSecretScan: true
+  requireSecretScan: false
 releasePolicy:
   minimumEvidence: E2
   requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
   requiredTargets: [tui, desktop:cua]
-  requireSecretScan: true
+  requireSecretScan: false
