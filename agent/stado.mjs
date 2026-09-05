@@ -6,13 +6,14 @@
 // on the worker, and results are persisted under stado://probierz/results.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stadoModelRouterUrl } from "./model-router.mjs";
 import { loadAppManifest } from "./apps.mjs";
 import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
+import { repositorySourceFiles } from "./source-identity.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -94,6 +95,7 @@ export function listHosts() {
     { host: "stado:spot", kind: "stado", request: { max_cost_per_hour_usd: Number("4") }, description: "stado queue, cost-capped capacity" },
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     { host: "stado:mini", kind: "stado", platform: "darwin", target: "charless-mac-mini", request: { provider: "local", pin_to_provider: true, pinned_host: "local-charless-mac-mini.local" }, description: "stado queue, dedicated Mac mini consumer" },
+    { host: "stado:ubuntu", kind: "stado", platform: "linux", target: "ubuntu-server-rtx-pro-6000", request: { provider: "local", pin_to_provider: true, pinned_host: "local-ubuntu-server" }, description: "stado queue, dedicated Ubuntu consumer" },
     { host: "stado:macbook", kind: "stado", platform: "darwin", target: "lukasz-macbook", apiUrl: "http://127.0.0.1:18765", request: { provider: "local", pin_to_provider: true, pinned_host: "local-lukaszs-macbook-pro-5485.local" }, description: "stado queue, dedicated MacBook consumer" },
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
@@ -174,13 +176,32 @@ function requireGuiReady(hostDef, target) {
   }
 }
 
+function packSource(repoRoot, file, extraPaths = []) {
+  const workspace = mkdtempSync(workPath("source-"));
+  const snapshot = path.join(workspace, "checkout");
+  try {
+    const cloned = sh("git", ["clone", "--no-checkout", "--no-local", "--single-branch", repoRoot, snapshot]);
+    if (cloned.status !== 0) throw localFailure("stado.pack", `Copying the Git source identity for ${repoRoot} failed`, cloned);
+    const indexed = sh("git", ["-C", snapshot, "reset", "--mixed", "HEAD"]);
+    if (indexed.status !== 0) throw localFailure("stado.pack", `Preparing the source index for ${repoRoot} failed`, indexed);
+    for (const relative of repositorySourceFiles(repoRoot, { includePackageLock: true })) {
+      const destination = path.join(snapshot, relative);
+      mkdirSync(path.dirname(destination), { recursive: true });
+      cpSync(path.join(repoRoot, relative), destination, { verbatimSymlinks: true });
+    }
+    for (const relative of extraPaths) {
+      cpSync(path.join(repoRoot, relative), path.join(snapshot, relative), { recursive: true, verbatimSymlinks: true });
+    }
+    const packed = sh("tar", ["-czf", file, "."], { cwd: snapshot });
+    if (packed.status !== 0) throw localFailure("stado.pack", `Packing ${repoRoot} failed`, packed);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
 function packRepo(appIds) {
   const hash = createHash("sha256").update(`${Date.now()}-${Math.random()}`).digest("hex").slice(0, Number("12"));
   const file = workPath(`probierz-${hash}.tar.gz`);
-  const includes = ["agent", "packages", "apps", "package.json", "package-lock.json", "tsconfig.base.json", ".git"];
-  const args = ["-czf", file, ...includes.filter((entry) => existsSync(path.join(ROOT, entry)))];
-  const packed = sh("tar", args, { cwd: ROOT });
-  if (packed.status !== Number("0")) throw localFailure("stado.pack", "Packing the probierz checkout failed", packed);
   for (const appId of appIds) {
     if (!existsSync(path.join(ROOT, "apps", appId))) {
       throw new FailureError({
@@ -191,15 +212,14 @@ function packRepo(appIds) {
       });
     }
   }
+  packSource(ROOT, file, appIds.map((appId) => `apps/${appId}`));
   return { file, hash };
 }
 
 function packAppSource(appId, repoRoot) {
   const hash = createHash("sha256").update(`${appId}-${Date.now()}`).digest("hex").slice(0, Number("12"));
   const file = workPath(`${appId}-${hash}.tar.gz`);
-  const args = ["-czf", file, "--exclude=target", "--exclude=node_modules", "--exclude=.build", "."];
-  const packed = sh("tar", args, { cwd: repoRoot });
-  if (packed.status !== Number("0")) throw localFailure("stado.pack", `Packing the ${appId} source tree failed`, packed);
+  packSource(repoRoot, file);
   return { file, hash };
 }
 
@@ -252,7 +272,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
   }
   lines.push(
-    `mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
+    `mkdir -p "$JOB_ROOT/work/probierz" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"`,
   );
   if (provision?.kind === "installed-tui") {
     lines.push(`export TUI_CMD=${shellQuote(provision.path)}`);
@@ -262,7 +282,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     const manifestDir = path.posix.dirname(manifestPath);
     const targetPrefix = manifestDir === "." ? "" : `${manifestDir}/`;
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
       "curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal",
       "export PATH=\"$HOME/.cargo/bin:$PATH\"",
@@ -272,9 +292,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   }
   if (provision?.kind === "app-bundle") {
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}-app.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export MAC_APP_PATH="$JOB_ROOT/work/${provision.appId}/${provision.bundleName}"`,
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}-src" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}-src"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}-src"`,
     );
   }
@@ -287,7 +307,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   if (provision?.kind === "node-source") {
     // Generic JS app sources are staged as immutable job inputs.
     lines.push(
-      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
+      `mkdir -p "$JOB_ROOT/work/${provision.appId}" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/${provision.appId}.tar.gz" -C "$JOB_ROOT/work/${provision.appId}"`,
       `export PROBIERZ_APP_SOURCE="$JOB_ROOT/work/${provision.appId}"`,
     );
   }
@@ -297,9 +317,9 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
   lines.push(
     `cd "$JOB_ROOT/work/probierz"`,
   );
-  if (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source") {
-    // The manifest ships the submitter's absolute repo root; on the worker
-    // the sources live under /tmp/w, so rewrite it before the run.
+  if (mode !== "run" && (provision?.kind === "app-bundle" || provision?.kind === "cargo-release" || provision?.kind === "node-source")) {
+    // Authoring and custom scripts read the staged source path from the
+    // manifest; ordinary runs use --app-repo without changing their source.
     const srcDir = provision.kind === "app-bundle" ? `$JOB_ROOT/work/${provision.appId}-src` : `$JOB_ROOT/work/${provision.appId}`;
     lines.push(
       `perl -pi -e "s|^  - root: .*|  - root: ${srcDir}|" apps/${appId}/probierz.yaml`,
@@ -309,12 +329,10 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     const appiumEnvironment = target === "desktop:mac" ? "appium-2-mac2-2.2.2" : "appium-2";
     lines.push(`export APPIUM_HOME="$HOME/.cache/probierz/${appiumEnvironment}"`);
   }
-  lines.push(
-    "npm install --no-audit --no-fund --loglevel=error",
-    // Fresh worker: provision the target's host-level deps (appium drivers,
-    // native helpers) exactly as a local `probierz setup <target>` would.
-    `node agent/cli.mjs setup ${target}`,
-  );
+  lines.push("npm ci --no-audit --no-fund --loglevel=error");
+  // TUI setup only installs npm dependencies, already locked above. Other
+  // surfaces also need host drivers; every run still performs its preflight.
+  if (target !== "tui") lines.push(`node agent/cli.mjs setup ${target}`);
   if (mode === "script") {
     // Custom app job (e.g. game_asset_creator sculpt/eval): run an app-owned
     // script from the probierz checkout after provisioning. The script writes
@@ -363,10 +381,11 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     );
     return lines.join("\n");
   }
+  const hasAppSource = ["app-bundle", "cargo-release", "node-source"].includes(provision?.kind);
   const runConditions = [
     "PROBIERZ_RUN_KIND=pull-request",
-    target === "tui" ? 'TUI_CMD="$TUI_CMD"' : null,
-    provision ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
+    target === "tui" && provision?.kind !== "node-source" ? 'TUI_CMD="$TUI_CMD"' : null,
+    hasAppSource ? 'PROBIERZ_APP_SOURCE="$PROBIERZ_APP_SOURCE"' : null,
     target === "desktop:cua" ? 'CUA_APP_EXECUTABLE="$CUA_APP_EXECUTABLE"' : null,
     ...environment.map(([key, value]) => shellQuote(`${key}=${value}`)),
   ].filter(Boolean).join(" ");
@@ -375,7 +394,7 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
     // upload whatever test-results exist, then re-emit the run's status so
     // the job's success/failure still reflects the tests.
     "set +e",
-    `node agent/cli.mjs run ${target} --app ${appId}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} ${runConditions}`,
+    `node agent/cli.mjs run ${target} --app ${appId}${hasAppSource ? ' --app-repo "$PROBIERZ_APP_SOURCE"' : ""}${spec ? ` --spec ${spec}` : ""}${record ? " --record" : ""} ${runConditions}`,
     "PROBIERZ_RUN_RC=$?",
     "set -e",
     `tar -czf "$JOB_ROOT/output/probierz-run-${hash}.tar.gz" test-results`,
@@ -560,7 +579,7 @@ function seoRunScript({ appId, baseUrl, mode, policyPath, briefPath, primaryMode
     );
   }
   lines.push(
-    'mkdir -p "$JOB_ROOT/work/probierz" && tar -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"',
+    'mkdir -p "$JOB_ROOT/work/probierz" && tar --no-same-owner -xzf "$JOB_ROOT/inputs/probierz.tar.gz" -C "$JOB_ROOT/work/probierz"',
     'cd "$JOB_ROOT/work/probierz"',
     "npm ci --no-audit --no-fund --loglevel=error",
     "node agent/cli.mjs setup web",

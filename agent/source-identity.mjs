@@ -9,7 +9,10 @@ function gitPaths(root) {
     ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
   );
-  if (listed.status !== Number("0")) throw new Error(`source inventory failed for ${root}`);
+  if (listed.status !== Number("0")) {
+    const detail = listed.error?.message || listed.stderr?.trim() || `git exited ${listed.status}`;
+    throw new Error(`source inventory failed for ${root}: ${detail}`);
+  }
   return listed.stdout.split("\0").filter(Boolean);
 }
 
