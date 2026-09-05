@@ -29,7 +29,7 @@ import { appStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { submitRemoteRun, submitRemoteSeo, collectRemoteRun } from "./stado.mjs";
+import { resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteSeo } from "./stado.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 
@@ -121,6 +121,7 @@ const TOOLS = [
       target: { type: "string", description: "One of web, electron, mobile:ios, mobile:android, desktop:mac, desktop:win." },
       record: { type: "boolean", description: "Force video + trace + screenshot capture on." },
       appId: { type: "string", description: "Product identifier used in the run-scoped artifact path and manifest." },
+      appRepo: { type: "string", description: "Primary product checkout to measure instead of the manifest's usual root; the selected binary and spec must belong to it." },
       env: { type: "object", description: "Condition env vars, e.g. { BASE_URL, APP_IOS, PROBIERZ_LOCALE, PROBIERZ_COLOR_SCHEME }." },
       timeoutMs: { type: "number", description: "Kill the run after this many ms (default 20 min)." },
       resourceWaitMs: { type: "number", description: "Wait this long for a busy device/port lease; 0 fails fast." },
@@ -293,7 +294,10 @@ const TOOLS = [
   {
     name: "probierz_source_identity",
     description: "Compute exact path-independent harness and app source SHA-256 identities.",
-    inputSchema: objectSchema({ appId: { type: "string" } }, ["appId"]),
+    inputSchema: objectSchema({
+      appId: { type: "string" },
+      appRepo: { type: "string", description: "Primary product checkout to measure instead of the manifest's usual root." },
+    }, ["appId"]),
   },
   {
     name: "probierz_gate_status",
@@ -355,7 +359,7 @@ const TOOLS = [
       host: { type: "string", description: "stado:gcp|azure|aws|any|spot|local|t4" },
       cargoRelease: { type: "boolean", description: "Build the app binary on the worker with cargo (needs appRepo)." },
       appRepo: { type: "string" },
-      env: { type: "object", description: "Non-secret execution conditions for a cargoRelease job; credentials use the app manifest's secretRefs." },
+      env: { type: "object", description: "Non-secret remote execution conditions; credentials use the app manifest's secretRefs." },
       watch: { type: "boolean", description: "Default true; waits for completion and fetches results." },
     }, ["target", "appId"]),
   },
@@ -367,6 +371,14 @@ const TOOLS = [
       appId: { type: "string" },
       host: { type: "string", description: "The original Stado host; defaults to stado:mini." },
     }, ["jobId", "appId"]),
+  },
+  {
+    name: "probierz_stado_resume",
+    description: "Resume watching an existing Stado run and import its original retained evidence. Writes local test-results only; never submits or reruns a job.",
+    inputSchema: objectSchema({
+      jobId: { type: "string" },
+      host: { type: "string", description: "Existing Stado endpoint profile; defaults to stado:any." },
+    }, ["jobId"]),
   },
   {
     name: "probierz_stado_evaluate_seo",
@@ -567,7 +579,9 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_source_identity") {
-    return textResult(appSourceIdentity(asString(args.appId, "appId")));
+    return textResult(appSourceIdentity(asString(args.appId, "appId"), {
+      primaryRoot: typeof args.appRepo === "string" ? args.appRepo : null,
+    }));
   }
   if (name === "probierz_history") {
     return textResult(runHistory({
@@ -672,17 +686,17 @@ async function callTool(name, args) {
     }));
   }
   if (name === "probierz_stado_run") {
-    if (args.env && args.cargoRelease !== true) throw new Error("cargoRelease is required when env is supplied");
     return textResult(await submitRemoteRun({
       target: asString(args.target, "target"),
       appId: asString(args.appId, "appId"),
       spec: typeof args.spec === "string" ? args.spec : null,
       host: typeof args.host === "string" ? args.host : "stado:gcp",
       provision: args.cargoRelease === true
-        ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId"), env: args.env && typeof args.env === "object" ? args.env : {} }
+        ? { kind: "cargo-release", appId: asString(args.appId, "appId"), binary: asString(args.appId, "appId") }
         : null,
       appRepo: typeof args.appRepo === "string" ? args.appRepo : null,
       watch: args.watch !== false,
+      environment: args.env && typeof args.env === "object" ? Object.entries(args.env) : [],
     }));
   }
   if (name === "probierz_stado_collect") {
@@ -690,6 +704,12 @@ async function callTool(name, args) {
       jobId: asString(args.jobId, "jobId"),
       appId: asString(args.appId, "appId"),
       host: typeof args.host === "string" ? args.host : "stado:mini",
+    }));
+  }
+  if (name === "probierz_stado_resume") {
+    return textResult(await resumeRemoteRun({
+      jobId: asString(args.jobId, "jobId"),
+      host: typeof args.host === "string" ? args.host : "stado:any",
     }));
   }
   if (name === "probierz_stado_evaluate_seo") {
@@ -771,6 +791,7 @@ async function callTool(name, args) {
     const target = asString(args.target, "target");
     const result = await runSurface(target, {
       appId: typeof args.appId === "string" ? args.appId : undefined,
+      appRepo: typeof args.appRepo === "string" ? args.appRepo : undefined,
       env: args.env && typeof args.env === "object" ? args.env : {},
       record: Boolean(args.record),
       timeoutMs: Number(args.timeoutMs) || Number("0"),

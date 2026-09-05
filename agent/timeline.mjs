@@ -146,7 +146,7 @@ function jsonTraceEvents(traceFile, fallbackAt, diagnostics) {
       document?.schemaVersion !== 1
       || typeof document.kind !== "string"
       || !document.kind.startsWith("probierz-")
-      || document.status !== "completed"
+      || (document.status !== "completed" && document.status !== "failed")
     ) {
       throw new Error("invalid Probierz JSON trace");
     }

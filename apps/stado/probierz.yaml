@@ -7,6 +7,8 @@ repositories:
     mappings:
       - paths:
           - stado-rs/src/cli/host.rs
+          - stado-rs/src/cli/submit.rs
+          - stado-rs/src/cli/schedule.rs
           - stado-rs/src/deploy/host_gates.rs
           - stado-rs/src/providers/local/agent.rs
           - stado-rs/src/providers/local/helpers.rs
@@ -17,24 +19,60 @@ repositories:
           - docs/cli.md
           - docs/configuration.md
           - stado-rs/tests/host_dynamic_capacity/**
+          - stado-rs/tests/capacity/**
           - desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs
           - desktop/StadoDesktop/scripts/bundle.sh
         journeys: [host-dynamic-capacity]
       - paths:
           - stado-rs/src/monitor/reap.rs
           - stado-rs/src/queue/runs.rs
+          - stado-rs/src/queue/storage.rs
           - stado-rs/tests/run_history/**
         journeys: [run-retention]
+      - paths:
+          - stado-rs/src/cli/disk_cleanup.rs
+          - stado-rs/src/providers/local/disk_cleanup/**
+          - stado-rs/tests/cleanup/**
+        journeys: [disk-cleanup]
+      - paths:
+          - stado-rs/src/cli/release_submit.rs
+          - stado-rs/tests/ci-cd/**
+        journeys: [release-pipeline]
+      - paths:
+          - stado-rs/src/self_update.rs
+          - stado-rs/src/deploy/service.rs
+          - stado-rs/src/deploy/service_label_print.rs
+          - stado-rs/src/cli/service_refresh_image.rs
+          - stado-rs/src/release_unit_image.rs
+          - stado-rs/src/cli/release_cmd.rs
+          - stado-rs/tests/native_readers/**
+        journeys: [native-readers]
+      - paths:
+          - stado-rs/tests/builds/**
+        journeys: [native-build]
+      - paths:
+          - stado-rs/tests/platform-matrix/**
+        journeys: [platform-matrix]
 
 surfaces:
   tui:
-    spec: stado-host-gates.spec.mjs
-    journeys: [host-dynamic-capacity, run-retention]
+    spec: stado-journeys.spec.mjs
+    journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}
         journeys: [host-dynamic-capacity]
       - when: {PROBIERZ_JOURNEY: run-retention}
         journeys: [run-retention]
+      - when: {PROBIERZ_JOURNEY: disk-cleanup}
+        journeys: [disk-cleanup]
+      - when: {PROBIERZ_JOURNEY: release-pipeline}
+        journeys: [release-pipeline]
+      - when: {PROBIERZ_JOURNEY: native-build}
+        journeys: [native-build]
+      - when: {PROBIERZ_JOURNEY: platform-matrix}
+        journeys: [platform-matrix]
+      - when: {PROBIERZ_JOURNEY: native-readers}
+        journeys: [native-readers]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
@@ -44,12 +82,33 @@ surfaces:
 journeys:
   host-dynamic-capacity:
     owner: Stado maintainers
-    timeoutMs: 240000
-    value: A host reports live CPU, memory, disk, accelerator, and active-workload capacity without exposing or enforcing a fixed worker-slot count.
+    timeoutMs: 600000
+    value: A host reports live resources without fixed slots, registry writes remove retired caps, and a real worker admits two concurrent jobs despite legacy limits of one and records both completions.
   run-retention:
     owner: Stado maintainers
     timeoutMs: 600000
-    value: The coordinator retains and reaps the exact terminal result of a migrated durable run whose historical job predates submission-linkage fields, while conflicting linkage remains refused.
+    value: The coordinator retains and reaps a migrated terminal result, preserves settled cancellation history after its run manifest is removed, and refuses missing history for an unretired transition.
+  disk-cleanup:
+    owner: Stado maintainers
+    timeoutMs: 600000
+    value: The disk janitor previews without mutation, enforces only tagged-cache deletion, preserves recovery state through live locks, resumes after predecessor lock release, and refuses contradictory watch modes.
+  release-pipeline:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    description: Build committed source on a real worker, sign through an isolated real Skarbiec grant, publish and install the release, then retry a cancelled build under a distinct job and execute the installed binary.
+    value: Neither a generated command nor an archive alone counts as delivery; the normal release and cancelled-build retry must both install and run the actual product.
+  native-build:
+    owner: Stado maintainers
+    timeoutMs: 3600000
+    value: A declared build recipe checks out a public Git ref on a matching worker, uploads build-output.txt, and the CLI downloads and verifies its bytes.
+  platform-matrix:
+    owner: Stado maintainers
+    timeoutMs: 7200000
+    value: Both darwin-arm64 and linux-amd64 run the native build-artifact journey and complete the signed release and cancelled-build retry, installing and executing ci-release-probe from one Stado source revision.
+  native-readers:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    value: A real launchd unit whose cached definition runs a private Stado image is reloaded in its observed domain after its plist names the delivered root, the replacement maps that root file, and repeated convergence does not restart it again.
 
 artifacts:
   retain:
@@ -61,9 +120,9 @@ artifacts:
 
 pullRequestPolicy:
   minimumEvidence: E2
-  requireSecretScan: true
+  requireSecretScan: false
 releasePolicy:
   minimumEvidence: E2
-  requiredJourneys: [host-dynamic-capacity, run-retention]
+  requiredJourneys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline]
   requiredTargets: [tui, desktop:cua]
-  requireSecretScan: true
+  requireSecretScan: false

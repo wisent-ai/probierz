@@ -63,8 +63,8 @@ function derived(code) {
  */
 export const EXIT_RETRY = RETRY_EXIT;
 
-/** A missing or malformed environment variable is our outage, not a mistake the operator made. */
-const CONFIG_RE = /(is required|not configured|missing env|must be set|env var)/i;
+/** Missing settings and malformed requests are configuration failures, not failed connections. */
+const CONFIG_RE = /(is required|not configured|missing env|must be set|env var|\binvalid[ _-]request\b)/i;
 
 /** Deadlines: ours (a watch budget elapsing) and the platform's (ETIMEDOUT). */
 const TIMEOUT_RE = /(timed out|timeout|etimedout|deadline|did not finish within)/i;

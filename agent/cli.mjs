@@ -40,7 +40,7 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo, collectRemoteRun } from "./stado.mjs";
+import { listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
@@ -64,7 +64,7 @@ function usage() {
       "  probierz list                 every test surface + run script",
       "  probierz apps                 registered products, targets, and journeys",
       "  probierz app <appId>          validated product manifest",
-      "  probierz source-identity <appId>  exact harness and app source SHA-256",
+      "  probierz source-identity <appId> [--app-repo path]  exact harness and selected app source SHA-256",
       "  probierz specs [surface]      spec files on disk (optional surface filter)",
       "  probierz accessibility <appId>  validate stable IDs and native selectors",
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
@@ -74,8 +74,9 @@ function usage() {
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|macbook] [--env K=V ...] [--cargo-release --app-repo p --binary b [--cargo-manifest p]] [--app-bundle-path p --app-repo p] [--node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado collect <job-id> --app <id> [--host stado:mini]  collect an existing job's retained evidence without submitting or rerunning it",
+      "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
       "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
@@ -106,7 +107,7 @@ function usage() {
       "  probierz seo-evaluate --app <id> --base-url <url> [--policy json] [--brief json] [--mode pull-request|release|nightly|production] [--out report.json] [--production-evidence json] [--primary-model id] [--secondary-model id] [--adjudicator-model id] [--router-url url] [--agent-id id] [--private-key-file pem] [--router-token-stdin]  full crawl, indexability, structured-data, dual-model content, performance, production, and signed SEO verdict",
       "  probierz ci [ref] [opts]      change-driven: select affected targets, run the ready ones, analyze",
       "",
-      "run opts: --app <appId>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
+      "run opts: --app <appId>  --app-repo <path>  --record  --force (skip preflight)  --spec <path>  --frames N  --timeout MS  --resource-wait MS  --no-analyze  KEY=VALUE...",
       "surfaces: web | electron | mobile | desktop-native | desktop-cua | tui",
       "targets:  web | electron | mobile:ios | mobile:android | desktop:mac | desktop:cua | desktop:win | tui",
     ].join("\n") + "\n",
@@ -189,6 +190,9 @@ function parseRunArgs(rest, { allowPositionals = false } = {}) {
       i += Number("1");
     } else if (arg === "--app") {
       opts.appId = valueFor(i, arg);
+      i += Number("1");
+    } else if (arg === "--app-repo") {
+      opts.appRepo = valueFor(i, arg);
       i += Number("1");
     } else if (arg === "--tool") {
       opts.tool = valueFor(i, arg);
@@ -306,9 +310,17 @@ async function main() {
     return;
   }
   if (cmd === "source-identity") {
+    validateAuthorOptions(rest, {
+      positionalCount: Number("1"),
+      valueFlags: ["--app-repo"],
+      booleanFlags: [],
+    });
     const appId = rest[Number("0")];
     if (!appId) throw configError("source-identity needs an app ID");
-    out(appSourceIdentity(appId));
+    const repoIndex = rest.indexOf("--app-repo");
+    out(appSourceIdentity(appId, {
+      primaryRoot: repoIndex === -1 ? null : rest[repoIndex + 1],
+    }));
     return;
   }
   if (cmd === "accessibility") {
@@ -453,7 +465,7 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (!["run", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
+    if (!["run", "resume", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
@@ -464,6 +476,20 @@ async function main() {
       const result = collectRemoteRun({ jobId: rest[1], appId, host: value("--host") || "stado:mini" });
       out(result);
       if (result.collected) remoteExit(result);
+      return;
+    }
+    if (sub === "resume") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("2"),
+        valueFlags: ["--host"],
+        booleanFlags: [],
+      });
+      const result = await resumeRemoteRun({
+        jobId: rest[1],
+        host: value("--host") || "stado:any",
+      });
+      out(result);
+      remoteExit(result);
       return;
     }
     if (sub === "author") {
@@ -538,7 +564,7 @@ async function main() {
     if (!target) throw configError("stado run needs a target (e.g. tui)");
     const appId = value("--app");
     if (!appId) throw configError("stado run needs --app <appId>");
-    const envFlags = {};
+    const environment = [];
     for (let index = 0; index < rest.length; index += 1) {
       const flag = rest[index];
       if (flag !== "--env" && !flag.startsWith("--env=")) continue;
@@ -548,24 +574,16 @@ async function main() {
       if (equals < 1 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
         throw configError("--env needs NAME=VALUE with a valid environment variable name");
       }
-      envFlags[key] = assignment.slice(equals + 1);
+      environment.push([key, assignment.slice(equals + 1)]);
     }
     const scriptPath = value("--script") || null;
     const provision = rest.includes("--cargo-release")
-      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml", env: envFlags }
+      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
       : value("--app-bundle-path")
-        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path"), env: envFlags }
+        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
         : rest.includes("--node-source")
-          ? {
-              kind: "node-source",
-              appId,
-              env: envFlags,
-              script: scriptPath,
-            }
+          ? { kind: "node-source", appId, script: scriptPath }
           : null;
-    if (!provision && Object.keys(envFlags).length) {
-      throw configError("--env requires --cargo-release, --app-bundle-path or --node-source");
-    }
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
     }
@@ -577,6 +595,7 @@ async function main() {
       provision,
       appRepo: value("--app-repo") || null,
       watch: !rest.includes("--no-watch"),
+      environment,
       mode: scriptPath ? "script" : "run",
       record: rest.includes("--record"),
     });
@@ -929,6 +948,7 @@ async function main() {
     const opts = parseRunArgs(rest.slice(Number("1")));
     const result = await runSurface(target, {
       appId: opts.appId,
+      appRepo: opts.appRepo,
       env: opts.env,
       record: opts.record,
       timeoutMs: opts.timeoutMs,

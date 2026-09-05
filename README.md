@@ -253,6 +253,40 @@ surfaces with their targets and environment requirements. `apps` returns the
 validated application manifests currently registered in the checkout. Neither
 command executes a test target.
 
+### Verify Stado public command documentation
+
+```bash
+node agent/cli.mjs stado run tui --app stado-docs \
+  --host stado:ubuntu --node-source \
+  --app-repo /absolute/path/stado-landing
+```
+
+This runs the existing website contract from `stado-landing/tests/docs/` on
+the dedicated Ubuntu host. It checks every generated command route and the
+complete public command index without opening a browser. Probierz copies the
+selected worktrees with portable Git metadata, keeps staging under
+`~/.stado/work/probierz`, and records the actual source revision and file hashes
+on the worker without rewriting the application manifest.
+
+If the watcher loses connectivity or reaches its waiting limit, resume the
+existing job instead of submitting the run again:
+
+```bash
+node agent/cli.mjs stado resume <jobId> --host stado:ubuntu
+```
+
+This waits for the original job and imports its retained report without
+changing the recorded source identities or executing another workload.
+The MCP equivalent is `probierz_stado_resume`.
+
+Remote Cargo provisioning builds the selected binary from its source directory
+with the locked dependency graph, so the repository's Rust toolchain is honored.
+An existing Rust installation is not upgraded by provisioning. Unless explicitly
+overridden with `--timeout`, the runner uses the sum of the selected journeys'
+declared time budgets, with the default budget for journeys that omit one.
+The staged Cargo output belongs only to that job and is removed on exit,
+including failed runs; retained reports and source identities are preserved.
+
 ### Evaluate a figure
 
 ```bash
@@ -479,16 +513,21 @@ not create static product banners; those belong to `wisent-asset-generator`.
   with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
   `--app-repo` selects the product tree that is packed and measured.
   `stado run --env NAME=VALUE` supplies non-secret execution conditions for
-  Cargo, native-bundle and Node-source jobs; `--env=NAME=VALUE` is equivalent.
+  remote jobs; `--env=NAME=VALUE` is equivalent.
   Values are passed literally, including embedded `=` characters. Credentials
   continue to use the manifest's scoped `secretRefs`, not command arguments.
   Submission requests and responses remain under `test-results/.remote/`;
   stderr prints the request receipt and accepted job ID before watching.
   `probierz stado collect <job-id> --app <id> --host stado:mini` (also
-  `probierz_stado_collect` over MCP) retrieves an existing job's retained
-  evidence after an interrupted watch, without submitting or running it again.
+  `probierz_stado_collect` over MCP) returns the current state immediately and
+  retrieves a terminal job's retained evidence without submitting or running it again.
   GUI readiness has its own 30-minute audit deadline; an expired audit means
   readiness is unknown and no GUI job was submitted, not that the host is down.
+- **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
+  and `probierz run TARGET --app APP --app-repo /path/to/worktree --spec /path/to/spec`
+  bind their evidence to the selected primary checkout without changing the
+  application manifest. Other declared repositories keep their own identities.
+  Select a binary and product-owned spec built from that same checkout.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
@@ -502,11 +541,13 @@ The complete command surface is printed by `probierz --help` and summarized in
   and returned remote evidence live under the configured `test-results/` and
   object-store paths. An unavailable store is an error, not an empty history.
 - **Credentials:** local discovery requires none. Model authoring and figure
-  evaluation require a distinct `STADO_MODEL_ROUTER_URL` and router-scoped
-  token; figure evaluation also requires `PROBIERZ_FIGURE_VISION_MODEL` or
-  `--model`. Remote Stado jobs materialize the token from the scoped
-  `probierz-model-router` secret reference instead of embedding it in the job
-  payload.
+  evaluation reach Brama through `STADO_MODEL_ROUTER_URL`, a router-scoped
+  `STADO_MODEL_ROUTER_TOKEN`, and a signed Probierz identity
+  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). Figure evaluation
+  also requires `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs set
+  the Probierz identity and materialize the token and signing secret from the
+  scoped `probierz-model-router` and `probierz-agent-auth` references instead
+  of embedding credentials in the job payload.
 - **Setup ownership:** `probierz setup` may install npm dependencies, Playwright
   browsers, and Appium drivers owned by Probierz. Host SDKs, simulators, devices,
   permissions, and application runtimes remain operator-managed.

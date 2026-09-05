@@ -26,7 +26,7 @@ import { appSurface, loadAppManifest, surfaceJourneys } from "./apps.mjs";
 import { collectPlatformDiagnostics, startPerformanceSampler } from "./collect.mjs";
 import { acquireResourcesWait, resourcesFor } from "./locks.mjs";
 import { repositoryIdentity } from "./source-identity.mjs";
-import { CODE, failureFrom, failureSummary } from "./failure.mjs";
+import { CODE, FailureError, failureFrom, failureSummary } from "./failure.mjs";
 import { recordPassingQualityEvidenceWritten } from "./onboarding.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -181,10 +181,14 @@ function sha256Path(value) {
 }
 
 
-function sourceIdentity(app) {
+function sourceIdentity(app, primaryRoot = null) {
   if (!app) return null;
   const repositories = app.manifest.repositories.map((repository, index) =>
-    repositoryIdentity(repository.root, path.basename(repository.root), index));
+    repositoryIdentity(
+      index === Number("0") && primaryRoot ? path.resolve(primaryRoot) : repository.root,
+      path.basename(repository.root),
+      index,
+    ));
   return {
     sha256: createHash("sha256").update(JSON.stringify(repositories.map(({ index, sha256 }) => ({ index, sha256 })))).digest("hex"),
     repositories,
@@ -196,16 +200,13 @@ const SHA256 = /^[0-9a-f]{64}$/;
 /**
  * The source identity a remote submitter measured and shipped with the job.
  *
- * A worker holds a snapshot of the source, not the checkouts: the app tarball
- * is `git archive HEAD` and carries no `.git`, the manifest's repository roots
- * are absolute paths on the submitter's machine, and the harness tarball
- * carries `.git` but not the `.gitignore` that tells source from
- * `node_modules`. Recomputing an identity there could only describe the copy,
- * and in practice it did not describe anything: it killed the run with
- * "source inventory failed". The submitter measured the thing that is actually
- * under test, so its answer travels with the job and every reader of the
- * identity — the run manifest, the SEO evaluation, an onboarding spec — takes
- * that answer instead of hashing what is on the worker's disk.
+ * A worker holds staged source archives, not the submitter's checkouts: the app
+ * archive contains Git-listed source files but no `.git`, and the manifest's
+ * repository roots are absolute paths on the submitter's machine. Recomputing
+ * an identity there could only describe the staged copy. The submitter measured
+ * the thing that is actually under test, so its answer travels with the job and
+ * every reader of the identity — the run manifest, the SEO evaluation, an
+ * onboarding spec — takes that answer instead of hashing the worker's files.
  */
 function submittedSourceIdentity(appId = null) {
   const file = process.env.PROBIERZ_SOURCE_IDENTITY;
@@ -245,10 +246,6 @@ export function appSourceIdentity(appId, { primaryRoot = null } = {}) {
   const submitted = submittedSourceIdentity(appId);
   if (submitted) return submitted;
   const manifest = loadAppManifest(appId);
-  const repositories = primaryRoot
-    ? manifest.repositories.map((repository, index) =>
-      (index === Number("0") ? { ...repository, root: primaryRoot } : repository))
-    : manifest.repositories;
   return {
     schemaVersion: 1,
     appId,
@@ -256,7 +253,7 @@ export function appSourceIdentity(appId, { primaryRoot = null } = {}) {
       excludeRuntimeSecrets: true,
       includePackageLock: true,
     }),
-    app: sourceIdentity({ manifest: { ...manifest, repositories } }),
+    app: sourceIdentity({ manifest }, primaryRoot),
   };
 }
 
@@ -399,7 +396,7 @@ export function completeRun(run, analysis, analysisError = null) {
 // Spawn a real run. opts:
 //   env        extra condition vars (BASE_URL, APP_IOS, PROBIERZ_LOCALE, ...)
 //   record     force video/trace/screenshot capture on (sets PROBIERZ_RECORD=1)
-//   timeoutMs  kill the run after this long (default 20 min)
+//   timeoutMs  override selected journey budgets (20 min fallback)
 //   spec       run only this one spec (path/substring); scopes a run to e.g.
 //              a single app's suite instead of every spec in the package
 //   force      skip the preflight gate and spawn even if the toolchain looks
@@ -469,7 +466,7 @@ export async function runSurface(target, opts = {}) {
   const kind = segment(opts.kind || requestedEnv.PROBIERZ_RUN_KIND, "adhoc");
   const runJourneys = app ? surfaceJourneys(app.surface, requestedEnv) : [];
   const submitted = submittedSourceIdentity(appId);
-  const source = submitted ? submitted.app : sourceIdentity(app);
+  const source = submitted ? submitted.app : sourceIdentity(app, opts.appRepo);
   const harness = submitted ? submitted.harness : repositoryIdentity(ROOT, "probierz", null, {
     excludeRuntimeSecrets: true,
     includePackageLock: true,
@@ -571,6 +568,9 @@ export async function runSurface(target, opts = {}) {
     PROBIERZ_JOURNEYS: runJourneys.join(","),
     PROBIERZ_NATIVE_CAPTURE_BIN: path.join(ROOT, "node_modules", ".cache", "probierz", "screen-capture-kit"),
   };
+  // npm and its env-node shebang must resolve this runtime even when the
+  // caller invoked Node by absolute path outside a configured shell.
+  env.PATH = [path.dirname(process.execPath), env.PATH ?? env.Path ?? ""].join(path.delimiter);
   if (record) env.PROBIERZ_RECORD = "1";
   const spec = bykAuth ? "byk-auth.e2e.ts" : configuredSpec;
   if (spec && !bykAuth) env.PROBIERZ_SPEC = spec;
@@ -664,7 +664,11 @@ export async function runSurface(target, opts = {}) {
 
   const command = `npm run ${t.script}${spec && !bykAuth ? ` (PROBIERZ_SPEC=${spec})` : ""}`;
   const wanted = Number(opts.timeoutMs);
-  const timeoutMs = wanted > Number("0") ? wanted : DEFAULT_TIMEOUT_MS;
+  const journeyBudget = runJourneys.reduce((total, journey) => {
+    const declared = Number(app.manifest.journeys[journey]?.timeoutMs);
+    return total + (declared > Number("0") ? declared : DEFAULT_TIMEOUT_MS);
+  }, Number("0"));
+  const timeoutMs = wanted > Number("0") ? wanted : journeyBudget || DEFAULT_TIMEOUT_MS;
   updateManifest(baseRun, { status: "running", command, timeoutMs });
   updateManifest(baseRun, { dataSeeded });
 
