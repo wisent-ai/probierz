@@ -30,6 +30,7 @@ surfaces:
     conditions:
       STADO_MODEL_ROUTER_URL: https://brama.wisent.com
       PROBIERZ_MODEL_AGENT_ID: probierz
+      PROBIERZ_MODEL: codex/gpt-5.6-sol
       JEDEN_MODEL: codex/gpt-5.6-sol
 journeys:
   task-contract:
