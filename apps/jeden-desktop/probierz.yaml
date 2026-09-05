@@ -1,0 +1,46 @@
+schemaVersion: 1
+appId: jeden-desktop
+productId: jeden
+owner: Jeden Desktop maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden-desktop
+    mappings:
+      - paths:
+          - Sources/Jeden/Store/ContractSettingsModel.swift
+          - Sources/Jeden/Views/SettingsScreen.swift
+          - Sources/Jeden/Views/ConversationScreen.swift
+          - Sources/Jeden/Views/Sidebar.swift
+          - Sources/Jeden/Model/SessionEvent.swift
+          - Sources/Jeden/Store/AgentConversationModel.swift
+          - tests/contracts/**
+        journeys: [task-contract]
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden
+    mappings:
+      - paths: [rust/agent/**, rust/cli/config/**, rust/session/**]
+        journeys: [task-contract]
+surfaces:
+  desktop:cua:
+    spec: jeden-desktop-task-contract.spec.mjs
+    journeys: [task-contract]
+journeys:
+  task-contract:
+    owner: Jeden Desktop maintainers
+    timeoutMs: 480000
+    description: Open real Jeden Desktop Settings, load the built-in contract through Stado and real Jeden RPC, inspect all seven requirements, and inspect a real recorded task report without duplicate answers. Do not change operator settings, trigger system consent prompts, or launch a browser.
+secretRefs:
+  STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token
+  PROBIERZ_MODEL_AGENT_SECRET: vault://wisent/probierz/model-agent-secret
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  pii: possible
+pullRequestPolicy:
+  minimumEvidence: E3
+  requiredTargets: [desktop:cua]
+  requiredJourneys: [task-contract]
+releasePolicy:
+  minimumEvidence: E3
+  requiredTargets: [desktop:cua]
+  requiredJourneys: [task-contract]
