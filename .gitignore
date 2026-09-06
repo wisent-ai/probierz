@@ -65,3 +65,6 @@ apps/stado-docs/*
 !apps/weles-apple/
 apps/weles-apple/*
 !apps/weles-apple/probierz.yaml
+!apps/landing-cli/
+apps/landing-cli/*
+!apps/landing-cli/probierz.yaml
