@@ -238,11 +238,12 @@ async function probeTui(command, options = {}) {
   await session.sleep(Number("3000"));
   try {
     const screen = session.screen();
-    if (session.child.exitCode !== null) {
-      throw new Error(`tui authoring probe exited before interaction (code ${session.child.exitCode}): ${session.fullLog().slice(-BODY_CHARS)}`);
-    }
+    // A finite CLI is still a terminal application. Its exit status and output
+    // are authoring context, not a successful journey or a reason to invent an
+    // interactive wrapper. The subsequently executed spec decides the verdict.
+    const state = session.child.exitCode === null ? "running" : `exited with code ${session.child.exitCode}`;
     if (!screen.trim()) throw new Error("tui authoring probe returned an empty initial screen");
-    return [`kind: tui`, `command: ${command}`, "initial screen (pty frame, ANSI stripped):", screen].join("\n").slice(0, PROBE_CHARS);
+    return [`kind: tui`, `command: ${command}`, `process: ${state}`, "observed output (pty frame, ANSI stripped):", screen].join("\n").slice(0, PROBE_CHARS);
   } finally {
     await session.close();
   }

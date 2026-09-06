@@ -349,6 +349,11 @@ revision. Nested authoring and run evidence hashes the staged executable as its
 `build` identity. Probierz does not invent or assert build provenance: the
 caller supplies the signed release binary and its source binding.
 
+Terminal authoring also accepts finite CLI commands. It records their output
+and actual exit status instead of requiring the process to remain open.
+The observation is not a passing test: only the subsequently executed journey
+can produce that verdict. An empty initial screen is still refused.
+
 Cancel an existing job without submitting replacement work:
 
 ```bash

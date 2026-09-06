@@ -616,6 +616,11 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
   lines.push('JOB_ROOT="$PWD"', "mkdir -p output work", 'export TMPDIR="$JOB_ROOT/work"');
+  lines.push(
+    'export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"',
+    'export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"',
+    'export PATH="$CARGO_HOME/bin:$PATH"',
+  );
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
     // so put homebrew on PATH first (stado and node live there on the mini).
@@ -682,9 +687,8 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
       `readonly PROBIERZ_CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/${targetPrefix}target"`,
       'export CARGO_TARGET_DIR="$PROBIERZ_CARGO_TARGET_DIR"',
       'trap \'rm -rf -- "$PROBIERZ_CARGO_TARGET_DIR"\' EXIT',
-      "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
-      `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bin ${shellQuote(provision.binary || provision.appId)})`,
+      `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bins)`,
       `export TUI_CMD="$JOB_ROOT/work/${provision.appId}/${targetPrefix}target/release/${provision.binary || provision.appId}"`,
     );
   }
@@ -703,7 +707,6 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
     );
     if (needsStadoDesktopCli(target, provision)) {
       lines.push(
-        "export PATH=\"$HOME/.cargo/bin:$PATH\"",
         "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
         'export CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/stado-rs/target"',
         '(cd "$PROBIERZ_APP_SOURCE/stado-rs" && cargo build --locked --bin stado)',

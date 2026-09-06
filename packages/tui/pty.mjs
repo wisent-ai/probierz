@@ -33,7 +33,7 @@ export function stripAnsi(text) {
 
 export function spawnTui(command, args = [], { cwd, env, cols = 120, rows = 36 } = {}) {
   const shim = `stty rows ${rows} cols ${cols}; exec "$@"`;
-  const child = spawn("python3", ["-c", "import pty,sys;pty.spawn(sys.argv[1:])", "/bin/sh", "-c", shim, "sh", command, ...args], {
+  const child = spawn("python3", ["-c", "import os,pty,sys;sys.exit(os.waitstatus_to_exitcode(pty.spawn(sys.argv[1:])))", "/bin/sh", "-c", shim, "sh", command, ...args], {
     cwd,
     env: { ...process.env, ...env, TERM: "xterm-256color", COLUMNS: String(cols), LINES: String(rows) },
     stdio: ["pipe", "pipe", "pipe"],
