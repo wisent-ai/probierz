@@ -75,7 +75,7 @@ function usage() {
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
-      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--area name] [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  verify a product-owned tests/<area>/<journey>.probierz.spec.* and register its toolkit symlink",
+      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--area name] [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  verify a product-owned <testDirectory>/<area>/<journey>.probierz.spec.* (surface testDirectory defaults to tests) and register its toolkit symlink",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",

@@ -552,6 +552,7 @@ function saveAuthorSubmission({
   area,
   target,
   productRoot,
+  testDirectory = "tests",
   sourceSha256,
   harnessSha256,
   installedSourceSha256 = null,
@@ -566,6 +567,7 @@ function saveAuthorSubmission({
     area,
     target,
     productRoot,
+    testDirectory,
     sourceSha256,
     harnessSha256,
     installedSourceSha256,
@@ -1380,8 +1382,11 @@ function restoreRemoteAuthoring(jobId, retained, expectedAppId = null, required 
       message: `Job ${jobId} returned an authored spec, but this checkout has no source-bound submission receipt.`,
     });
   }
+  const testDirectory = submission.testDirectory || "tests";
+  const localTestDirectory = loadAppManifest(submission.appId)
+    .surfaces[submission.target]?.testDirectory || "tests";
   const expectedProductRelative = path.posix.join(
-    "tests",
+    testDirectory,
     submission.area,
     `${submission.journey}.probierz.spec.${productSpecExtension(submission.target)}`,
   );
@@ -1395,6 +1400,7 @@ function restoreRemoteAuthoring(jobId, retained, expectedAppId = null, required 
     || receipt.journey !== submission.journey
     || receipt.area !== submission.area
     || receipt.target !== submission.target
+    || localTestDirectory !== testDirectory
     || receipt.spec?.relativePath !== expectedProductRelative
     || receipt.registration?.relativePath !== expectedRegistrationRelative
     || !Array.isArray(receipt.mappingPaths)
@@ -2004,6 +2010,7 @@ export async function submitRemoteAuthor({ appId, journey, target, desc, area = 
     area: selectedArea,
     target,
     productRoot,
+    testDirectory: surface.testDirectory || "tests",
     sourceSha256: sourceIdentity.app.sha256,
     harnessSha256: sourceIdentity.harness.sha256,
   });

@@ -49,7 +49,7 @@ repositories:
         journeys: [disk-cleanup]
       - paths:
           - stado-rs/tests/probierz-rust-journey.mjs
-        journeys: [host-dynamic-capacity, disk-cleanup]
+        journeys: [host-dynamic-capacity, disk-cleanup, release-pipeline]
       - paths:
           - stado-rs/src/cli/release_submit.rs
           - stado-rs/tests/ci-cd/**
@@ -95,6 +95,7 @@ repositories:
 surfaces:
   tui:
     spec: stado-journeys.spec.mjs
+    testDirectory: stado-rs/tests
     journeys: [host-dynamic-capacity, run-retention, disk-cleanup, release-pipeline, service-convergence]
     journeyOverrides:
       - when: {PROBIERZ_JOURNEY: host-dynamic-capacity}

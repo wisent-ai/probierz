@@ -63,6 +63,16 @@ export function validateManifest(document, file) {
     requireValue(surface && typeof surface === "object", `${file} surface ${target} must be an object`);
     requireValue(typeof surface.spec === "string" && surface.spec.length > 0, `${file} surface ${target} spec is required`);
     requireValue(Array.isArray(surface.journeys) && surface.journeys.length > 0, `${file} surface ${target} journeys are required`);
+    if (surface.testDirectory !== undefined) {
+      requireValue(
+        typeof surface.testDirectory === "string"
+          && !path.isAbsolute(surface.testDirectory)
+          && !surface.testDirectory.includes("\\")
+          && surface.testDirectory.split("/").every((part) => part && part !== "." && part !== "..")
+          && path.basename(surface.testDirectory) === "tests",
+        `${file} surface ${target} testDirectory must be a relative product path ending in tests without parent traversal`,
+      );
+    }
     for (const journey of surface.journeys) {
       requireValue(Boolean(document.journeys[journey]), `${file} surface ${target} journey ${journey} is unknown`);
     }
