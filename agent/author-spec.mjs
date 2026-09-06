@@ -55,15 +55,21 @@ function inside(root, candidate) {
   return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
-function assertPhysicalProductPath(testsRoot, productSpec) {
+function assertPhysicalProductPath(repositoryRoot, testsRoot, productSpec) {
   const destination = lstatSync(productSpec, { throwIfNoEntry: false });
   if (destination && !destination.isFile()) {
     throw new Error("authored spec destination must be a regular product file");
   }
   const parent = path.dirname(productSpec);
+  let existingParent = parent;
+  while (!existsSync(existingParent)) existingParent = path.dirname(existingParent);
+  const physicalProductRoot = realpathSync(repositoryRoot);
+  const physicalParent = realpathSync(existingParent);
+  if (physicalParent !== physicalProductRoot && !inside(physicalProductRoot, physicalParent)) {
+    throw new Error("authored spec path escapes the selected product tests directory");
+  }
   if (!existsSync(testsRoot) || !existsSync(parent)) return;
   const physicalTests = realpathSync(testsRoot);
-  const physicalProductRoot = realpathSync(path.dirname(testsRoot));
   const physicalProduct = path.join(realpathSync(parent), path.basename(productSpec));
   if (!inside(physicalProductRoot, physicalTests) || !inside(physicalTests, physicalProduct)) {
     throw new Error("authored spec path escapes the selected product tests directory");
@@ -74,16 +80,16 @@ function authoredPaths({ manifest, journey, target, area = null, productRoot = n
   const selectedJourney = safeName(journey, "journey");
   const selectedArea = safeName(area || selectedJourney, "authoring area");
   const repositoryRoot = path.resolve(productRoot || manifest.repositories[Number("0")].root);
-  const testsRoot = path.join(repositoryRoot, "tests");
+  const testsRoot = path.resolve(repositoryRoot, manifest.surfaces[target]?.testDirectory || "tests");
   const productSpec = path.resolve(
     testsRoot,
     selectedArea,
     `${selectedJourney}.probierz.spec.${productSpecExtension(target)}`,
   );
-  if (!inside(testsRoot, productSpec)) {
+  if (!inside(repositoryRoot, testsRoot) || !inside(testsRoot, productSpec)) {
     throw new Error("authored spec path escapes the selected product tests directory");
   }
-  assertPhysicalProductPath(testsRoot, productSpec);
+  assertPhysicalProductPath(repositoryRoot, testsRoot, productSpec);
   const registration = path.join(
     TARGET_SPEC_DIRS[target],
     `${manifest.appId}-${selectedJourney}${specExtension(target)}`,
@@ -468,7 +474,7 @@ export function installAcceptedSpec({
     document.repositories[Number("0")].mappings = mappings;
   }
   mkdirSync(path.dirname(paths.productSpec), { recursive: true });
-  assertPhysicalProductPath(paths.testsRoot, paths.productSpec);
+  assertPhysicalProductPath(paths.productRoot, paths.testsRoot, paths.productSpec);
   let replacedProductSpec = null;
   try {
     const registrationMetadata = lstatSync(paths.registration);

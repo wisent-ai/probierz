@@ -331,7 +331,7 @@ const TOOLS = [
       journey: { type: "string" },
       target: { type: "string", description: "web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui" },
       desc: { type: "string", description: "Journey goal in one or two sentences." },
-      area: { type: "string", description: "Product tests/<area> directory; defaults to the complete journey identifier." },
+      area: { type: "string", description: "Area below the surface's product testDirectory (default tests); defaults to the complete journey identifier." },
       baseUrl: { type: "string" },
       appPath: { type: "string" },
       rounds: { type: "number" },
