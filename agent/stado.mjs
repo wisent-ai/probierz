@@ -614,7 +614,11 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
   lines.push('JOB_ROOT="$PWD"', "mkdir -p output work", 'export TMPDIR="$JOB_ROOT/work"');
-  lines.push('export PATH="$HOME/.cargo/bin:$PATH"');
+  lines.push(
+    'export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"',
+    'export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"',
+    'export PATH="$CARGO_HOME/bin:$PATH"',
+  );
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
     // so put homebrew on PATH first (stado and node live there on the mini).
