@@ -5,6 +5,7 @@ import { loadAppManifest } from '../../../agent/apps.mjs';
 
 const source = process.env.PROBIERZ_APP_SOURCE || loadAppManifest('stado-docs').repositories[0].root;
 const productSpecs = new Map([
+  ['cli-scoped-generation', 'tests/docs/cli-scoped-generation.probierz.spec.mjs'],
   ['cli-command-pages', 'tests/docs/cli-commands.probierz.spec.mjs'],
 ]);
 const journeys = (process.env.PROBIERZ_JOURNEYS || '').split(',').filter(Boolean);
