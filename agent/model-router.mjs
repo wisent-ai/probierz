@@ -71,18 +71,19 @@ function artifactFromResponse(payload, toolName) {
   };
 }
 
-export async function draftStructuredArtifact({ brief, toolName, description }) {
+export async function draftStructuredArtifact({ brief, toolName, description, model = process.env.PROBIERZ_MODEL ?? ROUTER_SELECTOR }) {
   if (typeof brief !== "string" || !brief.trim()) throw new Error("model-router brief is required");
   if (typeof toolName !== "string" || toolName.length > MAX_TOOL_NAME_CHARS || !TOOL_NAME.test(toolName)) {
     throw new Error("model-router tool name is invalid");
   }
   if (typeof description !== "string" || !description.trim()) throw new Error("model-router artifact description is required");
+  if (typeof model !== "string" || !model.trim()) throw new Error("PROBIERZ_MODEL must name a Brama model or selector");
 
   const endpoint = `${stadoModelRouterUrl()}/v1/chat/completions`;
   const agentId = requiredEnvironment("PROBIERZ_MODEL_AGENT_ID");
   const agentSecret = requiredEnvironment("PROBIERZ_MODEL_AGENT_SECRET");
   const body = JSON.stringify({
-    model: ROUTER_SELECTOR,
+    model: model.trim(),
     max_tokens: MAX_OUTPUT_TOKENS,
     temperature: Number("0.1"),
     messages: [

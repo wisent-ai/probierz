@@ -15,6 +15,7 @@ const productSpecs = new Map([
   ['native-build', 'tests/builds/probierz.spec.mjs'],
   ['platform-matrix', 'tests/platform-matrix/probierz.spec.mjs'],
   ['native-readers', 'tests/native_readers/probierz.spec.mjs'],
+  ['service-convergence', 'tests/service_convergence/probierz.spec.mjs'],
   ['apple-challenge-preparation', 'tests/apple_challenge/preparation.probierz.spec.mjs'],
 ]);
 const journeys = (process.env.PROBIERZ_JOURNEYS || '').split(',').filter(Boolean);
