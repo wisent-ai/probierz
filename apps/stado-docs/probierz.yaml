@@ -7,6 +7,10 @@ repositories:
     mappings:
       - paths:
           - scripts/generate-cli-docs.mjs
+          - tests/docs/cli-scoped-generation.probierz.spec.mjs
+        journeys: [cli-scoped-generation]
+      - paths:
+          - scripts/generate-cli-docs.mjs
           - src/content/cli-commands.json
           - src/pages/docs/**
           - tests/docs/cli-commands.probierz.spec.mjs
@@ -14,12 +18,16 @@ repositories:
 surfaces:
   tui:
     spec: stado-cli-docs.spec.mjs
-    journeys: [cli-command-pages]
+    journeys: [cli-scoped-generation, cli-command-pages]
 journeys:
+  cli-scoped-generation:
+    owner: Stado maintainers
+    timeoutMs: 180000
+    value: The real documentation generator refreshes a complete selected command tree from STADO_BIN, preserves unrelated pages, and refuses malformed or unknown paths without changing its output.
   cli-command-pages:
     owner: Stado maintainers
     timeoutMs: 600000
-    value: The public Stado CLI index links every generated command, and each route serves its documented invocation under its canonical URL.
+    value: The public Stado CLI index links every generated command, and each route serves its documented invocation and options under its canonical URL.
 artifacts:
   retain:
     pullRequestDays: 14
