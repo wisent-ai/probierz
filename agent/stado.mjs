@@ -91,7 +91,7 @@ function conservativeWatchBudget(appId) {
 function legacyWatchBudget(job, hostDef) {
   const directory = mkdtempSync(workPath("watch-contract-"));
   const options = {
-    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    env: process.env,
   };
   try {
     const file = path.join(directory, "job.json");
@@ -233,13 +233,12 @@ function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\"'\"'")}'`;
 }
 
-function dedicatedStadoHost({ host, target, consumer, platform, description, apiUrl = null }) {
+function dedicatedStadoHost({ host, target, consumer, platform, description }) {
   return {
     host,
     kind: "stado",
     platform,
     target,
-    ...(apiUrl ? { apiUrl } : {}),
     request: {
       provider: "local",
       pin_to_provider: true,
@@ -262,7 +261,7 @@ export function listHosts() {
     { host: "stado:local", kind: "stado", request: { provider: "local", pin_to_provider: true }, description: "stado queue, local-kind consumers only" },
     dedicatedStadoHost({ host: "stado:mini", target: "charless-mac-mini", consumer: "local-charless-mac-mini.local", platform: "darwin", description: "stado queue, dedicated Mac mini consumer" }),
     dedicatedStadoHost({ host: "stado:ubuntu", target: "ubuntu-server-rtx-pro-6000", consumer: "local-ubuntu-server", platform: "linux", description: "stado queue, dedicated Ubuntu consumer" }),
-    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", consumer: "local-lukaszs-macbook-pro-5485.local", platform: "darwin", apiUrl: "http://127.0.0.1:18765", description: "stado queue, dedicated MacBook consumer" }),
+    dedicatedStadoHost({ host: "stado:macbook", target: "lukasz-macbook", consumer: "local-lukaszs-macbook-pro-5485.local", platform: "darwin", description: "stado queue, dedicated MacBook consumer" }),
     { host: "stado:t4", kind: "stado", request: { gpu_type: "nvidia-tesla-t4" }, description: "stado queue, nvidia-tesla-t4 capacity" },
   ];
 }
@@ -329,7 +328,7 @@ function requireGuiReady(hostDef, target) {
   }
   const started = Date.now();
   const status = sh(STADO_BIN, ["host", "gui-automation", "status", hostDef.target], {
-    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    env: process.env,
     timeout: GUI_STATUS_CALL_TIMEOUT_MS,
   });
   if (status.error?.code === "ETIMEDOUT") {
@@ -615,6 +614,11 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
   lines.push('JOB_ROOT="$PWD"', "mkdir -p output work", 'export TMPDIR="$JOB_ROOT/work"');
+  lines.push(
+    'export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"',
+    'export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"',
+    'export PATH="$CARGO_HOME/bin:$PATH"',
+  );
   if (platform === "darwin") {
     // macOS runner: jobs spawned by the stado agent get a bare /bin/sh PATH,
     // so put homebrew on PATH first (stado and node live there on the mini).
@@ -681,9 +685,8 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
       `readonly PROBIERZ_CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/${targetPrefix}target"`,
       'export CARGO_TARGET_DIR="$PROBIERZ_CARGO_TARGET_DIR"',
       'trap \'rm -rf -- "$PROBIERZ_CARGO_TARGET_DIR"\' EXIT',
-      "export PATH=\"$HOME/.cargo/bin:$PATH\"",
       "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
-      `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bin ${shellQuote(provision.binary || provision.appId)})`,
+      `(cd "$PROBIERZ_APP_SOURCE/${manifestDir}" && cargo build --locked --release --bins)`,
       `export TUI_CMD="$JOB_ROOT/work/${provision.appId}/${targetPrefix}target/release/${provision.binary || provision.appId}"`,
     );
   }
@@ -702,7 +705,6 @@ function runScript({ target, appId, spec, provision, hash, platform = null, mode
     );
     if (needsStadoDesktopCli(target, provision)) {
       lines.push(
-        "export PATH=\"$HOME/.cargo/bin:$PATH\"",
         "command -v cargo >/dev/null 2>&1 || { curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal; }",
         'export CARGO_TARGET_DIR="$PROBIERZ_APP_SOURCE/stado-rs/target"',
         '(cd "$PROBIERZ_APP_SOURCE/stado-rs" && cargo build --locked --bin stado)',
@@ -848,7 +850,7 @@ function submitMachine(hostDef, hash, kind, inputObjects, secretEnv = {}, reques
   writeFileSync(requestFile, JSON.stringify(request));
   console.error(`probierz-remote-request ${JSON.stringify({ requestId: request.client_request_id, requestFile })}`);
   const submit = sh(STADO_BIN, ["machine", "submit", "--request-file", requestFile], {
-    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    env: process.env,
   });
   writeFileSync(path.join(receiptDir, "submission.json"), JSON.stringify({
     status: submit.status,
@@ -915,7 +917,7 @@ async function watchJob(jobId, hostDef, requestedWatchBudgetMs = null) {
   let lastPollAnswered = false;
   while (Date.now() < deadline) {
     const out = sh(STADO_BIN, ["machine", "status", jobId], {
-      env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      env: process.env,
       timeout: Math.max(Number("1"), Math.min(STATUS_CALL_TIMEOUT_MS, deadline - Date.now())),
     });
     let payload = null;
@@ -1269,7 +1271,7 @@ function fetchRunEvidence(jobId, hostDef) {
   let committed = false;
   try {
     const downloaded = sh(STADO_BIN, ["machine", "artifacts", jobId, "--output-dir", stagingDir], {
-      env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      env: process.env,
     });
     let payload;
     try {
@@ -1507,7 +1509,7 @@ export function collectRemoteRun({ jobId, appId, host = "stado:mini" }) {
   }
   loadAppManifest(appId);
   const status = sh(STADO_BIN, ["machine", "status", jobId], {
-    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    env: process.env,
     timeout: STATUS_CALL_TIMEOUT_MS,
   });
   if (status.status !== Number("0")) {
@@ -1585,7 +1587,7 @@ function captureRemoteLogs(jobId, hostDef, directory) {
   let cursor = Number("0");
   while (true) {
     const page = sh(STADO_BIN, ["machine", "logs", jobId, "--cursor", String(cursor), "--limit", "65536"], {
-      env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+      env: process.env,
       timeout: STATUS_CALL_TIMEOUT_MS,
     });
     appendFileSync(receiptPath, `${page.stdout.trim()}\n`);
@@ -1667,7 +1669,7 @@ export function cancelRemoteRun({ jobId, host = "stado:any", reason }) {
     requestedAt: requestedAt.toISOString(),
   }, null, Number("2"))}\n`);
   const options = {
-    env: hostDef.apiUrl ? { ...process.env, STADO_API_URL: hostDef.apiUrl } : process.env,
+    env: process.env,
     timeout: STATUS_CALL_TIMEOUT_MS,
   };
   const before = sh(STADO_BIN, ["machine", "status", jobId], options);
