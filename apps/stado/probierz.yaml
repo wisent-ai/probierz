@@ -112,6 +112,10 @@ surfaces:
         journeys: [service-convergence]
       - when: {PROBIERZ_JOURNEY: apple-challenge-preparation}
         journeys: [apple-challenge-preparation]
+      - when: {PROBIERZ_JOURNEY: cli-release-qualification}
+        journeys: [host-dynamic-capacity, run-retention, disk-cleanup, native-build, release-pipeline, service-convergence]
+      - when: {PROBIERZ_JOURNEY: darwin-release-qualification}
+        journeys: [host-dynamic-capacity, run-retention, disk-cleanup, native-build, release-pipeline, service-convergence, native-readers]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23/stado-rs/target/release/stado
   desktop:cua:
