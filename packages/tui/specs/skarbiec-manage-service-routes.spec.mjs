@@ -173,6 +173,7 @@ try {
   assert.deepEqual(help.commands, [
     'routes list [<consumer>]',
     'routes add --resource <resource> --item <item> --field <field> --reason <text>',
+    'routes reconcile',
     'routes verify [<consumer>]',
   ]);
 
@@ -217,8 +218,20 @@ try {
     field: 'username',
     backup: null,
   });
+  // Every row names the item, the field, and the item's stable identity —
+  // the part that survives a local rename. The identity is opaque, so it is
+  // checked for shape here and dropped from the comparisons below rather
+  // than pinned to a value no fixture can predict.
+  const routeRows = async () => {
+    const table = JSON.parse((await readFile(routesTable)).toString('utf8'));
+    return Object.fromEntries(Object.entries(table).map(([resource, row]) => {
+      assert.match(row.item_uid, /^[0-9a-f]{32}$/, `route ${resource} has no stable item identity`);
+      assert.deepEqual(Object.keys(row).sort(), ['field', 'item', 'item_uid']);
+      return [resource, { item: row.item, field: row.field }];
+    }));
+  };
   const tableAfterFirstAdd = await readFile(routesTable);
-  assert.deepEqual(JSON.parse(tableAfterFirstAdd.toString('utf8')), {
+  assert.deepEqual(await routeRows(), {
     [emailResource]: { item: loginItem, field: 'username' },
   });
   const besideAfterFirstAdd = await lines(besideJournal);
@@ -272,7 +285,7 @@ try {
   );
   // Idempotent in the sense that matters: the route already there is untouched.
   const tableAfterSecondAdd = await readFile(routesTable);
-  assert.deepEqual(JSON.parse(tableAfterSecondAdd.toString('utf8')), {
+  assert.deepEqual(await routeRows(), {
     [emailResource]: { item: loginItem, field: 'username' },
     [passwordResource]: { item: loginItem, field: 'password' },
   });
