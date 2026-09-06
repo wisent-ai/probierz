@@ -610,7 +610,7 @@ function upload(localFile, name) {
   throw remoteFailure("stado.upload", `Uploading ${name} to the stado object store failed`, { ...out, stderr: `${out.stderr} (source ${localFile}, ${UPLOAD_ATTEMPTS} attempts)` });
 }
 
-function runScript({ target, appId, spec, provision, hash, platform = "linux", mode = "run", author = null, modelRouterUrl = null, record = false, environment = [] }) {
+function runScript({ target, appId, spec, provision, hash, platform = null, mode = "run", author = null, modelRouterUrl = null, record = false, environment = [] }) {
   // Remote jobs may receive secret_env values. Shell xtrace would copy any
   // expanded bearer into the canonical Stado command log.
   const lines = ["set -euo pipefail"];
@@ -624,11 +624,35 @@ function runScript({ target, appId, spec, provision, hash, platform = "linux", m
       "export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH",
       `command -v node >/dev/null 2>&1 || { curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.gz -o "$TMPDIR/node.tar.gz" && tar -xzf "$TMPDIR/node.tar.gz" -C "$TMPDIR" && export PATH="$TMPDIR/node-${NODE_VERSION}-darwin-arm64/bin:$PATH"; }`,
     );
-  } else {
+  } else if (platform === "linux") {
     lines.push(
       `curl -fsSL https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz -o "$TMPDIR/node.tar.xz"`,
       'tar -xJf "$TMPDIR/node.tar.xz" -C "$TMPDIR"',
       `export PATH="$TMPDIR/node-${NODE_VERSION}-linux-x64/bin:$PATH"`,
+    );
+  } else {
+    // Generic selectors can land on either supported worker family. Resolve
+    // the archive coordinate on the worker rather than assuming Linux x64.
+    lines.push(
+      'readonly PROBIERZ_WORKER_OS="$(uname -s)"',
+      'readonly PROBIERZ_WORKER_ARCH="$(uname -m)"',
+      'case "$PROBIERZ_WORKER_OS:$PROBIERZ_WORKER_ARCH" in',
+      '  Darwin:arm64) PROBIERZ_NODE_PLATFORM=darwin-arm64; PROBIERZ_NODE_EXTENSION=tar.gz ;;',
+      '  Darwin:x86_64) PROBIERZ_NODE_PLATFORM=darwin-x64; PROBIERZ_NODE_EXTENSION=tar.gz ;;',
+      '  Linux:aarch64|Linux:arm64) PROBIERZ_NODE_PLATFORM=linux-arm64; PROBIERZ_NODE_EXTENSION=tar.xz ;;',
+      '  Linux:x86_64|Linux:amd64) PROBIERZ_NODE_PLATFORM=linux-x64; PROBIERZ_NODE_EXTENSION=tar.xz ;;',
+      '  *) printf \'Unsupported Stado worker OS/architecture: %s/%s (supported: Darwin or Linux on arm64 or x64)\\n\' "$PROBIERZ_WORKER_OS" "$PROBIERZ_WORKER_ARCH" >&2; exit 1 ;;',
+      "esac",
+      'if [ "$PROBIERZ_WORKER_OS" = Darwin ]; then export PATH=$HOME/.stado/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH; fi',
+      "if ! command -v node >/dev/null 2>&1; then",
+      `  PROBIERZ_NODE_ARCHIVE="node-${NODE_VERSION}-$PROBIERZ_NODE_PLATFORM.$PROBIERZ_NODE_EXTENSION"`,
+      `  curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/$PROBIERZ_NODE_ARCHIVE" -o "$TMPDIR/$PROBIERZ_NODE_ARCHIVE"`,
+      '  case "$PROBIERZ_NODE_EXTENSION" in',
+      '    tar.gz) tar -xzf "$TMPDIR/$PROBIERZ_NODE_ARCHIVE" -C "$TMPDIR" ;;',
+      '    tar.xz) tar -xJf "$TMPDIR/$PROBIERZ_NODE_ARCHIVE" -C "$TMPDIR" ;;',
+      "  esac",
+      `  export PATH="$TMPDIR/node-${NODE_VERSION}-$PROBIERZ_NODE_PLATFORM/bin:$PATH"`,
+      "fi",
     );
   }
   lines.push(
