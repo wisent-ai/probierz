@@ -2,12 +2,31 @@
   "schema_version": 1,
   "product_id": "probierz",
   "journey_id": "first-use",
-  "journey_version": "2026-09-03.1",
-  "entry_screen_id": "choose-one-journey",
+  "journey_version": "2026-09-03.2",
+  "entry_screen_id": "adopt-existing-project",
   "first_success_fact": "passing_quality_evidence_written",
   "published_at": "2026-09-03T00:00:00Z",
-  "source_revision": "probierz-first-use-2026-09-03.1",
+  "source_revision": "probierz-first-use-2026-09-03.2",
   "screens": [
+    {
+      "screen_id": "adopt-existing-project",
+      "screen_kind": "import",
+      "title_key": "probierz.first_use.adopt.title",
+      "body_key": "probierz.first_use.adopt.body",
+      "required": false,
+      "actions": ["import", "skip"],
+      "transitions": [
+        {
+          "next_screen_id": "choose-one-journey",
+          "reason_code": "project_adopted_or_skipped",
+          "priority": 10
+        }
+      ],
+      "presentation": {
+        "title": "Bring your existing Probierz project",
+        "body": "Choose another Probierz repository to adopt its validated apps/<appId>/probierz.yaml manifests and established package spec directories. Probierz preserves the definitions, reports every conflict, and does not run a journey. Skip keeps this project empty and usable."
+      }
+    },
     {
       "screen_id": "choose-one-journey",
       "screen_kind": "explanation",

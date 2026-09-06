@@ -26,7 +26,7 @@ function requireValue(condition, message) {
   if (!condition) throw new Error(`invalid app manifest: ${message}`);
 }
 
-function validateManifest(document, file) {
+export function validateManifest(document, file) {
   requireValue(document && typeof document === "object", `${file} is not an object`);
   requireValue(document.schemaVersion === 1, `${file} schemaVersion must be 1`);
   requireValue(typeof document.appId === "string" && document.appId.length > 0, `${file} appId is required`);
@@ -252,6 +252,13 @@ export function affectedAppJourneys(files, manifests = loadAppManifests()) {
 }
 
 export function surfaceJourneys(surface, environment = {}) {
+  const selected = String(environment.PROBIERZ_JOURNEY ?? "").trim();
+  if (selected) {
+    const declared = surface?.journeys?.includes(selected)
+      || surface?.journeyOverrides?.some((override) => override.journeys.includes(selected));
+    if (!declared) throw new Error(`PROBIERZ_JOURNEY ${selected} is not declared for this surface`);
+    return [selected];
+  }
   for (const override of surface?.journeyOverrides || []) {
     const matches = Object.entries(override.when || {}).every(
       ([name, value]) => String(environment[name] ?? "") === String(value),

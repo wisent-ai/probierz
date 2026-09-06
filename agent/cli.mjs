@@ -40,12 +40,14 @@ import { appStatus, renderAppStatus } from "./status.mjs";
 import { prepushGate } from "./prepush-gate.mjs";
 import { authorSpec } from "./author-spec.mjs";
 import { authorManifest } from "./author-manifest.mjs";
-import { listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
+import { cancelRemoteRun, listHosts, resumeRemoteRun, collectRemoteRun, submitRemoteRun, submitRemoteAuthor, submitRemoteSeo } from "./stado.mjs";
 import { overview, renderOverview } from "./overview.mjs";
 import { EXIT_RETRY, reportBoundaryFailure } from "./failure.mjs";
 import { evaluateFigure } from "./figure-evaluate.mjs";
 import { evaluateSeo } from "./seo-evaluate.mjs";
 import { runOnboarding } from "./onboarding.mjs";
+import { adoptProject, listProjectAdoptions } from "./project-adoption.mjs";
+import { startLocalAPI } from "./local-api.mjs";
 import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,7 +62,10 @@ function usage() {
   process.stderr.write(
     [
       "usage:",
-      "  probierz onboarding [--reset]  show the first-run walkthrough; reset recorded progress and evidence to replay",
+      "  probierz onboarding [--reset] [--source <repository>] [--replace]  show first-run guidance and optionally adopt existing definitions without running them",
+      "  probierz project adopt --source <repository> [--replace]  validate and persist existing Probierz manifests and specs without running them",
+      "  probierz project adoptions  list durable project-adoption source identities",
+      "  probierz serve [--port N]  loopback API used by Probierz Desktop",
       "  probierz list                 every test surface + run script",
       "  probierz apps                 registered products, targets, and journeys",
       "  probierz app <appId>          validated product manifest",
@@ -70,15 +75,16 @@ function usage() {
       "  probierz history [appId] [target] [--limit N]  stability by run, journey, and test",
       "  probierz dashboard <appId> [limit]  product/version/journey evidence projection",
       "  probierz status <appId> [--base ref] [--text]  journey coverage, freshness vs HEAD, and merge eligibility (exit 1 when blocked)",
-      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  draft through the authenticated Stado model router, verify with a real run, keep it green",
+      "  probierz author-spec <appId> <journey> --target <t> --desc <goal> [--area name] [--base-url u | --app-path p] [--paths glob] [--rounds N] [--dry-run]  verify a product-owned tests/<area>/<journey>.probierz.spec.* and register its toolkit symlink",
       "  probierz author-manifest <appId> --desc <what> --repo <path> --target <t> [--base-url u | --app-path p] [--owner s] [--specs] [--dry-run]  draft through the authenticated Stado model router, then optionally cover every journey",
       "  probierz hosts              run hosts: local and stado providers",
       "  probierz overview [appId...] [--text]  unified status: journeys + merge eligibility + violations + stado fleet health",
-      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
+      "  probierz stado run <target> --app <id> [--spec f] [--record] [--host stado:gcp|azure|aws|any|spot|mini|ubuntu|macbook] [--app-binary-path f --app-repo p | --cargo-release --app-repo p --binary b [--cargo-manifest p] | --app-bundle-path p --app-repo p | --node-source --app-repo p [--script apps/<id>/remote/x.sh]] [--env K=V ...] [--no-watch]  run a target on a chosen stado host, evidence lands back in test-results",
       "  probierz stado collect <job-id> --app <id> [--host stado:mini]  collect an existing job's retained evidence without submitting or rerunning it",
       "  probierz stado resume <jobId> [--host stado:any]  resume watching an existing run and recover its original evidence without submitting work",
+      "  probierz stado cancel <jobId> --host <host> --reason <reason>  cancel the original Stado job and retain its receipt, logs, identity, and available evidence",
       "  probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [--mode pull-request|release|nightly|production] [--policy json] [--brief json] [--production-evidence json] [--agent-id id] [--host stado:mini] [--no-watch]  execute the complete SEO evaluator on a Stado-selected dedicated host",
-      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--host h] [--app-path p | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped model credentials; the accepted spec + manifest land back here",
+      "  probierz stado author <appId> <journey> --target <t> --desc <d> [--area name] [--host h] [--app-path p | --app-binary-path f --app-repo r | --cargo-release --binary b --app-repo r [--cargo-manifest p] | --app-bundle-path p --app-repo r] [--no-watch]  author on a Stado host with scoped credentials and return the accepted product file to the submitting checkout",
       "  probierz matrix <appId> <nightly|release> [--plan] [--release id] [KEY=VALUE...]",
       "  probierz protect <appId> <runId> [kind] --key-file <path> [--remove-source]",
       "  probierz restore <bundle> <destination> --key-file <path>",
@@ -119,6 +125,38 @@ function configError(message) {
   return error;
 }
 
+function parseProjectAdoptArgs(args) {
+  let sourceRoot;
+  let replace = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--replace") replace = true;
+    else if (arg === "--source") {
+      sourceRoot = args[index + 1];
+      if (!sourceRoot || sourceRoot.startsWith("--")) throw configError("--source needs a repository path");
+      index += 1;
+    } else {
+      throw configError(arg.startsWith("--") ? `unknown project adoption option: ${arg}` : `unexpected project adoption argument: ${arg}`);
+    }
+  }
+  if (!sourceRoot) throw configError("project adopt needs --source <repository>");
+  return { sourceRoot, replace };
+}
+
+function parseServeArgs(args) {
+  let port = 0;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg !== "--port") throw configError(`unknown serve option: ${arg}`);
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith("--")) throw configError("--port needs a number");
+    port = Number(value);
+    if (!Number.isInteger(port) || port < 0 || port > 65535) throw configError("--port needs an integer from 0 through 65535");
+    index += 1;
+  }
+  return { port };
+}
+
 /**
  * A completed run and an accepted asynchronous submission are both successful
  * CLI outcomes. Terminal and infrastructure failures keep the bridge's
@@ -147,6 +185,41 @@ function validateAuthorOptions(args, { positionalCount, valueFlags, booleanFlags
     }
     throw configError(arg.startsWith("--") ? `unknown option: ${arg}` : `unexpected argument: ${arg}`);
   }
+}
+
+function selectRemoteProvision(args, appId, { allowInstalledTui = false, allowNodeSource = false } = {}) {
+  const value = (flag) => {
+    const index = args.indexOf(flag);
+    return index === -1 ? null : args[index + Number("1")];
+  };
+  const candidates = [
+    allowInstalledTui && args.includes("--app-path")
+      ? { flag: "--app-path", provision: { kind: "installed-tui", appId, path: value("--app-path") } }
+      : null,
+    args.includes("--app-binary-path")
+      ? { flag: "--app-binary-path", provision: { kind: "native-binary", appId, binaryPath: value("--app-binary-path") } }
+      : null,
+    args.includes("--cargo-release")
+      ? { flag: "--cargo-release", provision: { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" } }
+      : null,
+    args.includes("--app-bundle-path")
+      ? { flag: "--app-bundle-path", provision: { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") } }
+      : null,
+    allowNodeSource && args.includes("--node-source")
+      ? { flag: "--node-source", provision: { kind: "node-source", appId, script: value("--script") } }
+      : null,
+  ].filter(Boolean);
+  if (candidates.length > Number("1")) {
+    throw configError(`remote application provisioning options are mutually exclusive: ${candidates.map(({ flag }) => flag).join(", ")}`);
+  }
+  if ((args.includes("--binary") || args.includes("--cargo-manifest")) && !args.includes("--cargo-release")) {
+    throw configError("--binary and --cargo-manifest require --cargo-release");
+  }
+  const appRepo = value("--app-repo");
+  if (args.includes("--app-binary-path") && (!appRepo || appRepo.startsWith("--"))) {
+    throw configError("--app-binary-path requires --app-repo <path>");
+  }
+  return candidates[Number("0")]?.provision || null;
 }
 
 
@@ -292,7 +365,30 @@ async function main() {
     return;
   }
   if (cmd === "onboarding") {
-    runOnboarding(rest);
+    runOnboarding(rest, path.resolve(AGENT_DIR, ".."));
+    return;
+  }
+  if (cmd === "project") {
+    const operation = rest[0];
+    if (operation === "adopt") {
+      const result = adoptProject({
+        projectRoot: path.resolve(AGENT_DIR, ".."),
+        ...parseProjectAdoptArgs(rest.slice(1)),
+      });
+      out(result);
+      if (result.status === "conflict") process.exitCode = 1;
+      return;
+    }
+    if (operation === "adoptions") {
+      if (rest.length !== 1) throw configError("project adoptions accepts no options");
+      out(listProjectAdoptions({ projectRoot: path.resolve(AGENT_DIR, "..") }));
+      return;
+    }
+    throw configError("usage: probierz project adopt --source <repository> [--replace] | probierz project adoptions");
+  }
+  if (cmd === "serve") {
+    const { port } = parseServeArgs(rest);
+    await startLocalAPI({ projectRoot: path.resolve(AGENT_DIR, ".."), port });
     return;
   }
   if (cmd === "list") {
@@ -465,11 +561,32 @@ async function main() {
   }
   if (cmd === "stado") {
     const sub = rest[0];
-    if (!["run", "resume", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
+    if (!["run", "resume", "cancel", "author", "seo", "collect"].includes(sub)) throw configError("usage: probierz stado run <target> --app <id> [...] | probierz stado collect <job-id> --app <id> [...] | probierz stado resume <jobId> [--host h] | probierz stado cancel <jobId> --host <host> --reason <reason> | probierz stado author <appId> <journey> [...] | probierz stado seo <appId> --base-url <url> --primary-model <id> --secondary-model <id> --adjudicator-model <id> [...]");
     const value = (flag) => {
       const index = rest.indexOf(flag);
       return index >= 0 ? rest[index + 1] : undefined;
     };
+    if (sub === "cancel") {
+      validateAuthorOptions(rest, {
+        positionalCount: Number("2"),
+        valueFlags: ["--host", "--reason"],
+        booleanFlags: [],
+      });
+      const host = value("--host");
+      const reason = value("--reason");
+      if (!host) throw configError("stado cancel needs --host <host>");
+      if (!reason) throw configError("stado cancel needs --reason <reason>");
+      const result = cancelRemoteRun({
+        jobId: rest[1],
+        host,
+        reason,
+      });
+      out(result);
+      if (!result.cancellationSucceeded) {
+        remoteExit({ ...result, failure: result.cancellationFailure || result.failure });
+      }
+      return;
+    }
     if (sub === "collect") {
       const appId = value("--app");
       if (!appId) throw configError("stado collect needs --app <appId>");
@@ -495,7 +612,7 @@ async function main() {
     if (sub === "author") {
       validateAuthorOptions(rest, {
         positionalCount: Number("3"),
-        valueFlags: ["--target", "--desc", "--app-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
+        valueFlags: ["--target", "--desc", "--area", "--app-path", "--app-binary-path", "--app-bundle-path", "--app-repo", "--binary", "--cargo-manifest", "--host"],
         booleanFlags: ["--cargo-release", "--no-watch"],
       });
       const appId = rest[1];
@@ -507,21 +624,19 @@ async function main() {
       const desc = value("--desc");
       if (!target) throw configError("stado author needs --target <t>");
       if (!desc) throw configError("stado author needs --desc <journey goal>");
-      const provision = value("--app-path")
-        ? { kind: "installed-tui", appId, path: value("--app-path") }
-        : value("--app-bundle-path")
-          ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-          : rest.includes("--cargo-release")
-            ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-            : null;
-      if (target === "tui" && !["installed-tui", "cargo-release"].includes(provision?.kind)) {
-        throw configError("stado author --target tui needs --app-path <installed-command> or --cargo-release --app-repo <path> [--binary <name>]");
+      const provision = selectRemoteProvision(rest, appId, { allowInstalledTui: true });
+      if (provision?.kind === "native-binary" && target !== "tui") {
+        throw configError("--app-binary-path is supported only for remote TUI authoring");
+      }
+      if (target === "tui" && !["installed-tui", "native-binary", "cargo-release"].includes(provision?.kind)) {
+        throw configError("stado author --target tui needs --app-path <installed-command>, --app-binary-path <file> --app-repo <path>, or --cargo-release --app-repo <path> [--binary <name>]");
       }
       const result = await submitRemoteAuthor({
         appId,
         journey,
         target,
         desc,
+        area: value("--area") || journey,
         host: value("--host") || "stado:gcp",
         provision,
         appRepo: value("--app-repo") || null,
@@ -577,13 +692,14 @@ async function main() {
       environment.push([key, assignment.slice(equals + 1)]);
     }
     const scriptPath = value("--script") || null;
-    const provision = rest.includes("--cargo-release")
-      ? { kind: "cargo-release", appId, binary: value("--binary") || appId, manifestPath: value("--cargo-manifest") || "Cargo.toml" }
-      : value("--app-bundle-path")
-        ? { kind: "app-bundle", appId, bundlePath: value("--app-bundle-path") }
-        : rest.includes("--node-source")
-          ? { kind: "node-source", appId, script: scriptPath }
-          : null;
+    const appBinaryPath = value("--app-binary-path");
+    if (rest.includes("--app-binary-path") && (!appBinaryPath || appBinaryPath.startsWith("--"))) {
+      throw configError("--app-binary-path needs a value");
+    }
+    if (appBinaryPath && target !== "tui") {
+      throw configError("--app-binary-path is supported only for remote TUI runs");
+    }
+    const provision = selectRemoteProvision(rest, appId, { allowNodeSource: true });
     if (scriptPath && provision?.kind !== "node-source") {
       throw configError("--script requires --node-source (custom app jobs run from app sources)");
     }
@@ -645,7 +761,7 @@ async function main() {
   if (cmd === "author-spec") {
     validateAuthorOptions(rest, {
       positionalCount: Number("2"),
-      valueFlags: ["--desc", "--target", "--paths", "--base-url", "--app-path", "--rounds"],
+      valueFlags: ["--desc", "--target", "--area", "--paths", "--base-url", "--app-path", "--rounds"],
       booleanFlags: ["--dry-run"],
     });
     const appId = rest[0];
@@ -673,6 +789,7 @@ async function main() {
       journey,
       target,
       desc,
+      area: value("--area") || journey,
       baseUrl: value("--base-url") || null,
       appPath: value("--app-path") || null,
       mappingPaths,

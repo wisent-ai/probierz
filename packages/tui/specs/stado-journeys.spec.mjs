@@ -17,6 +17,7 @@ const productSpecs = new Map([
   ['native-readers', 'tests/native_readers/probierz.spec.mjs'],
   ['service-convergence', 'tests/service_convergence/probierz.spec.mjs'],
   ['apple-challenge-preparation', 'tests/apple_challenge/preparation.probierz.spec.mjs'],
+  ['apple-challenge-readiness', 'tests/apple_challenge/readiness.probierz.spec.mjs'],
 ]);
 const journeys = (process.env.PROBIERZ_JOURNEYS || '').split(',').filter(Boolean);
 assert.ok(journeys.length > 0, 'PROBIERZ_JOURNEYS must name the journeys selected by Probierz');

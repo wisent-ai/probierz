@@ -12,7 +12,7 @@ repositories:
           - stado-rs/tests/apple_challenge/**
           - stado-rs/src/dashboard/operator_auth.rs
           - stado-rs/src/dashboard/operator_console.rs
-        journeys: [apple-challenge-preparation]
+        journeys: [apple-challenge-preparation, apple-challenge-readiness]
       - paths:
           - desktop/StadoDesktop/tests/apple_challenge/**
           - desktop/StadoDesktop/Sources/Stado/FleetControlStore.swift
@@ -47,6 +47,9 @@ repositories:
           - stado-rs/src/providers/local/disk_cleanup/**
           - stado-rs/tests/cleanup/**
         journeys: [disk-cleanup]
+      - paths:
+          - stado-rs/tests/probierz-rust-journey.mjs
+        journeys: [host-dynamic-capacity, disk-cleanup]
       - paths:
           - stado-rs/src/cli/release_submit.rs
           - stado-rs/tests/ci-cd/**
@@ -116,6 +119,8 @@ surfaces:
         journeys: [host-dynamic-capacity, run-retention, disk-cleanup, native-build, release-pipeline, service-convergence]
       - when: {PROBIERZ_JOURNEY: darwin-release-qualification}
         journeys: [host-dynamic-capacity, run-retention, disk-cleanup, native-build, release-pipeline, service-convergence, native-readers]
+      - when: {PROBIERZ_JOURNEY: apple-challenge-readiness}
+        journeys: [apple-challenge-readiness]
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-native-release23/stado-rs/target/release/stado
   desktop:cua:
@@ -132,7 +137,7 @@ surfaces:
 journeys:
   host-dynamic-capacity:
     owner: Stado maintainers
-    timeoutMs: 600000
+    timeoutMs: 5100000
     value: A host reports live resources without fixed slots, registry writes remove retired caps, and a real worker admits two concurrent jobs despite legacy limits of one and records both completions.
   run-retention:
     owner: Stado maintainers
@@ -140,7 +145,7 @@ journeys:
     value: The coordinator retains and reaps a migrated terminal result, preserves settled cancellation history after its run manifest is removed, and refuses missing history for an unretired transition.
   disk-cleanup:
     owner: Stado maintainers
-    timeoutMs: 600000
+    timeoutMs: 5100000
     value: The disk janitor previews without mutation, enforces only tagged-cache deletion, preserves recovery state through live locks, resumes after predecessor lock release, and refuses contradictory watch modes.
   release-pipeline:
     owner: Stado maintainers
@@ -173,6 +178,15 @@ journeys:
       platform: The selected Stado target must be a real Darwin ARM64 host.
       host: STADO_APPLE_PREPARATION_HOST must explicitly name that target; there is no default or simulated substitute.
       safety: The journey must not start Apple sign-in, CuaDriver, a browser, or notifications.
+  apple-challenge-readiness:
+    owner: Stado maintainers
+    timeoutMs: 900000
+    description: Read the registered Apple helper's real file, Accessibility, and prompt-free preflight state without preparing it or repeating a prior mutation.
+    value: A source-bound Stado command observes the existing helper in its declared Aqua session; the retained command and output distinguish ready state, refusal, timeout, and interrupted evidence.
+    prerequisites:
+      platform: The selected Stado target must be a real Darwin ARM64 host.
+      host: STADO_APPLE_PREPARATION_HOST explicitly names the registered Apple host.
+      safety: No preparation, Apple sign-in, consent window, notification, browser, or CuaDriver launch is permitted.
   apple-challenge-desktop:
     owner: Stado maintainers
     timeoutMs: 900000
