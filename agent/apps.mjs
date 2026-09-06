@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { parse } from "yaml";
+import { CODE, FailureError } from "./failure.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const APPS_ROOT = path.resolve(HERE, "..", "apps");
@@ -256,14 +257,18 @@ export function surfaceJourneys(surface, environment = {}) {
   if (selected) {
     const declared = surface?.journeys?.includes(selected)
       || surface?.journeyOverrides?.some((override) => override.journeys.includes(selected));
-    if (!declared) throw new Error(`PROBIERZ_JOURNEY ${selected} is not declared for this surface`);
-    return [selected];
+    if (declared) return [selected];
   }
   for (const override of surface?.journeyOverrides || []) {
+    if (selected && !Object.hasOwn(override.when || {}, "PROBIERZ_JOURNEY")) continue;
     const matches = Object.entries(override.when || {}).every(
       ([name, value]) => String(environment[name] ?? "") === String(value),
     );
     if (matches) return override.journeys;
+  }
+  if (selected) {
+    const detail = `PROBIERZ_JOURNEY ${selected} is not declared for this surface`;
+    throw new FailureError({ point: "apps.journeys", code: CODE.CONFIG, detail, message: detail });
   }
   return surface?.journeys || [];
 }

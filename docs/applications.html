@@ -26,7 +26,8 @@ journeys:
 <ul><li><code>env</code> — a <code>{TARGET_NAME: SOURCE_NAME}</code> map that forwards an existing</li></ul>
 <p>variable under the name the suite expects.</p>
 <ul><li><code>journeyOverrides</code> — <code>[{when: {VAR: value}, journeys: [...]}]</code>; the</li></ul>
-<p>first override whose <code>when</code> conditions all match the run environment replaces the journey list for that run.</p>
+<p>An explicit <code>PROBIERZ_JOURNEY</code> naming one declared journey selects only that journey, even when another environment condition matches a broader override. A value declared instead as a <code>journeyOverrides.when.PROBIERZ_JOURNEY</code> selector selects that override's complete journey list when all its conditions match.</p>
+<p>Without an explicit journey, the first override whose <code>when</code> conditions all match the run environment replaces the default list. An unknown selector, or a named selector whose additional conditions do not match, is a configuration refusal before remote source upload or job submission: <code>PROBIERZ_JOURNEY &lt;value&gt; is not declared for this surface</code>. An unrelated matching override cannot make an unknown selector valid.</p>
 <ul><li><code>journeys</code> — every journey with an <code>owner</code> and a positive <code>timeoutMs</code>.</li></ul>
 <h2>Optional blocks</h2>
 <ul><li><code>productId</code> — the stable central product identifier; required when any</li></ul>
