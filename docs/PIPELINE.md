@@ -15,12 +15,13 @@ commit → hooki Tama (write-time) → find-violations/clean (hygiene)
 | Co | Komenda |
 |----|---------|
 | Audyt repo pod reguły | `node hooks-rotator/src/cli.mjs find-violations --repo <path> [--tree dir] [--owner gh] [--me] [--json]` |
-| Naprawa przez agenta | `node hooks-rotator/src/cli.mjs clean --repo <path> [--model codex|kimi] [--dry-run]` |
+| Naprawa przez agenta | `node hooks-rotator/src/cli.mjs clean --repo <path> [--dry-run]` |
 | Pokrycie journeys apki | `probierz status <appId> [--text]` |
 | Całość naraz | `probierz overview [--text]` |
-| Autonomiczny manifest | `probierz author-manifest <appId> --desc <co robi> --repo <path> --target <t> --specs` |
-| Autonomiczny spec | `probierz author-spec <appId> <journey> --target <t> --desc <cel>` |
+| Autonomiczny manifest przez Stado model router | `probierz author-manifest <appId> --desc <co robi> --repo <path> --target <t> --specs` |
+| Autonomiczny spec przez Stado model router | `probierz author-spec <appId> <journey> --target <t> --desc <cel>` |
 | Zdalny run | `probierz stado run <target> --app <id> --host stado:gcp|azure|aws|any|spot|local|t4` |
+| Zdalne authoring | `probierz stado author <appId> <journey> --target <t> --desc <cel> --host stado:mini` |
 | Flota | `probierz hosts`, `wc status`, `deploy/stado-up.sh <target>` |
 
 ## Gate: instalacja i tryby
@@ -40,7 +41,13 @@ Naprawa: `deploy/stado-up.sh <target>` (lokalny agent przez launchd, logi `~/.st
 
 **Konfiguracja stado** — `stado.config.json` (`wc config init|show|validate`): backend stanu (`gcs|azure|s3|local`), providerzy, regiony, projekt. Kolejność: env > plik > default.
 
-**Rejestr floty** — `gs://wisent-compute/registry.json` (targets: kind local/gcp, hostnames znormalizowane lowercase, slots, opcjonalnie disk_cleanup z `mode: off`).
+**Router authoringu** — lokalne `author-spec` i `author-manifest` wymagają
+`STADO_MODEL_ROUTER_URL` (HTTPS albo HTTP loopback) oraz osobnego
+`STADO_MODEL_ROUTER_TOKEN`. Nie ma backendu CLI ani credentiali providera.
+Zdalne `stado author` przekazuje tylko zwalidowany URL, a token jest
+materializowany przez Stado z referencji `probierz-model-router` / `token`.
+
+**Rejestr floty** — `stado://probierz/registry.json` (targets: kind local/gcp, hostnames znormalizowane lowercase, slots, opcjonalnie disk_cleanup z `mode: off`).
 
 ## Nightly
 
@@ -49,5 +56,5 @@ Naprawa: `deploy/stado-up.sh <target>` (lokalny agent przez launchd, logi `~/.st
 ## Stan na 2026-07-24
 
 - Gate zainstalowany: tama-desktop, oko, skarbiec, jeden, hooks-rotator.
-- Agent lokalny: `lukasz-macbook` (launchd, broadcasting do `gs://stado/capacity/`).
+- Agent lokalny: `lukasz-macbook` (launchd, broadcasting do `stado://probierz/capacity/`).
 - Blockery: desktop:mac (Accessibility dla Mac2), oko backend (`OKO_E2E_*`), dispatch floty GPU (0 wolnych slotów lokalnie; spot+t4 w kolejce).
