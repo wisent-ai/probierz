@@ -131,6 +131,9 @@ Accepted arguments (parsed by the shared execution parser):
   --timeout <MS>        Give the suite this long before it is killed
   --resource-wait <MS>  Wait this long for a held resource before refusing
   --files <PATH>...     Changed files that select what runs (affected, ci)
+  --host <SELECTOR>     mobile:ios:byk-auth only: the fleet host its suite
+                        is placed on, from `probierz hosts`; default
+                        stado:mini
   --local               mobile:ios:byk-auth only: run its suite on this
                         machine instead of the dedicated host
   --seed-resend         mobile:ios:byk-auth only: seed the login mailbox's
@@ -169,6 +172,8 @@ struct RunArgs {
     tool: Option<String>,
     /// Run the byk-auth worker on this machine instead of the dedicated host.
     local: bool,
+    /// The fleet host the remote byk-auth suite is placed on.
+    host: Option<String>,
     /// Seed the login mailbox's resend source and stop, without a journey.
     seed_resend: bool,
 }
@@ -237,6 +242,7 @@ fn parse_run_args(args: &[String], allow_positionals: bool) -> Result<RunArgs, F
                 index += 1;
             }
             "--local" => opts.local = true,
+            "--host" => { opts.host = Some(value_after(args, index, arg)?); index += 1; }
             "--seed-resend" => opts.seed_resend = true,
             "--files" => {}
             _ if arg.starts_with("--") => {
@@ -2974,6 +2980,8 @@ struct RunOptions {
     env: BTreeMap<String, String>,
     /// Run the byk-auth suite on this machine instead of the dedicated host.
     local: bool,
+    /// The fleet host the remote byk-auth suite is placed on.
+    host_selector: String,
     record: bool,
     timeout_ms: u64,
     force: bool,
@@ -3410,8 +3418,20 @@ fn start_byk_broker(
 /// `local` decides where the XCUITest suite runs: on this machine's simulator,
 /// or on the dedicated host through the fleet. The mailbox side is identical
 /// either way, because there is only one login account.
+/// Which fleet host the remote suite is placed on: what the operator asked
+/// for, what the run environment declares, or the dedicated Mac otherwise.
+fn byk_host_selector(selector: Option<&str>, env: &BTreeMap<String, String>) -> String {
+    selector
+        .map(str::to_string)
+        .or_else(|| env.get("BYK_HOST_SELECTOR").cloned())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "stado:mini".to_string())
+}
+
 fn execute_byk(
     local: bool,
+    host_selector: &str,
     harness: &Path,
     env: &BTreeMap<String, String>,
     timeout_ms: u64,
@@ -3444,6 +3464,7 @@ fn execute_byk(
             suite_env.insert("BYK_TEST_EMAIL".into(), broker.recipient.clone());
             let outcome = execute_suite(
                 false,
+                host_selector,
                 harness,
                 "test:mobile:ios",
                 &suite_env,
@@ -3468,6 +3489,7 @@ fn execute_byk(
             ios_version: env.get("IOS_VERSION").map(String::as_str).unwrap_or(""),
             socket_path: &broker.socket_path,
             recipient: &broker.recipient,
+            host_selector,
         })
         .map_err(|error| error.detail)?;
         Ok(if outcome.signal.is_some() {
@@ -3521,9 +3543,10 @@ fn execute_byk(
 }
 
 fn execute_suite(
-    // Only `mobile:ios:byk-auth` reads this: run its suite here, not on the
-    // dedicated host.
+    // Only `mobile:ios:byk-auth` reads these: run its suite here rather than on
+    // the fleet, and which fleet host to place it on when it is remote.
     local: bool,
+    host_selector: &str,
     harness: &Path,
     script: &str,
     env: &BTreeMap<String, String>,
@@ -3538,6 +3561,7 @@ fn execute_suite(
     if target_name == "mobile:ios:byk-auth" {
         return execute_byk(
             local,
+            host_selector,
             harness,
             env,
             timeout_ms,
@@ -3995,6 +4019,7 @@ fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> Result<Value
     )?;
     let (exit_code, timed_out, out, err, performance, platform) = execute_suite(
         opts.local,
+        &opts.host_selector,
         harness,
         config.script,
         &env,
@@ -4200,13 +4225,14 @@ fn run_registered_surface(harness: &Path, name: &str, opts: &RunArgs) -> Answer 
         "PROBIERZ_REPORT_PATH".into(),
         report_path.to_string_lossy().into_owned(),
     );
+    // A registered journey is named by its title; an application-owned one is
+    // named by its absolute path, and a path must arrive whole.
     let filter = opts.spec.as_deref().map(|value| {
-        value
-            .rsplit('/')
-            .next()
-            .unwrap_or(value)
-            .strip_suffix(".spec.mjs")
-            .unwrap_or(value)
+        if value.contains('/') {
+            value
+        } else {
+            value.strip_suffix(".spec.mjs").unwrap_or(value)
+        }
     });
     let (report, code) = crate::specs::execute(
         name,
@@ -4248,6 +4274,7 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
         harness,
         name,
         RunOptions {
+            host_selector: byk_host_selector(opts.host.as_deref(), &opts.env),
             env: opts.env,
             local: opts.local,
             record: opts.record,
@@ -4392,6 +4419,7 @@ fn orchestrate(
             target,
             RunOptions {
                 local: false,
+                host_selector: byk_host_selector(None, &BTreeMap::new()),
                 env: opts.env.clone(),
                 record: opts.record,
                 timeout_ms: opts.timeout_ms,
@@ -4835,6 +4863,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             cell.get("target").and_then(Value::as_str).unwrap_or(""),
             RunOptions {
                 local: false,
+                host_selector: byk_host_selector(None, &BTreeMap::new()),
                 env: cell_env,
                 record: plan.get("record").and_then(Value::as_bool).unwrap_or(true),
                 timeout_ms: plan.get("timeoutMs").and_then(Value::as_u64).unwrap_or(0),

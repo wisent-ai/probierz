@@ -41,6 +41,27 @@ fn source_repository() -> TempDir {
     source
 }
 
+fn source_with_identical_definitions(source: &Path) -> TempDir {
+    let duplicate = tempfile::tempdir().expect("second source repository");
+    repository(duplicate.path());
+    for relative in [
+        "apps/example/probierz.yaml",
+        "packages/tui/tests/example.spec.mjs",
+        "packages/tui/tests/support.mjs",
+    ] {
+        let target = duplicate.path().join(relative);
+        fs::create_dir_all(target.parent().expect("definition parent"))
+            .expect("second source definition directory");
+        fs::copy(source.join(relative), &target).expect("copy identical source definition");
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&target, fs::metadata(source.join(relative)).unwrap().permissions())
+                .expect("copy source definition mode");
+        }
+    }
+    duplicate
+}
+
 fn destination_repository() -> TempDir {
     let destination = tempfile::tempdir().expect("temporary destination repository");
     repository(destination.path());
@@ -76,10 +97,29 @@ fn json_output(output: &Output) -> Value {
     })
 }
 
+fn assert_invocation_refused(root: &Path, arguments: &[&str], sentence: &str) {
+    let output = run(root, arguments);
+    assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(sentence),
+        "{arguments:?} did not report {sentence:?}:\n{stderr}"
+    );
+}
+
 #[test]
 fn project_adopt_persists_definitions_lists_identity_and_refuses_local_changes() {
     let destination = destination_repository();
     let source = source_repository();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(
+            source.path().join("packages/tui/tests/support.mjs"),
+            fs::Permissions::from_mode(0o751),
+        )
+        .expect("distinct source mode");
+    }
     let source_text = source.path().to_str().expect("UTF-8 source path");
 
     let adopted = run(
@@ -133,6 +173,22 @@ fn project_adopt_persists_definitions_lists_identity_and_refuses_local_changes()
         fs::read(destination.path().join("apps/.adoptions.json")).unwrap(),
         fs::read(source.path().join("apps/.adoptions.json")).unwrap()
     );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            fs::metadata(
+                destination
+                    .path()
+                    .join("packages/tui/tests/support.mjs")
+            )
+            .unwrap()
+            .permissions()
+            .mode()
+                & 0o777,
+            0o751
+        );
+    }
     assert!(!destination.path().join("test-results").exists());
 
     let index_file = destination.path().join("apps/.adoptions.json");
@@ -334,6 +390,85 @@ fn conflicts_are_atomic_and_reviewed_replacement_is_explicit() {
 }
 
 #[test]
+fn another_source_always_conflicts_even_when_every_definition_is_identical() {
+    let destination = destination_repository();
+    let first = source_repository();
+    let first_text = first.path().to_str().expect("UTF-8 first source");
+    let adopted = run(
+        destination.path(),
+        &["project", "adopt", "--source", first_text],
+    );
+    assert!(adopted.status.success());
+
+    let second = source_with_identical_definitions(first.path());
+    let second_text = second.path().to_str().expect("UTF-8 second source");
+    let refused = run(
+        destination.path(),
+        &[
+            "project",
+            "adopt",
+            "--source",
+            second_text,
+            "--replace",
+        ],
+    );
+    assert_eq!(refused.status.code(), Some(1));
+    assert!(refused.stderr.is_empty());
+    let refused = json_output(&refused);
+    assert_eq!(refused["status"], "conflict");
+    assert_eq!(refused["unchanged"], 0);
+    assert_eq!(refused["conflicting"], 3);
+    assert_eq!(refused["rejected"], 3);
+    assert!(refused["conflicts"]
+        .as_array()
+        .expect("complete conflict list")
+        .iter()
+        .all(|conflict| conflict["reason"] == "destination is owned by another adopted source"));
+
+    let listed = json_output(&run(destination.path(), &["project", "adoptions"]));
+    assert_eq!(listed["sources"].as_array().map(Vec::len), Some(1));
+    assert_eq!(
+        listed["sources"][0]["sourceRoot"],
+        fs::canonicalize(first.path())
+            .expect("canonical first source")
+            .to_string_lossy()
+            .as_ref()
+    );
+}
+
+#[test]
+fn documented_help_names_each_adoption_argument() {
+    let root = destination_repository();
+    let onboarding = run(root.path(), &["onboarding", "--help"]);
+    assert!(onboarding.status.success());
+    let onboarding = String::from_utf8_lossy(&onboarding.stdout);
+    for value in ["--reset", "--source <repository>", "--replace", "--json"] {
+        assert!(onboarding.contains(value), "missing {value}:\n{onboarding}");
+    }
+
+    let project = run(root.path(), &["project", "--help"]);
+    assert!(project.status.success());
+    let project = String::from_utf8_lossy(&project.stdout);
+    assert!(project.contains("Usage: probierz project [OPTIONS] <COMMAND>"));
+    assert!(project.contains("adopt"));
+    assert!(project.contains("adoptions"));
+
+    let adopt = run(root.path(), &["project", "adopt", "--help"]);
+    assert!(adopt.status.success());
+    let adopt = String::from_utf8_lossy(&adopt.stdout);
+    assert!(adopt.contains(
+        "Usage: probierz project adopt --source <repository> [--replace]"
+    ));
+    assert!(adopt.contains("--source <repository>"));
+    assert!(adopt.contains("--replace"));
+
+    let adoptions = run(root.path(), &["project", "adoptions", "--help"]);
+    assert!(adoptions.status.success());
+    assert!(String::from_utf8_lossy(&adoptions.stdout)
+        .contains("Usage: probierz project adoptions"));
+}
+
+#[test]
 fn invalid_selections_and_cli_shapes_are_refused_before_mutation() {
     let destination = destination_repository();
     let not_repository = tempfile::tempdir().expect("non-repository directory");
@@ -413,12 +548,55 @@ fn invalid_selections_and_cli_shapes_are_refused_before_mutation() {
         assert!(!destination.path().join("apps/example").exists());
     }
 
-    let missing_source = run(destination.path(), &["project", "adopt"]);
-    assert_eq!(missing_source.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&missing_source.stderr).contains("--source <repository>"));
-
-    let extra_list_input = run(destination.path(), &["project", "adoptions", "extra"]);
-    assert_eq!(extra_list_input.status.code(), Some(2));
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "adopt"],
+        "project adopt needs --source <repository>",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "adoptions", "extra"],
+        "project adoptions accepts no options",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project"],
+        "Usage: probierz project [OPTIONS] <COMMAND>",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "unknown"],
+        "Usage: probierz project [OPTIONS] <COMMAND>",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "adopt", "--source"],
+        "a value is required for '--source <repository>'",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "adopt", "--unknown"],
+        "unknown project adoption option: --unknown",
+    );
+    assert_invocation_refused(
+        destination.path(),
+        &["project", "adopt", "unexpected"],
+        "unexpected project adoption argument: unexpected",
+    );
+    let valid_source = source_repository();
+    let valid_source = valid_source.path().to_str().expect("UTF-8 valid source");
+    assert_invocation_refused(
+        destination.path(),
+        &[
+            "project",
+            "adopt",
+            "--source",
+            valid_source,
+            "--source",
+            valid_source,
+        ],
+        "cannot be used multiple times",
+    );
 
     let invalid_index_file = destination.path().join("apps/.adoptions.json");
     fs::write(
@@ -433,15 +611,35 @@ fn invalid_selections_and_cli_shapes_are_refused_before_mutation() {
     assert!(stderr.ends_with("Your request was refused; nothing ran.\n"));
 
     let state = tempfile::tempdir().expect("onboarding state root");
-    let replace_without_source = run_with_state(
-        destination.path(),
-        state.path(),
-        &["onboarding", "--replace"],
-    );
-    assert_eq!(replace_without_source.status.code(), Some(2));
-    assert!(
-        String::from_utf8_lossy(&replace_without_source.stderr).contains("--source <repository>")
-    );
+    for (arguments, sentence) in [
+        (
+            vec!["onboarding", "--replace"],
+            "--replace requires --source <repository>",
+        ),
+        (
+            vec!["onboarding", "--source"],
+            "--source needs a repository path",
+        ),
+        (
+            vec!["onboarding", "--unknown"],
+            "unknown onboarding option: --unknown",
+        ),
+        (
+            vec!["onboarding", "unexpected"],
+            "unknown onboarding option: unexpected",
+        ),
+        (
+            vec!["onboarding", "--reset", "--reset"],
+            "--reset may be supplied only once",
+        ),
+    ] {
+        let output = run_with_state(destination.path(), state.path(), &arguments);
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(sentence),
+            "{arguments:?}"
+        );
+    }
     assert!(!state.path().join("probierz/onboarding.json").exists());
 }
 
@@ -469,11 +667,40 @@ fn onboarding_writes_private_progress_and_supports_source_replace_reset_and_json
     assert_eq!(initial["status"], "in_progress");
     assert_eq!(initial["reset"], false);
     assert_eq!(initial["adoption"], Value::Null);
-    assert_eq!(initial["screens"].as_array().map(Vec::len), Some(5));
-    assert_eq!(initial["screens"][0]["screen_id"], "adopt-existing-project");
     assert_eq!(
-        initial["screens"][4]["command"],
-        "probierz run TARGET --app APP_ID --spec SPEC"
+        initial["screens"],
+        serde_json::json!([
+            {
+                "screen_id": "adopt-existing-project",
+                "title": "Bring your existing Probierz project",
+                "body": "Choose another Probierz repository to adopt its validated apps/<appId>/probierz.yaml manifests and established package spec directories. Probierz preserves the definitions, reports every conflict, and does not run a journey. Skip keeps this project empty and usable.",
+                "command": null
+            },
+            {
+                "screen_id": "choose-one-journey",
+                "title": "Start with one declared journey",
+                "body": "Probierz runs evidence for a product, surface and user journey declared in an application manifest. Begin with `probierz apps`, then inspect one registration with `probierz app APP_ID`; its surface names the target and spec you can run instead of guessing either.",
+                "command": null
+            },
+            {
+                "screen_id": "read-the-evidence",
+                "title": "A completed run leaves quality evidence",
+                "body": "The first durable result is a run manifest, not a claim that a suite passed. Probierz binds the report, analysis, source and build identities, conditions and artifact hashes into that record, then reports a pass or fail without averaging failures away.",
+                "command": null
+            },
+            {
+                "screen_id": "receipts-follow-runs",
+                "title": "Release receipts come after recorded runs",
+                "body": "A release gate consumes exact run IDs and identities. Once the required journeys have qualifying evidence, `probierz receipt` signs the resulting verdict for a release; it cannot replace the underlying run records or turn missing evidence green.",
+                "command": null
+            },
+            {
+                "screen_id": "produce-evidence",
+                "title": "Produce your first evidence record",
+                "body": "Run one declared spec on its target with `probierz run TARGET --app APP_ID --spec SPEC`. When the command succeeds and Probierz writes a passing evidence block into the run manifest, this journey is complete. A failed run remains honest, actionable evidence, but the release gate stays red and this first-success step stays open.",
+                "command": "probierz run TARGET --app APP_ID --spec SPEC"
+            }
+        ])
     );
     let progress: Value =
         serde_json::from_slice(&fs::read(&state_file).unwrap()).expect("onboarding progress");

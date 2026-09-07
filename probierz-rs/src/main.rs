@@ -58,25 +58,28 @@ struct Cli {
 enum Command {
     // Restored: adoption and local API
     /// Show the first-run journey and optionally adopt existing definitions.
+    #[command(
+        after_help = adoption::ONBOARDING_HELP,
+        override_usage = "probierz onboarding [--reset] [--source <repository>] [--replace] [--json]"
+    )]
     Onboarding {
-        #[arg(long)]
-        reset: bool,
-        #[arg(long, value_name = "repository")]
-        source: Option<PathBuf>,
-        #[arg(long, requires = "source")]
-        replace: bool,
-        #[arg(long)]
-        json: bool,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+        args: Vec<String>,
     },
     /// Durable project-adoption operations.
+    #[command(after_help = adoption::PROJECT_HELP)]
     Project {
         #[command(subcommand)]
         command: adoption::ProjectCommand,
     },
     /// Run the loopback API used by Probierz Desktop.
+    #[command(
+        after_help = serve::HELP,
+        override_usage = "probierz serve [--port N]"
+    )]
     Serve {
-        #[arg(long, default_value_t = 0)]
-        port: u16,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+        args: Vec<String>,
     },
     /// Every test surface, its tool, its npm script and its target coordinates.
     List,
@@ -499,19 +502,9 @@ fn main() {
 
 fn dispatch(harness: &Path, command: Command) -> Answer {
     match command {
-        Command::Onboarding {
-            reset,
-            source,
-            replace,
-            json,
-        } => {
-            if !adoption::onboarding(harness, reset, source.as_deref(), replace, json)? {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
+        Command::Onboarding { args } => adoption::onboarding(harness, &args),
         Command::Project { command } => adoption::dispatch(harness, command),
-        Command::Serve { port } => serve::serve(harness, port),
+        Command::Serve { args } => serve::serve(harness, &args),
         Command::List => discovery::list(harness),
         Command::Apps => discovery::apps(harness),
         Command::App { app_id } => discovery::app(harness, &app_id),

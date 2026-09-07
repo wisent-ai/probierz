@@ -28,18 +28,43 @@ const TARGET_PACKAGES: [(&str, &str); 9] = [
     ("tui", "packages/tui"),
 ];
 
+pub const ONBOARDING_HELP: &str = "\
+Accepted arguments:
+  --reset                  discard saved walkthrough progress
+  --source <repository>    adopt definitions from this existing Git repository
+  --replace                replace reviewed conflicts; requires --source
+  --json                   print the journey and adoption result as JSON
+
+Defaults: keep walkthrough progress, adopt no source, preserve existing files, and render text.";
+
+pub const PROJECT_HELP: &str = "\
+Operations:
+  adopt       validate and persist definitions without running them
+  adoptions   list retained source identities";
+
+
 #[derive(Debug, Subcommand)]
 pub enum ProjectCommand {
     /// Adopt existing application manifests and journey specs without running them.
+    #[command(override_usage = "probierz project adopt --source <repository> [--replace]")]
     Adopt {
+        /// Existing Git repository whose definitions should be adopted.
         #[arg(long, value_name = "repository")]
-        source: PathBuf,
+        source: Option<PathBuf>,
+        /// Replace reviewed unmanaged or unchanged same-source definitions.
         #[arg(long)]
         replace: bool,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+        args: Vec<String>,
     },
     /// List the retained identities of adopted definition sources.
-    Adoptions,
+    #[command(override_usage = "probierz project adoptions")]
+    Adoptions {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+        args: Vec<String>,
+    },
 }
+
 
 #[derive(Clone)]
 struct DefinitionFile {
@@ -102,7 +127,20 @@ struct Counts {
 
 pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
     match command {
-        ProjectCommand::Adopt { source, replace } => {
+        ProjectCommand::Adopt {
+            source,
+            replace,
+            args,
+        } => {
+            if let Some(value) = args.first() {
+                if value.starts_with("--") {
+                    invocation_error(format!("unknown project adoption option: {value}"));
+                }
+                invocation_error(format!("unexpected project adoption argument: {value}"));
+            }
+            let Some(source) = source else {
+                invocation_error("project adopt needs --source <repository>");
+            };
             let result = adopt_project(project_root, &source, replace)?;
             let accepted = result.get("status").and_then(Value::as_str) != Some("conflict");
             print_json(&result)?;
@@ -111,8 +149,18 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
             }
             Ok(())
         }
-        ProjectCommand::Adoptions => print_json(&list_project_adoptions(project_root)?),
+        ProjectCommand::Adoptions { args } => {
+            if !args.is_empty() {
+                invocation_error("project adoptions accepts no options");
+            }
+            print_json(&list_project_adoptions(project_root)?)
+        }
     }
+}
+
+
+fn invocation_error(detail: impl Into<String>) -> ! {
+    clap::Error::raw(clap::error::ErrorKind::InvalidValue, detail.into()).exit()
 }
 
 /// Validate and transactionally retain definitions from another Probierz checkout.
@@ -160,23 +208,9 @@ pub fn adopt_project(
     for file in &definitions.files {
         let target = absolute(&destination, &file.relative)?;
         let current = current_file(&target)?;
-        if let CurrentFile::Regular { sha256, mode } = &current {
-            if sha256 == &file.sha256 && *mode == file.mode {
-                unchanged += 1;
-                continue;
-            }
-        }
-
         let other_owner = ownership
             .get(file.relative.as_str())
             .is_some_and(|owners| owners.iter().any(|owner| owner != &source_key));
-        let previous = previous_by_path.get(file.relative.as_str()).copied();
-        let locally_changed = match (&current, previous) {
-            (CurrentFile::Regular { sha256, mode }, Some(previous)) => {
-                sha256 != &previous.sha256 || *mode != previous.mode
-            }
-            _ => false,
-        };
         if other_owner {
             conflicts.push(conflict(
                 &file.relative,
@@ -184,7 +218,22 @@ pub fn adopt_project(
                 current.digest_value(),
                 Value::String(file.sha256.clone()),
             ));
-        } else if matches!(current, CurrentFile::Unsupported) {
+            continue;
+        }
+        if let CurrentFile::Regular { sha256, mode } = &current {
+            if sha256 == &file.sha256 && *mode == file.mode {
+                unchanged += 1;
+                continue;
+            }
+        }
+        let previous = previous_by_path.get(file.relative.as_str()).copied();
+        let locally_changed = match (&current, previous) {
+            (CurrentFile::Regular { sha256, mode }, Some(previous)) => {
+                sha256 != &previous.sha256 || *mode != previous.mode
+            }
+            _ => false,
+        };
+        if matches!(current, CurrentFile::Unsupported) {
             conflicts.push(conflict(
                 &file.relative,
                 "destination is not a regular file",
@@ -346,8 +395,63 @@ pub fn list_project_adoptions(project_root: &Path) -> Result<Value, Failure> {
     }))
 }
 
-/// Render the first-use journey and optionally adopt definitions before it.
-pub fn onboarding(
+/// Parse and render the first-use journey, optionally adopting definitions first.
+pub fn onboarding(project_root: &Path, arguments: &[String]) -> Answer {
+    let (reset, source, replace, json) = onboarding_flags(arguments);
+    if !run_onboarding(project_root, reset, source.as_deref(), replace, json)? {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn onboarding_flags(arguments: &[String]) -> (bool, Option<PathBuf>, bool, bool) {
+    let mut reset = false;
+    let mut source = None;
+    let mut replace = false;
+    let mut json = false;
+    for (index, argument) in arguments.iter().enumerate() {
+        match argument.as_str() {
+            "--reset" => {
+                if reset {
+                    invocation_error("--reset may be supplied only once");
+                }
+                reset = true;
+            }
+            "--json" => {
+                if json {
+                    invocation_error("--json may be supplied only once");
+                }
+                json = true;
+            }
+            "--replace" => {
+                if replace {
+                    invocation_error("--replace may be supplied only once");
+                }
+                replace = true;
+            }
+            "--source" => {
+                if source.is_some() {
+                    invocation_error("--source may be supplied only once");
+                }
+                let value = arguments.get(index + 1).map(String::as_str);
+                if value.is_none_or(|value| value.is_empty() || value.starts_with("--")) {
+                    invocation_error("--source needs a repository path");
+                }
+                source = value.map(PathBuf::from);
+            }
+            _value if index > 0 && arguments[index - 1] == "--source" => {
+                continue;
+            }
+            value => invocation_error(format!("unknown onboarding option: {value}")),
+        }
+    }
+    if replace && source.is_none() {
+        invocation_error("--replace requires --source <repository>");
+    }
+    (reset, source, replace, json)
+}
+
+fn run_onboarding(
     project_root: &Path,
     reset_requested: bool,
     source_root: Option<&Path>,

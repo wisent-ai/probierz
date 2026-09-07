@@ -15,7 +15,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: echo-docs-capabilities.spec.mjs
+    spec: echo-docs-capabilities
     journeys: [document-every-capability]
 
 journeys:

@@ -59,6 +59,42 @@ pub struct Button {
     pub label: String,
 }
 
+pub fn read_prompt_free_cua_readiness(driver: &Driver) -> Result<Value, String> {
+    let response = driver.call("check_permissions", serde_json::json!({ "prompt": false }))?;
+    Ok(response
+        .get("permissions")
+        .cloned()
+        .unwrap_or(response))
+}
+pub fn require_product_dispatch(context: &specs::Context) -> Result<std::path::PathBuf, String> {
+    let source = context
+        .optional("PROBIERZ_APP_SOURCE")
+        .ok_or_else(|| "PROBIERZ_APP_SOURCE must identify the staged Stado source".to_string())?;
+    let journeys = context
+        .optional("PROBIERZ_JOURNEYS")
+        .ok_or_else(|| {
+            "PROBIERZ_JOURNEYS must name the journeys selected by Probierz".to_string()
+        })?;
+    let journeys = journeys
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+    if journeys.is_empty() {
+        return Err("PROBIERZ_JOURNEYS must name the journeys selected by Probierz".into());
+    }
+    for journey in journeys {
+        if !matches!(
+            journey,
+            "host-dynamic-capacity" | "service-convergence" | "apple-challenge-desktop"
+        ) {
+            return Err(format!(
+                "Unmapped Stado desktop journey selected by Probierz: {journey}"
+            ));
+        }
+    }
+    Ok(source.into())
+}
+
 pub fn read_window(driver: &Driver, pid: u32, window_id: u64) -> Result<View, String> {
     Ok(view_from(driver.snapshot(pid, window_id)?))
 }
@@ -429,9 +465,18 @@ where
 }
 
 pub fn launch_console(context: &specs::Context, driver: &Driver) -> Result<App, String> {
+    launch_console_with(context, driver, &Default::default(), &[])
+}
+
+pub fn launch_console_with(
+    context: &specs::Context,
+    driver: &Driver,
+    environment: &std::collections::BTreeMap<String, String>,
+    arguments: &[String],
+) -> Result<App, String> {
     let executable =
         common::executable(context, "path to the Stado native application executable")?;
-    let app = driver.launch_process(&executable, &Default::default(), &[])?;
+    let app = driver.launch_process(&executable, environment, arguments)?;
     let view = wait_for_screen(
         driver,
         app.pid,

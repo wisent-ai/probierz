@@ -50,6 +50,9 @@ mod weles_onboarding_first_use;
 mod wisent_benchmark_onboarding_first_use;
 mod wisent_onboarding_first_use;
 mod wisent_optimizer_onboarding_first_use;
+mod stado_cli_docs;
+mod stado_journeys;
+mod wisent_backend_production_latency;
 
 /// Every journey registered for this surface.
 pub fn specs() -> Vec<Spec> {
@@ -268,6 +271,21 @@ pub fn specs() -> Vec<Spec> {
             surface: "tui",
             title: "stado-service-unowned-processes",
             run: stado_service_unowned_processes::run,
+        },
+        Spec {
+            surface: "tui",
+            title: "stado-cli-docs",
+            run: stado_cli_docs::run,
+        },
+        Spec {
+            surface: "tui",
+            title: "stado-journeys",
+            run: stado_journeys::run,
+        },
+        Spec {
+            surface: "tui",
+            title: "wisent-backend-production-latency",
+            run: wisent_backend_production_latency::run,
         },
     ]
 }

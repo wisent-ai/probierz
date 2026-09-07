@@ -92,6 +92,39 @@ fn adoption_source(root: &Path) {
     .expect("spec");
 }
 
+fn identical_adoption_source(root: &Path, source: &Path) {
+    repository(root);
+    for relative in [
+        "apps/example/probierz.yaml",
+        "packages/tui/tests/example.spec.mjs",
+    ] {
+        let target = root.join(relative);
+        fs::create_dir_all(target.parent().expect("definition parent"))
+            .expect("second source directory");
+        fs::copy(source.join(relative), &target).expect("copy identical definition");
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&target, fs::metadata(source.join(relative)).unwrap().permissions())
+                .expect("copy definition mode");
+        }
+    }
+}
+
+fn assert_serve_refusal(root: &Path, arguments: &[&str], sentence: &str) {
+    let output = Command::new(env!("CARGO_BIN_EXE_probierz"))
+        .arg("--harness")
+        .arg(root)
+        .args(arguments)
+        .output()
+        .expect("run refused serve command");
+    assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(sentence),
+        "{arguments:?} did not report {sentence:?}:\n{stderr}"
+    );
+}
+
 #[test]
 fn local_api_serves_every_route_and_preserves_its_refusals() {
     let destination = tempdir().expect("temporary destination");
@@ -159,6 +192,24 @@ fn local_api_serves_every_route_and_preserves_its_refusals() {
             .as_ref(),
     );
 
+    let other_source = tempdir().expect("second source");
+    identical_adoption_source(other_source.path(), source.path());
+    let body = json!({
+        "sourceRoot": other_source.path().to_string_lossy(),
+        "replace": true,
+    })
+    .to_string();
+    let (status, conflict) = request(port, "POST", "/v1/project-adoptions", &body);
+    assert_eq!(status, 200);
+    assert_eq!(conflict["status"], "conflict");
+    assert_eq!(conflict["conflicting"], 2);
+    assert_eq!(conflict["rejected"], 2);
+    assert!(conflict["conflicts"]
+        .as_array()
+        .expect("complete conflict list")
+        .iter()
+        .all(|item| item["reason"] == "destination is owned by another adopted source"));
+
     let (status, malformed) = request(port, "POST", "/v1/project-adoptions", "{");
     assert_eq!(status, 400);
     assert!(malformed["error"]
@@ -186,20 +237,47 @@ fn local_api_serves_every_route_and_preserves_its_refusals() {
 }
 
 #[test]
-fn serve_refuses_unknown_options_and_ports_outside_u16() {
+fn serve_help_and_refusals_match_the_documented_cli() {
     let root = tempdir().expect("temporary harness");
     fs::create_dir(root.path().join("apps")).expect("apps directory");
-    for arguments in [
-        ["serve", "--port", "65536"],
-        ["serve", "--unknown", "value"],
+
+    let help = Command::new(env!("CARGO_BIN_EXE_probierz"))
+        .arg("--harness")
+        .arg(root.path())
+        .args(["serve", "--help"])
+        .output()
+        .expect("read serve help");
+    assert!(help.status.success());
+    let help = String::from_utf8_lossy(&help.stdout);
+    assert!(help.contains("--port <N>"), "{help}");
+    assert!(help.contains("default: 0"), "{help}");
+
+    for (arguments, sentence) in [
+        (
+            vec!["serve", "--port", "65536"],
+            "--port needs an integer from 0 through 65535",
+        ),
+        (
+            vec!["serve", "--port", "1.0"],
+            "--port needs an integer from 0 through 65535",
+        ),
+        (
+            vec!["serve", "--port"],
+            "--port needs a number",
+        ),
+        (
+            vec!["serve", "--unknown", "value"],
+            "unknown serve option: --unknown",
+        ),
+        (
+            vec!["serve", "--port=1"],
+            "unknown serve option: --port=1",
+        ),
+        (
+            vec!["serve", "--port", "1", "--port", "2"],
+            "--port may be supplied only once",
+        ),
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_probierz"))
-            .arg("--harness")
-            .arg(root.path())
-            .args(arguments)
-            .output()
-            .expect("run refused serve command");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(!output.stderr.is_empty());
+        assert_serve_refusal(root.path(), &arguments, sentence);
     }
 }

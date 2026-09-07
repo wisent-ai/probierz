@@ -8,17 +8,21 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Utc};
 use clap::{Args, Subcommand};
 use serde::Deserialize;
+use subtle::ConstantTimeEq;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
@@ -4435,10 +4439,11 @@ fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> Result<Valu
     Ok(result)
 }
 
-/// Inputs for the dedicated Byk iOS host bridge.  The OTP broker stays local;
-/// SSH forwards only its protected Unix socket into this one run directory.
+/// Inputs for the dedicated Byk iOS host bridge. The OTP broker stays local;
+/// Stado carries an authenticated loopback bridge to the worker's protected socket.
 #[derive(Debug)]
 pub struct RemoteBykRequest<'a> {
+    pub host_selector: &'a str,
     pub root: &'a Path,
     pub app_path: &'a Path,
     pub ios_device: &'a str,
@@ -4453,9 +4458,6 @@ pub struct RemoteBykOutcome {
     pub signal: Option<i32>,
 }
 
-const BYK_HOST: &str = "charles@charless-mac-mini.tail6443b3.ts.net";
-const BYK_BASE: &str = "/Users/charles/Library/Caches/probierz";
-const REMOTE_CARGO: &str = "/Users/charles/.cargo/bin/cargo";
 const BYK_RETRIES: usize = 3;
 const BYK_QUARANTINE: Duration = Duration::from_secs(15 * 60);
 
@@ -4531,105 +4533,163 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
     install_byk_signal_handlers();
     require_local_kind(request.root, true, "Probierz root")?;
     require_local_kind(request.app_path, true, "APP_IOS")?;
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| Failure::config("byk.remote", "HOME is required"))?;
-    let key = home.join(".ssh").join("charless_mac_mini_ed25519");
-    require_local_kind(&key, false, "dedicated-host SSH key")?;
     if !fs::metadata(request.socket_path)?.file_type().is_socket() {
         return Err(Failure::config(
             "byk.remote",
             "local OTP broker socket is unavailable",
         ));
     }
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| Failure::config("byk.remote", "HOME is required"))?;
     assert_byk_host_available(&home)?;
-    let run_root = format!("{BYK_BASE}/runs/{}", uuid_v4()?);
-    let remote_source = format!("{run_root}/probierz");
-    let remote_app = format!("{run_root}/Byk.app");
-    let remote_socket = format!("{run_root}/byk-otp.sock");
-    let ssh = byk_ssh_args(&key);
+    let target = resolve_byk_target(request.host_selector)?;
+    retry_byk("Stado reachability check", || {
+        sh_with_input(
+            STADO_BIN,
+            &[
+                "host".into(),
+                "ping".into(),
+                target.registry_target.clone(),
+                "--json".into(),
+            ],
+            &[],
+        )
+    })?;
+    let source_files = source_file_list(request.root)?;
+    if source_files.is_empty() {
+        return Err(Failure::config(
+            "byk.remote",
+            "Probierz source set is empty",
+        ));
+    }
+    let run_id = uuid_v4()?;
+    let remote_run_relative = format!(".stado/work/runs/{run_id}");
+    let run_root = target
+        .remote_home
+        .join(".stado")
+        .join("work")
+        .join("runs")
+        .join(&run_id);
+    let remote_source = run_root.join("probierz");
+    let remote_app = run_root.join("Byk.app");
+    let remote_socket = run_root.join("byk-otp.sock");
+    let worker = remote_source.join("probierz-rs/target/release/probierz");
+    let remote_port = byk_forward_port(&run_id);
+    let bridge_token = uuid_v4()?;
+    let bridge = BykLocalBridge::start(request.socket_path, &bridge_token)?;
+    let forward_name = format!("probierz-byk-{}", run_id.replace('-', ""));
+    let forward_args = vec![
+        "host".into(),
+        "forward-local".into(),
+        target.registry_target.clone(),
+        forward_name.clone(),
+        "--remote-port".into(),
+        remote_port.to_string(),
+        "--local-port".into(),
+        bridge.port().to_string(),
+        "--json".into(),
+    ];
+    let mut forward_opened = false;
     let mut created = false;
     let result = (|| {
+        retry_byk("Stado OTP forwarding channel", || {
+            sh_with_input(STADO_BIN, &forward_args, &[])
+        })?;
+        forward_opened = true;
         retry_byk("dedicated-host preparation", || {
-            let mut args = ssh.clone();
-            args.extend([
-                BYK_HOST.into(),
-                format!(
-                    "umask 077; mkdir -p {}; chmod 700 {}",
-                    shell_quote(&remote_source),
-                    shell_quote(&run_root)
-                ),
-            ]);
-            sh_with_input("ssh", &args, &[])
+            sh_with_input(
+                STADO_BIN,
+                &[
+                    "host".into(),
+                    "exec".into(),
+                    target.registry_target.clone(),
+                    "--".into(),
+                    "mkdir".into(),
+                    "-p".into(),
+                    ".stado/work/runs".into(),
+                ],
+                &[],
+            )
         })?;
         created = true;
-        let transport = std::iter::once("ssh".to_string())
-            .chain(ssh.iter().map(|value| shell_quote(value)))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let source_files = source_file_list(request.root)?;
-        retry_byk("Probierz source sync", || {
-            let args = vec![
-                "-a".into(),
-                "--delete".into(),
-                "--from0".into(),
-                "--files-from=-".into(),
-                "-e".into(),
-                transport.clone(),
-                format!("{}/", request.root.display()),
-                format!("{BYK_HOST}:{remote_source}/"),
-            ];
-            sh_with_input("rsync", &args, &source_files)
+        retry_byk("Probierz source delivery", || {
+            sh_with_input(
+                STADO_BIN,
+                &[
+                    "host".into(),
+                    "deliver".into(),
+                    target.registry_target.clone(),
+                    request.root.display().to_string(),
+                    format!("{remote_run_relative}/probierz"),
+                    "--files-from".into(),
+                    "-".into(),
+                    "--json".into(),
+                ],
+                &source_files,
+            )
         })?;
-        retry_byk("Byk app sync", || {
-            let args = vec![
-                "-a".into(),
-                "--delete".into(),
-                "-e".into(),
-                transport.clone(),
-                format!("{}/", request.app_path.display()),
-                format!("{BYK_HOST}:{remote_app}/"),
-            ];
-            sh_with_input("rsync", &args, &[])
+        retry_byk("Byk app delivery", || {
+            sh_with_input(
+                STADO_BIN,
+                &[
+                    "host".into(),
+                    "deliver".into(),
+                    target.registry_target.clone(),
+                    request.app_path.display().to_string(),
+                    format!("{remote_run_relative}/Byk.app"),
+                    "--json".into(),
+                ],
+                &[],
+            )
         })?;
         retry_byk("dedicated-host worker build", || {
-            let mut args = ssh.clone();
-            args.extend([
-                BYK_HOST.into(),
-                format!(
-                    "umask 077; {} build --locked --release --manifest-path {}/probierz-rs/Cargo.toml --bin probierz",
-                    shell_quote(REMOTE_CARGO), shell_quote(&remote_source),
-                ),
-            ]);
-            sh_with_input("ssh", &args, &[])
+            sh_with_input(
+                STADO_BIN,
+                &[
+                    "host".into(),
+                    "build".into(),
+                    target.registry_target.clone(),
+                    "--manifest-path".into(),
+                    remote_source
+                        .join("probierz-rs/Cargo.toml")
+                        .display()
+                        .to_string(),
+                    "--bin".into(),
+                    "probierz".into(),
+                    "--json".into(),
+                ],
+                &[],
+            )
         })?;
         let config = json!({
             "runRoot": run_root,
             "sourceRoot": remote_source,
             "appPath": remote_app,
             "socketPath": remote_socket,
+            "otpPort": remote_port,
+            "bridgeToken": bridge_token,
             "recipient": request.recipient,
             "iosDevice": request.ios_device,
             "iosVersion": request.ios_version,
         });
         let mut input = serde_json::to_vec(&config)?;
         input.push(b'\n');
-        let worker = format!("{remote_source}/probierz-rs/target/release/probierz");
-        let mut args = ssh.clone();
-        args.extend([
-            "-o".into(),
-            "ExitOnForwardFailure=yes".into(),
-            "-o".into(),
-            "StreamLocalBindUnlink=yes".into(),
-            "-R".into(),
-            format!("{remote_socket}:{}", request.socket_path.display()),
-            BYK_HOST.into(),
-            format!(
-                "umask 077; exec {} stado byk-auth-worker",
-                shell_quote(&worker)
-            ),
-        ]);
-        let output = sh_with_input("ssh", &args, &input);
+        let output = sh_with_input(
+            STADO_BIN,
+            &[
+                "host".into(),
+                "run-attached".into(),
+                target.registry_target.clone(),
+                "--program".into(),
+                worker.display().to_string(),
+                "--arg".into(),
+                "stado".into(),
+                "--arg".into(),
+                "byk-auth-worker".into(),
+            ],
+            &input,
+        );
         if output.status == Some(255) {
             return Err(Failure::unavailable(
                 "byk.remote",
@@ -4647,23 +4707,287 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
         })
     })();
     if created {
-        let mut args = ssh;
-        args.extend([
-            BYK_HOST.into(),
-            format!("rm -rf -- {}", shell_quote(&run_root)),
-        ]);
-        let _ = sh_with_input("ssh", &args, &[]);
+        let _ = sh_with_input(
+            STADO_BIN,
+            &[
+                "host".into(),
+                "remove-run-directory".into(),
+                target.registry_target.clone(),
+                run_root.display().to_string(),
+                "--json".into(),
+            ],
+            &[],
+        );
     }
+    if forward_opened {
+        let _ = sh_with_input(
+            STADO_BIN,
+            &[
+                "host".into(),
+                "forward-close".into(),
+                target.registry_target.clone(),
+                forward_name,
+                "--json".into(),
+            ],
+            &[],
+        );
+    }
+    drop(bridge);
     match &result {
         Ok(_) => clear_byk_quarantine(&home)?,
         Err(failure) if failure.code == Code::Unavailable => {
-            quarantine_byk_host(&home, &failure.detail)?
+            quarantine_byk_host(&home, request.host_selector, &failure.detail)?
         }
         Err(_) => {}
     }
     result
 }
 
+#[derive(Debug)]
+struct BykTarget {
+    registry_target: String,
+    remote_home: PathBuf,
+}
+
+fn resolve_byk_target(selector: &str) -> Result<BykTarget, Failure> {
+    if selector.trim() != selector || !selector.starts_with("stado:") {
+        return Err(Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not resolve Byk host selector {selector:?}: expected a stado:<target> selector"
+            ),
+        ));
+    }
+    let registry_target = discovery::stado_host(selector)
+        .and_then(|selected| selected.target.map(str::to_string))
+        .or_else(|| {
+            selector
+                .strip_prefix("stado:")
+                .filter(|target| !target.is_empty())
+                .map(str::to_string)
+        })
+        .ok_or_else(|| {
+            Failure::config(
+                "byk.remote",
+                format!(
+                    "Stado could not resolve Byk host selector {selector:?}: selector has no registry target"
+                ),
+            )
+        })?;
+    let inventory = sh_with_input(
+        STADO_BIN,
+        &[
+            "host".into(),
+            "inventory".into(),
+            registry_target.clone(),
+            "--json".into(),
+        ],
+        &[],
+    );
+    if inventory.status != Some(0) {
+        return Err(byk_resolution_failure(selector, &inventory));
+    }
+    let inventory: Value = serde_json::from_str(&inventory.stdout).map_err(|error| {
+        Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not resolve Byk host selector {selector:?}: invalid host inventory ({error})"
+            ),
+        )
+    })?;
+    if inventory.get("target").and_then(Value::as_str) != Some(registry_target.as_str()) {
+        return Err(Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not resolve Byk host selector {selector:?}: inventory named a different target"
+            ),
+        ));
+    }
+    if !inventory
+        .get("declared_release_platform")
+        .and_then(Value::as_str)
+        .is_some_and(|platform| platform.starts_with("darwin-"))
+    {
+        return Err(Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not place Byk host selector {selector:?}: target {registry_target:?} does not declare macOS"
+            ),
+        ));
+    }
+    let config = sh_with_input(
+        STADO_BIN,
+        &[
+            "host".into(),
+            "config-show".into(),
+            registry_target.clone(),
+        ],
+        &[],
+    );
+    if config.status != Some(0) {
+        return Err(byk_resolution_failure(selector, &config));
+    }
+    let config: Value = serde_json::from_str(&config.stdout).map_err(|error| {
+        Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not resolve Byk host selector {selector:?}: invalid effective configuration ({error})"
+            ),
+        )
+    })?;
+    let config_file = config
+        .get("file")
+        .and_then(Value::as_str)
+        .map(Path::new)
+        .ok_or_else(|| {
+            Failure::config(
+                "byk.remote",
+                format!(
+                    "Stado could not resolve Byk host selector {selector:?}: effective configuration did not report its file"
+                ),
+            )
+        })?;
+    let remote_home = stado_home_from_config(config_file).ok_or_else(|| {
+        Failure::config(
+            "byk.remote",
+            format!(
+                "Stado could not resolve Byk host selector {selector:?}: effective configuration reported an invalid home"
+            ),
+        )
+    })?;
+    Ok(BykTarget {
+        registry_target,
+        remote_home,
+    })
+}
+
+fn byk_resolution_failure(selector: &str, output: &ProcessOutput) -> Failure {
+    let detail = process_text(output);
+    Failure::config(
+        "byk.remote",
+        format!(
+            "Stado could not resolve Byk host selector {selector:?}: {}",
+            if detail.is_empty() {
+                "Stado returned no diagnostic"
+            } else {
+                detail.as_str()
+            }
+        ),
+    )
+}
+
+
+fn stado_home_from_config(file: &Path) -> Option<PathBuf> {
+    if !file.is_absolute() || file.file_name()?.to_str()? != "config.json" {
+        return None;
+    }
+    let stado = file.parent()?;
+    let config = stado.parent()?;
+    if stado.file_name()?.to_str()? != "stado" || config.file_name()?.to_str()? != ".config" {
+        return None;
+    }
+    config.parent().map(Path::to_path_buf)
+}
+
+fn byk_forward_port(run_id: &str) -> u16 {
+    let digest = Sha256::digest(run_id.as_bytes());
+    20_000 + (u16::from_be_bytes([digest[0], digest[1]]) % 20_000)
+}
+
+fn valid_bridge_token(value: &str) -> bool {
+    value.len() == 36
+        && value
+            .bytes()
+            .enumerate()
+            .all(|(index, byte)| match index {
+                8 | 13 | 18 | 23 => byte == b'-',
+                _ => byte.is_ascii_hexdigit(),
+            })
+}
+
+struct BykLocalBridge {
+    port: u16,
+    stop: Arc<AtomicBool>,
+    thread: Option<thread::JoinHandle<()>>,
+}
+
+impl BykLocalBridge {
+    fn start(socket_path: &Path, bridge_token: &str) -> Result<Self, Failure> {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(|error| {
+            Failure::unavailable(
+                "byk.remote",
+                format!("could not bind the local Stado OTP bridge: {error}"),
+            )
+        })?;
+        listener.set_nonblocking(true)?;
+        let port = listener.local_addr()?.port();
+        let socket_path = socket_path.to_path_buf();
+        let mut expected = bridge_token.as_bytes().to_vec();
+        expected.push(b'\n');
+        let stop = Arc::new(AtomicBool::new(false));
+        let thread_stop = Arc::clone(&stop);
+        let thread = thread::spawn(move || {
+            while !thread_stop.load(Ordering::SeqCst) {
+                match listener.accept() {
+                    Ok((mut tcp, _)) => {
+                        let socket_path = socket_path.clone();
+                        let expected = expected.clone();
+                        thread::spawn(move || {
+                            let _ = tcp.set_read_timeout(Some(Duration::from_secs(5)));
+                            let mut received = vec![0_u8; expected.len()];
+                            if tcp.read_exact(&mut received).is_ok()
+                                && bool::from(received.ct_eq(&expected))
+                            {
+                                if let Ok(unix) = UnixStream::connect(socket_path) {
+                                    relay_tcp_and_unix(tcp, unix);
+                                }
+                            }
+                        });
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+        Ok(Self {
+            port,
+            stop,
+            thread: Some(thread),
+        })
+    }
+
+    fn port(&self) -> u16 {
+        self.port
+    }
+}
+
+impl Drop for BykLocalBridge {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        let _ = TcpStream::connect(("127.0.0.1", self.port));
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+fn relay_tcp_and_unix(mut tcp: TcpStream, mut unix: UnixStream) {
+    let Ok(mut tcp_reader) = tcp.try_clone() else {
+        return;
+    };
+    let Ok(mut unix_writer) = unix.try_clone() else {
+        return;
+    };
+    let upstream = thread::spawn(move || {
+        let _ = std::io::copy(&mut tcp_reader, &mut unix_writer);
+        let _ = unix_writer.shutdown(Shutdown::Write);
+    });
+    let _ = std::io::copy(&mut unix, &mut tcp);
+    let _ = tcp.shutdown(Shutdown::Write);
+    let _ = upstream.join();
+}
 fn require_local_kind(path: &Path, directory: bool, name: &str) -> Answer {
     if !path.is_absolute() || !path.exists() {
         return Err(Failure::config(
@@ -4709,13 +5033,13 @@ fn assert_byk_host_available(home: &Path) -> Answer {
     Ok(())
 }
 
-fn quarantine_byk_host(home: &Path, reason: &str) -> Answer {
+fn quarantine_byk_host(home: &Path, selector: &str, reason: &str) -> Answer {
     let file = byk_state_path(home);
     let previous = read_json(&file);
     let now = Utc::now();
     let value = json!({
         "schemaVersion": 1,
-        "host": BYK_HOST,
+        "host": selector,
         "failures": previous.as_ref().and_then(|value| value.get("failures")).and_then(Value::as_u64).unwrap_or(0) + 1,
         "reason": reason,
         "quarantinedAt": now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
@@ -4740,20 +5064,6 @@ fn clear_byk_quarantine(home: &Path) -> Answer {
     Ok(())
 }
 
-fn byk_ssh_args(key: &Path) -> Vec<String> {
-    vec![
-        "-i".into(),
-        key.display().to_string(),
-        "-o".into(),
-        "BatchMode=yes".into(),
-        "-o".into(),
-        "IdentitiesOnly=yes".into(),
-        "-o".into(),
-        "StrictHostKeyChecking=yes".into(),
-        "-o".into(),
-        "ConnectTimeout=15".into(),
-    ]
-}
 
 fn retry_byk<F>(label: &str, mut operation: F) -> Answer
 where
@@ -4841,6 +5151,71 @@ fn sh_with_input(command: &str, args: &[String], input: &[u8]) -> ProcessOutput 
     }
 }
 
+struct BykRemoteBridge {
+    socket_path: PathBuf,
+    stop: Arc<AtomicBool>,
+    thread: Option<thread::JoinHandle<()>>,
+}
+
+impl BykRemoteBridge {
+    fn start(socket_path: &Path, port: u16, bridge_token: &str) -> Result<Self, Failure> {
+        if port < 1024 || socket_path.exists() || !valid_bridge_token(bridge_token) {
+            return Err(Failure::config(
+                "byk.worker",
+                "remote Byk OTP bridge configuration is invalid",
+            ));
+        }
+        let listener = UnixListener::bind(socket_path).map_err(|error| {
+            Failure::unavailable(
+                "byk.worker",
+                format!("could not bind the protected OTP socket: {error}"),
+            )
+        })?;
+        fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600))?;
+        listener.set_nonblocking(true)?;
+        let mut authentication = bridge_token.as_bytes().to_vec();
+        authentication.push(b'\n');
+        let stop = Arc::new(AtomicBool::new(false));
+        let thread_stop = Arc::clone(&stop);
+        let thread = thread::spawn(move || {
+            while !thread_stop.load(Ordering::SeqCst) {
+                match listener.accept() {
+                    Ok((unix, _)) => {
+                        let authentication = authentication.clone();
+                        thread::spawn(move || {
+                            if let Ok(mut tcp) = TcpStream::connect(("127.0.0.1", port)) {
+                                if tcp.write_all(&authentication).is_ok() {
+                                    relay_tcp_and_unix(tcp, unix);
+                                }
+                            }
+                        });
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+        Ok(Self {
+            socket_path: socket_path.to_path_buf(),
+            stop,
+            thread: Some(thread),
+        })
+    }
+}
+
+impl Drop for BykRemoteBridge {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        let _ = UnixStream::connect(&self.socket_path);
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+        let _ = fs::remove_file(&self.socket_path);
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct BykWorkerConfig {
@@ -4848,8 +5223,10 @@ struct BykWorkerConfig {
     source_root: String,
     app_path: String,
     socket_path: String,
+    bridge_token: String,
     recipient: String,
     ios_device: String,
+    otp_port: u16,
     ios_version: String,
 }
 
@@ -4916,6 +5293,7 @@ fn byk_auth_worker_inner() -> Result<i32, Failure> {
         config.source_root.as_str(),
         config.app_path.as_str(),
         config.socket_path.as_str(),
+        config.bridge_token.as_str(),
         config.recipient.as_str(),
         config.ios_device.as_str(),
     ]
@@ -4954,12 +5332,14 @@ fn byk_auth_worker_inner() -> Result<i32, Failure> {
             "remote iOS version is invalid",
         ));
     }
-    if !app_path.is_dir() || !fs::metadata(&socket_path)?.file_type().is_socket() {
+    if !app_path.is_dir() {
         return Err(Failure::config(
             "byk.worker",
-            "remote Byk app or protected OTP socket is unavailable",
+            "remote Byk app is unavailable",
         ));
     }
+    let otp_bridge =
+        BykRemoteBridge::start(&socket_path, config.otp_port, &config.bridge_token)?;
     let lock_path = run_root
         .parent()
         .and_then(Path::parent)
@@ -5033,6 +5413,7 @@ fn byk_auth_worker_inner() -> Result<i32, Failure> {
         )
     })();
     let _ = fs::remove_dir_all(&lock_path);
+    drop(otp_bridge);
     let _ = fs::remove_dir_all(&run_root);
     result
 }

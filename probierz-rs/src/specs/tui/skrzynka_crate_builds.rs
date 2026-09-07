@@ -1,5 +1,5 @@
 use crate::specs::{self, tui::common};
-use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+use std::{path::PathBuf, process::Command};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let repo = PathBuf::from(context.optional("SKRZYNKA_REPO").unwrap_or_else(|| {
@@ -17,15 +17,16 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             repo.display()
         ));
     }
-    let build = common::run(
-        "cargo",
-        &common::strings(&["build", "--locked", "--all-targets"]),
-        Some(&repo),
-        &BTreeMap::new(),
-        &[],
-        None,
-        Duration::from_secs(900),
-    )?;
+    let output = Command::new("cargo")
+        .args(["build", "--locked", "--all-targets"])
+        .current_dir(&repo)
+        .output()
+        .map_err(|error| format!("cannot start cargo: {error}"))?;
+    let build = common::Output {
+        status: output.status,
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
     if !build.status.success() {
         return Err(format!(
             "cargo build --locked --all-targets failed with {}\n{}",
@@ -46,20 +47,24 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             binary.display()
         ));
     }
-    let version = common::run(
-        binary.to_string_lossy().as_ref(),
-        &common::strings(&["--version"]),
-        None,
-        &BTreeMap::new(),
-        &[],
-        None,
-        Duration::from_secs(30),
-    )?;
+    let output = Command::new(&binary)
+        .arg("--version")
+        .output()
+        .map_err(|error| format!("cannot start {}: {error}", binary.display()))?;
+    let version = common::Output {
+        status: output.status,
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
     if !version.status.success() {
         return Err(format!(
             "{} could not report its version: {}",
             binary.display(),
-            version.combined()
+            if version.stderr.is_empty() {
+                &version.stdout
+            } else {
+                &version.stderr
+            }
         ));
     }
     let pattern = regex::Regex::new(r"^skrzynka \d+\.\d+\.\d+").unwrap();

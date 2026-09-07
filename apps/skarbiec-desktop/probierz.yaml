@@ -19,7 +19,7 @@ repositories:
         journeys: [capabilities-screen]
 surfaces:
   desktop:cua:
-    spec: skarbiec-desktop-*.spec.mjs
+    spec: skarbiec-desktop-*
     journeys: [capabilities-screen]
     conditions:
       CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec-desktop/.build/Skarbiec.app/Contents/MacOS/Skarbiec

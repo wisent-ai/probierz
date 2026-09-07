@@ -17,14 +17,32 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     if !path.is_file() {
         return Err("ECHO_ANALYTICS_TEST_ENV must identify a readable file".into());
     }
-    let mut env = super::echo_common::env_file(&path)?;
+    let env = super::echo_common::env_file(&path)?;
+    let mut env = env
+        .into_iter()
+        .filter_map(|(name, value)| {
+            let name = name.trim_start().to_string();
+            let renamed = name.strip_prefix("export").and_then(|rest| {
+                rest.chars()
+                    .next()
+                    .is_some_and(char::is_whitespace)
+                    .then(|| rest.trim_start().to_string())
+            });
+            let name = renamed.unwrap_or(name);
+            (!name.is_empty()).then_some((name, value))
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
     for name in ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] {
         if !env.get(name).is_some_and(|v| !v.is_empty()) {
             return Err(format!("{name} is required in ECHO_ANALYTICS_TEST_ENV"));
         }
     }
-    env.entry("NEXT_PUBLIC_SITE_URL".into())
-        .or_insert_with(|| "https://echo.wisent.com".into());
+    if env.get("NEXT_PUBLIC_SITE_URL").is_none_or(String::is_empty) {
+        env.insert(
+            "NEXT_PUBLIC_SITE_URL".into(),
+            "https://echo.wisent.com".into(),
+        );
+    }
     let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web");
     let (result, logs) = super::echo_common::server_test(
         repo,

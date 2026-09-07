@@ -355,7 +355,7 @@ surfaces:
     conditions:
       TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
-    spec: stado-*
+    spec: "*"
     journeys:
     - host-dynamic-capacity
     - hosts-screen

@@ -16,7 +16,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: echo-read-every-capability.spec.mjs
+    spec: echo-read-every-capability
     journeys: [read-every-capability]
     env:
       ECHO_TEST_ENV: ECHO_TEST_ENV

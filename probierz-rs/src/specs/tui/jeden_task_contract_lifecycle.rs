@@ -4,7 +4,7 @@ use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 const REQUIREMENTS: [&str; 7] = [
     "functionality",
@@ -114,7 +114,7 @@ fn model_turn(
             .as_str()
             .ok_or("sessionPath missing")?,
     );
-    if !session.starts_with(sessions) {
+    if !session.starts_with(sessions) || session == sessions {
         return Err("the turn must use its isolated session root".into());
     }
     let transcript =
@@ -147,6 +147,18 @@ fn model_turn(
     if report["status"] != "complete" {
         return Err("blocked work must not pass as completed".into());
     }
+    let mut report_keys = report["report"]
+        .as_object()
+        .ok_or("task report must contain a report object")?
+        .keys()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    report_keys.sort();
+    let mut required_keys = REQUIREMENTS.to_vec();
+    required_keys.sort();
+    if report_keys != required_keys {
+        return Err("task report must contain exactly the required entries".into());
+    }
     for name in REQUIREMENTS {
         let entry = &report["report"][name];
         if entry["status"] != "done" && entry["status"] != "not_applicable" {
@@ -158,11 +170,13 @@ fn model_turn(
         {
             return Err(format!("{name} has no explanation"));
         }
+        let evidence = entry["evidence"]
+            .as_array()
+            .ok_or_else(|| format!("{name} evidence must be an array"))?;
         if entry["status"] == "done"
-            && !entry["evidence"].as_array().is_some_and(|a| {
-                a.iter()
-                    .any(|r| r.as_str().is_some_and(|s| !s.trim().is_empty()))
-            })
+            && !evidence
+                .iter()
+                .any(|r| r.as_str().is_some_and(|s| !s.trim().is_empty()))
         {
             return Err(format!("{name} done entry has no evidence"));
         }
@@ -171,8 +185,9 @@ fn model_turn(
         .iter()
         .rev()
         .find(|e| e["type"] == "final")
-        .and_then(|e| e["data"]["text"].as_str())
-        .unwrap_or("")
+        .ok_or("final transcript event missing")?["data"]["text"]
+        .as_str()
+        .ok_or("final transcript text missing")?
         .trim();
     if final_text != answer["text"].as_str().unwrap_or("").trim() {
         return Err("final transcript and answer differ".into());
@@ -194,7 +209,13 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     if !Path::new(&binary).is_absolute() {
         return Err("TUI_CMD must name the source-bound Jeden binary".into());
     }
-    let root = common::scratch("task-contract")?;
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let root = context
+        .artifacts
+        .join(format!("task-contract-{}-{stamp}", std::process::id()));
     let home = root.join("home");
     let workspace = root.join("workspace");
     let sessions = root.join("sessions");
@@ -202,7 +223,7 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     for p in [&home, &workspace, &sessions, &temporary] {
         fs::create_dir_all(p).map_err(|e| e.to_string())?;
     }
-    let env = common::env_map([
+    let mut env = common::env_map([
         ("HOME", home.to_string_lossy().as_ref()),
         ("JEDEN_SESSION_ROOT", sessions.to_string_lossy().as_ref()),
         ("TMPDIR", temporary.to_string_lossy().as_ref()),
@@ -256,11 +277,14 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
                 None,
                 Duration::from_secs(300),
             )?;
+            if !get.status.success() {
+                return Err(get.combined());
+            }
             if get.stdout.trim() != value {
                 return Err("CLI config get returned a different communication value".into());
             }
         }
-        command(
+        let set = command(
             &binary,
             &common::strings(&[
                 "config",
@@ -273,7 +297,14 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             None,
             Duration::from_secs(300),
         )?;
-        command(
+        if !set.status.success() {
+            return Err(set.combined());
+        }
+        let settings = common::read_json(&home.join(".jeden/config.yml"))?;
+        if settings["contracts"]["functionality"] != "Complete the requested operation." {
+            return Err("CLI contract functionality did not persist".into());
+        }
+        let reset = command(
             &binary,
             &common::strings(&["config", "reset", "contracts.functionality"]),
             &workspace,
@@ -281,6 +312,13 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             None,
             Duration::from_secs(300),
         )?;
+        if !reset.status.success() {
+            return Err(reset.combined());
+        }
+        let settings = common::read_json(&home.join(".jeden/config.yml"))?;
+        if settings["contracts"]["functionality"] != "" {
+            return Err("CLI contract functionality did not reset".into());
+        }
         let before = fs::read(home.join(".jeden/config.yml")).map_err(|e| e.to_string())?;
         let refused = command(
             &binary,
@@ -310,7 +348,30 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             &workspace,
             &env,
         )?;
+        if !saved["error"].is_null() {
+            return Err("config/contracts/set returned an error".into());
+        }
         check_contract(&saved["result"]["taskContract"])?;
+        let settings = common::read_json(&home.join(".jeden/config.yml"))?;
+        if settings["contracts"]["communication"] != "Be concise."
+            || settings["contracts"]["functionality"] != "Finish the task."
+        {
+            return Err("RPC contract settings did not persist".into());
+        }
+        let get = command(
+            &binary,
+            &common::strings(&["config", "get", "contracts.functionality"]),
+            &workspace,
+            &env,
+            None,
+            Duration::from_secs(300),
+        )?;
+        if !get.status.success() {
+            return Err(get.combined());
+        }
+        if get.stdout.trim() != "Finish the task." {
+            return Err("CLI did not read the functionality saved through RPC".into());
+        }
         let before = fs::read(home.join(".jeden/config.yml")).map_err(|e| e.to_string())?;
         let refused = rpc(
             &binary,
@@ -332,11 +393,12 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "WISENT_APP_AGENT_AUTH_SECRET",
             "JEDEN_MODEL",
         ] {
-            common::required(
+            let value = common::required(
                 context,
                 name,
                 &format!("{name} must be supplied by the real Brama workload configuration"),
             )?;
+            env.insert(name.into(), value);
         }
         let prefix="This is an explicitly requested isolated file-tool exercise, not new product development. Do not create software, documentation, tests or commits for it. Explain inapplicable delivery requirements honestly in the final structured report. ";
         model_turn(&binary,&format!("{prefix}Create lifecycle.txt containing exactly alpha, using the real file tools, then read it back."),&workspace,&sessions,&env)?;

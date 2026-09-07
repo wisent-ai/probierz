@@ -19,6 +19,20 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         return Err("ECHO_TEST_ENV must identify a readable file".into());
     }
     let env = super::echo_common::env_file(&path)?;
+    let env = env
+        .into_iter()
+        .filter_map(|(name, value)| {
+            let name = name.trim_start().to_string();
+            let renamed = name.strip_prefix("export").and_then(|rest| {
+                rest.chars()
+                    .next()
+                    .is_some_and(char::is_whitespace)
+                    .then(|| rest.trim_start().to_string())
+            });
+            let name = renamed.unwrap_or(name);
+            (!name.is_empty()).then_some((name, value))
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
     for name in ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] {
         if !env.get(name).is_some_and(|v| !v.is_empty()) {
             return Err(format!("{name} is required in ECHO_TEST_ENV"));

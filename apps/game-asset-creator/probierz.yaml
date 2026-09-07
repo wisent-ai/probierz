@@ -26,7 +26,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: game-asset-creator-cli.spec.mjs
+    spec: game-asset-creator-cli
     journeys: [cli, verify]
   eval:
     spec: game-asset-creator.visual-eval

@@ -31,7 +31,7 @@ surfaces:
     recording:
       primary: appium-mac2
   desktop:cua:
-    spec: brama-desktop-*.spec.mjs
+    spec: brama-desktop-*
     journeys: [critical-operations, subscription-pool-screen]
 journeys:
   critical-operations:

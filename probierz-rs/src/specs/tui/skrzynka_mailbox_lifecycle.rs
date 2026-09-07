@@ -1,5 +1,5 @@
 use crate::specs::{self, tui::common};
-use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+use std::{path::PathBuf, process::Command};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let repo = PathBuf::from(context.optional("SKRZYNKA_REPO").unwrap_or_else(|| {
@@ -14,15 +14,16 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         "--test-reporter=tap".into(),
         owned.to_string_lossy().into_owned(),
     ];
-    let run = common::run(
-        "node",
-        &args,
-        Some(&repo),
-        &BTreeMap::new(),
-        &[],
-        None,
-        Duration::from_secs(900),
-    )?;
+    let output = Command::new("node")
+        .args(&args)
+        .current_dir(&repo)
+        .output()
+        .map_err(|error| format!("cannot start node: {error}"))?;
+    let run = common::Output {
+        status: output.status,
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
     let output = run.combined();
     if !run.status.success() {
         return Err(format!(
@@ -35,16 +36,17 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     let mut results = Vec::new();
     let plan_re = regex::Regex::new(r"^1\.\.(\d+)$").unwrap();
     let result_re = regex::Regex::new(r"^(not ok|ok)\s+\d+\b").unwrap();
+    let skip_re = regex::Regex::new(r"(?i)\s+#\s+SKIP\b").unwrap();
+    let todo_re = regex::Regex::new(r"(?i)\s+#\s+TODO\b").unwrap();
     for line in run.stdout.lines() {
         if let Some(c) = plan_re.captures(line) {
             planned = c[1].parse::<usize>().ok();
             continue;
         }
         if let Some(c) = result_re.captures(line) {
-            let upper = line.to_uppercase();
-            let directive = if upper.contains("# SKIP") {
+            let directive = if skip_re.is_match(line) {
                 "SKIP"
-            } else if upper.contains("# TODO") {
+            } else if todo_re.is_match(line) {
                 "TODO"
             } else {
                 ""

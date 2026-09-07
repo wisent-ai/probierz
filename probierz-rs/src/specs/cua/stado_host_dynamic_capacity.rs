@@ -1,0 +1,251 @@
+use std::time::Duration;
+
+use regex::Regex;
+
+use crate::specs;
+
+use super::stado_console as console;
+
+
+fn absent(tree: &str, needles: &[&str], why: &str) -> Result<(), String> {
+    for needle in needles {
+        if tree.contains(needle) {
+            return Err(format!("{why}: the screen shows {needle:?}"));
+        }
+    }
+    Ok(())
+}
+
+pub fn run(context: &specs::Context) -> Result<(), String> {
+    console::require_product_dispatch(context)?;
+    let driver = super::common::driver(context)?;
+    let app = console::launch_console(context, &driver)?;
+    let result = (|| {
+        console::open_screen(
+            &driver,
+            app.pid,
+            app.window_id,
+            "Hosts",
+            |tree| Regex::new(r"AX\w*Button \(All hosts").unwrap().is_match(tree),
+            "/AX\\w*Button \\(All hosts/",
+            &["No host inventory", "No registered hosts"],
+            "Refresh",
+            Duration::from_secs(180),
+        )?;
+
+        let (_, row) = console::select_row(
+            &driver,
+            app.pid,
+            app.window_id,
+            |tree| tree.contains("CLEANUP POLICY MODE"),
+            "/CLEANUP POLICY MODE/",
+            Duration::from_secs(60),
+            3,
+            0,
+        )?;
+        let loaded = console::capture(
+            context,
+            &driver,
+            app.pid,
+            app.window_id,
+            "stado-hosts-screen",
+            "loaded",
+        )?;
+
+        absent(
+            &loaded.tree,
+            &[
+                "No host inventory",
+                "No registered hosts",
+                "No hosts in this filter",
+                "Reading host capacity reports",
+                "No host selected",
+            ],
+            "the Hosts screen did not load real fleet state",
+        )?;
+
+        let claiming = console::assert_field(
+            &loaded,
+            "Claiming work",
+            Some(|value: &str| matches!(value, "Yes" | "No")),
+            "/^(Yes|No)$/",
+        )?;
+        let blockers =
+            console::assert_field(&loaded, "Blockers", None::<fn(&str) -> bool>, "the field")?;
+        if blockers == "Reading…" {
+            return Err(format!(
+                "{} renders a spinner where its blockers belong",
+                row.label
+            ));
+        }
+        if claiming == "No" && !loaded.tree.contains("This host is claiming no work") {
+            return Err(format!(
+                "a host that claims nothing must say so; tree: {}",
+                super::common::tail(&loaded.tree, 2000)
+            ));
+        }
+
+        console::assert_field(
+            &loaded,
+            "Free space",
+            Some(|value: &str| {
+                Regex::new(r"^([\d.,]+ GB free|Not reported)")
+                    .unwrap()
+                    .is_match(value)
+            }),
+            "/^([\\d.,]+ GB free|Not reported)/",
+        )?;
+        console::assert_field(
+            &loaded,
+            "Cleanup policy mode",
+            None::<fn(&str) -> bool>,
+            "the field",
+        )?;
+        if !Regex::new(r"[\d.,]+ GB").unwrap().is_match(&loaded.tree) {
+            return Err("the screen renders no disk figure for any host".to_string());
+        }
+        console::assert_field(
+            &loaded,
+            "Running jobs",
+            Some(|value: &str| Regex::new(r"^(\d+|Not reported)$").unwrap().is_match(value)),
+            "/^(\\d+|Not reported)$/",
+        )?;
+        console::assert_field(
+            &loaded,
+            "CPU",
+            Some(|value: &str| {
+                Regex::new(r"^(\d+ available of \d+ cores|Not reported)$")
+                    .unwrap()
+                    .is_match(value)
+            }),
+            "/^(\\d+ available of \\d+ cores|Not reported)$/",
+        )?;
+        console::assert_field(
+            &loaded,
+            "RAM",
+            Some(|value: &str| {
+                Regex::new(r"^([\d.,]+ free of [\d.,]+ GB|Not reported)$")
+                    .unwrap()
+                    .is_match(value)
+            }),
+            "/^([\\d.,]+ free of [\\d.,]+ GB|Not reported)$/",
+        )?;
+        console::assert_field(
+            &loaded,
+            "Accelerators available",
+            None::<fn(&str) -> bool>,
+            "the field",
+        )?;
+        console::assert_field(
+            &loaded,
+            "VRAM",
+            Some(|value: &str| {
+                Regex::new(r"^([\d.,]+ free of [\d.,]+ GB|Not reported)$")
+                    .unwrap()
+                    .is_match(value)
+            }),
+            "/^([\\d.,]+ free of [\\d.,]+ GB|Not reported)$/",
+        )?;
+        if Regex::new(r"(?i)\b(?:FREE )?SLOTS?\b")
+            .unwrap()
+            .is_match(&loaded.tree)
+        {
+            return Err(
+                "the Hosts screen retained the removed fixed-capacity design: the screen shows /\\b(?:FREE )?SLOTS?\\b/i"
+                    .to_string(),
+            );
+        }
+
+        let (dialog_window, sheet, _) = console::activate(
+            &driver,
+            app.pid,
+            app.window_id,
+            "Reclaim disk…",
+            "\"Reclaim disk on \"",
+            |tree| tree.contains("Reclaim disk on "),
+            Duration::from_secs(120),
+        )?;
+        if !sheet.tree.contains("Why this host needs the space") {
+            return Err(format!(
+                "the reclamation sheet does not ask why; tree: {}",
+                super::common::tail(&sheet.tree, 2000)
+            ));
+        }
+        if ![
+            "Type a reason to enable the apply.",
+            "The apply stays unavailable until the dry run above has answered for",
+        ]
+        .iter()
+        .any(|text| sheet.tree.contains(text))
+        {
+            return Err(format!(
+                "the sheet does not state why the apply is unavailable; tree: {}",
+                super::common::tail(&sheet.tree, 2500)
+            ));
+        }
+        if !Regex::new(
+            r#"stado host reclaim .*--apply --reason "why this host needs the space" --json"#,
+        )
+        .unwrap()
+        .is_match(&sheet.tree)
+        {
+            return Err(
+                "the sheet does not show the apply command with an unfilled reason".to_string(),
+            );
+        }
+
+        let control = console::assert_refused_control(&sheet, "Reclaim now")?;
+        let refused = console::capture(
+            context,
+            &driver,
+            app.pid,
+            dialog_window,
+            "stado-hosts-screen",
+            "refused-without-reason",
+        )?;
+        if !refused.tree.contains("Why this host needs the space") {
+            return Err(format!(
+                "the sheet stopped asking why; tree: {}",
+                super::common::tail(&refused.tree, 2000)
+            ));
+        }
+        if console::assert_refused_control(&refused, "Reclaim now")? != control {
+            return Err("the apply became reachable without a reason being typed".to_string());
+        }
+        absent(
+            &refused.tree,
+            &[
+                "What reclamation freed",
+                "Reclaiming disk on ",
+                "The pass ran and reported no stages",
+                "A reason is required",
+            ],
+            "the screen applied a reclamation without a typed reason",
+        )?;
+        if !refused
+            .tree
+            .contains("--apply --reason \"why this host needs the space\" --json")
+        {
+            return Err("the refused sheet no longer shows the unfilled apply command".to_string());
+        }
+
+        console::attempt(&driver, app.pid, dialog_window, "Cancel");
+        let after = console::wait_for_screen(
+            &driver,
+            app.pid,
+            app.window_id,
+            |tree| tree.contains("CLEANUP POLICY MODE"),
+            "/CLEANUP POLICY MODE/",
+            Duration::from_secs(120),
+        )?;
+        absent(
+            &after.tree,
+            &["What reclamation freed", "Reclaim disk on "],
+            "the reclamation sheet outlived a cancel",
+        )
+    })();
+
+    let dump = console::dump_windows(context, &driver, app.pid, "stado-hosts-screen");
+    driver.quit_app(app.pid);
+    result.and(dump)
+}

@@ -17,7 +17,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: echo-web-analytics-collectors.spec.mjs
+    spec: echo-web-analytics-collectors
     journeys: [analytics-collectors]
     env:
       ECHO_ANALYTICS_TEST_ENV: ECHO_ANALYTICS_TEST_ENV

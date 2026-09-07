@@ -1,5 +1,5 @@
 use crate::specs::{self, tui::common};
-use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+use std::{path::PathBuf, process::Command};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let repo = PathBuf::from(context.optional("SKRZYNKA_REPO").unwrap_or_else(|| {
@@ -11,15 +11,16 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             repo.display()
         ));
     }
-    let run = common::run(
-        "cargo",
-        &common::strings(&["test", "--locked", "--bins", "--", "--nocapture"]),
-        Some(&repo),
-        &BTreeMap::new(),
-        &[],
-        None,
-        Duration::from_secs(900),
-    )?;
+    let output = Command::new("cargo")
+        .args(["test", "--locked", "--bins", "--", "--nocapture"])
+        .current_dir(&repo)
+        .output()
+        .map_err(|error| format!("cannot start cargo: {error}"))?;
+    let run = common::Output {
+        status: output.status,
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    };
     let output = run.combined();
     if !run.status.success() {
         return Err(format!(

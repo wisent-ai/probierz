@@ -50,7 +50,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: skarbiec-*.spec.mjs
+    spec: skarbiec-*
     journeys:
       - onboarding-first-use
       - initialize-vault

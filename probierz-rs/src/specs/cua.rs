@@ -9,9 +9,12 @@ mod brama_desktop_critical_operations;
 mod brama_desktop_subscription_pool_screen;
 mod jeden_desktop_task_contract;
 mod skarbiec_desktop_capabilities_screen;
+mod stado_apple_challenge_desktop;
+mod stado_host_dynamic_capacity;
 mod stado_hosts_screen;
 mod stado_releases_screen;
 mod stado_services_screen;
+mod stado_service_convergence;
 mod tama_auth_gate;
 mod tama_session_control;
 mod tama_system_policy;
@@ -40,6 +43,21 @@ pub fn specs() -> Vec<Spec> {
             surface: "desktop:cua",
             title: "skarbiec-desktop-capabilities-screen",
             run: skarbiec_desktop_capabilities_screen::run,
+        },
+        Spec {
+            surface: "desktop:cua",
+            title: "apple-challenge-desktop",
+            run: stado_apple_challenge_desktop::run,
+        },
+        Spec {
+            surface: "desktop:cua",
+            title: "host-dynamic-capacity",
+            run: stado_host_dynamic_capacity::run,
+        },
+        Spec {
+            surface: "desktop:cua",
+            title: "service-convergence",
+            run: stado_service_convergence::run,
         },
         Spec {
             surface: "desktop:cua",

@@ -22,6 +22,6 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     }
     common::write_json(
         &context.artifacts.join("echo-docs-capabilities.json"),
-        &json!({"command":"npm run test:docs","repository":repo,"assertions":["capability catalogue","17 canonical CLI command pages","CLI index links"]}),
+        &json!({"command":"npm run test:docs","repository":repo,"assertions":["capability catalogue","17 canonical CLI command pages","CLI index links","traffic analytics decision guide"]}),
     )
 }

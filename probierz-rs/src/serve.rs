@@ -13,6 +13,10 @@ use crate::failure::{fail, Answer, Failure};
 const BODY_LIMIT: usize = 1024 * 1024;
 const HEADER_LIMIT: usize = 16 * 1024;
 
+pub const HELP: &str = "\
+Accepted arguments:
+  --port <N>    bind loopback port 0 through 65535 (default: 0)";
+
 fn response(stream: &mut TcpStream, status: u16, body: &Value) -> std::io::Result<()> {
     let mut bytes = serde_json::to_vec(body).unwrap_or_else(|_| b"{}".to_vec());
     bytes.push(b'\n');
@@ -149,7 +153,42 @@ fn handle_connection(mut stream: TcpStream, project_root: &Path) -> Result<(), F
     answer.map_err(|error| fail("serve.response", error.to_string()))
 }
 
-pub fn serve(project_root: &Path, port: u16) -> Answer {
+pub fn serve(project_root: &Path, arguments: &[String]) -> Answer {
+    let port = serve_port(arguments);
+    run_server(project_root, port)
+}
+
+fn serve_port(arguments: &[String]) -> u16 {
+    let mut port = None;
+    let mut index = 0usize;
+    while index < arguments.len() {
+        let argument = &arguments[index];
+        if argument != "--port" {
+            invocation_error(format!("unknown serve option: {argument}"));
+        }
+        if port.is_some() {
+            invocation_error("--port may be supplied only once");
+        }
+        let Some(value) = arguments.get(index + 1) else {
+            invocation_error("--port needs a number");
+        };
+        if value.starts_with("--") {
+            invocation_error("--port needs a number");
+        }
+        port = value.trim().parse::<u16>().ok();
+        if port.is_none() {
+            invocation_error("--port needs an integer from 0 through 65535");
+        }
+        index += 2;
+    }
+    port.unwrap_or(0)
+}
+
+fn invocation_error(detail: impl Into<String>) -> ! {
+    clap::Error::raw(clap::error::ErrorKind::InvalidValue, detail.into()).exit()
+}
+
+fn run_server(project_root: &Path, port: u16) -> Answer {
     let listener = TcpListener::bind(("127.0.0.1", port)).map_err(|error| {
         Failure::unavailable(
             "serve.listen",

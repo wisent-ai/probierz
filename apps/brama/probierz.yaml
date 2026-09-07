@@ -21,7 +21,7 @@ repositories:
           - subscription-pool
 surfaces:
   tui:
-    spec: brama-*.spec.mjs
+    spec: brama-*
     journeys:
       - onboarding-first-use
       - subscription-pool

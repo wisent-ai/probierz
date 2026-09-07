@@ -18,7 +18,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: echo-web-capability-catalogue.spec.mjs
+    spec: echo-web-capability-catalogue
     journeys: [capability-catalogue]
     env:
       ECHO_GUI_TEST_ENV: ECHO_GUI_TEST_ENV
