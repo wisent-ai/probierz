@@ -55,8 +55,11 @@ fn source_with_identical_definitions(source: &Path) -> TempDir {
         fs::copy(source.join(relative), &target).expect("copy identical source definition");
         #[cfg(unix)]
         {
-            fs::set_permissions(&target, fs::metadata(source.join(relative)).unwrap().permissions())
-                .expect("copy source definition mode");
+            fs::set_permissions(
+                &target,
+                fs::metadata(source.join(relative)).unwrap().permissions(),
+            )
+            .expect("copy source definition mode");
         }
     }
     duplicate
@@ -177,14 +180,10 @@ fn project_adopt_persists_definitions_lists_identity_and_refuses_local_changes()
     {
         use std::os::unix::fs::PermissionsExt;
         assert_eq!(
-            fs::metadata(
-                destination
-                    .path()
-                    .join("packages/tui/tests/support.mjs")
-            )
-            .unwrap()
-            .permissions()
-            .mode()
+            fs::metadata(destination.path().join("packages/tui/tests/support.mjs"))
+                .unwrap()
+                .permissions()
+                .mode()
                 & 0o777,
             0o751
         );
@@ -404,13 +403,7 @@ fn another_source_always_conflicts_even_when_every_definition_is_identical() {
     let second_text = second.path().to_str().expect("UTF-8 second source");
     let refused = run(
         destination.path(),
-        &[
-            "project",
-            "adopt",
-            "--source",
-            second_text,
-            "--replace",
-        ],
+        &["project", "adopt", "--source", second_text, "--replace"],
     );
     assert_eq!(refused.status.code(), Some(1));
     assert!(refused.stderr.is_empty());
@@ -456,16 +449,15 @@ fn documented_help_names_each_adoption_argument() {
     let adopt = run(root.path(), &["project", "adopt", "--help"]);
     assert!(adopt.status.success());
     let adopt = String::from_utf8_lossy(&adopt.stdout);
-    assert!(adopt.contains(
-        "Usage: probierz project adopt --source <repository> [--replace]"
-    ));
+    assert!(adopt.contains("Usage: probierz project adopt --source <repository> [--replace]"));
     assert!(adopt.contains("--source <repository>"));
     assert!(adopt.contains("--replace"));
 
     let adoptions = run(root.path(), &["project", "adoptions", "--help"]);
     assert!(adoptions.status.success());
-    assert!(String::from_utf8_lossy(&adoptions.stdout)
-        .contains("Usage: probierz project adoptions"));
+    assert!(
+        String::from_utf8_lossy(&adoptions.stdout).contains("Usage: probierz project adoptions")
+    );
 }
 
 #[test]

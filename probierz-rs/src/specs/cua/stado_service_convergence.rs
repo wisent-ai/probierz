@@ -204,10 +204,9 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     let mut app: Option<App> = None;
     let journey = (|| {
         wait_for_file(&ready, &mut fixture, Duration::from_secs(180))?;
-        let state: Value = serde_json::from_slice(
-            &fs::read(&ready).map_err(|error| error.to_string())?,
-        )
-        .map_err(|error| error.to_string())?;
+        let state: Value =
+            serde_json::from_slice(&fs::read(&ready).map_err(|error| error.to_string())?)
+                .map_err(|error| error.to_string())?;
         for field in [
             "endpoint",
             "home",
@@ -221,13 +220,12 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         }
         let endpoint = state_string(&state, "endpoint")?;
         let home = PathBuf::from(state_string(&state, "home")?);
-        let binary = fs::canonicalize(state_string(&state, "binary")?)
-            .map_err(|error| error.to_string())?;
+        let binary =
+            fs::canonicalize(state_string(&state, "binary")?).map_err(|error| error.to_string())?;
         let expected_binary = fs::canonicalize(&built_cli).map_err(|error| error.to_string())?;
         if binary != expected_binary {
             return Err(
-                "the GUI fixture and Stado Desktop are not using the same staged-source CLI"
-                    .into(),
+                "the GUI fixture and Stado Desktop are not using the same staged-source CLI".into(),
             );
         }
         let token_file = PathBuf::from(state_string(&state, "token_file")?);
@@ -238,7 +236,9 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             & 0o777
             != 0o600
         {
-            return Err("the dedicated registry API token file is not owner read/write only".into());
+            return Err(
+                "the dedicated registry API token file is not owner read/write only".into(),
+            );
         }
         if home.join(".stado/local-storage/registry.json").exists() {
             return Err(
@@ -331,17 +331,22 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "a state this journey reads",
             Duration::from_secs(180),
         )?;
-        let target_pattern = Regex::new(&format!(
-            r#""target"\s*:\s*"{}""#,
-            regex::escape(target)
-        ))
-        .unwrap();
+        let target_pattern =
+            Regex::new(&format!(r#""target"\s*:\s*"{}""#, regex::escape(target))).unwrap();
         if !target_pattern.is_match(&receipt.tree) {
-            return Err(format!("the convergence receipt does not name target {target}"));
+            return Err(format!(
+                "the convergence receipt does not name target {target}"
+            ));
         }
         for (pattern, message) in [
-            (r#""verdict"\s*:\s*"host-behind""#, "the receipt has no host-behind verdict"),
-            (r#""verdict"\s*:\s*"in-sync""#, "the receipt has no in-sync verdict"),
+            (
+                r#""verdict"\s*:\s*"host-behind""#,
+                "the receipt has no host-behind verdict",
+            ),
+            (
+                r#""verdict"\s*:\s*"in-sync""#,
+                "the receipt has no in-sync verdict",
+            ),
         ] {
             if !Regex::new(pattern).unwrap().is_match(&receipt.tree) {
                 return Err(message.to_string());

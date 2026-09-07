@@ -85,7 +85,10 @@ printf '{"probierz":{"runId":"%s","captureErrors":[]},"total":1,"passed":1,"fail
     );
     assert_eq!(
         fs::read_to_string(capture.join("env")).expect("env"),
-        format!("bar\nprobierz\n{}\nfocused.web.spec.ts\n1\n", harness.display()),
+        format!(
+            "bar\nprobierz\n{}\nfocused.web.spec.ts\n1\n",
+            harness.display()
+        ),
     );
     let paths = fs::read_to_string(capture.join("paths")).expect("paths");
     let paths: Vec<&str> = paths.lines().collect();

@@ -36,9 +36,11 @@ mod skrzynka_crate_builds;
 mod skrzynka_mailbox_lifecycle;
 mod skrzynka_oauth_failure_diagnosis;
 mod ssh_auth_router_onboarding_first_use;
+mod stado_cli_docs;
 mod stado_fleet_fixture;
 mod stado_host_gates;
 mod stado_host_reclaim;
+mod stado_journeys;
 mod stado_release_doctor;
 mod stado_release_logs;
 mod stado_release_quarantine;
@@ -47,12 +49,10 @@ mod stado_service_ensure;
 mod stado_service_unowned_processes;
 mod ugc_cli_onboarding_first_use;
 mod weles_onboarding_first_use;
+mod wisent_backend_production_latency;
 mod wisent_benchmark_onboarding_first_use;
 mod wisent_onboarding_first_use;
 mod wisent_optimizer_onboarding_first_use;
-mod stado_cli_docs;
-mod stado_journeys;
-mod wisent_backend_production_latency;
 
 /// Every journey registered for this surface.
 pub fn specs() -> Vec<Spec> {

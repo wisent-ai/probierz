@@ -15,21 +15,9 @@ const PRODUCT_SPECS: [(&str, &str, u64); 10] = [
         "tests/run_history/probierz.spec.mjs",
         5_100,
     ),
-    (
-        "disk-cleanup",
-        "tests/cleanup/probierz.spec.mjs",
-        5_100,
-    ),
-    (
-        "release-pipeline",
-        "tests/ci-cd/probierz.spec.mjs",
-        8_100,
-    ),
-    (
-        "native-build",
-        "tests/builds/probierz.spec.mjs",
-        5_700,
-    ),
+    ("disk-cleanup", "tests/cleanup/probierz.spec.mjs", 5_100),
+    ("release-pipeline", "tests/ci-cd/probierz.spec.mjs", 8_100),
+    ("native-build", "tests/builds/probierz.spec.mjs", 5_700),
     (
         "platform-matrix",
         "tests/platform-matrix/probierz.spec.mjs",
@@ -65,10 +53,7 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         Some(source) => resolve_from(&context.harness, &source).join("stado-rs"),
         None => {
             let binary = resolve_from(&context.harness, &binary);
-            binary
-                .parent()
-                .unwrap_or(&binary)
-                .join("../..")
+            binary.parent().unwrap_or(&binary).join("../..")
         }
     };
     let journeys = context
@@ -101,9 +86,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     }
 
     for journey in journeys {
-        let Some((_, relative, timeout_seconds)) = PRODUCT_SPECS
-            .iter()
-            .find(|(known, _, _)| *known == journey)
+        let Some((_, relative, timeout_seconds)) =
+            PRODUCT_SPECS.iter().find(|(known, _, _)| *known == journey)
         else {
             return Err(format!(
                 "Unmapped Stado journey selected by Probierz: {journey}"

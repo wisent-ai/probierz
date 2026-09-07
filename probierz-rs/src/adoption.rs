@@ -42,7 +42,6 @@ Operations:
   adopt       validate and persist definitions without running them
   adoptions   list retained source identities";
 
-
 #[derive(Debug, Subcommand)]
 pub enum ProjectCommand {
     /// Adopt existing application manifests and journey specs without running them.
@@ -64,7 +63,6 @@ pub enum ProjectCommand {
         args: Vec<String>,
     },
 }
-
 
 #[derive(Clone)]
 struct DefinitionFile {
@@ -157,7 +155,6 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
         }
     }
 }
-
 
 fn invocation_error(detail: impl Into<String>) -> ! {
     clap::Error::raw(clap::error::ErrorKind::InvalidValue, detail.into()).exit()

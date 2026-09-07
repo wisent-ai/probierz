@@ -13,10 +13,10 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
-use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -200,9 +200,8 @@ program that writes the canonical report"
                 ),
             ));
         }
-        let metadata = fs::metadata(&path).map_err(|error| {
-            fail("specs.external", format!("{spec} cannot be read: {error}"))
-        })?;
+        let metadata = fs::metadata(&path)
+            .map_err(|error| fail("specs.external", format!("{spec} cannot be read: {error}")))?;
         if !metadata.is_file() {
             return Err(fail("specs.external", format!("{spec} is not a file")));
         }
@@ -222,7 +221,11 @@ program that writes the canonical report"
         #[cfg(not(unix))]
         let executable = true;
         if executable {
-            return Ok(Self { title, program: path, args: Vec::new() });
+            return Ok(Self {
+                title,
+                program: path,
+                args: Vec::new(),
+            });
         }
         let interpreter = interpreter_of(&path)?;
         Ok(Self {

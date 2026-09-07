@@ -3094,12 +3094,14 @@ pub fn evaluate_seo(
                 .as_f64()
                 .unwrap_or(0.0)
                 .min(model_value["score"].as_f64().unwrap_or(0.0)),
-            _ => return Err(Failure::config(
-                "seo-evaluate",
-                format!(
+            _ => {
+                return Err(Failure::config(
+                    "seo-evaluate",
+                    format!(
                     "invalid SEO contract: {name}.source must be model, deterministic, or hybrid"
                 ),
-            )),
+                ))
+            }
         };
         let weight = rule["weight"].as_f64().unwrap_or(0.0);
         let minimum = rule["minimum"].as_f64().unwrap_or(0.0);

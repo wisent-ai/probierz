@@ -63,7 +63,8 @@ fn an_application_owned_program_runs_and_lands_in_the_canonical_report() {
 
     let (code, stdout, stderr) = run_journey(&harness, &spec, &artifacts);
     assert_eq!(code, Some(0), "stderr: {stderr}");
-    let report: Value = serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
+    let report: Value =
+        serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
     let row = &report["tests"][0];
     assert_eq!(row["title"], "docs-publication", "row: {row}");
     assert_eq!(row["passed"], true, "row: {row}");
@@ -72,7 +73,8 @@ fn an_application_owned_program_runs_and_lands_in_the_canonical_report() {
 
     // The run's environment reached the program, and its working directory was
     // the artifacts directory the run allocated.
-    let evidence = fs::read_to_string(artifacts.join("ran.txt")).expect("the program wrote evidence");
+    let evidence =
+        fs::read_to_string(artifacts.join("ran.txt")).expect("the program wrote evidence");
     assert!(
         evidence.contains(artifacts.to_str().expect("UTF-8 artifacts")),
         "evidence: {evidence}"
@@ -94,7 +96,8 @@ fn a_failing_application_program_fails_the_run_and_keeps_its_reason() {
 
     let (code, stdout, _) = run_journey(&harness, &spec, &artifacts);
     assert_eq!(code, Some(1), "a failed journey fails the run");
-    let report: Value = serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
+    let report: Value =
+        serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
     let row = &report["tests"][0];
     assert_eq!(row["title"], "developer-id");
     assert_eq!(row["status"], "failed");
@@ -121,7 +124,8 @@ fn a_script_that_is_not_executable_runs_through_the_interpreter_it_names() {
 
     let (code, stdout, stderr) = run_journey(&harness, &spec, &artifacts);
     assert_eq!(code, Some(0), "stderr: {stderr}");
-    let report: Value = serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
+    let report: Value =
+        serde_json::from_str(&stdout).unwrap_or_else(|_| panic!("run JSON: {stdout}"));
     assert_eq!(report["tests"][0]["title"], "owned");
     assert_eq!(report["tests"][0]["passed"], true);
 }
@@ -147,9 +151,8 @@ fn a_spec_that_is_neither_a_title_nor_a_path_is_refused_by_name() {
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains(
-            "no-such-journey is neither a registered journey title nor an absolute path"
-        ),
+        stderr
+            .contains("no-such-journey is neither a registered journey title nor an absolute path"),
         "stderr: {stderr}"
     );
 }

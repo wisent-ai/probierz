@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use serde_json::Value;
-use tempfile::{TempDir, tempdir};
+use tempfile::TempDir;
 
 fn run(root: &Path, arguments: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_probierz"))
@@ -285,7 +285,9 @@ else:
 
 fn write_executable(path: &Path, source: &str) {
     fs::write(path, source).expect("write executable");
-    let mut permissions = fs::metadata(path).expect("executable metadata").permissions();
+    let mut permissions = fs::metadata(path)
+        .expect("executable metadata")
+        .permissions();
     permissions.set_mode(0o755);
     fs::set_permissions(path, permissions).expect("make executable");
 }
@@ -363,9 +365,13 @@ fn remote_byk_builds_the_stado_transport_from_resolved_host_inventory() {
             .unwrap()[..]
     );
     assert_eq!(forward[4], "--remote-port");
-    assert!(forward[5].as_str().is_some_and(|port| port.parse::<u16>().is_ok()));
+    assert!(forward[5]
+        .as_str()
+        .is_some_and(|port| port.parse::<u16>().is_ok()));
     assert_eq!(forward[6], "--local-port");
-    assert!(forward[7].as_str().is_some_and(|port| port.parse::<u16>().is_ok()));
+    assert!(forward[7]
+        .as_str()
+        .is_some_and(|port| port.parse::<u16>().is_ok()));
     assert_eq!(forward[8], "--json");
     assert_eq!(
         argv(4),
@@ -383,9 +389,7 @@ fn remote_byk_builds_the_stado_transport_from_resolved_host_inventory() {
     );
 
     let source_delivery = argv(5);
-    let destination = source_delivery[4]
-        .as_str()
-        .expect("source destination");
+    let destination = source_delivery[4].as_str().expect("source destination");
     let run_id = destination
         .strip_prefix(".stado/work/runs/")
         .and_then(|value| value.strip_suffix("/probierz"))
@@ -457,9 +461,7 @@ fn remote_byk_builds_the_stado_transport_from_resolved_host_inventory() {
     assert_eq!(worker_input["recipient"], "fixture@example.com");
     assert_eq!(worker_input["runRoot"], remote_root);
     assert!(worker_input["otpPort"].as_u64().is_some());
-    let bridge_token = worker_input["bridgeToken"]
-        .as_str()
-        .expect("bridge token");
+    let bridge_token = worker_input["bridgeToken"].as_str().expect("bridge token");
     assert_eq!(bridge_token.len(), 36);
     assert!(stado
         .iter()

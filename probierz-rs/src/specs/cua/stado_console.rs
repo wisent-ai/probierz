@@ -61,20 +61,15 @@ pub struct Button {
 
 pub fn read_prompt_free_cua_readiness(driver: &Driver) -> Result<Value, String> {
     let response = driver.call("check_permissions", serde_json::json!({ "prompt": false }))?;
-    Ok(response
-        .get("permissions")
-        .cloned()
-        .unwrap_or(response))
+    Ok(response.get("permissions").cloned().unwrap_or(response))
 }
 pub fn require_product_dispatch(context: &specs::Context) -> Result<std::path::PathBuf, String> {
     let source = context
         .optional("PROBIERZ_APP_SOURCE")
         .ok_or_else(|| "PROBIERZ_APP_SOURCE must identify the staged Stado source".to_string())?;
-    let journeys = context
-        .optional("PROBIERZ_JOURNEYS")
-        .ok_or_else(|| {
-            "PROBIERZ_JOURNEYS must name the journeys selected by Probierz".to_string()
-        })?;
+    let journeys = context.optional("PROBIERZ_JOURNEYS").ok_or_else(|| {
+        "PROBIERZ_JOURNEYS must name the journeys selected by Probierz".to_string()
+    })?;
     let journeys = journeys
         .split(',')
         .filter(|value| !value.is_empty())

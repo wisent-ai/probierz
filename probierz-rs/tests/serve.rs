@@ -104,8 +104,11 @@ fn identical_adoption_source(root: &Path, source: &Path) {
         fs::copy(source.join(relative), &target).expect("copy identical definition");
         #[cfg(unix)]
         {
-            fs::set_permissions(&target, fs::metadata(source.join(relative)).unwrap().permissions())
-                .expect("copy definition mode");
+            fs::set_permissions(
+                &target,
+                fs::metadata(source.join(relative)).unwrap().permissions(),
+            )
+            .expect("copy definition mode");
         }
     }
 }
@@ -261,18 +264,12 @@ fn serve_help_and_refusals_match_the_documented_cli() {
             vec!["serve", "--port", "1.0"],
             "--port needs an integer from 0 through 65535",
         ),
-        (
-            vec!["serve", "--port"],
-            "--port needs a number",
-        ),
+        (vec!["serve", "--port"], "--port needs a number"),
         (
             vec!["serve", "--unknown", "value"],
             "unknown serve option: --unknown",
         ),
-        (
-            vec!["serve", "--port=1"],
-            "unknown serve option: --port=1",
-        ),
+        (vec!["serve", "--port=1"], "unknown serve option: --port=1"),
         (
             vec!["serve", "--port", "1", "--port", "2"],
             "--port may be supplied only once",

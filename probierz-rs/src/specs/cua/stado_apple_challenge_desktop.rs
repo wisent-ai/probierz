@@ -48,11 +48,9 @@ fn prompt_free_readiness(context: &specs::Context) -> Result<Value, String> {
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
     }
-    let response: Value = serde_json::from_slice(&output.stdout).map_err(|error| error.to_string())?;
-    Ok(response
-        .get("permissions")
-        .cloned()
-        .unwrap_or(response))
+    let response: Value =
+        serde_json::from_slice(&output.stdout).map_err(|error| error.to_string())?;
+    Ok(response.get("permissions").cloned().unwrap_or(response))
 }
 
 fn quoted(argument: &str) -> String {
@@ -125,24 +123,28 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         .filter(|value| !value.is_empty())
         .or_else(|| context.optional("STADO_APPLE_PREPARATION_HOST"))
         .ok_or_else(|| {
-            "STADO_APPLE_PREPARATION_HOST must explicitly name the dedicated Stado host"
-                .to_string()
+            "STADO_APPLE_PREPARATION_HOST must explicitly name the dedicated Stado host".to_string()
         })?;
     let host = raw_host.trim();
     if host != raw_host {
-        return Err(
-            "STADO_APPLE_PREPARATION_HOST must not contain surrounding whitespace".into(),
-        );
+        return Err("STADO_APPLE_PREPARATION_HOST must not contain surrounding whitespace".into());
     }
     if host.is_empty() {
         return Err("STADO_APPLE_PREPARATION_HOST must not be empty".into());
     }
-    if host.chars().any(|character| matches!(character, '\r' | '\n' | '\0')) {
+    if host
+        .chars()
+        .any(|character| matches!(character, '\r' | '\n' | '\0'))
+    {
         return Err("STADO_APPLE_PREPARATION_HOST contains a control character".into());
     }
 
     let readiness_before = prompt_free_readiness(context)?;
-    if readiness_before.get("accessibility").and_then(Value::as_bool) != Some(true) {
+    if readiness_before
+        .get("accessibility")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
         return Err("the existing CuaDriver daemon must report Accessibility ready without prompting before app launch".into());
     }
 
@@ -158,17 +160,18 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             launched.pid,
             launched.window_id,
             "Hosts",
-            |tree| Regex::new(r"AX\w*Button \(All hosts").unwrap().is_match(tree),
+            |tree| {
+                Regex::new(r"AX\w*Button \(All hosts")
+                    .unwrap()
+                    .is_match(tree)
+            },
             "/AX\\w*Button \\(All hosts/",
             &["No host inventory", "No registered hosts"],
             "Refresh",
             GATES,
         )?;
-        let row_pattern = Regex::new(&format!(
-            r"AX\w*Button \({}(?:,|\))",
-            regex::escape(host)
-        ))
-        .unwrap();
+        let row_pattern =
+            Regex::new(&format!(r"AX\w*Button \({}(?:,|\))", regex::escape(host))).unwrap();
         let hosts = console::wait_for_screen(
             &driver,
             launched.pid,
@@ -190,7 +193,11 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
                         .map(|row| row.label)
                         .collect::<Vec<_>>()
                         .join(" | ");
-                    if rows.is_empty() { "none".to_string() } else { rows }
+                    if rows.is_empty() {
+                        "none".to_string()
+                    } else {
+                        rows
+                    }
                 }
             ));
         }
@@ -216,12 +223,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "stado-apple-challenge-preparation",
             "selected-host",
         )?;
-        let command = console::assert_field(
-            &selected,
-            "Command",
-            None::<fn(&str) -> bool>,
-            "the field",
-        )?;
+        let command =
+            console::assert_field(&selected, "Command", None::<fn(&str) -> bool>, "the field")?;
         if command != expected_command {
             return Err(format!(
                 "Command reads {command:?}, expected {expected_command:?}"
@@ -269,7 +272,9 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "the field",
         )?;
         if reported != host {
-            return Err(format!("Reported host reads {reported:?}, expected {host:?}"));
+            return Err(format!(
+                "Reported host reads {reported:?}, expected {host:?}"
+            ));
         }
 
         console::click(
@@ -316,7 +321,9 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "the field",
         )?;
         if reported != host {
-            return Err(format!("Reported host reads {reported:?}, expected {host:?}"));
+            return Err(format!(
+                "Reported host reads {reported:?}, expected {host:?}"
+            ));
         }
         let destination = console::assert_field(
             &observed,
@@ -336,21 +343,17 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
                 "the product did not report Apple helper version {APPLE_HELPER_VERSION}"
             ));
         }
-        if !report_item(
-            &observed.tree,
-            "apple-challenge-accessibility",
-            "granted",
-        ) {
-            return Err("the product did not read back the Apple helper Accessibility grant".into());
+        if !report_item(&observed.tree, "apple-challenge-accessibility", "granted") {
+            return Err(
+                "the product did not read back the Apple helper Accessibility grant".into(),
+            );
         }
         if !report_item(&observed.tree, "apple-challenge-ready", "yes") {
             return Err("the product did not exercise the signed helper prompt-free in the registry-bound Aqua session".into());
         }
-        if !Regex::new(
-            r#"(?i)apple-challenge-helper:\s*(?:installed|reused)(?:[\s"),]|$)"#,
-        )
-        .unwrap()
-        .is_match(&observed.tree)
+        if !Regex::new(r#"(?i)apple-challenge-helper:\s*(?:installed|reused)(?:[\s"),]|$)"#)
+            .unwrap()
+            .is_match(&observed.tree)
         {
             return Err(
                 "the product did not report whether the real signed helper was installed or reused"

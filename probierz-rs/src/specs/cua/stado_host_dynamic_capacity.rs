@@ -6,7 +6,6 @@ use crate::specs;
 
 use super::stado_console as console;
 
-
 fn absent(tree: &str, needles: &[&str], why: &str) -> Result<(), String> {
     for needle in needles {
         if tree.contains(needle) {
@@ -26,7 +25,11 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             app.pid,
             app.window_id,
             "Hosts",
-            |tree| Regex::new(r"AX\w*Button \(All hosts").unwrap().is_match(tree),
+            |tree| {
+                Regex::new(r"AX\w*Button \(All hosts")
+                    .unwrap()
+                    .is_match(tree)
+            },
             "/AX\\w*Button \\(All hosts/",
             &["No host inventory", "No registered hosts"],
             "Refresh",

@@ -553,7 +553,6 @@ impl Snapshot {
             .iter()
             .find(|element| element.get("element_index").and_then(Value::as_u64) == Some(index))
     }
-
 }
 
 pub fn element_index_of(tree: &str, needle: &str) -> Result<u64, String> {

@@ -42,9 +42,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     }
 
     for journey in journeys {
-        let Some((_, relative, timeout_seconds)) = PRODUCT_SPECS
-            .iter()
-            .find(|(known, _, _)| *known == journey)
+        let Some((_, relative, timeout_seconds)) =
+            PRODUCT_SPECS.iter().find(|(known, _, _)| *known == journey)
         else {
             return Err(format!(
                 "Unmapped Stado documentation journey selected by Probierz: {journey}"

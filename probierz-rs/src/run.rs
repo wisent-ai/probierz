@@ -242,7 +242,10 @@ fn parse_run_args(args: &[String], allow_positionals: bool) -> Result<RunArgs, F
                 index += 1;
             }
             "--local" => opts.local = true,
-            "--host" => { opts.host = Some(value_after(args, index, arg)?); index += 1; }
+            "--host" => {
+                opts.host = Some(value_after(args, index, arg)?);
+                index += 1;
+            }
             "--seed-resend" => opts.seed_resend = true,
             "--files" => {}
             _ if arg.starts_with("--") => {

@@ -22,9 +22,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use chrono::{DateTime, Utc};
 use clap::{Args, Subcommand};
 use serde::Deserialize;
-use subtle::ConstantTimeEq;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 use crate::discovery;
 use crate::failure::{print_json, Answer, Code, Failure};
@@ -4817,11 +4817,7 @@ fn resolve_byk_target(selector: &str) -> Result<BykTarget, Failure> {
     }
     let config = sh_with_input(
         STADO_BIN,
-        &[
-            "host".into(),
-            "config-show".into(),
-            registry_target.clone(),
-        ],
+        &["host".into(), "config-show".into(), registry_target.clone()],
         &[],
     );
     if config.status != Some(0) {
@@ -4876,7 +4872,6 @@ fn byk_resolution_failure(selector: &str, output: &ProcessOutput) -> Failure {
     )
 }
 
-
 fn stado_home_from_config(file: &Path) -> Option<PathBuf> {
     if !file.is_absolute() || file.file_name()?.to_str()? != "config.json" {
         return None;
@@ -4896,13 +4891,10 @@ fn byk_forward_port(run_id: &str) -> u16 {
 
 fn valid_bridge_token(value: &str) -> bool {
     value.len() == 36
-        && value
-            .bytes()
-            .enumerate()
-            .all(|(index, byte)| match index {
-                8 | 13 | 18 | 23 => byte == b'-',
-                _ => byte.is_ascii_hexdigit(),
-            })
+        && value.bytes().enumerate().all(|(index, byte)| match index {
+            8 | 13 | 18 | 23 => byte == b'-',
+            _ => byte.is_ascii_hexdigit(),
+        })
 }
 
 struct BykLocalBridge {
@@ -5063,7 +5055,6 @@ fn clear_byk_quarantine(home: &Path) -> Answer {
     }
     Ok(())
 }
-
 
 fn retry_byk<F>(label: &str, mut operation: F) -> Answer
 where
@@ -5338,8 +5329,7 @@ fn byk_auth_worker_inner() -> Result<i32, Failure> {
             "remote Byk app is unavailable",
         ));
     }
-    let otp_bridge =
-        BykRemoteBridge::start(&socket_path, config.otp_port, &config.bridge_token)?;
+    let otp_bridge = BykRemoteBridge::start(&socket_path, config.otp_port, &config.bridge_token)?;
     let lock_path = run_root
         .parent()
         .and_then(Path::parent)
