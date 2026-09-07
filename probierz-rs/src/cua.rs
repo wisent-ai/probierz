@@ -554,14 +554,6 @@ impl Snapshot {
             .find(|element| element.get("element_index").and_then(Value::as_u64) == Some(index))
     }
 
-    /// An element by the token the snapshot itself minted. A token carries the
-    /// snapshot it came from, so a stale token cannot silently address a
-    /// different element after the window re-rendered.
-    pub fn element_by_token(&self, token: &str) -> Option<&Value> {
-        self.elements
-            .iter()
-            .find(|element| element.get("element_token").and_then(Value::as_str) == Some(token))
-    }
 }
 
 pub fn element_index_of(tree: &str, needle: &str) -> Result<u64, String> {
@@ -673,7 +665,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn snapshot_prefers_structured_content_and_resolves_bound_token() {
+    fn snapshot_prefers_structured_content_over_the_markdown_tree() {
         let snapshot = Snapshot::from_value(json!({
             "tree_markdown": "- AXButton (Save) [7]",
             "structuredContent": {
@@ -683,6 +675,5 @@ mod tests {
         }));
         assert_eq!(snapshot.snapshot_id.as_deref(), Some("s42"));
         assert_eq!(element_index_of(&snapshot.tree, "AXButton (Save)"), Ok(7));
-        assert_eq!(snapshot.element_by_token("s42:7").unwrap()["label"], "Save");
     }
 }
