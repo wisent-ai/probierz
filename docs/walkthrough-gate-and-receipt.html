@@ -1,0 +1,127 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Walkthrough: run → gate → signed receipt — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/walkthrough-gate-and-receipt.md</p><h1>Walkthrough: run → gate → signed receipt</h1>
+<p>Executed end-to-end on this checkout on 2026-08-24, continuing from the registered <code>docs-demo</code> application of <a href="walkthrough-register-app.md">walkthrough-register-app</a>. Every output is pasted from the session (paths shortened to <code>&lt;checkout&gt;</code>, UUIDs to <code>…</code>). This is as far as <code>main</code> goes without external hosts: local runs, the full gate lifecycle, a signed and verified receipt, and the in-process async queue. Remote Stado execution needs a fleet and is not exercised here (<a href="remote-stado.md">remote-stado</a>).</p>
+<p>Runnable version: <a href="examples/run-gate-receipt.sh">examples/run-gate-receipt.sh</a>.</p>
+<h2>1. An adhoc run</h2>
+<pre data-language=""><code>$ node agent/cli.mjs run tui --app docs-demo
+{
+  &quot;runId&quot;: &quot;2026-08-24T22-35-08-980Z-9bc420dc-…&quot;,
+  &quot;appId&quot;: &quot;docs-demo&quot;,
+  &quot;kind&quot;: &quot;adhoc&quot;,
+  &quot;target&quot;: &quot;tui&quot;,
+  &quot;command&quot;: &quot;npm run test:tui (PROBIERZ_SPEC=docs-demo-hello.spec.mjs)&quot;,
+  &quot;spec&quot;: &quot;docs-demo-hello.spec.mjs&quot;,
+  &quot;exitCode&quot;: 0,
+  &quot;passed&quot;: true,
+  &quot;durationMs&quot;: 665,
+  &quot;reportValidation&quot;: { &quot;ok&quot;: true, &quot;runId&quot;: &quot;2026-08-24T22-35-08-980Z-9bc420dc-…&quot;,
+                        &quot;mtime&quot;: &quot;2026-08-24T22:35:09.616Z&quot; },
+  &quot;evidence&quot;: { &quot;report&quot;: true, &quot;analysis&quot;: true, &quot;captureRequired&quot;: false,
+                &quot;capturePresent&quot;: true, &quot;captureErrors&quot;: [], &quot;missingMedia&quot;: [],
+                &quot;crashes&quot;: [], &quot;errors&quot;: [] },
+  &quot;analysis&quot;: { &quot;tool&quot;: &quot;playwright&quot;, &quot;total&quot;: 1, &quot;passed&quot;: 1, &quot;failed&quot;: 0, … },
+  …
+}</code></pre>
+<p>Exit 0. The manifest surface selected the spec; the report came back stamped with this run&#x27;s own ID; the analysis found one executed, passing check — so the evidence block is clean and the run is <code>E2</code> (<a href="concepts/run.md">concepts/run</a>, <a href="concepts/evidence.md">concepts/evidence</a>).</p>
+<p><code>status docs-demo</code> would now answer merge eligibility, but it walks the whole registry and this checkout ships one broken manifest (<a href="limitations.md">limitations</a>); the per-app projections work:</p>
+<pre data-language=""><code>$ node agent/cli.mjs last-green docs-demo
+{ …, &quot;run&quot;: { &quot;runId&quot;: &quot;2026-08-24T22-35-08-980Z-9bc420dc-…&quot;, &quot;status&quot;: &quot;passed&quot;,
+  &quot;harness&quot;: { &quot;gitSha&quot;: &quot;f8807e5…&quot;, &quot;dirty&quot;: true,
+               &quot;sha256&quot;: &quot;74ab23def1e65b14ce964c1f7ccb3261f9ec4b43e2f081327115c113a3014331&quot; },
+  &quot;source&quot;:  { &quot;sha256&quot;: &quot;bf76b35155387978d44936fb30019110c5791c32b26648d03c814e20935be6f2&quot;, … }, … } }</code></pre>
+<h2>2. The gate starts closed</h2>
+<pre data-language=""><code>$ node agent/cli.mjs gate-status docs-demo
+{ &quot;schemaVersion&quot;: 2, &quot;appId&quot;: &quot;docs-demo&quot;,
+  &quot;modes&quot;: { &quot;pull-request&quot;: { &quot;enforcement&quot;: &quot;pending-green&quot; },
+             &quot;release&quot;:      { &quot;enforcement&quot;: &quot;pending-green&quot; } },
+  &quot;file&quot;: &quot;&lt;checkout&gt;/apps/docs-demo/gates.json&quot;, &quot;exists&quot;: false }</code></pre>
+<p>No <code>gates.json</code> exists yet; both modes report the fail-closed default.</p>
+<p>Export the identities from step 1 (they are also printed by <code>source-identity docs-demo</code>):</p>
+<pre data-language="bash"><code>H=74ab23def1e65b14ce964c1f7ccb3261f9ec4b43e2f081327115c113a3014331
+S=bf76b35155387978d44936fb30019110c5791c32b26648d03c814e20935be6f2
+ADHOC=2026-08-24T22-35-08-980Z-9bc420dc-ed03-4412-b96f-a1f5c26ecaa9</code></pre>
+<h2>3. The adhoc run cannot satisfy the gate</h2>
+<pre data-language=""><code>$ node agent/cli.mjs gate-evaluate docs-demo pull-request $H --source-sha $S --runs $ADHOC
+… &quot;verdict&quot;: {
+  &quot;passed&quot;: false,
+  &quot;errors&quot;: [ &quot;2026-08-24T22-35-08-980Z-9bc420dc-…: run kind adhoc is not pull-request&quot; ] }</code></pre>
+<p>Exit 1. Same evidence, wrong <code>kind</code> — gates only accept runs whose recorded kind matches the mode. Produce a pull-request run by passing the kind as a run condition:</p>
+<pre data-language=""><code>$ node agent/cli.mjs run tui --app docs-demo PROBIERZ_RUN_KIND=pull-request
+{ &quot;runId&quot;: &quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;, &quot;kind&quot;: &quot;pull-request&quot;, &quot;passed&quot;: true, … }
+$ PR=2026-08-24T22-35-50-658Z-bd1e5394-e741-4c56-8f28-54ed53921968</code></pre>
+<h2>4. Enforce fails closed until activation</h2>
+<pre data-language=""><code>$ node agent/cli.mjs gate-enforce docs-demo pull-request $H --source-sha $S --runs $PR
+{ …, &quot;mode&quot;: &quot;pull-request&quot;,
+  &quot;verdict&quot;: { &quot;passed&quot;: false, &quot;errors&quot;: [ &quot;gate is pending green activation&quot; ] }, … }</code></pre>
+<p>Exit 1 — with a fully green run in hand. Enforcement refuses to pass anything until the gate has been activated by one fully green evaluation.</p>
+<h2>5. Evaluate green, then activate</h2>
+<pre data-language=""><code>$ node agent/cli.mjs gate-evaluate docs-demo pull-request $H --source-sha $S --runs $PR
+… &quot;verdict&quot;: { &quot;passed&quot;: true, &quot;errors&quot;: [] },
+  &quot;evidence&quot;: { &quot;runIds&quot;: [&quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;],
+                &quot;builds&quot;: { &quot;tui&quot;: &quot;ab7a82f9562fd57da01c011640b0e756dd45314f03c777a7210e2378c1eb6c7c&quot; },
+                &quot;levels&quot;: { &quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;: &quot;E2&quot; } }
+
+$ node agent/cli.mjs gate-activate docs-demo pull-request $H --source-sha $S --runs $PR</code></pre>
+<p>Activation wrote the managed state — <code>apps/docs-demo/gates.json</code> now holds:</p>
+<pre data-language="json"><code>&quot;pull-request&quot;: {
+  &quot;enforcement&quot;: &quot;required&quot;,
+  &quot;activatedAt&quot;: &quot;2026-08-24T22:36:18.019Z&quot;,
+  &quot;activationEvidence&quot;: {
+    &quot;expectedHarnessSha&quot;: &quot;74ab23de…&quot;,
+    &quot;expectedSourceSha&quot;: &quot;bf76b351…&quot;,
+    &quot;runIds&quot;: [&quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;],
+    &quot;builds&quot;: { &quot;tui&quot;: &quot;ab7a82f9…&quot; },
+    &quot;receiptFingerprint&quot;: null
+  }
+}</code></pre>
+<p>and the same <code>gate-enforce</code> command now re-evaluates and passes:</p>
+<pre data-language=""><code>$ node agent/cli.mjs gate-enforce docs-demo pull-request $H --source-sha $S --runs $PR
+… &quot;verdict&quot;: { &quot;passed&quot;: true, &quot;errors&quot;: [] }</code></pre>
+<h2>6. Sign a receipt — first attempt refused, and signed anyway</h2>
+<pre data-language=""><code>$ openssl genpkey -algorithm ed25519 -out /tmp/receipt-key.pem
+$ export PROBIERZ_RECEIPT_PRIVATE_KEY_FILE=/tmp/receipt-key.pem
+$ node agent/cli.mjs receipt docs-demo v0.2.0-docs $H --source-sha $S --runs $PR
+{ &quot;receiptId&quot;: &quot;3a335abe2b864beb3ff0223f&quot;,
+  &quot;file&quot;: &quot;&lt;checkout&gt;/test-results/receipts/docs-demo/v0.2.0-docs/3a335abe2b864beb3ff0223f.json&quot;,
+  &quot;receipt&quot;: { &quot;verdict&quot;: {
+    &quot;passed&quot;: false,
+    &quot;errors&quot;: [ &quot;2026-08-24T22-35-50-658Z-bd1e5394-…: E2 is below E3&quot; ],
+    &quot;coveredJourneys&quot;: [&quot;greet&quot;], &quot;missingJourneys&quot;: [] }, … } }</code></pre>
+<p>Exit 1 — the receipt default minimum is <code>E3</code> and this run has no recording. Note what happened anyway: the failing receipt <strong>was written and signed</strong>, so the failure list itself is portable evidence (<a href="concepts/receipt.md">concepts/receipt</a>). Sign at the level the evidence actually has:</p>
+<pre data-language=""><code>$ node agent/cli.mjs receipt docs-demo v0.2.0-docs $H --source-sha $S --runs $PR --minimum E2
+{ &quot;receiptId&quot;: &quot;8f082f1da9ffe054043e7306&quot;,
+  &quot;file&quot;: &quot;…/test-results/receipts/docs-demo/v0.2.0-docs/8f082f1da9ffe054043e7306.json&quot;,
+  &quot;receipt&quot;: { &quot;verdict&quot;: { &quot;passed&quot;: true, &quot;errors&quot;: [], &quot;coveredJourneys&quot;: [&quot;greet&quot;] },
+    &quot;secretScans&quot;: { &quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;: {
+      &quot;passed&quot;: true, &quot;scannedFiles&quot;: 8, &quot;findings&quot;: [] } },
+    &quot;runs&quot;: [ { &quot;runId&quot;: &quot;2026-08-24T22-35-50-658Z-bd1e5394-…&quot;, &quot;evidenceLevel&quot;: &quot;E2&quot;,
+      &quot;kind&quot;: &quot;pull-request&quot;, &quot;sourceRevision&quot;: &quot;5ec63d9f585b20f03e803da3d9e13fbe0cb73237&quot;,
+      &quot;artifacts&quot;: [ { &quot;file&quot;: &quot;analysis.json&quot;, &quot;sha256&quot;: &quot;b0fb4263…&quot;, &quot;bytes&quot;: 2939 }, …7 more ] } ],
+    &quot;signing&quot;: { &quot;algorithm&quot;: &quot;Ed25519&quot;,
+      &quot;publicKeyFingerprintSha256&quot;: &quot;4e194878e1dec583911fa17adc02837a84ff3b52bc5dcb0fce3a9c8c6ee220fe&quot;, … } } }</code></pre>
+<p>Exit 0. Signing re-ran the secret scan and re-hashed every artifact of the run before the signature was produced.</p>
+<h2>7. Verify: validity is signature AND trust AND hash</h2>
+<pre data-language=""><code>$ node agent/cli.mjs verify-receipt &lt;file&gt;
+{ &quot;valid&quot;: false, &quot;signatureValid&quot;: true, &quot;trusted&quot;: false,
+  &quot;fingerprint&quot;: &quot;4e194878…&quot;, &quot;payloadSha256&quot;: &quot;4c98c600…&quot;, … }        # exit 1
+
+$ node agent/cli.mjs verify-receipt &lt;file&gt; --fingerprint 4e194878e1dec583911fa17adc02837a84ff3b52bc5dcb0fce3a9c8c6ee220fe
+{ &quot;valid&quot;: true, &quot;signatureValid&quot;: true, &quot;trusted&quot;: true, … }          # exit 0</code></pre>
+<p>A receipt verifying against its own embedded key proves integrity, not authorship; trust must be pinned explicitly.</p>
+<h2>8. The same lifecycle, asynchronously</h2>
+<p>The MCP server runs the identical run path through the in-process queue — started, polled, canceled, and read back over JSON-RPC. The captured session (start → <code>queued</code> → <code>running</code> → <code>passed</code> in 0.6 s, artifact reads audited, cancel-in-flight settling as <code>canceled</code>, traversal refused) is in <a href="mcp.md#the-asynchronous-run-queue">mcp</a>. The queue is not durable across a server restart; the run directories it leaves behind are ordinary runs:</p>
+<pre data-language=""><code>$ node agent/cli.mjs history docs-demo
+{ &quot;summary&quot;: { &quot;runs&quot;: 7, &quot;passed&quot;: 5, &quot;failed&quot;: 1, &quot;blocked&quot;: 0, &quot;canceled&quot;: 1,
+    &quot;productFailures&quot;: 1, &quot;infrastructureFailures&quot;: 0, &quot;passRate&quot;: 0.833…,
+    &quot;flakyTests&quot;: 1,
+    &quot;lastGreenRunId&quot;: &quot;2026-08-24T22-38-06-656Z-104d5be2-…&quot; },
+  &quot;journeys&quot;: [ { &quot;journey&quot;: &quot;greet&quot;, &quot;runs&quot;: 7, &quot;passed&quot;: 5, &quot;failed&quot;: 1,
+    &quot;canceled&quot;: 1, &quot;passRate&quot;: 0.833… } ] }</code></pre>
+<p>Seven runs of the demo journey — including one deliberate failure from an earlier session and the canceled queue run — all first-class records.</p>
+<h2>What this proved</h2>
+<ul><li>A run passes only through report identity plus analysis, and carries its</li></ul>
+<p>evidence grade explicitly (<code>E2</code> here, <code>E3</code> with <code>--record</code> on a recording-capable target).</p>
+<ul><li>The gate lifecycle is fail-closed at every step: wrong kind refused,</li></ul>
+<p>enforcement refused before activation, activation recorded as managed state with the exact evidence.</p>
+<ul><li>A receipt refuses to overstate (<code>E2 is below E3</code>), signs its own failure</li></ul>
+<p>when asked, and separates validity from trust at verification.</p>
+<ul><li>The async queue runs the same lifecycle and forgets nothing on disk.</li></ul></main></body></html>

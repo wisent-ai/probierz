@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Evidence model — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/evidence-model.md</p><h1>Evidence model</h1>
+<p>Every claim Probierz makes about quality resolves to a run directory on disk. This page defines what one run binds to, how evidence strength is graded, and which projections read that evidence back.</p>
+<h2>The run record</h2>
+<p><code>probierz run</code> writes one directory per run:</p>
+<pre data-language=""><code>test-results/&lt;appId&gt;/&lt;target&gt;/&lt;YYYY-MM-DD&gt;/&lt;runId&gt;/
+  run-manifest.json   # schemaVersion 2 — the binding record
+  report.json         # machine-readable framework report
+  analysis.json       # normalized totals, media, diagnostics
+  stdout.log stderr.log
+  media/ frames/ diagnostics/</code></pre>
+<p>The <code>runId</code> is the run&#x27;s start timestamp plus a random UUID (path-safe characters only; <code>:</code> in a target directory name becomes <code>-</code>). The run manifest is written before anything executes and updated atomically as the run progresses.</p>
+<h2>What a run binds to</h2>
+<p><code>run-manifest.json</code> records, at start:</p>
+<ul><li><strong>Harness source identity</strong> — the Probierz checkout itself: <code>gitSha</code>, a</li></ul>
+<p><code>dirty</code> flag (uncommitted diff or untracked files), and <code>worktreeSha256</code>, a SHA-256 over every tracked and untracked-but-not-ignored file (path, kind, mode, size, and content), excluding <code>node_modules/</code>, <code>test-results/</code>, <code>.env*</code> files, and runtime <code>probierz-*.json</code> files, and including <code>package-lock.json</code>. A dirty worktree therefore changes the identity; the git SHA alone never suffices.</p>
+<ul><li><strong>App source identity</strong> — the same triple for every repository the</li></ul>
+<p>application manifest declares, plus one combined <code>sha256</code> over the ordered per-repository hashes.</p>
+<ul><li><strong>Build identity</strong> — the SHA-256 of the exact artifact under test:</li></ul>
+<p><code>PROBIERZ_BUILD_PATH</code>, <code>APP_IOS</code>, <code>MAC_APP_PATH</code>, or <code>ELECTRON_APP_MAIN</code> when set, otherwise the harness <code>package-lock.json</code>.</p>
+<ul><li><strong>Run kind</strong> — <code>adhoc</code> by default, or <code>pull-request</code>/<code>release</code>/<code>nightly</code></li></ul>
+<p>(<code>PROBIERZ_RUN_KIND</code> or the matrix profile). Gates only accept runs whose kind matches the gate mode.</p>
+<ul><li><strong>Conditions</strong> — the requested environment, with values under sensitive</li></ul>
+<p>key names (auth/cookie/credential/key/password/secret/session/token/…) redacted before they are persisted.</p>
+<ul><li><strong>Context</strong> — host (hostname, platform, release, arch, Node version),</li></ul>
+<p>device name and runtime, the selected spec, the declared journeys, the app manifest file and owner, and <code>PROBIERZ_APP_VERSION</code> when provided.</p>
+<p>At completion the manifest gains <code>status</code> (<code>passed</code>, <code>failed</code>, <code>blocked</code>, or <code>canceled</code>), <code>completedAt</code>, <code>exitCode</code>, <code>timedOut</code>, <code>reportValidation</code>, <code>evidence</code>, <code>analysisPath</code>, and <code>artifacts[]</code> — the relative path, SHA-256, and byte size of every file the run left behind. A blocked preflight and a canceled run are first-class recorded outcomes, not missing history.</p>
+<h2>Report identity, not process exit</h2>
+<p>A run passes only when all of these hold:</p>
+<ul><li>the child process passed <strong>and</strong> the report file exists, postdates the</li></ul>
+<p>run&#x27;s start, and carries this run&#x27;s own ID (<code>report.probierz.runId</code>);</p>
+<ul><li>the analysis is valid: it matches the run ID, executed more than zero</li></ul>
+<p>checks, has zero failures, zero capture errors, zero missing report-typed media, and zero crash diagnostics;</p>
+<ul><li>when recording was requested, at least one report-typed video, trace, or</li></ul>
+<p>screenshot was actually produced.</p>
+<p>A green exit with a stale, foreign, or empty report is a failed run with an explicit error list. Recording is forced with <code>--record</code> (<code>PROBIERZ_RECORD=1</code>); capture support is driver-specific and a missing capability never upgrades a failed run.</p>
+<h2>Evidence levels</h2>
+<p>| Level | Meaning | |---|---| | <code>E0</code> | run did not pass | | <code>E1</code> | reserved in the level ladder; no current producer | | <code>E2</code> | run passed with a valid report and analysis | | <code>E3</code> | <code>E2</code> plus requested recording with report-typed capture present | | <code>E4</code> | a complete matrix passed with every cell at its minimum level | | <code>E5</code> | label of the aggregated stability history projection |</p>
+<p>Policies (<code>pullRequestPolicy</code>, <code>releasePolicy</code>, matrix <code>minimumCellEvidence</code>, receipt <code>minimumEvidence</code>) accept <code>E2</code> or <code>E3</code>.</p>
+<h2>Matrix evidence (E4)</h2>
+<p><code>probierz matrix &lt;appId&gt; &lt;nightly|release&gt;</code> expands the manifest&#x27;s declared targets × condition dimensions into cells (each a 16-hex <code>cellId</code> over target plus environment; <code>maxCells</code> defaults to 128), schedules them by resource with bounded parallelism (<code>maximumParallel</code>, default 4), and executes each cell as a normal run. A release matrix requires a release ID and injects it as the <code>PROBIERZ_RELEASE</code> condition; declared axes cannot be overridden from the command line. The verdict is <code>E4</code> only when every cell passed at <code>minimumCellEvidence</code>. When the profile sets <code>artifactEncryption: required</code>, <code>PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE</code> must name a key and every cell is protected after it completes.</p>
+<h2>Protection, retention, audit</h2>
+<ul><li><code>probierz protect</code> encrypts a complete run into one authenticated</li></ul>
+<p>AES-256-GCM bundle under <code>test-results/.protected/&lt;appId&gt;/</code> (file magic <code>PROBIERZ-EVIDENCE-1</code>), recording bundle hash, content index hash, and key fingerprint in the run manifest; <code>--remove-source</code> deletes the plaintext after a passing secret scan. <code>probierz restore</code> authenticates and unpacks a bundle into an empty directory.</p>
+<ul><li><code>probierz retention</code> plans expiry from the manifest&#x27;s</li></ul>
+<p><code>artifacts.retain.{pullRequestDays,nightlyDays,adhocDays}</code> and deletes expired plaintext runs and bundles only with <code>--apply</code>.</p>
+<ul><li><code>probierz secret-scan</code> scans plaintext artifacts for high-confidence</li></ul>
+<p>secrets without printing secret values; results land in <code>diagnostics/secret-scan.json</code> and are re-checked at receipt time.</p>
+<ul><li>Security-relevant operations (gate evaluate/activate/enforce, protection,</li></ul>
+<p>restore) append integrity-checked records under <code>test-results/.audit/</code>, attributed to <code>PROBIERZ_ACTOR</code>, <code>GITHUB_ACTOR</code>, or <code>USER</code>.</p>
+<h2>Reading evidence back</h2>
+<ul><li><code>probierz history [appId] [target]</code> — aggregates run manifests into pass</li></ul>
+<p>rate, product vs infrastructure failures, flaky tests, journey stability, duration trend, latest run, and last green.</p>
+<ul><li><code>probierz status &lt;appId&gt;</code> — per-journey latest evidence, freshness against</li></ul>
+<p>the current HEAD of every declared repository (the recorded git SHA must equal today&#x27;s HEAD), and pull-request merge eligibility with exact blocking reasons.</p>
+<ul><li><code>probierz compare &lt;left&gt; &lt;right&gt;</code> — deterministic diff of status,</li></ul>
+<p>duration, tests, evidence, build identity, and artifact hashes.</p>
+<ul><li><code>probierz last-green</code> — the newest passing run for a product, target, or</li></ul>
+<p>journey.</p>
+<ul><li><code>probierz dashboard &lt;appId&gt;</code> — the product → version → journey → surface →</li></ul>
+<p>device → result → artifact projection.</p>
+<p>These are projections over the run manifests; they are not alternate sources of truth. How gates consume this evidence is in <a href="gates-and-receipts.md">gates-and-receipts</a>.</p></main></body></html>

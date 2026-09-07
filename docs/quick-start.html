@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Quick start — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/quick-start.md</p><h1>Quick start</h1>
+<p>How do you go from a source checkout to one evidence-producing run? This page is the one happy path: install, discover, preflight, run, and read the result. There is no stable public binary; Probierz runs from source.</p>
+<h2>Prerequisites</h2>
+<ul><li>Git</li><li>Node.js 22 or newer (<code>package.json</code> declares <code>&quot;node&quot;: &quot;&gt;=22.0.0&quot;</code>)</li><li>npm</li></ul>
+<h2>Install and discover</h2>
+<pre data-language="bash"><code>git clone https://github.com/wisent-ai/probierz.git
+cd probierz
+npm install
+node agent/cli.mjs list
+node agent/cli.mjs apps</code></pre>
+<p><code>list</code> prints every test surface with its tool, npm script, targets, and the environment variables it reads. <code>apps</code> prints the validated application manifests registered under <code>apps/</code>. Both are read-only: no browser starts, no driver installs, no test runs. (<code>npm install</code> links the <code>probierz</code> and <code>probierz-mcp</code> bins declared in <code>package.json</code>; the examples below call <code>node agent/cli.mjs</code> directly, which is the same entry point.)</p>
+<h2>Preflight a target</h2>
+<pre data-language="bash"><code>node agent/cli.mjs check web</code></pre>
+<p><code>check</code> reports whether the target&#x27;s toolchain is ready and, for each missing piece, exactly how to fix it: <code>probierz setup &lt;target&gt;</code> for the parts Probierz owns (npm dependencies, Playwright browsers, Appium drivers) or a one-line host install hint for the parts it never installs (Xcode, the Android SDK, simulators, WinAppDriver). <code>check</code> is read-only.</p>
+<pre data-language="bash"><code>node agent/cli.mjs setup web</code></pre>
+<p><code>setup</code> installs only the Probierz-owned parts, in order, stopping at the first failure.</p>
+<h2>Run one target</h2>
+<pre data-language="bash"><code>node agent/cli.mjs run web --app APP_ID --record</code></pre>
+<p><code>run</code> is preflight-gated: if the toolchain is not ready it returns the blocking checks and their fixes without spawning anything. A ready run executes the application&#x27;s declared spec, records video/trace/screenshots (<code>--record</code>), analyzes the report and media, and writes everything under <code>test-results/&lt;appId&gt;/&lt;target&gt;/&lt;date&gt;/&lt;runId&gt;/</code>. A failing suite is a recorded result, not a tool error. Run options are listed in <a href="cli.md#execution">cli</a>; what the run directory contains is in <a href="evidence-model.md">evidence-model</a>.</p>
+<h2>Read the result</h2>
+<pre data-language="bash"><code>node agent/cli.mjs status APP_ID --text
+node agent/cli.mjs history APP_ID
+node agent/cli.mjs last-green APP_ID</code></pre>
+<p><code>status</code> answers merge eligibility for the application: which manifest journeys have evidence, whether that evidence is fresh against the current HEAD, whether its level meets the pull-request policy, and the exact blocking reasons (exit 1 when blocked). <code>history</code> aggregates pass rate, flaky tests, and duration trends from the run manifests on disk. <code>last-green</code> prints the newest passing evidence.</p>
+<p>Note: <code>status</code>, <code>apps</code>, <code>affected</code>, and <code>ci</code> walk the whole app registry and are blocked on this checkout by one invalid registered manifest — the exact failure and the repair are in <a href="limitations.md">limitations</a>. The per-app projections (<code>history</code>, <code>last-green</code>) are unaffected.</p>
+<h2>Run only what a change affects</h2>
+<pre data-language="bash"><code>node agent/cli.mjs affected origin/main
+node agent/cli.mjs ci origin/main</code></pre>
+<p><code>affected</code> maps a git diff to the run targets it can touch; <code>ci</code> composes affected → preflight-gated run → analyze and returns one consolidated verdict. This is the same pass the <a href="gates-and-receipts.md">pre-push gate</a> invokes with <code>--ci</code>.</p>
+<h2>Do it end-to-end, executed</h2>
+<p>Two captured walkthroughs run this whole page against a demo application on this checkout: <a href="walkthrough-register-app.md">register an application</a> and <a href="walkthrough-gate-and-receipt.md">run → gate → signed receipt</a>; the runnable scripts live in <a href="examples/README.md">examples</a>.</p></main></body></html>

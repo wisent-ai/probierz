@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Verdict — Probierz Docs</title><link rel="stylesheet" href="/docs/site.css"></head><body><aside><a href="/docs"><strong>Probierz / Docs</strong></a><a href="/docs/PIPELINE">Pipeline: rules → evidence → compute</a><a href="/docs/applications">Application manifests</a><a href="/docs/cli-authoring-remote">CLI reference — authoring, evaluators, remote Stado execution</a><a href="/docs/cli-evidence">CLI reference — status, history, protection</a><a href="/docs/cli-gates">CLI reference — gates, receipts, publication</a><a href="/docs/cli">CLI reference — conventions, discovery, execution</a><a href="/docs/concepts/application">Application</a><a href="/docs/concepts/evaluator">Evaluator</a><a href="/docs/concepts/evidence">Evidence item</a><a href="/docs/concepts/gate">Gate</a><a href="/docs/concepts/journey">Journey</a><a href="/docs/concepts/receipt">Receipt</a><a href="/docs/concepts/run">Run</a><a href="/docs/concepts/verdict">Verdict</a><a href="/docs/configuration">Configuration</a><a href="/docs/evaluators">Evaluators</a><a href="/docs/evidence-model">Evidence model</a><a href="/docs/examples">Examples</a><a href="/docs/execution">Execution</a><a href="/docs/gates-and-receipts">Gates and receipts</a><a href="/docs/limitations">Limitations on this revision</a><a href="/docs/mcp">MCP server reference</a><a href="/docs/quick-start">Quick start</a><a href="/docs/remote-stado">Remote execution on Stado</a><a href="/docs/runbook">Runbook</a><a href="/docs/walkthrough-gate-and-receipt">Walkthrough: run → gate → signed receipt</a><a href="/docs/walkthrough-register-app">Walkthrough: register an application</a><a href="/docs/what-is-probierz">What is Probierz</a></aside><main><p class="source">Migrated from docs/concepts/verdict.md</p><h1>Verdict</h1>
+<p>Probierz never answers &quot;mostly green&quot; — every decision surface returns a verdict: <code>passed</code> plus an exhaustive error list, deterministic over recorded inputs, never a score.</p>
+<h2>What it is</h2>
+<p>The shape <code>{ passed: boolean, errors: string[] }</code> (sometimes with extra fields beside it), produced by:</p>
+<p>| Producer | Verdict location | Extra fields | |---|---|---| | <code>gate-evaluate</code> / <code>gate-enforce</code> / <code>gate-activate</code> | <code>.verdict</code> | <code>policy</code>, <code>evidence</code> (run IDs, builds, levels, matrix, receipt) | | <code>receipt</code> | <code>.receipt.verdict</code> | <code>coveredJourneys</code>, <code>missingJourneys</code> | | <code>matrix</code> (executed) | <code>.verdict</code> | <code>evidenceLevel: &quot;E4&quot;</code> when passed, <code>minimumCellEvidence</code>, <code>evidenceSatisfied</code> | | <code>gate-prepush</code> | <code>.verdict</code> (plus top-level <code>ok</code>) | <code>affectedJourneys</code>, <code>runIds</code>, or a single <code>reason</code> | | <code>status</code> | <code>.mergeEligibility</code> | <code>eligible</code>, <code>blockingReasons</code>, <code>evaluatedJourneys</code> | | run completion | <code>.evidence</code> | <code>errors[]</code> explains a failed run |</p>
+<p>A captured example (this checkout, demo app; see <a href="../walkthrough-gate-and-receipt.md">walkthrough</a>):</p>
+<pre data-language="json"><code>&quot;verdict&quot;: {
+  &quot;passed&quot;: false,
+  &quot;errors&quot;: [
+    &quot;2026-08-24T22-35-08-980Z-…: run kind adhoc is not pull-request&quot;
+  ]
+}</code></pre>
+<h2>Properties</h2>
+<ul><li><strong>Deterministic.</strong> A verdict is a pure function of recorded runs, the</li></ul>
+<p>manifest policy, and the expected identities passed in. Re-evaluating with the same inputs yields the same verdict; there is no flake allowance and no model in the loop.</p>
+<ul><li><strong>Exhaustive.</strong> Evaluation does not stop at the first problem: a gate</li></ul>
+<p>verdict lists every failing run, every hash mismatch, every missing target, journey, and matrix cell at once.</p>
+<ul><li><strong>Fail-closed.</strong> Missing inputs are errors, not passes:</li></ul>
+<p><code>expected harness source SHA-256 is required</code>, <code>at least one run ID is required</code>, <code>gate is pending green activation</code>.</p>
+<ul><li><strong>Exit-code mapped.</strong> Every CLI decision command exits <code>1</code> on a failing</li></ul>
+<p>verdict (<code>gate-evaluate</code>, <code>gate-enforce</code>, <code>gate-prepush</code>, <code>status</code>, <code>matrix</code>, <code>receipt</code>, <code>verify-receipt</code>, <code>figure-evaluate</code>, <code>seo-evaluate</code>, <code>secret-scan</code>), so automation needs no output parsing.</p>
+<h2>The error vocabulary</h2>
+<p>Gate-verdict errors are sentences, one condition each (all from <code>agent/gate.mjs</code>):</p>
+<pre data-language=""><code>&lt;runId&gt;: status is &lt;status&gt;
+&lt;runId&gt;: complete harness source identity is missing
+&lt;runId&gt;: harness source &lt;sha&gt; does not match &lt;sha&gt;
+&lt;runId&gt;: exact build hash is missing
+&lt;runId&gt;: &lt;level&gt; is below &lt;minimum&gt;
+&lt;runId&gt;: complete app source identity is missing
+&lt;runId&gt;: app source &lt;sha|missing&gt; does not match &lt;sha&gt;
+&lt;runId&gt;: E3 artifact hashes are incomplete
+&lt;runId&gt;: artifact path escapes its run: &lt;file&gt;
+&lt;runId&gt;: artifact is missing: &lt;file&gt;
+&lt;runId&gt;: artifact hash mismatch: &lt;file&gt;
+&lt;runId&gt;: artifact cannot be hashed: &lt;file&gt; (&lt;reason&gt;)
+&lt;runId&gt;: run kind &lt;kind&gt; is not &lt;mode&gt;
+&lt;runId&gt;: release condition does not match &lt;release&gt;
+&lt;runId&gt;: encrypted-at-rest artifact bundle is missing
+&lt;runId&gt;: encrypted bundle hash does not match its manifest
+&lt;runId&gt;: passing pre-upload secret scan is missing
+runs do not identify one exact app source (&lt;n&gt; source hashes)
+&lt;target&gt;: runs do not identify one exact build
+required target is missing: &lt;target&gt;
+required journey is missing: &lt;journey&gt;
+&lt;n&gt; required matrix cell(s) are missing
+&lt;n&gt; run(s) are outside the required matrix
+release ID is required
+signed receipt is required
+receipt signature, trust, or payload hash is invalid
+receipt app ID &lt;id&gt; does not match &lt;id&gt;
+receipt release &lt;r&gt; does not match &lt;r&gt;
+receipt harness source SHA-256 does not match
+receipt app source SHA-256 does not match
+receipt build identities do not match
+receipt run IDs do not match gate run IDs
+receipt verdict is not passed
+&lt;runId&gt;: local policy evidence differs from the signed receipt
+&lt;runId&gt;: encrypted bundle does not match the signed receipt
+receipt verification failed: &lt;reason&gt;</code></pre>
+<p>Merge-eligibility blocking reasons (<code>agent/status.mjs</code>):</p>
+<pre data-language=""><code>&lt;journey&gt;: no runs recorded
+&lt;journey&gt;: last run is &lt;status&gt;
+&lt;journey&gt;: evidence is older than HEAD
+&lt;journey&gt;: &lt;level&gt; is below &lt;minimum&gt;</code></pre>
+<h2>Not to be confused with</h2>
+<ul><li><strong>A <a href="gate.md">gate</a></strong> — the policy machine that produces verdicts; the</li></ul>
+<p>verdict is its output, the gate also has activation state.</p>
+<ul><li><strong>A run&#x27;s <code>passed</code> flag</strong> — one input among many; a verdict can fail over</li></ul>
+<p>runs that all passed (wrong kind, stale identity, missing coverage).</p>
+<ul><li><strong>An analysis</strong> — normalization of one report; verdicts consume analyses,</li></ul>
+<p>they do not replace them.</p></main></body></html>

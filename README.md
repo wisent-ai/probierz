@@ -5,7 +5,7 @@
 <!-- wisent-banner:end -->
 
 <!-- wisent-readme-signals:start -->
-[![Source](https://img.shields.io/badge/GitHub-Source-181717?logo=github)](https://github.com/wisent-ai/probierz) [![Issues](https://img.shields.io/badge/GitHub-Issues-181717?logo=github)](https://github.com/wisent-ai/probierz/issues) [![Wisent](https://img.shields.io/badge/Wisent-Website-0B0B0B)](https://wisent.ai) [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qRjpkthq54) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Follow-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/wisent-ai/) [![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/wisentai) [![Enterprise](https://img.shields.io/badge/Enterprise-Book%20a%20call-0B0B0B?logo=calendly)](https://calendly.com/lbartoszcze)
+[![Source](https://img.shields.io/badge/GitHub-Source-181717?logo=github)](https://github.com/wisent-ai/probierz) [![Issues](https://img.shields.io/badge/GitHub-Issues-181717?logo=github)](https://github.com/wisent-ai/probierz/issues) [![Wisent](https://img.shields.io/badge/Wisent-Website-0B0B0B)](https://wisent.com) [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qRjpkthq54) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Follow-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/wisent-ai/) [![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/wisentai) [![Enterprise](https://img.shields.io/badge/Enterprise-Book%20a%20call-0B0B0B?logo=calendly)](https://calendly.com/lbartoszcze)
 <!-- wisent-readme-signals:end -->
 
 # Probierz: AI QA That Makes Sure You Never Ship Anything Broken
@@ -253,6 +253,125 @@ surfaces with their targets and environment requirements. `apps` returns the
 validated application manifests currently registered in the checkout. Neither
 command executes a test target.
 
+### Adopt existing journey definitions
+
+First setup can start from another Probierz repository without executing its
+journeys:
+
+```bash
+node agent/cli.mjs onboarding --source /absolute/path/to/existing-probierz
+# The same operation is reusable after onboarding:
+node agent/cli.mjs project adopt --source /absolute/path/to/existing-probierz
+node agent/cli.mjs project adoptions
+```
+
+The selected Git repository must contain validated
+`apps/<appId>/probierz.yaml` manifests and their referenced specs in the
+established `packages/<surface>/test/specs`, `tests`, or `specs` directories.
+Probierz validates the complete selection before changing the destination,
+copies definitions byte-for-byte with their file modes, and records the
+canonical source path, content digest, applications, and per-file digests and
+modes in `apps/.adoptions.json`. The source path plus content identity makes
+repeat adoption idempotent.
+
+Existing definitions are preserved by default. A differing destination returns
+the full conflict list and writes nothing. After reviewing those paths, an
+explicit `--replace` updates unmanaged files and previously adopted same-source
+files that still match their retained content and mode. Definitions owned by
+another imported source and locally changed same-source files remain conflicts,
+including locally changed files that disappeared upstream. A source repository's
+own `.adoptions.json` is reported and excluded as local history. Import never
+runs a spec, creates evidence, installs tools, or changes the selected source
+repository. Skipping this optional step leaves a usable empty project.
+
+### Verify Stado public command documentation
+
+```bash
+node agent/cli.mjs stado run tui --app stado-docs \
+  --host stado:ubuntu --node-source \
+  --app-repo /absolute/path/stado-landing
+```
+
+This runs the existing website contract from `stado-landing/tests/docs/` on
+the dedicated Ubuntu host. It checks every generated command route and the
+complete public command index without opening a browser. Probierz copies the
+selected worktrees with portable Git metadata, keeps staging under
+`~/.stado/work/probierz`, and records the actual source revision and file hashes
+on the worker without rewriting the application manifest.
+
+If the watcher loses connectivity, resume the existing job instead of submitting
+the run again. If Probierz's own watch budget expires while Stado still answers,
+the result is `watch-expired` and recommends the same resume command; it is not
+reported as an infrastructure outage and no local bypass is recommended:
+
+```bash
+node agent/cli.mjs stado resume <jobId> --host stado:ubuntu
+```
+
+This waits for the original job and imports its retained report without
+changing the recorded source identities or executing another workload.
+The MCP equivalent is `probierz_stado_resume`.
+
+Remote Cargo provisioning builds the selected binary from its source directory
+with the locked dependency graph, so the repository's Rust toolchain is honored.
+An existing Rust installation is not upgraded by provisioning. Unless explicitly
+overridden with `--timeout`, the runner uses the sum of the selected journeys'
+declared time budgets, with the default budget for journeys that omit one.
+The staged Cargo output belongs only to that job and is removed on exit,
+including failed runs; retained reports and source identities are preserved.
+
+To run or author with an already signed native Stado executable against its
+exact, clean, committed product source without rebuilding or consulting a
+mutable installation:
+
+```bash
+node agent/cli.mjs stado run tui --app stado \
+  --host stado:mini \
+  --app-binary-path /absolute/path/to/signed/stado \
+  --app-repo /absolute/path/to/the/matching/stado/source
+
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+node agent/cli.mjs stado author stado <journey> \
+  --target tui --desc "<journey goal>" \
+  --host stado:mini \
+  --app-binary-path /absolute/path/to/signed/stado \
+  --app-repo /absolute/path/to/the/matching/stado/source
+```
+
+Both commands use the same provisioning path. Probierz uploads the executable
+and selected committed source as separate immutable job inputs, copies the
+executable into job-owned storage, and uses the ordinary TUI runner and
+authoring loop. Native provisioning does not invoke Cargo or rebuild the
+application; a selected journey can still run its own declared commands. The
+submission receipt records `binary-identity.json` with the executable SHA-256 and
+`source-identity.json` with the existing source identity and exact primary
+revision. Nested authoring and run evidence hashes the staged executable as its
+`build` identity. Probierz does not invent or assert build provenance: the
+caller supplies the signed release binary and its source binding.
+
+Terminal authoring also accepts finite CLI commands. It records their output
+and actual exit status instead of requiring the process to remain open.
+The observation is not a passing test: only the subsequently executed journey
+can produce that verdict. An empty initial screen is still refused.
+
+Cancel an existing job without submitting replacement work:
+
+```bash
+node agent/cli.mjs stado cancel <jobId> \
+  --host stado:mini \
+  --reason "operator-requested cancellation"
+```
+
+Stado's machine cancellation API accepts the job ID only. Probierz retains the
+required reason locally with the original job, exact cancellation receipt,
+canonical log pages, and available worker evidence. Each request uses a distinct
+`test-results/.remote/cancellations/<jobId>/<attemptId>/` directory; downloaded
+worker artifacts remain under `test-results/.remote/<jobId>/`. A successful
+cancellation command exits zero when cancellation receipts, logs, and any
+required worker artifacts were retained. The cancelled evaluation itself still
+has `state: "cancelled"`, `passed: false`, and its failure details. A failed
+cancellation or missing required evidence exits nonzero.
+
 ### Evaluate a figure
 
 ```bash
@@ -466,20 +585,52 @@ not create static product banners; those belong to `wisent-asset-generator`.
   gate evaluation and enforcement remain distinct commands.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
-  the configured object store. A failed remote run invokes the same bounded
-  Brama repair worker before its evidence bundle returns. The submitter
-  measures the source identity of the harness and of every manifest repository
-  and ships it as `inputs/source-identity.json`; the worker records that answer
-  and marks the run `sourceIdentityOrigin: "submitter"`, because a worker holds
-  a snapshot of the source and not the checkouts. `--app-repo` names the tree
-  that is packed, and the identity is measured on that tree.
+  the configured object store; `probierz stado resume`, `collect`, and `cancel`
+  operate on the original job without submitting replacement work.
   Authoring applies the surface's matching single-journey override before
   executing its candidate, including on a remote worker. Native `desktop:cua`
   authoring returns the accepted spec alongside the manifest and evidence.
   Every run exports `PROBIERZ_TOOLKIT_ROOT` for product-owned specs that use the
-  toolkit's real drivers. Remote source provisioning exports `PROBIERZ_APP_REPO`
+  toolkit's real drivers. Remote source provisioning exports `PROBIERZ_APP_SOURCE`
   as the staged product checkout; native application bundles keep their source
   beside the bundle, under the `-src` directory.
+  The submitter measures the source identity of the harness and every manifest
+  repository and ships `inputs/source-identity.json`; the worker records it
+  with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
+  `--app-repo` selects the product tree that is packed and measured.
+  For native TUI releases, `--app-binary-path FILE --app-repo REPO` gives
+  `stado run tui` and `stado author ... --target tui` the same immutable
+  executable and exact source inputs without a provisioning-time Cargo build,
+  and records the source revision and executable SHA-256 in submission metadata
+  and nested run evidence. A selected journey can still invoke its own declared
+  commands.
+  `stado run --env NAME=VALUE` supplies non-secret execution conditions for
+  remote jobs; `--env=NAME=VALUE` is equivalent.
+  Values are passed literally, including embedded `=` characters. Credentials
+  continue to use the manifest's scoped `secretRefs`, not command arguments.
+  Submission requests and responses remain under `test-results/.remote/`;
+  stderr prints the request receipt and accepted job ID before watching.
+  `probierz stado collect <job-id> --app <id> --host stado:mini` (also
+  `probierz_stado_collect` over MCP) returns the current state immediately and
+  retrieves a terminal job's retained evidence without submitting or running it again.
+  A job cancelled before its worker starts remains `cancelled`; the result keeps
+  the exact Stado job and source-input metadata and marks run evidence as not
+  required, without asking the artifact store for output the worker never made.
+  A structured, non-retryable `NO_ARTIFACTS` response for evidence that was
+  required is reported as missing evidence, not as an object-store outage.
+  `probierz stado cancel <job-id> --host <host> --reason <reason>` retains the
+  original job identity, actual machine cancellation receipt, canonical logs,
+  and available evidence under `test-results/.remote/cancellations/<job-id>/`
+  and `test-results/.remote/<job-id>/`. The command exits 0 when cancellation
+  and required evidence retention succeed; the evaluation remains cancelled,
+  non-passing, and keeps its failure details.
+  GUI readiness has its own 30-minute audit deadline; an expired audit means
+  readiness is unknown and no GUI job was submitted, not that the host is down.
+- **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
+  and `probierz run TARGET --app APP --app-repo /path/to/worktree --spec /path/to/spec`
+  bind their evidence to the selected primary checkout without changing the
+  application manifest. Other declared repositories keep their own identities.
+  Select a binary and product-owned spec built from that same checkout.
 
 The complete command surface is printed by `probierz --help` and summarized in
 [`skills/probierz/SKILL.md`](skills/probierz/SKILL.md).
@@ -492,12 +643,14 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **State:** run reports, histories, receipts, protected bundles, audit records,
   and returned remote evidence live under the configured `test-results/` and
   object-store paths. An unavailable store is an error, not an empty history.
-- **Credentials:** local discovery requires none. Model authoring, automatic
-  repair, and figure evaluation require a distinct `STADO_MODEL_ROUTER_URL` and
-  router-scoped token; figure evaluation also requires
-  `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs materialize the
-  token from the scoped `probierz-model-router` secret reference instead of
-  embedding it in the job payload.
+- **Credentials:** local discovery requires none. Model authoring and figure
+  evaluation reach Brama through `STADO_MODEL_ROUTER_URL`, a router-scoped
+  `STADO_MODEL_ROUTER_TOKEN`, and a signed Probierz identity
+  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). Figure evaluation
+  also requires `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs set
+  the Probierz identity and materialize the token and signing secret from the
+  scoped `probierz-model-router` and `probierz-agent-auth` references instead
+  of embedding credentials in the job payload.
 - **Setup ownership:** `probierz setup` may install npm dependencies, Playwright
   browsers, and Appium drivers owned by Probierz. Host SDKs, simulators, devices,
   permissions, and application runtimes remain operator-managed.

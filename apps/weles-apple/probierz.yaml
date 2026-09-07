@@ -1,0 +1,44 @@
+schemaVersion: 1
+appId: weles-apple
+productId: weles
+owner: Weles maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/weles
+    mappings:
+      - paths:
+          - scripts/auth/authorize-apple-developer-id.mjs
+          - scripts/auth/apple-account-placement.mjs
+          - scripts/trajectories/apple/create_developer_id.mjs
+          - scripts/worker/stado-action-runner.mjs
+          - tests/apple/**
+        journeys: [developer-id]
+surfaces:
+  tui:
+    spec: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/weles/tests/apple/developer-id.spec.mjs
+    journeys: [developer-id]
+journeys:
+  developer-id:
+    owner: Weles maintainers
+    timeoutMs: 1200000
+    description: Issue a real Apple Developer ID Application certificate through Weles on the Stado-selected dedicated Mac mini, with a real trusted-device code captured by Stado and redeemed through Skarbiec; verify that the issued certificate matches the retained private key.
+    prerequisites:
+      account: A real Apple Account Holder item and its trusted-device session must already be registered in Skarbiec and Stado.
+      host: Browser execution is confined to charless-mac-mini; this journey must never launch a browser on the submitter.
+      effect: A queued job, preflight, reused certificate, simulated provider, or failed authorization is not a successful journey.
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: possible
+pullRequestPolicy:
+  minimumEvidence: E2
+  requiredJourneys: [developer-id]
+  requiredTargets: [tui]
+  requireSecretScan: false
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [developer-id]
+  requiredTargets: [tui]
+  requireSecretScan: false

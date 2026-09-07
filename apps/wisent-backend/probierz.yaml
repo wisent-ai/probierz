@@ -1,0 +1,45 @@
+schemaVersion: 1
+appId: wisent-backend
+productId: wisent-backend
+owner: Wisent Backend maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-backend
+    mappings:
+      - paths:
+          - api_service/api_layer/routers/chat_routes/**
+          - api_service/api_layer/services/ml/models/inference_client.py
+          - api_service/main/middleware_setup.py
+          - deploy/stado-api-service
+          - tests/chat/production_latency.py
+        journeys: [production-chat-latency]
+
+surfaces:
+  tui:
+    spec: wisent-backend-production-latency.spec.mjs
+    journeys: [production-chat-latency]
+
+journeys:
+  production-chat-latency:
+    owner: Wisent Backend maintainers
+    timeoutMs: 1200000
+    value: Production chat returns real assistant content and records browser-visible response headers, first content, completion, backend preparation, and edge overhead for new and existing conversations.
+    prerequisites:
+      data:
+        requirement: The dedicated latency account and character 7014 must exist in the production Wisent App database.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 30
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: unlikely
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [production-chat-latency]
+  requiredTargets: [tui]
+  requireSecretScan: true
