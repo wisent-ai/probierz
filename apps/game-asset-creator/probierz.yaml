@@ -29,7 +29,9 @@ surfaces:
     spec: game-asset-creator-cli.spec.mjs
     journeys: [cli, verify]
   eval:
-    runner: apps/game-asset-creator/evals/visual-eval.mjs
+    spec: game-asset-creator.visual-eval
+    runner:
+      capability: game-asset-creator.visual-eval
     journeys: [visual-eval]
 
 journeys:
@@ -47,13 +49,12 @@ journeys:
     value: Generated models render through Blender MCP and pass a Brama-vision rubric (proportions, silhouette, race palette, artifacts) above threshold.
 
 secretRefs:
-  GAC_BRAMA_KEY: skarbiec://BRAMA/agent_auth_secret
+  GAC_BRAMA_KEY: vault://wisent/game-asset-creator/brama-key
   PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE: vault://wisent/probierz/artifact-encryption-key-file
 
 data:
-  fixtures:
-    command: node
-    args: [apps/game-asset-creator/fixtures.mjs]
+  seed:
+    capability: game-asset-creator.fixtures
 
 artifacts:
   retain:

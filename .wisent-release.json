@@ -4,15 +4,18 @@
   "releases": true,
   "version_source": {
     "kind": "regex",
-    "path": "package.json",
-    "pattern": "(?m)^\\s*\"version\"\\s*:\\s*\"(?<version>[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\"\\s*,"
+    "path": "probierz-rs/Cargo.toml",
+    "pattern": "(?m)^\\s*version\\s*=\\s*\"(?<version>[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\""
   },
   "platforms": {
     "darwin-arm64": {
       "runner_platform": "darwin-arm64",
       "quality": [],
       "build": {
-        "argv": ["bash", "release/stado-build.sh"]
+        "argv": [
+          "bash",
+          "release/stado-build.sh"
+        ]
       },
       "stage": {
         "bin/probierz": "bin/probierz",
@@ -30,7 +33,10 @@
     "rollback_compatible_with": []
   },
   "promotion": {
-    "channels": ["candidate", "stable"],
+    "channels": [
+      "candidate",
+      "stable"
+    ],
     "reconcile": true
   }
 }

@@ -1,1 +1,0 @@
-../../../../jeden/tests/contracts/task-contract-lifecycle.probierz.spec.mjs

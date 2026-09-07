@@ -44,9 +44,6 @@ apps/brama-desktop/*
 !apps/oko/
 apps/oko/*
 !apps/oko/probierz.yaml
-!apps/oko/seed.mjs
-!apps/oko/otp-broker.mjs
-!apps/oko/otp-broker.d.mts
 !apps/brama/
 apps/brama/*
 !apps/brama/probierz.yaml
@@ -68,3 +65,10 @@ apps/jeden/*
 !apps/jeden-desktop/
 apps/jeden-desktop/*
 !apps/jeden-desktop/probierz.yaml
+
+# Rust build output
+probierz-rs/target/
+
+# scratch downloads and captures
+tmp/
+.artifacts/
