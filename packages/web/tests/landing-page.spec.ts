@@ -917,8 +917,47 @@ test.describe('landing page release evaluation', () => {
       tablet = undefined;
       mobile = undefined;
 
-      const routedEvaluation = await modelEvaluation(rubric, brief, audits, images);
+      let routedEvaluation: RoutedModelEvaluation;
+      let modelFailure: string | undefined;
+      try {
+        routedEvaluation = await modelEvaluation(rubric, brief, audits, images);
+      } catch (cause) {
+        // The viewport captures, audits and conversion evidence are already
+        // collected. Throwing here discards them, which turns an outage of the
+        // vision route into "no evidence at all". Record the failure as the
+        // report's state and still fail the test: a page cannot pass a release
+        // evaluation its grader never saw, but the deterministic evidence must
+        // survive to be reviewed.
+        modelFailure = cause instanceof Error ? cause.message : String(cause);
+        routedEvaluation = {
+          routerModel: process.env.PROBIERZ_LANDING_VISION_MODEL ?? 'unknown',
+          usage: null,
+          evaluation: {
+            summary: `model evaluation unavailable: ${modelFailure}`,
+            // No grader saw the page, so no dimension earned a score; zeroing
+            // them keeps the threshold blockers honest instead of inventing a
+            // verdict the model never produced.
+            dimensions: Object.fromEntries(
+              Object.keys(rubric.dimensions).map((name) => [
+                name,
+                { score: 0, evidence: ['model evaluation unavailable'], issues: [] },
+              ]),
+            ),
+            blocking_issues: [],
+            recommendations: [],
+          },
+        };
+      }
       const report = buildReport(rubric, briefPath, brief, audits, conversion, routedEvaluation, images);
+      if (modelFailure) {
+        (report as unknown as Record<string, unknown>).modelEvaluationFailed = modelFailure;
+        report.blockers.push({
+          code: 'model_evaluation_unavailable',
+          evidence: modelFailure,
+          source: 'model',
+        });
+        (report as unknown as Record<string, unknown>).pass = false;
+      }
       const reportPath = testInfo.outputPath('landing-page-evaluation.json');
       await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
       await Promise.all([

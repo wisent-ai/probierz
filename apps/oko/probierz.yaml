@@ -114,7 +114,7 @@ surfaces:
       primary: appium
       fallback: screencapturekit
   tui:
-    spec: oko-autonomy.spec.mjs
+    spec: oko-autonomy
     journeys: [autonomy-experimental]
 journeys:
   auth:
@@ -175,11 +175,9 @@ secretRefs:
   PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE: vault://wisent/probierz/artifact-encryption-key-file
 data:
   seed:
-    command: node
-    args: [apps/oko/seed.mjs, seed]
+    capability: oko.seed
   cleanup:
-    command: node
-    args: [apps/oko/seed.mjs, cleanup]
+    capability: oko.cleanup
   isolationKeyEnv: PROBIERZ_RUN_ID
 artifacts:
   retain:

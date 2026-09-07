@@ -75,7 +75,7 @@ surfaces:
   # "run a cargo command", and inventing a surface key would name a runner that
   # does not exist.
   tui:
-    spec: skrzynka-*.spec.mjs
+    spec: skrzynka-*
     journeys:
       - crate-builds
       - oauth-failure-diagnosis

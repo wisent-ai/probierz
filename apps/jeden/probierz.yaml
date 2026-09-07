@@ -28,6 +28,7 @@ surfaces:
       - settings-screen
       - task-contract-lifecycle
     env:
+      JEDEN_CONTRACT_JOURNEY: JEDEN_CONTRACT_JOURNEY
       BRAMA_URL: STADO_MODEL_ROUTER_URL
       BRAMA_TOKEN: STADO_MODEL_ROUTER_TOKEN
       WISENT_APP_AGENT_ID: PROBIERZ_MODEL_AGENT_ID
@@ -37,6 +38,10 @@ surfaces:
       PROBIERZ_MODEL_AGENT_ID: probierz
       PROBIERZ_MODEL: local-openai/chat-primary
       JEDEN_MODEL: local-openai/chat-primary
+    journeyOverrides:
+      - when:
+          JEDEN_CONTRACT_JOURNEY: "1"
+        journeys: [task-contract-lifecycle]
 journeys:
   onboarding-first-use:
     owner: jeden maintainers

@@ -549,3 +549,77 @@ export async function compareToGolden(
     wroteGolden: false,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Interaction journeys                                                *
+ * ------------------------------------------------------------------ */
+
+export interface JourneyStep {
+  label: string;
+  /** Slash command submitted through the verified path. */
+  command?: string;
+  /** A tmux key name (`Down`, `Right`, `Enter`, `C-u`, `Escape`). */
+  key?: string;
+  /** Literal characters typed into whatever has the keyboard. */
+  type?: string;
+  /** What must hold once the screen settles. Receives the screen after the
+   * step and the screen before it, because half of an interaction contract
+   * is "something changed" — a cursor that never moves passes any regex. */
+  expect: (after: string, before: string) => boolean;
+  /** How long the expectation may take to hold; defaults to the view budget
+   * so a network-bound step is not judged on its spinner. */
+  timeoutMs?: number;
+}
+
+export interface JourneyStepResult {
+  label: string;
+  ok: boolean;
+  screen: string;
+}
+
+/** Drive a scripted interaction, asserting after every keystroke. A journey
+ * is how a user meets the app: open, move, cross panes, choose, land
+ * somewhere. Grading one static screenshot cannot see any of that. */
+export async function runJourney(
+  session: TuiSession,
+  steps: JourneyStep[],
+): Promise<JourneyStepResult[]> {
+  const results: JourneyStepResult[] = [];
+  for (const step of steps) {
+    const before = session.capture();
+    if (step.command) await session.command(step.command, { escapeFirst: false });
+    if (step.key) session.key(step.key);
+    if (step.type) session.type(step.type);
+    // Poll, never sample once: a view that needs a network round trip is
+    // still a spinner when the screen first settles, and judging it there
+    // reports "the keys did nothing" for a step that simply had not landed.
+    const deadline = Date.now() + (step.timeoutMs ?? TIMEOUTS.view);
+    let after = await settledCapture(session);
+    let ok = step.expect(after, before);
+    while (!ok && Date.now() < deadline) {
+      await delay(SCAN_SETTLE_MS);
+      after = session.capture();
+      ok = step.expect(after, before);
+    }
+    results.push({ label: step.label, ok, screen: after });
+    if (!ok) break;
+  }
+  return results;
+}
+
+/** The row the item cursor is on, without its marker. */
+export function cursorRow(screen: string): string {
+  return (screen.split('\n').find((line) => line.includes('›')) ?? '').trim();
+}
+
+/** The row the brands cursor is on. */
+export function brandRow(screen: string): string {
+  return (screen.split('\n').find((line) => line.includes('❯')) ?? '').trim();
+}
+
+/** First `provider/model` id visible on the cursor row, if any. */
+export function cursorModelId(screen: string): string {
+  return cursorRow(screen).match(/[a-z\d.-]+\/[a-z\d.:-]+/i)?.[NAME_MATCH] ?? '';
+}
+
+const NAME_MATCH = ''.length;

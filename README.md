@@ -25,9 +25,9 @@ coding is Vibe QA, Vibe Testing and Vibe Assurance.
 [Agent interface](skills/probierz/SKILL.md) ·
 [Source and issues](https://github.com/wisent-ai/probierz)
 
-Current proof boundary: source version `0.1.0` provides local execution, evidence,
-receipts, and gate evaluation. No stable public binary or hosted service is
-currently promised.
+Current proof boundary: source version `0.1.0` provides the Rust CLI and MCP
+binaries, local execution, evidence, receipts, and gate evaluation. No hosted
+service or prebuilt binary release is currently promised.
 
 ## Problem and intended users
 
@@ -78,7 +78,7 @@ one explainable release decision.
 - scientific figure evaluation from SVG, TeX, PDF, or raster inputs, combining
   deterministic render geometry with an evidence-grounded vision verdict routed
   through the authenticated Stado model router;
-- a human CLI and a stdio MCP server backed by the same agent modules.
+- a human CLI and a stdio MCP server backed by the same Rust product core.
 
 ### Explicit non-goals
 
@@ -97,7 +97,7 @@ one explainable release decision.
   support, WinAppDriver, operating-system permissions, or application runtimes.
 - Probierz does not make Playwright video available for Electron or promise
   screen recording from drivers that do not expose it.
-- Probierz is not currently a hosted testing service or a supported public
+- Probierz is not currently a hosted testing service or a supported prebuilt
   binary distribution.
 
 ### Supported environments and current capability
@@ -112,7 +112,7 @@ one explainable release decision.
 | Native macOS (CUA) | `cua-driver` | macOS target and CuaDriver Accessibility permission | Implemented |
 | Native Windows | WebdriverIO, WinAppDriver | Windows target, Developer Mode, WinAppDriver | Implemented when host prerequisites are available |
 | Remote execution | Stado bridge | admitted host, capacity, object store, target toolchain | Implemented; availability depends on the selected host |
-| Stable hosted service or public binary | — | — | Not published |
+| Prebuilt public binary or hosted service | — | — | Not published; build the Rust binaries from source |
 | Scientific figures | ImageMagick, optional pdfLaTeX, vision model through the Stado router | `magick`; `pdflatex` for TeX; router URL, scoped token, model ID | Implemented |
 
 `probierz check <target>` is authoritative for toolchain readiness on the current
@@ -229,23 +229,23 @@ and returned evidence.
 
 ## Quick start
 
-No stable public binary exists. The safe source path below performs discovery
-only: it does not start a browser, install Appium drivers, drive an application,
-or create run evidence.
+The supported source installation builds the Rust product binaries. The
+discovery commands below do not start a browser, install Appium drivers, drive
+an application, or create run evidence.
 
 ### Prerequisites
 
 - Git;
-- Node.js 22 or newer;
-- npm;
+- a stable Rust toolchain with Cargo;
 - a source checkout of the public repository.
 
 ```bash
 git clone https://github.com/wisent-ai/probierz.git
-cd probierz
-npm install
-node agent/cli.mjs list
-node agent/cli.mjs apps
+cd probierz/probierz-rs
+cargo build --release
+export PATH="$PWD/target/release:$PATH"
+probierz list
+probierz apps
 ```
 
 Expected result: `list` returns the web, Electron, mobile, and native-desktop
@@ -378,7 +378,7 @@ cancellation or missing required evidence exits nonzero.
 STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_FIGURE_VISION_MODEL='<vision-model-id>' \
-node agent/cli.mjs figure-evaluate \
+probierz figure-evaluate \
   --reference /absolute/path/intermediate.svg \
   --candidate /absolute/path/final.tex \
   --out test-results/figure-evaluations/paper-figure.json
@@ -426,7 +426,7 @@ PROBIERZ_SEO_PRIMARY_MODEL='<pinned-model-a>' \
 PROBIERZ_SEO_SECONDARY_MODEL='<pinned-model-b>' \
 PROBIERZ_SEO_ADJUDICATOR_MODEL='<pinned-model-c>' \
 PROBIERZ_RECEIPT_PRIVATE_KEY_FILE=/absolute/path/seo-ed25519.pem \
-node agent/cli.mjs seo-evaluate \
+probierz seo-evaluate \
   --app landing-page \
   --base-url https://product.example.com \
   --mode release
@@ -454,7 +454,7 @@ Run the same evaluator on a dedicated Stado-selected host without putting any
 secret in `argv`:
 
 ```bash
-node agent/cli.mjs stado seo landing-page \
+probierz stado seo landing-page \
   --base-url https://product.example.com \
   --mode release \
   --primary-model '<pinned-model-a>' \
@@ -479,8 +479,8 @@ Choose an application and target returned by discovery, then check the exact
 host before running it:
 
 ```bash
-node agent/cli.mjs check TARGET
-node agent/cli.mjs run TARGET --app APP_ID --record
+probierz check TARGET
+probierz run TARGET --app APP_ID --record
 ```
 
 `check` either reports readiness or names the missing prerequisite and its owner.
@@ -521,7 +521,7 @@ After a release receipt is signed, provide an asset-registration JSON array:
 ```
 
 ```bash
-node agent/cli.mjs publication RECEIPT_JSON ATTEMPT_ID JOURNEY_ID \
+probierz publication RECEIPT_JSON ATTEMPT_ID JOURNEY_ID \
   --assets ASSET_REGISTRATIONS_JSON \
   --public-key TRUSTED_PROBIERZ_PUBLIC_KEY
 ```
@@ -551,7 +551,7 @@ Probierz owns animated product evidence. Select one recorded journey video from
 `test-results/`, trim it to the shortest complete outcome, and export it:
 
 ```bash
-node agent/cli.mjs readme-gif test-results/APP_ID/RUN_ID/path/to/video.webm \
+probierz readme-gif test-results/APP_ID/RUN_ID/path/to/video.webm \
   --out /path/to/product/assets/demo.gif \
   --start 0 \
   --duration 12 \
@@ -571,16 +571,16 @@ not create static product banners; those belong to `wisent-asset-generator`.
 ## Primary interfaces
 
 - **Human CLI:** `probierz` is canonical for discovery, setup, execution,
-  analysis, figure and SEO evaluation, authoring, evidence, gate, retention,
-  security, and Stado workflows.
+  analysis, figure and SEO evaluation, authoring, automatic repair, evidence,
+  gate, retention, security, and Stado workflows.
 - **Machine CLI output:** status, overview, run, analysis, figure evaluation,
   SEO evaluation, and gate commands expose structured data; automation must not
   infer state from prose.
-- **MCP:** `probierz-mcp` exposes the same discovery and explicitly named
-  side-effecting operations over stdio JSON-RPC. Tool descriptions preserve the
-  read-only versus mutation boundary; `probierz_evaluate_figure` and
-  `probierz_evaluate_seo` use the same evaluators and evidence contracts as the
-  CLI.
+- **MCP:** the `probierz-mcp` binary exposes the same discovery and explicitly
+  named side-effecting operations over stdio JSON-RPC. Tool descriptions
+  preserve the read-only versus mutation boundary;
+  `probierz_evaluate_figure` and `probierz_evaluate_seo` use the same evaluators
+  and evidence contracts as the CLI.
 - **Repository gate:** `probierz gate-install` installs the pre-push integration;
   gate evaluation and enforcement remain distinct commands.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
@@ -657,12 +657,16 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **Observability:** status, overview, dashboard projection, history, audit, and
   explicit failure objects distinguish failed work from unavailable
   dependencies and blocked prerequisites.
-- **Failure recovery:** preflight prevents known-unready runs; retention and
-  protected bundles preserve selected evidence; receipts can be verified before
-  use; remote failures retain their classified failure point and retryability.
-- **Upgrades:** the repository is currently a source distribution. `package.json`
-  owns the source version and Node engine contract; no mutable installation is
-  presented as a stable release channel.
+- **Failure recovery:** every failed `probierz run` dispatches one bounded Brama
+  repair worker unless `--no-repair` is present. Product fixes apply only in a
+  fresh worktree, reject secret and evidence paths, cap the change at eight
+  files, commit and publish a repair branch, and open a pull request when GitHub
+  credentials are available. Spec fixes must pass the same real journey before
+  publication. Infrastructure failures and unsafe repairs are recorded refusals,
+  not model guesses.
+- **Upgrades:** the repository is currently a source distribution.
+  `probierz-rs/Cargo.toml` owns the Rust product version; rebuild both
+  `probierz` and `probierz-mcp` from the desired source revision.
 
 ## Project status and support
 
@@ -670,8 +674,8 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **Current support:** local execution, evidence contracts, receipts, and gate
   evaluation are available from source. Host and remote target availability
   remains environment-specific.
-- **Public distribution:** no stable hosted service or supported public binary
-  release is currently promised.
+- **Public distribution:** source-built Rust binaries are supported; no stable
+  hosted service or prebuilt public binary release is currently promised.
 - **Source and defects:** [`wisent-ai/probierz`](https://github.com/wisent-ai/probierz).
 - **Security reports:** use the private
   [GitHub Security Advisory](https://github.com/wisent-ai/probierz/security/advisories/new);
@@ -679,7 +683,7 @@ The complete command surface is printed by `probierz --help` and summarized in
 - **License:** Apache License 2.0; see [`LICENSE`](LICENSE).
 
 This README owns the product promise, boundaries, use cases, interface roles, and
-support status. Executable behavior remains authoritative in the CLI and agent
-modules; downstream documentation must not advertise a broader capability than
-the installed source exposes.
+support status. Executable behavior remains authoritative in `probierz --help`
+and each subcommand's `--help`; downstream documentation must not advertise a
+broader capability than the installed binary exposes.
 

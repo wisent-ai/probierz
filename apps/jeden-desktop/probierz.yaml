@@ -20,7 +20,7 @@ repositories:
         journeys: [task-contract]
 surfaces:
   desktop:cua:
-    spec: jeden-desktop-task-contract.spec.mjs
+    spec: jeden-desktop-task-contract
     journeys: [task-contract]
     env:
       BRAMA_URL: STADO_MODEL_ROUTER_URL

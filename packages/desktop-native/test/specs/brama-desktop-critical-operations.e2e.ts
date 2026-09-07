@@ -17,43 +17,91 @@ async function capture(name: string): Promise<void> {
   await browser.saveScreenshot(path.join(mediaDir, `${name}.png`));
 }
 
-describe('Brama Desktop critical operations', () => {
-  it('starts its private runtime and completes the local model-source lifecycle', async () => {
+function keychainValue(provider: string): string | null {
+  const result = spawnSync('security', [
+    'find-generic-password',
+    '-w',
+    '-s', 'ai.wisent.brama.desktop.providers',
+    '-a', provider,
+  ], { encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+describe('Brama Desktop administration lifecycles', () => {
+  it('adds, replaces, and deletes a provider key and route alias through the real native UI', async () => {
     if (process.env.PROBIERZ_DATA_STATE !== 'fresh') {
-      throw new Error('Brama Desktop critical operations require PROBIERZ_DATA_STATE=fresh on a dedicated macOS host');
+      throw new Error('Brama Desktop administration lifecycles require PROBIERZ_DATA_STATE=fresh on a dedicated macOS host');
     }
 
-    const provider = `probierz-${randomUUID()}`;
+    const provider = 'openai';
+    const firstKey = `qa-${randomUUID()}`;
+    const replacementKey = `qa-${randomUUID()}`;
+    const alias = `probierz/${randomUUID().replaceAll('-', '')}`;
     let providerAdded = false;
 
     try {
-      const overview = await $('~Overview');
-      await overview.waitForDisplayed({ timeout: TIMEOUT });
-      const operational = await textContaining('Operational');
-      await operational.waitForDisplayed({ timeout: TIMEOUT });
-      await capture('brama-private-runtime-operational');
+      await (await $('~Posture')).waitForDisplayed({ timeout: TIMEOUT });
+      await (await $('~Subscriptions')).click();
+      await (await $('~Add local key')).waitForDisplayed({ timeout: TIMEOUT });
+      await (await $('~Add local key')).click();
 
-      await (await $('~Model Sources')).click();
-      await (await $('~Add model source')).waitForDisplayed({ timeout: TIMEOUT });
-      await (await $('~Add model source')).click();
-
-      await (await $('~Provider (for example openai or anthropic)')).setValue(provider);
-      await (await $('~API key or subscription credential')).setValue(`qa-${randomUUID()}`);
-      await (await $('~Add')).click();
+      await (await $('~Provider')).setValue(provider);
+      await (await $('~API key or subscription credential')).setValue(firstKey);
+      await (await $('~Add key')).click();
 
       const source = await textContaining(provider);
       await source.waitForDisplayed({ timeout: TIMEOUT });
       providerAdded = true;
-      await capture('brama-model-source-added');
+      if (keychainValue(provider) !== firstKey) {
+        throw new Error('the add operation did not persist the exact provider key in the isolated Keychain item');
+      }
+      await capture('brama-provider-key-added');
 
-      await (await $('~Remove')).click();
-      await (await $('~Remove model source')).waitForDisplayed({ timeout: TIMEOUT });
-      await (await $('~Remove model source')).click();
-      await source.waitForExist({ timeout: TIMEOUT, reverse: true });
+      await source.click();
+      await (await $('~Replace this provider key…')).click();
+      await (await $('~API key or subscription credential')).setValue(replacementKey);
+      await (await $('~Replace credential')).click();
+      await (await textContaining(`${provider} is saved`)).waitForDisplayed({ timeout: TIMEOUT });
+      if (keychainValue(provider) !== replacementKey) {
+        throw new Error('the replace operation left the previous provider key in the isolated Keychain item');
+      }
+      await capture('brama-provider-key-replaced');
+
+      await (await $('~Routing')).click();
+      await (await $('~Add alias')).waitForDisplayed({ timeout: TIMEOUT });
+      await (await $('~Add alias')).click();
+      await (await $('~Alias')).setValue(alias);
+      await (await $('~Primary target')).setValue('openai/default');
+      await (await $('~Create alias')).click();
+
+      const route = await textContaining(alias);
+      await route.waitForDisplayed({ timeout: TIMEOUT });
+      await capture('brama-route-alias-added');
+      await route.click();
+      const primary = await $('~Primary target');
+      await primary.setValue('openai/fail');
+      await (await $('~Review change…')).click();
+      await (await $('~Rewrite the route')).click();
+      await (await textContaining('openai/fail')).waitForDisplayed({ timeout: TIMEOUT });
+      await capture('brama-route-alias-replaced');
+
+      await (await $('~Delete this alias…')).click();
+      await (await $('~Delete the alias')).click();
+      await route.waitForExist({ timeout: TIMEOUT, reverse: true });
+      await capture('brama-route-alias-deleted');
+
+      await (await $('~Subscriptions')).click();
+      const savedSource = await textContaining(provider);
+      await savedSource.waitForDisplayed({ timeout: TIMEOUT });
+      await savedSource.click();
+      await (await $('~Remove this provider key…')).click();
+      await (await $('~Remove it')).click();
+      await savedSource.waitForExist({ timeout: TIMEOUT, reverse: true });
       providerAdded = false;
-
-      await expect(await textContaining('Operational')).toBeDisplayed();
-      await capture('brama-model-source-removed');
+      if (keychainValue(provider) !== null) {
+        throw new Error('the remove operation left the provider key in the isolated Keychain item');
+      }
+      await capture('brama-provider-key-deleted');
     } finally {
       if (providerAdded) {
         spawnSync('security', [

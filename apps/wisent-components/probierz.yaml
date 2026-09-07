@@ -1,0 +1,47 @@
+schemaVersion: 1
+appId: wisent-components
+owner: Wisent design system maintainers
+repositories:
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-components
+    mappings:
+      - paths:
+          - src/**
+          - tokens.json
+          - figma-component-inventory.json
+          - figma/renders/**
+          - tests/visual/**
+          - playwright.config.mjs
+        journeys: [figma-parity]
+  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz
+    mappings:
+      - paths:
+          - apps/wisent-components/**
+        journeys: [figma-parity]
+
+surfaces:
+  web:
+    spec: figma-parity.spec.mjs
+    journeys: [figma-parity]
+
+journeys:
+  figma-parity:
+    owner: Wisent design system maintainers
+    timeoutMs: 3600000
+    value: Every literal Figma component the package ships is drawn by the package and by Figma at the same size and device scale, and the two differ in no more pixels than tests/visual/parity-thresholds.json allows; a component whose Figma export has not landed is skipped by name and not silently passed.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH]
+  pii: none
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: false
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [figma-parity]
+  requiredTargets: [web]
+  requireSecretScan: false

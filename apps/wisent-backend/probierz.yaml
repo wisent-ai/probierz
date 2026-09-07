@@ -15,7 +15,7 @@ repositories:
 
 surfaces:
   tui:
-    spec: wisent-backend-production-latency.spec.mjs
+    spec: wisent-backend-production-latency
     journeys: [production-chat-latency]
 
 journeys:

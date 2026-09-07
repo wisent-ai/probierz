@@ -1,0 +1,41 @@
+[package]
+name = "probierz"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Probierz: journeys run where the product lives, and every run becomes evidence"
+license = "Apache-2.0"
+
+[[bin]]
+name = "probierz"
+path = "src/main.rs"
+
+[[bin]]
+name = "probierz-mcp"
+path = "src/mcp.rs"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml = "0.9"
+sha2 = "0.10"
+flate2 = "1"
+regex = "1"
+url = "2"
+aes = "0.8"
+ctr = "0.9"
+ghash = "0.5"
+subtle = "2"
+base64 = "0.22"
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+ureq = { version = "2", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+strip = true

@@ -17,7 +17,7 @@ repositories:
         journeys: [cli-command-pages]
 surfaces:
   tui:
-    spec: stado-cli-docs.spec.mjs
+    spec: stado-cli-docs
     journeys: [cli-scoped-generation, cli-command-pages]
 journeys:
   cli-scoped-generation:
