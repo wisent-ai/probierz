@@ -25,9 +25,6 @@ fn probierz(root: &Path, args: &[&str]) -> Output {
         .expect("run product")
 }
 
-fn stdout(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
 fn stderr(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
