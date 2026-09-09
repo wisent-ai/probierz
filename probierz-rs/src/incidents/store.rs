@@ -11,6 +11,18 @@ use crate::failure::Failure;
 
 use super::{register_file, INCIDENT_SCHEMA, RESOLUTION_SCHEMA};
 
+pub(super) fn lock(harness: &Path) -> Result<std::fs::File, Failure> {
+    let directory = harness.join("test-results/.incidents");
+    fs::create_dir_all(&directory)?;
+    let lock = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(directory.join("register.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    Ok(lock)
+}
+
 /// The four fields every stored envelope carries, refused by name when one is
 /// missing. The intake listener requires the same three identifiers; the
 /// register also requires the detail, because an incident nobody can read is
@@ -84,6 +96,7 @@ pub fn append(harness: &Path, entry: &Value) -> Result<(), Failure> {
     line.push('\n');
     let mut output = OpenOptions::new().create(true).append(true).open(&file)?;
     output.write_all(line.as_bytes())?;
+    output.sync_data()?;
     Ok(())
 }
 
@@ -98,7 +111,7 @@ fn entries(harness: &Path) -> Result<Vec<Value>, Failure> {
         if line.trim().is_empty() {
             continue;
         }
-        parsed.push(serde_json::from_str(line).map_err(|error| {
+        let entry: Value = serde_json::from_str(line).map_err(|error| {
             Failure::invalid(
                 "incident.register",
                 format!(
@@ -107,7 +120,21 @@ fn entries(harness: &Path) -> Result<Vec<Value>, Failure> {
                     index + 1
                 ),
             )
-        })?);
+        })?;
+        if !matches!(
+            entry.get("schema").and_then(Value::as_str),
+            Some(INCIDENT_SCHEMA | RESOLUTION_SCHEMA)
+        ) {
+            return Err(Failure::invalid(
+                "incident.register",
+                format!(
+                    "{}:{} carries an unsupported incident schema",
+                    file.display(),
+                    index + 1
+                ),
+            ));
+        }
+        parsed.push(entry);
     }
     Ok(parsed)
 }

@@ -117,6 +117,17 @@ fn handle_connection(mut stream: TcpStream, project_root: &Path) -> Result<(), F
         }
     };
 
+    if method == "POST" && path.starts_with("/v1/incidents/") {
+        match request_body(&bytes) {
+            Ok(body) => match crate::incidents::http::handle(project_root, &path, &body) {
+                Ok(Some(value)) => response(&mut stream, 200, &value)?,
+                Ok(None) => error_response(&mut stream, 404, "not found")?,
+                Err(error) => error_response(&mut stream, 400, error.detail)?,
+            },
+            Err(detail) => error_response(&mut stream, 400, detail)?,
+        }
+        return Ok(());
+    }
     let answer = match (method.as_str(), path.as_str()) {
         ("GET", "/v1/health") => response(
             &mut stream,

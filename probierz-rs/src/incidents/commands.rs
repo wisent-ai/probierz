@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 
 use crate::failure::{Answer, Failure};
 
+use super::store::lock;
 use super::store::{append, envelope_from_flags, envelope_problem, field, folded, read_envelope};
 use super::{actor, identity, now, register_file, INCIDENT_SCHEMA, RESOLUTION_SCHEMA};
 
@@ -59,24 +60,8 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
             recorded.detail,
         ),
     };
-    if let Some(problem) = envelope_problem(&carried) {
-        return Err(Failure::invalid(
-            "incident.record",
-            format!("the envelope is not usable: {problem}"),
-        ));
-    }
-    let recorded_at = now();
-    let incident_id = identity(&recorded_at, recorded.claim, &carried);
-    let entry = json!({
-        "schema": INCIDENT_SCHEMA,
-        "incident_id": incident_id,
-        "recorded_at": recorded_at,
-        "actor": actor(),
-        "claim": recorded.claim,
-        "run_id": recorded.run_id,
-        "envelope": carried,
-    });
-    append(harness, &entry)?;
+    let entry = record_envelope(harness, recorded.claim, carried, recorded.run_id)?;
+    let incident_id = field(&entry, "incident_id");
     if json_output {
         return print_json(&entry);
     }
@@ -87,18 +72,41 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
     Ok(())
 }
 
-pub fn list(harness: &Path, state: &str, limit: usize, json_output: bool) -> Answer {
-    if !matches!(state, "open" | "resolved" | "all") {
+pub(super) fn record_envelope(
+    harness: &Path,
+    claim: &str,
+    envelope: Value,
+    run_id: Option<&str>,
+) -> Result<Value, Failure> {
+    if claim.trim().is_empty() {
         return Err(Failure::invalid(
-            "incident.list",
-            format!("--state is open, resolved or all, not {state}"),
+            "incident.record",
+            "--claim must say what was claimed",
         ));
     }
-    let rows: Vec<Value> = folded(harness)?
-        .into_iter()
-        .filter(|row| state == "all" || field(row, "state") == state)
-        .take(limit)
-        .collect();
+    if let Some(problem) = envelope_problem(&envelope) {
+        return Err(Failure::invalid(
+            "incident.record",
+            format!("the envelope is not usable: {problem}"),
+        ));
+    }
+    let _lock = lock(harness)?;
+    let recorded_at = now();
+    let entry = json!({
+        "schema": INCIDENT_SCHEMA,
+        "incident_id": identity(&recorded_at, claim, &envelope),
+        "recorded_at": recorded_at,
+        "actor": actor(),
+        "claim": claim,
+        "run_id": run_id,
+        "envelope": envelope,
+    });
+    append(harness, &entry)?;
+    Ok(entry)
+}
+
+pub fn list(harness: &Path, state: &str, limit: usize, json_output: bool) -> Answer {
+    let rows = list_rows(harness, state, limit)?;
     if json_output {
         return print_json(&json!({
             "register": register_file(harness).display().to_string(),
@@ -126,7 +134,28 @@ pub fn list(harness: &Path, state: &str, limit: usize, json_output: bool) -> Ans
     Ok(())
 }
 
-fn one(harness: &Path, id: &str) -> Result<Value, Failure> {
+pub(super) fn list_rows(harness: &Path, state: &str, limit: usize) -> Result<Vec<Value>, Failure> {
+    let _lock = lock(harness)?;
+    if !matches!(state, "open" | "resolved" | "all") {
+        return Err(Failure::invalid(
+            "incident.list",
+            format!("--state is open, resolved or all, not {state}"),
+        ));
+    }
+    if limit == 0 {
+        return Err(Failure::invalid(
+            "incident.list",
+            "--limit needs a positive number",
+        ));
+    }
+    Ok(folded(harness)?
+        .into_iter()
+        .filter(|row| state == "all" || field(row, "state") == state)
+        .take(limit)
+        .collect())
+}
+
+fn one_unlocked(harness: &Path, id: &str) -> Result<Value, Failure> {
     folded(harness)?
         .into_iter()
         .find(|row| field(row, "incident_id") == id)
@@ -136,6 +165,11 @@ fn one(harness: &Path, id: &str) -> Result<Value, Failure> {
                 format!("no incident {id} in {}", register_file(harness).display()),
             )
         })
+}
+
+pub(super) fn one(harness: &Path, id: &str) -> Result<Value, Failure> {
+    let _lock = lock(harness)?;
+    one_unlocked(harness, id)
 }
 
 pub fn show(harness: &Path, id: &str, json_output: bool) -> Answer {
@@ -169,13 +203,28 @@ pub fn resolve(
     run_id: Option<&str>,
     json_output: bool,
 ) -> Answer {
+    let entry = resolve_entry(harness, id, note, run_id)?;
+    if json_output {
+        return print_json(&entry);
+    }
+    println!("resolved {id}");
+    Ok(())
+}
+
+pub(super) fn resolve_entry(
+    harness: &Path,
+    id: &str,
+    note: &str,
+    run_id: Option<&str>,
+) -> Result<Value, Failure> {
     if note.trim().is_empty() {
         return Err(Failure::invalid(
             "incident.resolve",
             "--note must say what closed it",
         ));
     }
-    let row = one(harness, id)?;
+    let _lock = lock(harness)?;
+    let row = one_unlocked(harness, id)?;
     if let Some(resolution) = row.get("resolution") {
         return Err(Failure::invalid(
             "incident.resolve",
@@ -195,9 +244,5 @@ pub fn resolve(
         "run_id": run_id,
     });
     append(harness, &entry)?;
-    if json_output {
-        return print_json(&entry);
-    }
-    println!("resolved {id}");
-    Ok(())
+    Ok(entry)
 }
