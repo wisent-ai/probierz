@@ -33,7 +33,25 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
         ));
     }
     let carried = match recorded.envelope {
-        Some(source) => read_envelope(source)?,
+        Some(source) => {
+            let named = [
+                recorded.service.map(|_| "--service"),
+                recorded.failure_point.map(|_| "--failure-point"),
+                recorded.error_code.map(|_| "--code"),
+                recorded.detail.map(|_| "--detail"),
+            ];
+            let also: Vec<&str> = named.into_iter().flatten().collect();
+            if !also.is_empty() {
+                return Err(Failure::invalid(
+                    "incident.record",
+                    format!(
+                        "--envelope carries the failure, so {} would be a second answer to the same field",
+                        also.join(", ")
+                    ),
+                ));
+            }
+            read_envelope(source)?
+        }
         None => envelope_from_flags(
             recorded.service,
             recorded.failure_point,

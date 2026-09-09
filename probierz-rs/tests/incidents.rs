@@ -263,3 +263,70 @@ fn the_register_refuses_what_it_cannot_record_or_close() {
         "the refused resolution wrote nothing"
     );
 }
+
+/// Two ways of describing the same failure in one call, and a bound that would
+/// return nothing. Both were accepted silently when the register was first
+/// written: the flags were dropped on the floor, and `--limit 0` printed an
+/// empty register that looked like an empty register.
+#[test]
+fn the_register_refuses_a_second_answer_and_a_bound_that_reads_nothing() {
+    let root = harness();
+    let envelope = root.path().join("envelope.json");
+    fs::write(
+        &envelope,
+        r#"{"service":"probierz","failure_point":"verification.claim","error_code":"unknown","detail":"the runs were never made"}"#,
+    )
+    .expect("an envelope on disk");
+
+    let both = probierz(
+        root.path(),
+        &[
+            "incident",
+            "record",
+            "--claim",
+            "a claim",
+            "--envelope",
+            envelope.to_str().expect("a utf-8 path"),
+            "--service",
+            "probierz",
+            "--detail",
+            "something else",
+        ],
+    );
+    assert!(!both.status.success());
+    assert!(
+        stderr(&both).contains(
+            "--envelope carries the failure, so --service, --detail would be a second answer to the same field"
+        ),
+        "every flag that arrived with the envelope is named: {}",
+        stderr(&both)
+    );
+
+    let carried = probierz(
+        root.path(),
+        &[
+            "incident",
+            "record",
+            "--claim",
+            "a claim",
+            "--envelope",
+            envelope.to_str().expect("a utf-8 path"),
+        ],
+    );
+    assert!(carried.status.success(), "{}", stderr(&carried));
+    let entries = lines(root.path());
+    assert_eq!(
+        entries.len(),
+        1,
+        "the refused call recorded nothing: {entries:?}"
+    );
+    assert_eq!(entries[0]["envelope"]["detail"], "the runs were never made");
+
+    let empty_bound = probierz(root.path(), &["incident", "list", "--limit", "0"]);
+    assert!(!empty_bound.status.success());
+    assert!(
+        stderr(&empty_bound).contains("--limit needs a positive number"),
+        "a bound that reads nothing is refused, not answered: {}",
+        stderr(&empty_bound)
+    );
+}

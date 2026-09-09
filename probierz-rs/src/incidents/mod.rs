@@ -77,7 +77,7 @@ pub enum IncidentCommand {
     List {
         #[arg(long, default_value = "open")]
         state: String,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 20, value_parser = crate::cli::reporting::positive_history_limit)]
         limit: usize,
         #[arg(long)]
         json: bool,
