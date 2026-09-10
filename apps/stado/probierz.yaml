@@ -48,13 +48,15 @@ repositories:
     journeys:
     - run-retention
   - paths:
-    - stado-rs/src/cli/disk_cleanup.rs
+    - stado-rs/src/cli/hosts/disk_cleanup.rs
     - stado-rs/src/providers/local/disk_cleanup/**
     - stado-rs/tests/cleanup/**
     journeys:
     - disk-cleanup
   - paths:
     - stado-rs/tests/probierz-rust-journey.mjs
+    - stado-rs/tests/probierz-rust-artifacts.mjs
+    - stado-rs/tests/probierz-rust-processes.mjs
     journeys:
     - host-dynamic-capacity
     - run-retention

@@ -22,3 +22,8 @@ package-lock.json
 # every page.
 docs
 docs/concepts
+# One manifest per application, at the exact path the product reads:
+# `manifest::load` opens `apps/<id>/probierz.yaml` and nothing else, and the
+# format has no include mechanism, so an application's declaration cannot be
+# split across files without changing what a manifest is.
+apps/stado/probierz.yaml
