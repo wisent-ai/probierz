@@ -1,4 +1,11 @@
 use crate::discovery::*;
+/// Every spec a package owns, including the ones in sub-directories.
+///
+/// The runners already glob `test/specs/**`, so a surface may group its
+/// journeys into folders — by product, by screen — and the suite still runs
+/// them. Discovery used to read only the top level, so a grouped journey
+/// existed for the runner and not for `probierz specs`, and an operator
+/// reading the list would have concluded it had been deleted.
 pub(crate) fn spec_files(harness: &Path, pkg: &str) -> Result<Vec<String>, Failure> {
     let mut found = Vec::new();
     for sub in SPEC_DIRS {
@@ -6,15 +13,28 @@ pub(crate) fn spec_files(harness: &Path, pkg: &str) -> Result<Vec<String>, Failu
         if !directory.is_dir() {
             continue;
         }
-        for entry in std::fs::read_dir(&directory)? {
-            let name = entry?.file_name().to_string_lossy().into_owned();
-            if SPEC_SUFFIXES.iter().any(|suffix| name.ends_with(suffix)) {
-                found.push(format!("{pkg}/{sub}/{name}"));
-            }
-        }
+        collect_specs(&directory, &format!("{pkg}/{sub}"), &mut found)?;
     }
     found.sort();
     Ok(found)
+}
+
+/// One directory of specs and everything below it, in the repository-relative
+/// form every other command names a spec by.
+fn collect_specs(directory: &Path, prefix: &str, found: &mut Vec<String>) -> Result<(), Failure> {
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = entry.path();
+        if path.is_dir() {
+            collect_specs(&path, &format!("{prefix}/{name}"), found)?;
+            continue;
+        }
+        if SPEC_SUFFIXES.iter().any(|suffix| name.ends_with(suffix)) {
+            found.push(format!("{prefix}/{name}"));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Serialize)]

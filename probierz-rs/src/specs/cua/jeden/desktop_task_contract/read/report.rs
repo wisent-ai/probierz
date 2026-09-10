@@ -1,5 +1,5 @@
 use serde_json::json;
-use super::*;
+use super::super::*;
 pub(crate) fn wait_for_session(
     driver: &Driver,
     app: &App,

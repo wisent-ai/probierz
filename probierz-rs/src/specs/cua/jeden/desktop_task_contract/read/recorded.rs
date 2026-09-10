@@ -1,5 +1,5 @@
 use serde_json::json;
-use super::*;
+use super::super::*;
 pub(crate) fn inspect_recorded(
     backend: &Backend,
     sessions_root: &Path,
