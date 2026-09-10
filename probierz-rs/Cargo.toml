@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [[bin]]
 name = "probierz-mcp"
-path = "src/mcp.rs"
+path = "src/mcp/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
