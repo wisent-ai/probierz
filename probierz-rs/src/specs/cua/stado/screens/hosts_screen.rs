@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::specs;
 
-use super::console as console;
+use crate::specs::cua::stado::console as console;
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     crate::specs::cua::common::executable(context, "path to the Stado native application executable")?;

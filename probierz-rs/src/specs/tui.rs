@@ -48,12 +48,12 @@ pub fn specs() -> Vec<Spec> {
         Spec {
             surface: "tui",
             title: "echo-web-analytics-collectors",
-            run: echo::web_analytics_collectors::run,
+            run: echo::web::web_analytics_collectors::run,
         },
         Spec {
             surface: "tui",
             title: "echo-web-capability-catalogue",
-            run: echo::web_capability_catalogue::run,
+            run: echo::web::web_capability_catalogue::run,
         },
         Spec {
             surface: "tui",
@@ -148,27 +148,27 @@ pub fn specs() -> Vec<Spec> {
         Spec {
             surface: "tui",
             title: "skarbiec-delete-and-restore-secret",
-            run: skarbiec::delete_and_restore_secret::run,
+            run: skarbiec::secrets::delete_and_restore_secret::run,
         },
         Spec {
             surface: "tui",
             title: "skarbiec-initialize-vault",
-            run: skarbiec::initialize_vault::run,
+            run: skarbiec::vault::initialize_vault::run,
         },
         Spec {
             surface: "tui",
             title: "skarbiec-manage-secrets",
-            run: skarbiec::manage_secrets::run,
+            run: skarbiec::secrets::manage_secrets::run,
         },
         Spec {
             surface: "tui",
             title: "skarbiec-manage-service-routes",
-            run: skarbiec::manage_service_routes::run,
+            run: skarbiec::vault::manage_service_routes::run,
         },
         Spec {
             surface: "tui",
             title: "skarbiec-manage-users-and-sharing",
-            run: skarbiec::manage_users_and_sharing::run,
+            run: skarbiec::vault::manage_users_and_sharing::run,
         },
         Spec {
             surface: "tui",
@@ -178,52 +178,52 @@ pub fn specs() -> Vec<Spec> {
         Spec {
             surface: "tui",
             title: "skarbiec-recover-vault-access",
-            run: skarbiec::recover_vault_access::run,
+            run: skarbiec::vault::recover_vault_access::run,
         },
         Spec {
             surface: "tui",
             title: "skarbiec-use-json-output",
-            run: skarbiec::use_json_output::run,
+            run: skarbiec::secrets::use_json_output::run,
         },
         Spec {
             surface: "tui",
             title: "stado-host-gates",
-            run: stado::host_gates::run,
+            run: stado::host::host_gates::run,
         },
         Spec {
             surface: "tui",
             title: "stado-host-reclaim",
-            run: stado::host_reclaim::run,
+            run: stado::host::host_reclaim::run,
         },
         Spec {
             surface: "tui",
             title: "stado-release-doctor",
-            run: stado::release_doctor::run,
+            run: stado::release::release_doctor::run,
         },
         Spec {
             surface: "tui",
             title: "stado-release-logs",
-            run: stado::release_logs::run,
+            run: stado::release::release_logs::run,
         },
         Spec {
             surface: "tui",
             title: "stado-release-quarantine",
-            run: stado::release_quarantine::run,
+            run: stado::release::release_quarantine::run,
         },
         Spec {
             surface: "tui",
             title: "stado-service-converge",
-            run: stado::service_converge::run,
+            run: stado::service::service_converge::run,
         },
         Spec {
             surface: "tui",
             title: "stado-service-ensure",
-            run: stado::service_ensure::run,
+            run: stado::service::service_ensure::run,
         },
         Spec {
             surface: "tui",
             title: "stado-service-unowned-processes",
-            run: stado::service_unowned_processes::run,
+            run: stado::service::service_unowned_processes::run,
         },
         Spec {
             surface: "tui",

@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use crate::specs;
 
-use super::fixture::{self as fixture, CommandResult, Shell};
+use crate::specs::tui::skarbiec::fixture::{self as fixture, CommandResult, Shell};
 
 const EMAIL_RESOURCE: &str = "origin:https://dash.cloudflare.com/email";
 const PASSWORD_RESOURCE: &str = "origin:https://dash.cloudflare.com/password";

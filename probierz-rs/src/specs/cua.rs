@@ -47,17 +47,17 @@ pub fn specs() -> Vec<Spec> {
         Spec {
             surface: "desktop:cua",
             title: "stado-hosts-screen",
-            run: stado::hosts_screen::run,
+            run: stado::screens::hosts_screen::run,
         },
         Spec {
             surface: "desktop:cua",
             title: "stado-releases-screen",
-            run: stado::releases_screen::run,
+            run: stado::screens::releases_screen::run,
         },
         Spec {
             surface: "desktop:cua",
             title: "stado-services-screen",
-            run: stado::services_screen::run,
+            run: stado::screens::services_screen::run,
         },
         Spec {
             surface: "desktop:cua",

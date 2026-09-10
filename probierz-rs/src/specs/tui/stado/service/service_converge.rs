@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 
 use crate::specs;
 
-use super::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
+use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
 
 const LABEL: &str = "ai.wisent.probierz.fixture.converge";
 const BINARY: &str = "fixture-daemon";

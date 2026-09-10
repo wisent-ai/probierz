@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::specs;
 
-use super::console as console;
+use crate::specs::cua::stado::console as console;
 
 fn clearable_digests(view: &console::View) -> usize {
     console::buttons(view)

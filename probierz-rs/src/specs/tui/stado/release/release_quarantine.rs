@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use crate::failure::iso_timestamp;
 use crate::specs;
 
-use super::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT};
+use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT};
 
 const DESIRED: &str = "0.2.27";
 const QUARANTINE_REASON: &str = "candidate did not become ready within 90s: pid 46748 is gone";

@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::specs;
 
-use super::console as console;
+use crate::specs::cua::stado::console as console;
 
 fn writing_controls(view: &console::View) -> Vec<String> {
     let writing = Regex::new(r"(?i)^(Reclaim|Clear|Apply|Restart|Stop|End|Kill|Terminate|Ensure|Install|Converge|Delete|Remove)\b").unwrap();

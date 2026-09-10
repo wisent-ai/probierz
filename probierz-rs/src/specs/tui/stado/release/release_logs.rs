@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 
 use crate::specs;
 
-use super::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT};
+use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let source = fixture::source_identity()?;

@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use crate::failure::iso_timestamp;
 use crate::specs;
 
-use super::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
+use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let source = fixture::source_identity()?;

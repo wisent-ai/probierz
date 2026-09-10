@@ -5,7 +5,7 @@ use serde_json::json;
 
 use crate::specs;
 
-use super::fixture::{self as fixture, Shell};
+use crate::specs::tui::skarbiec::fixture::{self as fixture, Shell};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let binary = fixture::binary(context);

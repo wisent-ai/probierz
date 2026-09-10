@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 
 use crate::specs;
 
-use super::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
+use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST};
 
 const NAME: &str = "probierz-fixture-ensure";
 const LABEL: &str = "com.wisent.compute.service.probierz-fixture-ensure";
