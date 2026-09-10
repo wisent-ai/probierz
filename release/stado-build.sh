@@ -61,6 +61,7 @@ for binary in probierz probierz-mcp; do
   fi
   install -m 0755 "$built/$binary" "$WISENT_OUTPUT_DIR/bin/$binary"
 done
+wisent-products signing sign --product probierz "$WISENT_OUTPUT_DIR/bin/probierz" "$WISENT_OUTPUT_DIR/bin/probierz-mcp"
 
 # An artifact that cannot start is not a release. Each binary answers a
 # read-only question: the product prints its command surface, and the MCP
