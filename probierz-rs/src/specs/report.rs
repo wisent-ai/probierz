@@ -27,6 +27,7 @@ pub(crate) fn write_report(path: &Path, report: &Value) -> Result<(), Failure> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn scratch(name: &str) -> PathBuf {
         let dir =
