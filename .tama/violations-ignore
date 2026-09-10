@@ -1,0 +1,24 @@
+# Audit exclusions for `tama find-violations`: generated output and paths
+# fixed by something outside this project.
+#
+# Written by the wisent-visuals banner bot from .github/banner.toml.
+assets/readme-banner.svg
+# Resolved by cargo from probierz-rs/Cargo.toml and committed because this
+# crate ships a binary. A person never edits it, and `cargo build` rewrites it
+# whole.
+probierz-rs/Cargo.lock
+# Resolved by npm from package.json for the workspace packages.
+package-lock.json
+# The repository root. npm reads package.json and package-lock.json from here,
+# tsc reads tsconfig.base.json, Vercel reads vercel.json, GitHub reads
+# README.md and LICENSE, and the pack's release tooling reads
+# platform-entitlements.json by that exact path from other repositories.
+.
+# The published documentation URL space. Every file below is one page of
+# https://probierz.wisent.com/docs, served with `cleanUrls` by vercel.json:
+# moving a page into a sub-folder renames the page's public address. Only the
+# folder counts are declared here — each page is still held to the line
+# limit, and the shared stylesheet lives in docs/site.css instead of inside
+# every page.
+docs
+docs/concepts
