@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::*;
+use serde_json::json;
 pub(crate) fn observe(
     driver: &Driver,
     pid: u32,
@@ -136,4 +136,3 @@ pub(crate) fn click_fresh(
     }
     Ok(())
 }
-

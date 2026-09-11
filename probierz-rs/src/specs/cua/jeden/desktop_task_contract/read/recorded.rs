@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::super::*;
+use serde_json::json;
 pub(crate) fn inspect_recorded(
     backend: &Backend,
     sessions_root: &Path,
@@ -259,4 +259,3 @@ pub(crate) fn assert_contract_visible(tree: &str, contract: &Value) -> Result<()
     }
     Ok(())
 }
-

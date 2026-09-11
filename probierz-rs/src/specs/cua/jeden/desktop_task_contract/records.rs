@@ -39,7 +39,11 @@ pub(crate) fn required(context: &specs::Context, name: &str) -> Result<String, S
         .ok_or_else(|| format!("{name} is required for the Jeden Desktop task-contract journey"))
 }
 
-pub(crate) fn required_path(context: &specs::Context, name: &str, file: bool) -> Result<PathBuf, String> {
+pub(crate) fn required_path(
+    context: &specs::Context,
+    name: &str,
+    file: bool,
+) -> Result<PathBuf, String> {
     let value = required(context, name)?;
     let path = PathBuf::from(&value);
     if !path.is_absolute() {
@@ -118,4 +122,3 @@ pub(crate) fn observed_at() -> String {
         .as_millis();
     millis.to_string()
 }
-

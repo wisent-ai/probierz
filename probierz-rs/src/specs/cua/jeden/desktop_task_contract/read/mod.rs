@@ -3,6 +3,8 @@
 
 mod recorded;
 mod report;
+mod visible;
 
 pub(crate) use recorded::*;
 pub(crate) use report::*;
+pub(crate) use visible::*;
