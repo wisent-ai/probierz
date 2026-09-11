@@ -34,6 +34,9 @@ fi
 work="$WISENT_OUTPUT_DIR/work"
 source_tree="$work/source"
 rm -rf "$work"
+# Throwaway state is removed by the code that made it: the unpacked commit
+# and its target directory end with the run.
+trap 'rm -rf "$work"' EXIT
 mkdir -p "$source_tree" "$WISENT_OUTPUT_DIR/bin" "$WISENT_OUTPUT_DIR/evidence"
 
 # The commit, not the working tree. The installer files HEAD as the revision it
