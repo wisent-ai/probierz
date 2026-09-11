@@ -1,11 +1,11 @@
 //! The failure intake envelope: its failure point, codes and meaning, the bounded JSON line it becomes, and the store it is appended to.
 
-use super::*;
+use crate::status::*;
 
-pub(super) const MAX_LINE_BYTES: usize = 64 * 1024;
-pub(super) const MAX_FILE_BYTES: usize = 10 * 1024 * 1024;
-pub(super) const DEFAULT_BIND: &str = "127.0.0.1:9790";
-pub(super) const ERROR_CODES: [&str; 7] = [
+pub(crate) const MAX_LINE_BYTES: usize = 64 * 1024;
+pub(crate) const MAX_FILE_BYTES: usize = 10 * 1024 * 1024;
+pub(crate) const DEFAULT_BIND: &str = "127.0.0.1:9790";
+pub(crate) const ERROR_CODES: [&str; 7] = [
     "config",
     "auth",
     "not_found",
@@ -15,7 +15,7 @@ pub(super) const ERROR_CODES: [&str; 7] = [
     "unknown",
 ];
 
-pub(super) fn valid_failure_point(point: &str) -> bool {
+pub(crate) fn valid_failure_point(point: &str) -> bool {
     if point.is_empty() {
         return false;
     }
@@ -41,7 +41,7 @@ pub(super) fn valid_failure_point(point: &str) -> bool {
     })
 }
 
-pub(super) fn envelope_problem(body: &Value) -> Option<String> {
+pub(crate) fn envelope_problem(body: &Value) -> Option<String> {
     if !body.is_object() {
         return Some("body is not a JSON object".to_string());
     }
@@ -69,7 +69,7 @@ pub(super) fn envelope_problem(body: &Value) -> Option<String> {
     None
 }
 
-pub(super) fn code_meaning(code: &str) -> (&'static str, bool, bool) {
+pub(crate) fn code_meaning(code: &str) -> (&'static str, bool, bool) {
     match code {
         "config" => ("critical", false, true),
         "auth" | "not_found" => ("warning", false, false),
@@ -80,7 +80,7 @@ pub(super) fn code_meaning(code: &str) -> (&'static str, bool, bool) {
     }
 }
 
-pub(super) fn failure_envelope(code: &str, detail: &str) -> Value {
+pub(crate) fn failure_envelope(code: &str, detail: &str) -> Value {
     let (severity, retryable, outage) = code_meaning(code);
     json!({
         "failure_point": "probierz.intake.request",
@@ -94,7 +94,7 @@ pub(super) fn failure_envelope(code: &str, detail: &str) -> Value {
     })
 }
 
-pub(super) fn authorized(header: Option<&str>, token: &str) -> bool {
+pub(crate) fn authorized(header: Option<&str>, token: &str) -> bool {
     let presented = header
         .and_then(|header| header.strip_prefix("Bearer "))
         .unwrap_or("");
@@ -108,7 +108,7 @@ pub(super) fn authorized(header: Option<&str>, token: &str) -> bool {
         == 0
 }
 
-pub(super) fn bounded_line(envelope: &Value) -> Result<String, Failure> {
+pub(crate) fn bounded_line(envelope: &Value) -> Result<String, Failure> {
     let mut stored = envelope.clone();
     stored
         .as_object_mut()
@@ -168,7 +168,7 @@ pub(super) fn bounded_line(envelope: &Value) -> Result<String, Failure> {
     Ok(serde_json::to_string(&stored)?)
 }
 
-pub(super) fn rotate_if_needed(file: &Path, incoming_bytes: usize) -> Result<(), Failure> {
+pub(crate) fn rotate_if_needed(file: &Path, incoming_bytes: usize) -> Result<(), Failure> {
     let Ok(metadata) = fs::metadata(file) else {
         return Ok(());
     };
@@ -186,7 +186,7 @@ pub(super) fn rotate_if_needed(file: &Path, incoming_bytes: usize) -> Result<(),
     Ok(())
 }
 
-pub(super) fn store_envelope(envelope: &Value) -> Result<(), Failure> {
+pub(crate) fn store_envelope(envelope: &Value) -> Result<(), Failure> {
     let directory = failures_dir();
     fs::create_dir_all(&directory)?;
     let line = bounded_line(envelope)?;

@@ -1,8 +1,8 @@
 //! Operator status of one application against a base ref, and its text rendering.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn app_status_value(
+pub(crate) fn app_status_value(
     harness: &Path,
     app_id: &str,
     base_ref: &str,
@@ -162,7 +162,7 @@ pub(super) fn app_status_value(
     }))
 }
 
-pub(super) fn render_app_status(status: &Value) -> String {
+pub(crate) fn render_app_status(status: &Value) -> String {
     let mut lines = vec![format!(
         "app: {}",
         status.get("appId").and_then(Value::as_str).unwrap_or("")

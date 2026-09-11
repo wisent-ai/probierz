@@ -1,8 +1,8 @@
 //! Run history: per-test and per-journey history, the performance trend, and the history answer.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn percentile(mut values: Vec<f64>, fraction: f64) -> Option<f64> {
+pub(crate) fn percentile(mut values: Vec<f64>, fraction: f64) -> Option<f64> {
     if values.is_empty() {
         return None;
     }
@@ -11,7 +11,7 @@ pub(super) fn percentile(mut values: Vec<f64>, fraction: f64) -> Option<f64> {
     values.get(index.min(values.len() - 1)).copied()
 }
 
-pub(super) fn test_history(runs: &[Value]) -> Vec<Value> {
+pub(crate) fn test_history(runs: &[Value]) -> Vec<Value> {
     let mut order = Vec::new();
     let mut by_title: HashMap<String, Vec<Value>> = HashMap::new();
     for run in runs.iter().rev() {
@@ -80,7 +80,7 @@ pub(super) fn test_history(runs: &[Value]) -> Vec<Value> {
         .collect()
 }
 
-pub(super) fn journey_history(runs: &[Value]) -> Vec<Value> {
+pub(crate) fn journey_history(runs: &[Value]) -> Vec<Value> {
     let names = runs
         .iter()
         .flat_map(|run| {
@@ -142,7 +142,7 @@ pub(super) fn journey_history(runs: &[Value]) -> Vec<Value> {
         .collect()
 }
 
-pub(super) fn performance_trend(runs: &[Value]) -> Value {
+pub(crate) fn performance_trend(runs: &[Value]) -> Value {
     let passed = runs
         .iter()
         .filter(|run| {

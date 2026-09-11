@@ -1,21 +1,21 @@
 //! The desktop failure store: where it lives, how a service names its file, and the failures answer.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn home_dir() -> PathBuf {
+pub(crate) fn home_dir() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-pub(super) fn failures_dir() -> PathBuf {
+pub(crate) fn failures_dir() -> PathBuf {
     std::env::var_os("PROBIERZ_FAILURES_DIR")
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| home_dir().join(".probierz").join("failures"))
 }
 
-pub(super) fn service_file_name(service: &str) -> String {
+pub(crate) fn service_file_name(service: &str) -> String {
     let mut replaced = String::new();
     let mut invalid_run = false;
     for byte in service.trim().to_ascii_lowercase().bytes() {
@@ -31,7 +31,7 @@ pub(super) fn service_file_name(service: &str) -> String {
     format!("{}.jsonl", if clean.is_empty() { "unknown" } else { clean })
 }
 
-pub(super) fn log_failure_index(detail: &str) {
+pub(crate) fn log_failure_index(detail: &str) {
     eprintln!(
         "probierz-failure {}",
         json!({
@@ -47,7 +47,7 @@ pub(super) fn log_failure_index(detail: &str) {
     );
 }
 
-pub(super) fn failures_index(service: Option<&str>, limit: usize) -> Value {
+pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     let directory = failures_dir();
     let mut names = Vec::new();
     if directory.exists() {
@@ -154,12 +154,12 @@ pub(super) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     })
 }
 
-pub(super) fn trim_detail(text: &str, limit: usize) -> String {
+pub(crate) fn trim_detail(text: &str, limit: usize) -> String {
     let value = text.trim();
     value.chars().take(limit).collect()
 }
 
-pub(super) fn render_failures(report: &Value) -> String {
+pub(crate) fn render_failures(report: &Value) -> String {
     let mut lines = vec![
         format!(
             "failures: {} stored ({} unparsed lines) in {}",

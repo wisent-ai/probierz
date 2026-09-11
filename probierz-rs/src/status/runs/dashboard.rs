@@ -1,12 +1,12 @@
 //! The dashboard over an application's runs, grouped by device and version.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn yaml_json(value: &serde_yaml::Value) -> Result<Value, Failure> {
+pub(crate) fn yaml_json(value: &serde_yaml::Value) -> Result<Value, Failure> {
     serde_json::to_value(value).map_err(|error| Failure::config("manifest.read", error.to_string()))
 }
 
-pub(super) fn manifest_object(
+pub(crate) fn manifest_object(
     harness: &Path,
     app_id: &str,
 ) -> Result<(manifest::Manifest, Value), Failure> {
@@ -15,7 +15,7 @@ pub(super) fn manifest_object(
     Ok((loaded, document))
 }
 
-pub(super) fn artifact_projection(run: &Value) -> Value {
+pub(crate) fn artifact_projection(run: &Value) -> Value {
     Value::Array(
         run.get("artifacts")
             .and_then(Value::as_array)
@@ -32,7 +32,7 @@ pub(super) fn artifact_projection(run: &Value) -> Value {
     )
 }
 
-pub(super) fn result_projection(run: Option<&Value>) -> Value {
+pub(crate) fn result_projection(run: Option<&Value>) -> Value {
     let Some(run) = run else {
         return Value::Null;
     };
@@ -47,7 +47,7 @@ pub(super) fn result_projection(run: Option<&Value>) -> Value {
     })
 }
 
-pub(super) fn device_key(run: &Value) -> String {
+pub(crate) fn device_key(run: &Value) -> String {
     let name = run
         .get("device")
         .and_then(|device| string(device.get("name")))
@@ -59,7 +59,7 @@ pub(super) fn device_key(run: &Value) -> String {
     format!("{name}:{runtime}")
 }
 
-pub(super) fn version_key(run: &Value) -> String {
+pub(crate) fn version_key(run: &Value) -> String {
     run.get("build")
         .and_then(|value| string(value.get("sha256")))
         .or_else(|| {
@@ -70,7 +70,7 @@ pub(super) fn version_key(run: &Value) -> String {
         .to_string()
 }
 
-pub(super) fn dashboard_value(
+pub(crate) fn dashboard_value(
     harness: &Path,
     app_id: &str,
     limit: usize,

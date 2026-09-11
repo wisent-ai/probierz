@@ -1,12 +1,12 @@
 //! Run records: the manifests below a root, their normalised status and failure class, and the record one run manifest becomes.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn now() -> String {
+pub(crate) fn now() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
-pub(super) fn json_number(value: f64) -> Value {
+pub(crate) fn json_number(value: f64) -> Value {
     if value.is_finite()
         && value.fract() == 0.0
         && value >= i64::MIN as f64
@@ -20,7 +20,7 @@ pub(super) fn json_number(value: f64) -> Value {
     }
 }
 
-pub(super) fn number(value: Option<&Value>) -> f64 {
+pub(crate) fn number(value: Option<&Value>) -> f64 {
     match value {
         Some(Value::Number(value)) => value.as_f64().unwrap_or(0.0),
         Some(Value::String(value)) => value.parse::<f64>().unwrap_or(f64::NAN),
@@ -30,13 +30,13 @@ pub(super) fn number(value: Option<&Value>) -> f64 {
     }
 }
 
-pub(super) fn string(value: Option<&Value>) -> Option<&str> {
+pub(crate) fn string(value: Option<&Value>) -> Option<&str> {
     value
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
 }
 
-pub(super) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
+pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     if !root.exists() {
         return Ok(Vec::new());
     }
@@ -56,13 +56,13 @@ pub(super) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     Ok(files)
 }
 
-pub(super) fn read_json(path: &Path) -> Option<Value> {
+pub(crate) fn read_json(path: &Path) -> Option<Value> {
     fs::read_to_string(path)
         .ok()
         .and_then(|text| serde_json::from_str(&text).ok())
 }
 
-pub(super) fn normalized_status(manifest: &Value) -> &str {
+pub(crate) fn normalized_status(manifest: &Value) -> &str {
     match manifest.get("status").and_then(Value::as_str) {
         Some("passed") => "passed",
         Some("blocked") => "blocked",
@@ -79,7 +79,7 @@ pub(super) fn normalized_status(manifest: &Value) -> &str {
     }
 }
 
-pub(super) fn failure_class(analysis: Option<&Value>, report: Option<&Value>) -> &'static str {
+pub(crate) fn failure_class(analysis: Option<&Value>, report: Option<&Value>) -> &'static str {
     let failures = analysis
         .and_then(|value| value.get("failures"))
         .and_then(Value::as_array)
@@ -113,14 +113,14 @@ pub(super) fn failure_class(analysis: Option<&Value>, report: Option<&Value>) ->
     }
 }
 
-pub(super) fn value_or(value: Option<&Value>, fallback: Value) -> Value {
+pub(crate) fn value_or(value: Option<&Value>, fallback: Value) -> Value {
     match value {
         Some(Value::Null) | None => fallback,
         Some(value) => value.clone(),
     }
 }
 
-pub(super) fn run_record(manifest_path: &Path) -> Option<Value> {
+pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
     let manifest = read_json(manifest_path)?;
     let directory = manifest_path.parent()?;
     let analysis_path = string(manifest.get("analysisPath"))

@@ -1,8 +1,8 @@
 //! The fleet overview: violations per root, fleet health, and the overview answer.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn violations_for(root: &str) -> Value {
+pub(crate) fn violations_for(root: &str) -> Value {
     let output = Command::new("tama")
         .args(["find-violations", "--repo", root, "--json"])
         .output();
@@ -41,7 +41,7 @@ pub(super) fn violations_for(root: &str) -> Value {
     })
 }
 
-pub(super) fn fleet_failure(point: &str, code: &str, detail: &str, message: &str) -> Value {
+pub(crate) fn fleet_failure(point: &str, code: &str, detail: &str, message: &str) -> Value {
     let (severity, retryable, outage) = code_meaning(code);
     let detail = trim_detail(detail, 300);
     eprintln!(
@@ -60,7 +60,7 @@ pub(super) fn fleet_failure(point: &str, code: &str, detail: &str, message: &str
     fleet_summary(point, code, message)
 }
 
-pub(super) fn fleet_summary(point: &str, code: &str, message: &str) -> Value {
+pub(crate) fn fleet_summary(point: &str, code: &str, message: &str) -> Value {
     let (_, retryable, outage) = code_meaning(code);
     json!({
         "available": false,
@@ -73,7 +73,7 @@ pub(super) fn fleet_summary(point: &str, code: &str, message: &str) -> Value {
     })
 }
 
-pub(super) fn object_message(action: &str, code: &str) -> String {
+pub(crate) fn object_message(action: &str, code: &str) -> String {
     let blame = match code {
         "infra_down" => format!("{action}: the objects dependency is unavailable. This is an infrastructure outage, not your configuration — retry later."),
         "timeout" => format!("{action}: the objects dependency did not answer in time. Not your configuration — retry later."),
@@ -90,7 +90,7 @@ pub(super) fn object_message(action: &str, code: &str) -> String {
     }
 }
 
-pub(super) fn fleet_health() -> Value {
+pub(crate) fn fleet_health() -> Value {
     let objects = match crate::evidence::list_objects("stado://probierz/capacity/") {
         Ok(objects) => objects,
         Err(failure) => {
@@ -147,7 +147,7 @@ pub(super) fn fleet_health() -> Value {
     })
 }
 
-pub(super) fn overview_value(
+pub(crate) fn overview_value(
     harness: &Path,
     app_ids: Option<&[String]>,
     include_violations: bool,
@@ -180,7 +180,7 @@ pub(super) fn overview_value(
     Ok(json!({ "generatedAt": now(), "apps": apps, "fleet": fleet_health() }))
 }
 
-pub(super) fn render_overview(report: &Value) -> String {
+pub(crate) fn render_overview(report: &Value) -> String {
     let mut lines = vec![format!(
         "overview {}",
         report

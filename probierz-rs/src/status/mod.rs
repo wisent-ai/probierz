@@ -28,32 +28,23 @@ use serde_json::{json, Number, Value};
 use crate::failure::{print_json, Answer, Code, Failure};
 use crate::manifest;
 
-mod app;
-mod changes;
-mod dashboard;
-mod envelope;
-mod failures;
-mod gates;
-mod history;
+mod application;
+mod fleet;
 mod intake;
-mod overview;
-mod records;
+mod runs;
 
-use app::*;
-use changes::*;
-use dashboard::*;
-use envelope::*;
-use failures::*;
-use gates::*;
-use records::*;
+use application::*;
+use fleet::*;
+use intake::*;
+use runs::*;
 
-pub use app::status;
-pub use dashboard::dashboard;
-pub use failures::failures;
-pub use history::history;
-pub(crate) use history::run_history_value;
-pub use intake::intake_serve;
-pub use overview::overview;
+pub use application::report::status;
+pub use fleet::failures::failures;
+pub use fleet::overview::overview;
+pub use intake::listener::intake_serve;
+pub use runs::dashboard::dashboard;
+pub use runs::history::history;
+pub(crate) use runs::history::run_history_value;
 
 #[cfg(test)]
 mod tests {

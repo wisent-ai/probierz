@@ -1,8 +1,8 @@
 //! What changed: git reads, glob matching and the journeys a set of files affects.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn git(root: &str, arguments: &[&str]) -> Option<String> {
+pub(crate) fn git(root: &str, arguments: &[&str]) -> Option<String> {
     let output = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -16,7 +16,7 @@ pub(super) fn git(root: &str, arguments: &[&str]) -> Option<String> {
     (!text.is_empty()).then_some(text)
 }
 
-pub(super) fn git_lines(root: &str, arguments: &[&str]) -> Vec<String> {
+pub(crate) fn git_lines(root: &str, arguments: &[&str]) -> Vec<String> {
     let Some(output) = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -37,7 +37,7 @@ pub(super) fn git_lines(root: &str, arguments: &[&str]) -> Vec<String> {
         .collect()
 }
 
-pub(super) fn glob_matches(pattern: &str, text: &str) -> bool {
+pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {
     fn matches(
         pattern: &[u8],
         text: &[u8],
@@ -73,7 +73,7 @@ pub(super) fn glob_matches(pattern: &str, text: &str) -> bool {
     )
 }
 
-pub(super) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec<String>, Failure> {
+pub(crate) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec<String>, Failure> {
     let mut affected = BTreeSet::new();
     for app in manifest::list(harness)? {
         let (_, document) = manifest_object(harness, &app.app_id)?;

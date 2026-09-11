@@ -1,8 +1,8 @@
 //! The release gate of an application and the evidence level a run reaches.
 
-use super::*;
+use crate::status::*;
 
-pub(super) fn gate_status(loaded: &manifest::Manifest, app_id: &str) -> Result<Value, Failure> {
+pub(crate) fn gate_status(loaded: &manifest::Manifest, app_id: &str) -> Result<Value, Failure> {
     let file = loaded
         .file
         .parent()
@@ -35,7 +35,7 @@ pub(super) fn gate_status(loaded: &manifest::Manifest, app_id: &str) -> Result<V
     Ok(config)
 }
 
-pub(super) fn evidence_level(run: &Value) -> &'static str {
+pub(crate) fn evidence_level(run: &Value) -> &'static str {
     if run.get("status").and_then(Value::as_str) != Some("passed") {
         return "E0";
     }
@@ -62,7 +62,7 @@ pub(super) fn evidence_level(run: &Value) -> &'static str {
     }
 }
 
-pub(super) fn evidence_rank(level: &str) -> i32 {
+pub(crate) fn evidence_rank(level: &str) -> i32 {
     match level {
         "E0" => 0,
         "E1" => 1,
