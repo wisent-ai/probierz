@@ -27,7 +27,6 @@ repositories:
           - browser/**
           - native-host/**
           - install/**
-          - scripts/**
           - deploy/**
         journeys:
           - onboarding-first-use

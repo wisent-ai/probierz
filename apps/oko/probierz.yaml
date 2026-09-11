@@ -29,7 +29,7 @@ repositories:
           - Sources/OkoKit/Autonomy/**
           - Sources/oko-cli/AutonomyCommand.swift
           - Sources/oko-cli/Suggestions/SuggestionsAgents.swift
-          - scripts/run-autonomy-service.sh
+          - assets/run-autonomy-service
         journeys: [autonomy-experimental]
       - paths:
           - Sources/Oko/**
@@ -38,7 +38,6 @@ repositories:
       - paths:
           - Package.swift
           - Resources/**
-          - scripts/bundle.sh
         journeys: [auth, onboarding, strategy, writer-conflict, slack-feedback, resilience]
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios
     mappings:

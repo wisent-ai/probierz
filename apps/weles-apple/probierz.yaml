@@ -6,10 +6,9 @@ repositories:
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/weles
     mappings:
       - paths:
-          - scripts/auth/authorize-apple-developer-id.mjs
-          - scripts/auth/apple-account-placement.mjs
-          - scripts/trajectories/apple/create_developer_id.mjs
-          - scripts/worker/stado-action-runner.mjs
+          - src/auth/**
+          - src/trajectories/apple/create_developer_id.mjs
+          - src/trajectories/_shared/action-runner.mjs
           - tests/apple/**
         journeys: [developer-id]
 surfaces:

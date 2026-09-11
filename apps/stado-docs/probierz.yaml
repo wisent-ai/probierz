@@ -6,11 +6,11 @@ repositories:
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-landing
     mappings:
       - paths:
-          - scripts/generate-cli-docs.mjs
+          - src/cli/generate-cli-docs.mjs
           - tests/docs/cli-scoped-generation.probierz.spec.mjs
         journeys: [cli-scoped-generation]
       - paths:
-          - scripts/generate-cli-docs.mjs
+          - src/cli/generate-cli-docs.mjs
           - src/content/cli-commands.json
           - src/pages/docs/**
           - tests/docs/cli-commands.probierz.spec.mjs

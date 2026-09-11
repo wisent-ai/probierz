@@ -54,7 +54,6 @@ repositories:
           - oauth-failure-diagnosis
           - mailbox-lifecycle
       - paths:
-          - scripts/**
           - examples/**
           - README.md
         journeys:

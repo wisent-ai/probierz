@@ -9,7 +9,7 @@ repositories:
         journeys: [docs-publication]
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/onboarding-seeding-integration/spis-landing
     mappings:
-      - paths: [src/content/**, landing.manifest.json, scripts/**]
+      - paths: [src/content/**, landing.manifest.json]
         journeys: [docs-publication]
 surfaces:
   tui:

@@ -37,7 +37,7 @@ repositories:
     - stado-rs/tests/host_dynamic_capacity/**
     - stado-rs/tests/capacity/**
     - desktop/StadoDesktop/tests/fleet/HostsDynamicCapacity.probierz.mjs
-    - desktop/StadoDesktop/scripts/bundle.sh
+    - desktop/StadoDesktop/scripts/build-app.sh
     journeys:
     - host-dynamic-capacity
   - paths:
@@ -158,7 +158,7 @@ repositories:
     - host-reclaim
   - paths:
     - stado-rs/src/cli/service_converge.rs
-    - stado-rs/scripts/report-installed-versions.sh
+    - stado-rs/src/cli/service_converge/**
     journeys:
     - service-converge
   - paths:
