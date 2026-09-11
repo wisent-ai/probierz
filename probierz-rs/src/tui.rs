@@ -20,6 +20,13 @@ use std::time::{Duration, Instant};
 
 use crate::failure::{Code, Failure};
 
+mod screen;
+#[cfg(test)]
+mod tests;
+
+use screen::last_frame;
+pub use screen::strip_ansi;
+
 /// The keys a journey may send by name, in the bytes a terminal sends for them.
 const KEYS: [(&str, &str); 10] = [
     ("enter", "\r"),
@@ -89,83 +96,6 @@ impl Spawn {
         self.rows = rows;
         self
     }
-}
-
-/// Everything a terminal wrote, with the escape sequences that drew it
-/// removed. A carriage return is dropped too: it moves the cursor, it is not
-/// content.
-pub fn strip_ansi(text: &str) -> String {
-    let bytes: Vec<char> = text.chars().collect();
-    let mut out = String::with_capacity(text.len());
-    let mut index = 0usize;
-    while index < bytes.len() {
-        let character = bytes[index];
-        if character != '\u{1b}' {
-            if character != '\r' {
-                out.push(character);
-            }
-            index += 1;
-            continue;
-        }
-        index += 1;
-        if index >= bytes.len() {
-            break;
-        }
-        match bytes[index] {
-            // An operating-system command runs to BEL or ST.
-            ']' => {
-                index += 1;
-                while index < bytes.len() {
-                    if bytes[index] == '\u{7}' {
-                        index += 1;
-                        break;
-                    }
-                    if bytes[index] == '\u{1b}' && bytes.get(index + 1) == Some(&'\\') {
-                        index += 2;
-                        break;
-                    }
-                    index += 1;
-                }
-            }
-            // A control sequence runs to its final byte in @-~.
-            '[' => {
-                index += 1;
-                while index < bytes.len() && !matches!(bytes[index], '@'..='~') {
-                    index += 1;
-                }
-                index += 1;
-            }
-            // Character-set selection takes one more byte; so do the two
-            // keypad-mode sequences.
-            '(' | ')' => index += 2,
-            '=' | '>' => index += 1,
-            _ => index += 1,
-        }
-    }
-    out
-}
-
-/// The last repaint frame: what is on the screen now, rather than everything
-/// the application has ever written.
-fn last_frame(raw: &str) -> String {
-    let mut start = 0usize;
-    let bytes = raw.as_bytes();
-    let mut index = 0usize;
-    while index + 2 < bytes.len() {
-        if bytes[index] == 0x1b && bytes[index + 1] == b'[' {
-            let mut cursor = index + 2;
-            while cursor < bytes.len() && matches!(bytes[cursor], b'0'..=b'9' | b';' | b'?') {
-                cursor += 1;
-            }
-            if cursor < bytes.len() && bytes[cursor] == b'J' {
-                start = cursor + 1;
-                index = cursor + 1;
-                continue;
-            }
-        }
-        index += 1;
-    }
-    strip_ansi(&raw[start.min(raw.len())..])
 }
 
 impl Terminal {
@@ -365,75 +295,4 @@ fn shell_quote(value: &str) -> String {
 /// already gone: cleanup runs on the failure path too.
 pub fn remove_scratch(path: &Path) {
     let _ = std::fs::remove_dir_all(path);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn escape_sequences_are_removed_and_content_is_kept() {
-        let painted = "\u{1b}[2J\u{1b}[H\u{1b}[1mReady\u{1b}[0m\r\nnext\u{1b}]0;title\u{7}";
-        assert_eq!(strip_ansi(painted), "Ready\nnext");
-    }
-
-    #[test]
-    fn the_screen_is_the_last_repaint_not_the_whole_session() {
-        let session = "first frame\u{1b}[2Jsecond frame";
-        assert_eq!(last_frame(session), "second frame");
-        assert_eq!(strip_ansi(session), "first framesecond frame");
-    }
-
-    #[test]
-    fn a_real_terminal_application_is_driven_and_read() {
-        let terminal = Terminal::spawn(
-            Spawn::new("/bin/sh")
-                .arg("-c")
-                .arg("printf 'hello from a terminal\\n'; sleep 5"),
-        )
-        .expect("spawn a terminal");
-        let seen = terminal
-            .wait_for("hello from a terminal", Duration::from_secs(10), true)
-            .expect("the application's output");
-        assert!(
-            seen.contains("hello from a terminal"),
-            "unexpected session: {seen}"
-        );
-        let (_, log) = terminal.close().expect("close the terminal");
-        assert!(log.contains("hello from a terminal"));
-    }
-
-    #[test]
-    fn a_timeout_reports_the_screen_it_was_waiting_on() {
-        let terminal = Terminal::spawn(
-            Spawn::new("/bin/sh")
-                .arg("-c")
-                .arg("printf 'only this\\n'; sleep 5"),
-        )
-        .expect("spawn a terminal");
-        let failure = terminal
-            .wait_for("never appears", Duration::from_millis(400), false)
-            .expect_err("the wait must time out");
-        assert!(
-            failure.detail.contains("never appears"),
-            "detail: {}",
-            failure.detail
-        );
-        let _ = terminal.close();
-    }
-
-    #[test]
-    fn an_unknown_key_is_refused_by_name() {
-        let mut terminal = Terminal::spawn(Spawn::new("/bin/sh").arg("-c").arg("sleep 2"))
-            .expect("spawn a terminal");
-        let failure = terminal
-            .key("f13")
-            .expect_err("unknown key must be refused");
-        assert!(
-            failure.detail.starts_with("unknown key: f13"),
-            "detail: {}",
-            failure.detail
-        );
-        let _ = terminal.close();
-    }
 }
