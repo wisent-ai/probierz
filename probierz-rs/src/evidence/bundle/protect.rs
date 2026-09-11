@@ -1,5 +1,15 @@
-use serde_json::json;
+//! Protecting a run's plaintext evidence: an encrypted bundle under the product's
+//! protected root, reused when it already exists, and the plaintext removed when asked.
+
+mod existing;
+mod header;
+
 use crate::evidence::*;
+use serde_json::json;
+
+use existing::reuse_existing_bundle;
+use header::{bundle_header, HeaderInputs};
+
 pub fn protect(
     harness: &Path,
     app_id: Option<&str>,
@@ -144,131 +154,35 @@ pub(crate) fn protect_run(
     .into_bytes();
     let index_hash = sha256_bytes(&index);
     if existing {
-        let (header, _, _) = read_header(&destination)?;
-        if header.get("runId").and_then(Value::as_str) != Some(run_id)
-            || header.get("appId").and_then(Value::as_str) != Some(app_id)
-        {
-            return Err(Failure::invalid(
-                "evidence.protect",
-                "encrypted bundle identity mismatch",
-            ));
-        }
-        if header.get("keyFingerprintSha256").and_then(Value::as_str) != Some(&sha256_bytes(&key)) {
-            return Err(Failure::invalid(
-                "evidence.protect",
-                "artifact encryption key fingerprint mismatch",
-            ));
-        }
-        let Some(existing_index) = header.get("contentIndexSha256").and_then(Value::as_str) else {
-            return Err(Failure::invalid(
-                "evidence.protect",
-                "existing encrypted bundle predates source-integrity metadata",
-            ));
-        };
-        if existing_index != index_hash {
-            return Err(Failure::invalid(
-                "evidence.protect",
-                "plaintext artifacts changed after the encrypted bundle was created",
-            ));
-        }
-        let protected = json!({
-            "file": destination.to_string_lossy(),
-            "bytes": fs::metadata(&destination)?.len(),
-            "sha256": sha256_file(&destination)?,
-            "contentIndexSha256": existing_index,
-            "keyFingerprintSha256": header.get("keyFingerprintSha256").cloned().unwrap_or(Value::Null),
-            "expiresAt": header.get("expiresAt").cloned().unwrap_or(Value::Null),
-            "retentionDays": header.get("retentionDays").cloned().unwrap_or(Value::Null),
-            "files": header.get("files").cloned().unwrap_or(Value::Null),
-            "secretScan": header.get("secretScan").cloned().unwrap_or(Value::Null),
-            "plaintextRemoved": remove_source,
-            "reused": true,
-        });
-        if remove_source {
-            remove_plaintext_source(source, &manifest_path, retention_kind, &protected)?;
-        }
-        return Ok(protected);
+        return reuse_existing_bundle(
+            &destination,
+            source,
+            &manifest_path,
+            app_id,
+            run_id,
+            retention_kind,
+            &key,
+            &index_hash,
+            remove_source,
+        );
     }
     let scan = scan.unwrap_or_else(|| json!({}));
-    let primary = run
-        .pointer("/source/repositories")
-        .and_then(Value::as_array)
-        .and_then(|repositories| {
-            repositories
-                .iter()
-                .find(|entry| entry.get("index").and_then(Value::as_i64) == Some(0))
-                .or_else(|| repositories.first())
-        });
-    let journeys = run
-        .get("journeys")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    let journey_manifest = document.get("journeys").and_then(Value::as_object);
-    let journey_identities = journeys.iter().filter_map(|name| {
-        let name = name.as_str()?;
-        let journey = journey_manifest?.get(name)?;
-        journey.get("journeyId")?;
-        Some(json!({
-            "name": name,
-            "journeyId": journey.get("journeyId").cloned().unwrap_or(Value::Null),
-            "journeyVersion": journey.get("journeyVersion").cloned().unwrap_or(Value::Null),
-            "journeyVersionId": journey.get("journeyVersionId").cloned().unwrap_or(Value::Null),
-            "firstSuccessFact": journey.get("firstSuccessFact").cloned().unwrap_or(Value::Null),
-            "screenId": journey.pointer("/publication/screenId").cloned().unwrap_or(Value::Null),
-        }))
-    }).collect::<Vec<_>>();
-    let evidence_level = if run.get("status").and_then(Value::as_str) != Some("passed") {
-        "E0"
-    } else if run.pointer("/conditions/record").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/report").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/analysis").and_then(Value::as_bool) == Some(true)
-        && run
-            .pointer("/evidence/capturePresent")
-            .and_then(Value::as_bool)
-            == Some(true)
-    {
-        "E3"
-    } else {
-        "E2"
-    };
-    let started = run
-        .get("completedAt")
-        .or_else(|| run.get("startedAt"))
-        .and_then(Value::as_str)
-        .unwrap_or_default();
     let mut nonce = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
-    let header = json!({
-        "schemaVersion": 2,
-        "kind": "probierz-encrypted-evidence",
-        "algorithm": "AES-256-GCM",
-        "appId": app_id,
-        "runId": run_id,
-        "attemptId": run_id,
-        "productId": document.get("productId").cloned().unwrap_or_else(|| json!(app_id)),
-        "releaseVersion": current.get("appVersion").cloned().filter(|value| !value.is_null()).or_else(|| current.pointer("/conditions/PROBIERZ_RELEASE").cloned()).unwrap_or(Value::Null),
-        "sourceRevision": primary.and_then(|value| value.get("gitSha")).cloned().unwrap_or(Value::Null),
-        "sourceSha256": run.pointer("/source/sha256").cloned().unwrap_or(Value::Null),
-        "buildSha256": run.pointer("/build/sha256").cloned().unwrap_or(Value::Null),
-        "evidenceLevel": evidence_level,
-        "journeys": journey_identities,
-        "runKind": retention_kind,
-        "createdAt": now_iso(),
-        "expiresAt": expires_at(started, days)?,
-        "retentionDays": js_number(days),
-        "pii": document.pointer("/artifacts/pii").cloned().unwrap_or_else(|| json!("unknown")),
-        "nonce": BASE64.encode(nonce),
-        "keyFingerprintSha256": sha256_bytes(&key),
-        "contentIndexSha256": index_hash,
-        "secretScan": {
-            "passed": scan.get("passed").cloned().unwrap_or(Value::Null),
-            "scannedFiles": scan.get("scannedFiles").cloned().unwrap_or(Value::Null),
-            "skippedBinary": scan.get("skippedBinary").cloned().unwrap_or(Value::Null),
-        },
-        "files": entries.len(),
-        "plaintextBytes": entries.iter().filter_map(|entry| entry.get("bytes").and_then(Value::as_u64)).sum::<u64>(),
-    });
+    let header = bundle_header(HeaderInputs {
+        run: &run,
+        document: &document,
+        current: &current,
+        app_id,
+        run_id,
+        retention_kind,
+        days,
+        key: &key,
+        index_hash: &index_hash,
+        scan: &scan,
+        entries: &entries,
+        nonce: &nonce,
+    })?;
     let prefix = encoded_header(&header)?;
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent)?;
@@ -316,4 +230,3 @@ pub(crate) fn protect_run(
     }
     Ok(protected)
 }
-
