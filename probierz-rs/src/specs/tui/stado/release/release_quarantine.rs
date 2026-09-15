@@ -1,3 +1,10 @@
+//! Quarantine, listed and cleared: a rollout state with one quarantined digest, the
+//! clears that are refused, the one clear that is accepted with its backup and audit
+//! line, and the doctor no longer naming the digest as a blocker.
+
+mod audit;
+mod refusals;
+
 use std::fs;
 use std::time::{Duration, SystemTime};
 
@@ -6,10 +13,13 @@ use serde_json::{json, Value};
 use crate::failure::iso_timestamp;
 use crate::specs;
 
-use crate::specs::tui::stado::fleet_fixture::{self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT};
+use crate::specs::tui::stado::fleet_fixture::{
+    self as fixture, FleetFixture, FIXTURE_HOST, FIXTURE_PRODUCT,
+};
 
 const DESIRED: &str = "0.2.27";
-const QUARANTINE_REASON: &str = "candidate did not become ready within 90s: pid 46748 is gone";
+pub(super) const QUARANTINE_REASON: &str =
+    "candidate did not become ready within 90s: pid 46748 is gone";
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let source = fixture::source_identity()?;
@@ -114,110 +124,7 @@ fn run_fixture(
         "the entry blocking the current rollout must be called out",
     )?;
 
-    let absent_digest = "f".repeat(64);
-    let refusals = vec![
-        (
-            "no reason",
-            vec![
-                "release",
-                "quarantine",
-                "clear",
-                FIXTURE_PRODUCT,
-                "--target",
-                FIXTURE_HOST,
-                "--digest",
-                &digest,
-            ],
-            "--reason <REASON>",
-        ),
-        (
-            "no digest",
-            vec![
-                "release",
-                "quarantine",
-                "clear",
-                FIXTURE_PRODUCT,
-                "--target",
-                FIXTURE_HOST,
-                "--reason",
-                "because",
-            ],
-            "--digest <DIGEST>",
-        ),
-        (
-            "no target",
-            vec![
-                "release",
-                "quarantine",
-                "clear",
-                FIXTURE_PRODUCT,
-                "--digest",
-                &digest,
-                "--reason",
-                "because",
-            ],
-            "--target <TARGET>",
-        ),
-        (
-            "blank reason",
-            vec![
-                "release",
-                "quarantine",
-                "clear",
-                FIXTURE_PRODUCT,
-                "--target",
-                FIXTURE_HOST,
-                "--digest",
-                &digest,
-                "--reason",
-                "   ",
-            ],
-            "--reason must say why this digest is being retried",
-        ),
-        (
-            "a digest nobody quarantined",
-            vec![
-                "release",
-                "quarantine",
-                "clear",
-                FIXTURE_PRODUCT,
-                "--target",
-                FIXTURE_HOST,
-                "--digest",
-                &absent_digest,
-                "--reason",
-                "aiming at a digest nobody quarantined",
-            ],
-            "ffffffffffffffff",
-        ),
-    ];
-    let mut refusal_statuses = serde_json::Map::new();
-    for (name, args, expected) in refusals {
-        let attempt = fleet.invoke(&args)?;
-        fixture::ensure(
-            attempt.status != 0,
-            format!("clear with {name} must be refused"),
-        )?;
-        fixture::ensure(
-            attempt.output.contains(expected),
-            format!("the \"{name}\" refusal does not say why"),
-        )?;
-        fixture::ensure(
-            fs::read_to_string(&state_path).map_err(|error| error.to_string())? == state_before,
-            format!("a clear refused for {name} still rewrote the rollout state"),
-        )?;
-        refusal_statuses.insert(name.to_string(), json!(attempt.status));
-    }
-    let mut state_files = fs::read_dir(&fleet.state_dir)
-        .map_err(|error| error.to_string())?
-        .filter_map(Result::ok)
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .collect::<Vec<_>>();
-    state_files.sort();
-    fixture::ensure(
-        state_files == vec![format!("{FIXTURE_PRODUCT}.json")],
-        "a refused clear left a backup or an audit file behind",
-    )?;
+    let refusal_statuses = refusals::refused_clears(fleet, &digest, &state_path, &state_before)?;
 
     let reason = "stderr named a missing config key; fixed and republished in 0.2.28";
     let cleared = fleet.invoke_json(&[
@@ -267,52 +174,7 @@ fn run_fixture(
         fs::read_to_string(backup).map_err(|error| error.to_string())? == state_before,
         "the backup is not the state that was replaced",
     )?;
-    let audit_text = fs::read_to_string(&audit_path).map_err(|error| error.to_string())?;
-    let audit_lines = audit_text.trim().lines().collect::<Vec<_>>();
-    fixture::ensure(
-        audit_lines.len() == 1,
-        format!("audit has {} lines instead of one", audit_lines.len()),
-    )?;
-    let audit: Value = serde_json::from_str(audit_lines[0]).map_err(|error| error.to_string())?;
-    fixture::ensure(
-        audit["host"] == FIXTURE_HOST
-            && audit["product"] == FIXTURE_PRODUCT
-            && audit["digest"] == digest
-            && audit["reason"] == reason
-            && audit["quarantine_reason"] == QUARANTINE_REASON,
-        format!("audit line is wrong: {audit}"),
-    )?;
-    let original =
-        chrono::DateTime::parse_from_rfc3339(&quarantined_at).map_err(|error| error.to_string())?;
-    let audited_original =
-        chrono::DateTime::parse_from_rfc3339(audit["quarantined_at"].as_str().unwrap_or_default())
-            .map_err(|error| error.to_string())?;
-    fixture::ensure(
-        original == audited_original,
-        "audit changed the quarantine instant",
-    )?;
-    fixture::ensure(
-        audit["state_backup"] == backup,
-        format!("audit names the wrong backup: {audit}"),
-    )?;
-    fixture::ensure(audit["actor"].is_string(), "the audit line names no actor")?;
-    fixture::ensure(
-        audit["audited_at"].is_string(),
-        "the audit line carries no instant",
-    )?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fixture::ensure(
-            fs::metadata(&audit_path)
-                .map_err(|error| error.to_string())?
-                .permissions()
-                .mode()
-                & 0o777
-                == 0o600,
-            "the audit trail is not owner-only",
-        )?;
-    }
+    let audit = audit::check_audit(&audit_path, &digest, reason, &quarantined_at, backup)?;
     let again = fleet.invoke(&[
         "release",
         "quarantine",
