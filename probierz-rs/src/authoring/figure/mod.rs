@@ -5,6 +5,9 @@ mod evaluate;
 mod geometry;
 mod render;
 
-pub use evaluate::*;
+// Only the command is exported; the evaluation's own stages stay
+// inside the package, so a name like `Router` or `Graded` cannot
+// collide with another evaluation's.
+pub use evaluate::evaluate_figure;
 pub(crate) use geometry::*;
 pub(crate) use render::*;
