@@ -63,6 +63,52 @@ pub fn list_objects(root_uri: &str) -> Result<Vec<Value>, Failure> {
     Ok(objects.clone())
 }
 
+/// Remove one object this product owns.
+///
+/// The same `DELETE /api/object` Stado's own CLI performs, through the grant
+/// the fleet holds for Probierz. Only the prefixes `split_object_uri`
+/// accepts can be addressed, so a retention pass can reach a run's evidence
+/// and nothing else.
+pub fn remove_object(uri: &str) -> Result<(), Failure> {
+    split_object_uri(uri)?;
+    let (base_url, token) = object_store_config()?;
+    let mut url = Url::parse(&format!("{base_url}/api/object"))
+        .map_err(|error| Failure::config("objects.config", error.to_string()))?;
+    url.query_pairs_mut().append_pair("uri", uri);
+    let agent = ureq::AgentBuilder::new().redirects(0).build();
+    let response = match agent
+        .delete(url.as_str())
+        .set("Authorization", &format!("Bearer {token}"))
+        .call()
+    {
+        Ok(response) => response,
+        Err(ureq::Error::Status(status, _)) => {
+            return Err(Failure::unavailable(
+                "objects.delete",
+                format!("Stado object storage refused to remove {uri}: {status}"),
+            ));
+        }
+        Err(error) => {
+            return Err(Failure::unavailable(
+                "objects.delete",
+                format!("Stado object storage did not answer the removal of {uri}: {error}"),
+            ));
+        }
+    };
+    let payload: Value = response
+        .into_json()
+        .map_err(|error| Failure::unavailable("objects.delete", error.to_string()))?;
+    if payload.get("state").and_then(Value::as_str) != Some("absent")
+        || payload.get("uri").and_then(Value::as_str) != Some(uri)
+    {
+        return Err(Failure::unavailable(
+            "objects.delete",
+            format!("Stado object storage did not report {uri} absent after removing it"),
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) fn unsafe_url_text(value: &str) -> bool {
     value.trim() != value
         || value
@@ -86,20 +132,67 @@ pub(crate) fn loopback(host: &str) -> bool {
     }
 }
 
-pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
-    let raw = std::env::var("STADO_API_URL").unwrap_or_default();
-    let token = std::env::var("STADO_API_TOKEN").unwrap_or_default();
-    if raw.is_empty() {
+/// The loopback Stado API every fleet host serves; a host runs its own object
+/// store behind it.
+const LOCAL_STADO_API: &str = "http://127.0.0.1:18776";
+/// Where the fleet keeps this product's object-store token.
+const OBJECT_API_ITEM: &str = "probierz-object-api";
+const OBJECT_API_FIELD: &str = "token";
+
+/// Read the object-store token the fleet holds for Probierz.
+///
+/// A job on a fleet host is handed `STADO_API_TOKEN`; an operator running the
+/// same command from a terminal is not, and until 2026-09-21 every such run
+/// refused with `STADO_API_TOKEN is required for remote object storage` — a
+/// sentence about a variable rather than about the credential the fleet
+/// already holds for this product. Reading it through Stado is the path
+/// every other Probierz call to the fleet takes.
+fn token_from_vault() -> Result<String, Failure> {
+    let output = std::process::Command::new(crate::stado::STADO_BIN)
+        .args([
+            "credentials",
+            "get",
+            OBJECT_API_ITEM,
+            "--field",
+            OBJECT_API_FIELD,
+        ])
+        .output()
+        .map_err(|error| {
+            Failure::config(
+                "objects.config",
+                format!(
+                    "cannot run {} to read {OBJECT_API_ITEM}: {error}",
+                    crate::stado::STADO_BIN
+                ),
+            )
+        })?;
+    if !output.status.success() {
         return Err(Failure::config(
             "objects.config",
-            "STADO_API_URL is required for remote object storage",
+            format!(
+                "Stado refused to read {OBJECT_API_ITEM} field {OBJECT_API_FIELD}: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
         ));
     }
+    let token = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if token.is_empty() {
         return Err(Failure::config(
             "objects.config",
-            "STADO_API_TOKEN is required for remote object storage",
+            format!("{OBJECT_API_ITEM} field {OBJECT_API_FIELD} holds nothing in the vault"),
         ));
+    }
+    Ok(token)
+}
+
+pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
+    let mut raw = std::env::var("STADO_API_URL").unwrap_or_default();
+    let mut token = std::env::var("STADO_API_TOKEN").unwrap_or_default();
+    if raw.is_empty() {
+        raw = LOCAL_STADO_API.to_string();
+    }
+    if token.is_empty() {
+        token = token_from_vault()?;
     }
     if unsafe_url_text(&raw) {
         return Err(Failure::config(
@@ -182,10 +275,18 @@ pub(crate) fn split_object_uri(uri: &str) -> Result<(String, String), Failure> {
         ));
     }
     let key = parsed.path().trim_start_matches('/').to_string();
-    if !key.starts_with("capacity/") {
+    // Capacity readings and the evidence a fleet run leaves behind. The
+    // second is what retention has to reach: the results of runs this
+    // harness dispatched to the fleet accumulate in the store on the host
+    // that ran them, and on charless-mac-mini they had grown to 34.9 GiB
+    // with nothing able to expire them.
+    // A listing addresses the root itself, a read addresses one object under
+    // it, so both the bare prefix and a key below it are accepted.
+    let under_root = |root: &str| key == root || key.starts_with(&format!("{root}/"));
+    if !under_root("capacity") && !under_root("results") {
         return Err(Failure::invalid(
             "objects.uri",
-            "Stado object URI must stay under stado://probierz/capacity/",
+            "Stado object URI must stay under stado://probierz/capacity/ or stado://probierz/results/",
         ));
     }
     Ok(("probierz".into(), key))

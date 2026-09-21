@@ -34,8 +34,17 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             destination.as_deref(),
             key_file.as_deref(),
         ),
-        EvidenceCommand::Retention { app_id, at, apply } => {
-            evidence::retention(harness, app_id.as_deref(), at.as_deref(), apply)
+        EvidenceCommand::Retention {
+            app_id,
+            at,
+            apply,
+            fleet,
+        } => {
+            if fleet {
+                evidence::fleet_retention(harness, app_id.as_deref(), at.as_deref(), apply)
+            } else {
+                evidence::retention(harness, app_id.as_deref(), at.as_deref(), apply)
+            }
         }
         EvidenceCommand::SecretScan { directory } => evidence::secret_scan(directory.as_deref()),
         EvidenceCommand::Audit {

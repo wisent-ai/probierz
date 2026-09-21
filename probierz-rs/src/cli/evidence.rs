@@ -34,6 +34,10 @@ pub enum EvidenceCommand {
         at: Option<String>,
         #[arg(long)]
         apply: bool,
+        /// Read the evidence this harness left in the fleet's object store
+        /// instead of the local test-results tree.
+        #[arg(long)]
+        fleet: bool,
     },
     /// Find credentials and tokens in an evidence directory.
     SecretScan { directory: Option<PathBuf> },

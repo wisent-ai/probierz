@@ -5,9 +5,11 @@
 mod cipher;
 mod protect;
 mod restore;
+mod fleet_retention;
 mod retention;
 
 pub use protect::*;
 pub use restore::*;
+pub use fleet_retention::*;
 pub use retention::*;
 pub(crate) use cipher::*;
