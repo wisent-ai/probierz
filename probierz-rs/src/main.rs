@@ -17,7 +17,6 @@ mod apphooks;
 mod discovery;
 mod failure;
 mod manifest;
-mod serve;
 // PortAuthoring: authoring, evaluation, and identity
 mod authoring;
 // ReadmeGif

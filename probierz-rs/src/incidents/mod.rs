@@ -20,7 +20,6 @@
 //! required fields are refused by name when one is missing.
 
 mod commands;
-pub(crate) mod http;
 mod store;
 
 use std::path::{Path, PathBuf};

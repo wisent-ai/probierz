@@ -5,11 +5,11 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 
-use crate::{adoption, apphook_help, serve};
+use crate::{adoption, apphook_help};
 
 #[derive(Debug, Subcommand)]
 pub enum InspectCommand {
-    // Restored: adoption and local API
+    // Restored: adoption
     /// Show the first-run journey and optionally adopt existing definitions.
     #[command(
         after_help = adoption::ONBOARDING_HELP,
@@ -24,15 +24,6 @@ pub enum InspectCommand {
     Project {
         #[command(subcommand)]
         command: adoption::ProjectCommand,
-    },
-    /// Run the loopback API used by Probierz Desktop.
-    #[command(
-        after_help = serve::HELP,
-        override_usage = "probierz serve [--port N]"
-    )]
-    Serve {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
-        args: Vec<String>,
     },
     /// Every test surface, its tool, its npm script and its target coordinates.
     List,

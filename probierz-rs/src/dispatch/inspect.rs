@@ -5,13 +5,12 @@ use std::path::Path;
 
 use crate::cli::inspect::InspectCommand;
 use crate::failure::Answer;
-use crate::{adoption, apphooks, authoring, discovery, readme_gif, serve};
+use crate::{adoption, apphooks, authoring, discovery, readme_gif};
 
 pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
     match command {
         InspectCommand::Onboarding { args } => adoption::onboarding(harness, &args),
         InspectCommand::Project { command } => adoption::dispatch(harness, command),
-        InspectCommand::Serve { args } => serve::serve(harness, &args),
         InspectCommand::List => discovery::list(harness),
         InspectCommand::Apps => discovery::apps(harness),
         InspectCommand::App { app_id } => discovery::app(harness, &app_id),

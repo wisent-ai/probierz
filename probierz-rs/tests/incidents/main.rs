@@ -1,5 +1,4 @@
 //! Real CLI register stories; all state is isolated under the build directory.
-mod http;
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
