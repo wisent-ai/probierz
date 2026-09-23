@@ -27,9 +27,9 @@ repositories:
         journeys: [slack-feedback]
       - paths:
           - Sources/OkoKit/Autonomy/**
-          - Sources/oko-cli/AutonomyCommand.swift
-          - Sources/oko-cli/Suggestions/SuggestionsAgents.swift
-          - assets/run-autonomy-service
+          - Sources/oko-cli/Commands/AutonomyCommand.swift
+          - Sources/oko-cli/Commands/ServeCommand.swift
+          - Sources/oko-cli/Suggestions/Agents/SuggestionsAgents.swift
         journeys: [autonomy-experimental]
       - paths:
           - Sources/Oko/**
