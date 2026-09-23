@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "releases": false,
+  "reason": "The README states that Probierz is a source distribution and is not currently a hosted service or supported public binary distribution."
+}
