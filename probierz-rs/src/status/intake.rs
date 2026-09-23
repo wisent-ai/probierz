@@ -2,5 +2,6 @@
 
 pub(crate) mod envelope;
 pub(crate) mod listener;
+pub(crate) mod predecessor;
 
 pub(crate) use envelope::*;

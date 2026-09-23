@@ -217,6 +217,7 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
 pub fn intake_serve(bind: Option<&str>) -> Answer {
     let bind = bind.unwrap_or(DEFAULT_BIND);
     let (host, port) = parse_bind(bind)?;
+    super::predecessor::retire();
     let (token, created, token_file) = intake_token()?;
     if created {
         eprintln!(

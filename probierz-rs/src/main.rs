@@ -48,9 +48,24 @@ use failure::Failure;
 
 fn main() {
     let parsed = cli::Cli::parse();
-    let harness = match resolve_harness(parsed.harness.as_deref()) {
-        Ok(root) => root,
-        Err(failure) => std::process::exit(failure.report()),
+    // The failure intake and its reader are host-level: they keep envelopes
+    // under ~/.probierz and never read a harness, so a service started with no
+    // project directory - launchd starts it in / - is not refused for lacking
+    // one.
+    let host_level = matches!(
+        parsed.command,
+        cli::Command::Reporting(
+            cli::reporting::ReportingCommand::Intake { .. }
+                | cli::reporting::ReportingCommand::Failures { .. }
+        )
+    );
+    let harness = if host_level {
+        PathBuf::new()
+    } else {
+        match resolve_harness(parsed.harness.as_deref()) {
+            Ok(root) => root,
+            Err(failure) => std::process::exit(failure.report()),
+        }
     };
     let answer = dispatch::dispatch(&harness, parsed.command);
     if let Err(failure) = answer {
