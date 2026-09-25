@@ -17,6 +17,12 @@
           "release/stado-build.sh"
         ]
       },
+      "tests": [
+        {
+          "name": "real-journeys",
+          "argv": ["cargo", "test", "--manifest-path", "probierz-rs/Cargo.toml", "--locked", "--release"]
+        }
+      ],
       "stage": {
         "bin/probierz": "bin/probierz",
         "bin/probierz-mcp": "bin/probierz-mcp",
