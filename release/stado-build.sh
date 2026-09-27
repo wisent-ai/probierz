@@ -41,9 +41,18 @@ mkdir -p "$source_tree" "$WISENT_OUTPUT_DIR/bin" "$WISENT_OUTPUT_DIR/evidence"
 
 # The commit, not the working tree. The installer files HEAD as the revision it
 # installed and reports the product stale against origin/main from it, so the
-# artifact has to be HEAD or that provenance is fiction.
-revision="$(git -C "$WISENT_SOURCE_DIR" rev-parse HEAD)"
-git -C "$WISENT_SOURCE_DIR" archive --format=tar HEAD | tar -x -C "$source_tree"
+# artifact has to be HEAD or that provenance is fiction. A release worker hands
+# an unpacked `git archive` of the commit, which has no repository to ask, and
+# names the commit in WISENT_SOURCE_COMMIT; a checkout is archived at HEAD.
+if [ -n "${WISENT_SOURCE_COMMIT:-}" ] && [ ! -e "$WISENT_SOURCE_DIR/.git" ]; then
+  revision="$WISENT_SOURCE_COMMIT"
+  (cd "$WISENT_SOURCE_DIR" && tar -cf - --exclude ./.wisent-output .) | tar -x -C "$source_tree"
+  commit_time=0
+else
+  revision="$(git -C "$WISENT_SOURCE_DIR" rev-parse HEAD)"
+  git -C "$WISENT_SOURCE_DIR" archive --format=tar HEAD | tar -x -C "$source_tree"
+  commit_time="$(git -C "$WISENT_SOURCE_DIR" show -s --format=%ct HEAD)"
+fi
 
 # `.wisent-release.json` reads the version out of probierz-rs/Cargo.toml, so
 # there is one version and nothing here to reconcile. What still has to be
@@ -53,7 +62,7 @@ git -C "$WISENT_SOURCE_DIR" archive --format=tar HEAD | tar -x -C "$source_tree"
 # Locked, offline, release profile: a release that resolves a different
 # dependency graph than the checkout was tested against is a different product.
 export CARGO_TERM_COLOR=never
-export SOURCE_DATE_EPOCH="$(git -C "$WISENT_SOURCE_DIR" show -s --format=%ct HEAD)"
+export SOURCE_DATE_EPOCH="$commit_time"
 cargo build --locked --release --manifest-path "$source_tree/probierz-rs/Cargo.toml" --bins
 
 built="$source_tree/probierz-rs/target/release"
