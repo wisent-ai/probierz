@@ -16,6 +16,7 @@ use crate::specs::{self, tui::common};
 use crate::tui::{Spawn, Terminal};
 
 mod constants;
+pub(crate) mod discovery;
 pub(crate) mod judge;
 pub(crate) mod replays;
 

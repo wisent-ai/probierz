@@ -38,9 +38,6 @@ export const CHECK_IDS = {
   'fn.omfg-persists': 'a forged rule lands in the rules file',
   'fn.collab-relay': '/collab start opens a relay and /collab stop closes it',
   'fn.marketplace-source': '/marketplace add registers a catalog and lists its plugins',
-  'fn.extension-discovery': '/extensions discovers a module planted in the workspace',
-  'fn.agent-discovery': '/agents lists and shows a custom agent definition',
-  'fn.setup-checklist': '/setup distinguishes a bare home from a configured one',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -63,9 +60,6 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
   { view: 'Collab', verdict: 'parity', checks: ['fn.collab-relay'] },
   { view: 'Marketplace', verdict: 'parity', checks: ['fn.marketplace-source'] },
-  { view: 'Extensions', verdict: 'parity', checks: ['fn.extension-discovery'] },
-  { view: 'Agents', verdict: 'parity', checks: ['fn.agent-discovery'] },
-  { view: 'Setup', verdict: 'parity', checks: ['fn.setup-checklist'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
 ];

@@ -87,6 +87,21 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
+            title: "jeden-agent-discovery",
+            run: jeden::views::discovery::agents,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-extension-discovery",
+            run: jeden::views::discovery::extensions,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-setup-checklist",
+            run: jeden::views::discovery::setup_checklist,
+        },
+        Spec {
+            surface: "tui",
             title: "jeden-identity",
             run: jeden::views::replays::identity,
         },

@@ -6,17 +6,24 @@ use super::constants::{FIRST_RUN_SCREEN, READY_SCREEN, START_SECONDS};
 use crate::specs::{self, tui::common};
 use crate::tui::{Spawn, Terminal};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 const PICKER: &str = "Select model route";
 
-fn launch(context: &specs::Context, home: &PathBuf) -> Result<Terminal, String> {
+/// Start jeden with `args` on the sandbox `home` and wait until it is ready.
+pub(super) fn launch(
+    context: &specs::Context,
+    home: &Path,
+    args: &[&str],
+) -> Result<Terminal, String> {
     let binary = context
         .optional("TUI_CMD")
         .unwrap_or_else(|| "jeden".to_string());
-    let app = Terminal::spawn(Spawn::new(binary).env("HOME", home.display().to_string()))
-        .map_err(|error| error.detail)?;
+    let spawn = Spawn::new(binary)
+        .args(args.iter().copied())
+        .env("HOME", home.display().to_string());
+    let app = Terminal::spawn(spawn).map_err(|error| error.detail)?;
     // A fresh sandbox home may open on the first-run tips instead of the
     // returning-user welcome; either means jeden is ready for input.
     app.wait_until(
@@ -29,7 +36,7 @@ fn launch(context: &specs::Context, home: &PathBuf) -> Result<Terminal, String> 
     Ok(app)
 }
 
-fn submit(app: &mut Terminal, command: &str) -> Result<(), String> {
+pub(super) fn submit(app: &mut Terminal, command: &str) -> Result<(), String> {
     app.send(command).map_err(|error| error.detail)?;
     app.key("enter").map_err(|error| error.detail)
 }
@@ -55,7 +62,7 @@ pub fn model_picker_after_login(context: &specs::Context) -> Result<(), String> 
     // the wrong reason. The standalone run first tells a slow catalog apart
     // from a view queued behind the previous one, which was the report.
     let alone_home = super::super::sandbox::home(false, true)?;
-    let standalone = launch(context, &alone_home).and_then(|mut app| {
+    let standalone = launch(context, &alone_home, &[]).and_then(|mut app| {
         let measured = picker_after(&mut app);
         let _ = app.close();
         measured
@@ -64,7 +71,7 @@ pub fn model_picker_after_login(context: &specs::Context) -> Result<(), String> 
     let standalone = standalone?;
 
     let home = super::super::sandbox::home(false, true)?;
-    let replay = launch(context, &home).and_then(|mut app| {
+    let replay = launch(context, &home, &[]).and_then(|mut app| {
         let result = (|| {
             submit(&mut app, "/login")?;
             app.wait_until(
@@ -97,7 +104,7 @@ pub fn model_picker_after_login(context: &specs::Context) -> Result<(), String> 
 /// jeden-identity: /prompt shows that the agent is jeden.
 pub fn identity(context: &specs::Context) -> Result<(), String> {
     let home = super::super::sandbox::home(false, true)?;
-    let shown = launch(context, &home).and_then(|mut app| {
+    let shown = launch(context, &home, &[]).and_then(|mut app| {
         let result = (|| {
             submit(&mut app, "/prompt")?;
             app.wait_until(
