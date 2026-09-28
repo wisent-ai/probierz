@@ -14,12 +14,6 @@ pub fn author_spec(
     rounds: u32,
     dry_run: bool,
 ) -> Result<JsonValue, Failure> {
-    if target == "tui:jeden" {
-        return Err(Failure::invalid(
-            "author-spec",
-            "tui:jeden journeys are the hand-written jeden/omp comparison suite; they are not authored",
-        ));
-    }
     let Some(directory) = target_spec_dir(harness, target) else {
         return Err(if matches!(target, "tui" | "desktop:cua" | "web") {
             registry_surface_refusal("author-spec", target)

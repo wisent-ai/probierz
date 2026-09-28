@@ -23,14 +23,6 @@ pub const SURFACES: &[Surface] = &[
         env: &["WELES_BIN", "BASE_URL"],
     },
     Surface {
-        name: "tui:jeden",
-        pkg: "packages/web",
-        tool: "tmux",
-        script: "test:tui:jeden",
-        targets: "jeden and omp terminal sessions side by side",
-        env: &["JEDEN_BIN", "OMP_BIN"],
-    },
-    Surface {
         name: "mobile",
         pkg: "packages/mobile",
         tool: "WebdriverIO + Appium (XCUITest / UiAutomator2)",
@@ -78,9 +70,8 @@ pub(crate) const SPEC_SUFFIXES: [&str; 3] = [".e2e.ts", ".spec.ts", ".spec.mjs"]
 /// The exact command that runs a target. It is returned as text: this product
 /// prints it so an operator can run it, and `run` is the command that executes
 /// one.
-pub(crate) const RUN_COMMANDS: [(&str, &str); 8] = [
+pub(crate) const RUN_COMMANDS: [(&str, &str); 7] = [
     ("web", "BASE_URL=https://example.com probierz run web"),
-    ("tui:jeden", "npm run test:tui:jeden"),
     (
         "mobile:ios",
         "APP_IOS=/abs/App.app IOS_DEVICE='iPhone 17' npm run test:mobile:ios",

@@ -17,10 +17,6 @@ pub(crate) fn preflight(
                 "web journeys drive pages through `weles mcp`: install weles or set WELES_BIN to its binary",
             )]
         }
-        "tui:jeden" => vec![
-            check_row("@playwright/test", pkg_installed(harness, "@playwright/test"), true, setup(name)),
-            check_row("playwright browsers", playwright_browsers_installed(harness), true, setup(name)),
-        ],
         "mobile:ios" => {
             let runtimes = available_ios_runtimes();
             let pinned = env.get("IOS_VERSION").cloned();

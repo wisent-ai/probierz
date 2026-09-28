@@ -13,11 +13,8 @@ dist/
 # release build output (WISENT_OUTPUT_DIR)
 .wisent-output/
 
-# Playwright
+# Run evidence
 test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
 
 # WebdriverIO / Appium
 .wdio/

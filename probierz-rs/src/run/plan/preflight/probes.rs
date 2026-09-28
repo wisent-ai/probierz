@@ -28,18 +28,6 @@ pub(crate) fn appium_driver_installed(name: &str, env: &BTreeMap<String, String>
         == Some(&format!("appium-{name}-driver"))
 }
 
-pub(crate) fn playwright_browsers_installed(harness: &Path) -> bool {
-    let code = "const {chromium,firefox,webkit}=require('playwright');process.exit([chromium,firefox,webkit].every(b=>{const p=b.executablePath();return p&&require('fs').existsSync(p)})?0:1)";
-    capture_text("node", &["-e", code], Some(harness), Some(PROBE_MS))
-        .status
-        .is_some_and(|status| status.success())
-}
-
-pub(crate) fn pkg_installed(harness: &Path, relative: &str) -> bool {
-    harness.join("node_modules").join(relative).exists()
-        || harness.join(relative).join("node_modules").exists()
-}
-
 pub(crate) fn simctl_devices() -> Value {
     let result = capture_text(
         "xcrun",

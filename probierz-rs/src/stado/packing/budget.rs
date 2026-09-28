@@ -1,7 +1,10 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 
-pub(crate) fn manifest_string<'a>(document: &'a serde_yaml::Value, path: &[&str]) -> Option<&'a str> {
+pub(crate) fn manifest_string<'a>(
+    document: &'a serde_yaml::Value,
+    path: &[&str],
+) -> Option<&'a str> {
     let mut current = document;
     for segment in path {
         current = current.get(*segment)?;
@@ -9,7 +12,11 @@ pub(crate) fn manifest_string<'a>(document: &'a serde_yaml::Value, path: &[&str]
     current.as_str()
 }
 
-pub(crate) fn remote_secret_env(harness: &Path, app_id: &str, names: &[&str]) -> Result<Value, Failure> {
+pub(crate) fn remote_secret_env(
+    harness: &Path,
+    app_id: &str,
+    names: &[&str],
+) -> Result<Value, Failure> {
     let application = manifest::load(harness, app_id)?;
     let configured = application
         .document
@@ -52,14 +59,25 @@ pub(crate) fn remote_secret_env(harness: &Path, app_id: &str, names: &[&str]) ->
 
 pub(crate) fn setup_step_count(target: &str) -> Result<u64, Failure> {
     match target {
-        "web" | "tui:jeden" | "mobile:ios" | "mobile:android" | "desktop:win" | "desktop:cua" => Ok(2),
+        "mobile:ios" | "mobile:android" | "desktop:win" | "desktop:cua" => Ok(2),
+        // Web journeys need only the weles binary: setup installs nothing.
+        "web" => Ok(0),
         "desktop:mac" => Ok(3),
         "tui" => Ok(1),
-        _ => Err(Failure::config("stado.submit", format!("unknown target: {target} (web|tui:jeden|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui)"))),
+        _ => Err(Failure::config(
+            "stado.submit",
+            format!(
+                "unknown target: {target} ({})",
+                crate::run::accepted_preflight_targets()
+            ),
+        )),
     }
 }
 
-pub(crate) fn provisioning_budget(target: &str, provision: Option<&Provision>) -> Result<u64, Failure> {
+pub(crate) fn provisioning_budget(
+    target: &str,
+    provision: Option<&Provision>,
+) -> Result<u64, Failure> {
     let setup = if target == "tui" {
         0
     } else {
@@ -178,4 +196,3 @@ pub(crate) fn yaml_scalar(value: &serde_yaml::Value) -> Option<String> {
         _ => None,
     }
 }
-

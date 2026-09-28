@@ -43,7 +43,7 @@ fn jeden(
 }
 
 /// The command's stdout, refusing a failed exit.
-fn succeeded(
+pub(crate) fn succeeded(
     context: &specs::Context,
     args: &[&str],
     input: Option<&str>,

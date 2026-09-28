@@ -17,10 +17,7 @@ use crate::tui::Terminal;
 
 /// The fixtures the jeden journeys plant.
 pub(crate) fn fixture(context: &specs::Context, name: &str) -> PathBuf {
-    context
-        .harness
-        .join("packages/web/harness/fixtures")
-        .join(name)
+    context.harness.join("tests/tui/fixtures").join(name)
 }
 
 /// The screen with box borders removed and wrapped rows joined both ways a

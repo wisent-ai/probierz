@@ -12,7 +12,7 @@ use super::cli::network::brama;
 use super::views::replays::{launch, submit};
 
 mod constants;
-mod geometry;
+pub(crate) mod geometry;
 pub(crate) mod semantics;
 pub(crate) mod tmux;
 

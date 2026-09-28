@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn analyze_run(
     report_path: &Path,
     artifacts_dir: Option<&Path>,
@@ -32,14 +32,10 @@ pub(crate) fn analyze_run(
     }
     let canonical =
         report.get("probierz").is_some() && report.get("tests").and_then(Value::as_array).is_some();
-    let playwright = report.get("suites").and_then(Value::as_array).is_some();
-    let mut summary = if canonical {
-        normalize_wdio(&report, tool.unwrap_or("probierz"))
-    } else if playwright {
-        normalize_playwright(&report)
-    } else {
-        normalize_wdio(&report, tool.unwrap_or("wdio"))
-    };
+    let mut summary = normalize_wdio(
+        &report,
+        tool.unwrap_or(if canonical { "probierz" } else { "wdio" }),
+    );
     let report_media = summary
         .as_object_mut()
         .expect("object")
@@ -163,4 +159,3 @@ pub fn analyze(_harness: &Path, report: &str, args: &[String]) -> Answer {
     )?;
     print_json(&result)
 }
-

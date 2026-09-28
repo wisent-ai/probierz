@@ -14,13 +14,6 @@ pub(crate) fn target(name: &str) -> Option<Target> {
             script: "probierz run web",
             tool: "probierz",
         },
-        // The jeden/omp terminal comparison suite, still a Node suite under
-        // packages/web until it runs as registered tui journeys.
-        "tui:jeden" => Target {
-            pkg: "packages/web",
-            script: "test:tui:jeden",
-            tool: "playwright",
-        },
         "mobile:ios" => Target {
             pkg: "packages/mobile",
             script: "test:mobile:ios",
@@ -63,7 +56,6 @@ pub(crate) fn target(name: &str) -> Option<Target> {
 pub(crate) fn target_list() -> Vec<&'static str> {
     vec![
         "web",
-        "tui:jeden",
         "mobile:ios",
         "mobile:ios:byk-auth",
         "mobile:android",
@@ -75,7 +67,7 @@ pub(crate) fn target_list() -> Vec<&'static str> {
 }
 
 pub(crate) fn accepted_preflight_targets() -> &'static str {
-    "web|tui:jeden|mobile:ios|mobile:ios:byk-auth|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
+    "web|mobile:ios|mobile:ios:byk-auth|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
 }
 
 /// The flags the six execution commands accept, printed by each of their
@@ -94,7 +86,7 @@ Accepted arguments (parsed by the shared execution parser):
   NAME=VALUE            Environment variable given to the suite; repeatable
   --app <ID>            Application manifest whose surface and secrets apply
   --spec <FILE>         One spec file instead of the target's whole suite
-  --tool <NAME>         Report shape to expect: playwright, wdio, or probierz
+  --tool <NAME>         Report shape to expect: wdio or probierz
   --record              Keep video, traces, and screenshots for every journey
   --force               Run even when the resource this target locks is held
   --no-analyze          Skip report analysis and print the raw run

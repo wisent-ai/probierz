@@ -15,16 +15,9 @@
     "packages/desktop-cua"
   ],
   "scripts": {
-    "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps",
+    "setup": "npm install",
     "test:web": "probierz run web",
-    "test:tui:jeden": "npm --workspace packages/web run test",
-    "test:jeden": "npm --workspace packages/web exec playwright test jeden",
-    "test:jeden:matrix": "npm --workspace packages/web exec -- playwright test jeden.matrix --project=jeden-matrix --no-deps",
-    "test:jeden:scan": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"command surface\"",
-    "test:jeden:behaviour": "npm --workspace packages/web exec -- playwright test jeden.replay --project=jeden",
-    "test:jeden:screen": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"screen semantics\"",
-    "test:jeden:journeys": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"interaction journeys\"",
-    "test:jeden:golden": "PROBIERZ_UPDATE_GOLDEN=yes npm --workspace packages/web exec -- playwright test jeden.sidebyside --project=jeden",
+    "test:tui": "probierz run tui",
     "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
     "test:mobile:ios:byk-auth": "probierz run mobile:ios:byk-auth",
     "test:mobile:ios:byk-auth:remote": "probierz run mobile:ios:byk-auth --host stado:mini",
@@ -38,10 +31,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
-    "@types/pixelmatch": "^5.2.6",
-    "@types/pngjs": "^6.0.5",
-    "pixelmatch": "^7.2.0",
-    "pngjs": "^7.0.0",
     "typescript": "^5.5.4",
     "yaml": "^2.9.0"
   },

@@ -133,6 +133,17 @@ impl Tmux {
             previous = pane;
         }
     }
+
+    /// Whether the application ended (its tmux session closed) within `limit`.
+    pub(crate) fn ended_within(&self, limit: Duration) -> bool {
+        let started = Instant::now();
+        while started.elapsed() < limit {
+            if tmux(&["has-session", "-t", &self.name]).is_err() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Drop for Tmux {

@@ -158,7 +158,6 @@ pub fn hosts() -> Answer {
 /// Where a spec path resolves for a surface, used by run and author paths.
 pub fn spec_dir(surface: &str) -> Option<PathBuf> {
     match surface {
-        "tui:jeden" => Some(PathBuf::from("packages/web/tests")),
         "mobile:ios" | "mobile:android" => Some(PathBuf::from("packages/mobile/test/specs")),
         "desktop:mac" | "desktop:win" => Some(PathBuf::from("packages/desktop-native/test/specs")),
         // `tui`, `desktop:cua` and `web` journeys are functions in this crate,

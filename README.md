@@ -106,7 +106,7 @@ one explainable release decision.
 | Surface | Execution tool | Required environment | Current state |
 |---|---|---|---|
 | Web | Weles browser through `weles mcp`: desktop, tablet and mobile viewports | the `weles` binary (or `WELES_BIN`) | Implemented |
-| jeden terminal comparison (`tui:jeden`) | tmux sessions of jeden and omp, Node suite in `packages/web` | Node.js 22 or newer; tmux; both binaries | Implemented; moving to registered `tui` journeys |
+| Terminal (`tui`) | journeys registered in probierz, driving a PTY or tmux; jeden's journeys also compare with omp and judge view content through a routed model | tmux; the application binary (`TUI_CMD`); for jeden, `omp` and the Stado model router (`PROBIERZ_TUI_JUDGE_MODEL`) | Implemented |
 | Mobile iOS | WebdriverIO, Appium, XCUITest | macOS, Xcode, simulator or authorized device | Implemented when host prerequisites are available |
 | Mobile Android | WebdriverIO, Appium, UiAutomator2 | Android SDK, emulator or authorized device | Implemented when host prerequisites are available |
 | Native macOS (Mac2) | WebdriverIO, Appium Mac2 | macOS, full Xcode, target, and required Accessibility permission | Implemented when host prerequisites are available |

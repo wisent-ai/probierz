@@ -3,9 +3,8 @@ pub(crate) const INDEX_SCHEMA: &str = "ai.wisent.probierz.project-adoptions.v1";
 pub(crate) const RESULT_SCHEMA: &str = "ai.wisent.probierz.project-adoption-result.v1";
 pub(crate) const INDEX_RELATIVE_PATH: &str = "apps/.adoptions.json";
 pub(crate) const SPEC_DIRECTORIES: [&str; 3] = ["test/specs", "tests", "specs"];
-pub(crate) const TARGET_PACKAGES: [(&str, &str); 9] = [
+pub(crate) const TARGET_PACKAGES: [(&str, &str); 8] = [
     ("web", "packages/web"),
-    ("tui:jeden", "packages/web"),
     ("mobile:ios", "packages/mobile"),
     ("mobile:ios:byk-auth", "packages/mobile"),
     ("mobile:android", "packages/mobile"),

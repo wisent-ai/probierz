@@ -109,7 +109,7 @@ pub enum ReportingCommand {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Normalize a Playwright, WDIO, or canonical Probierz report.
+    /// Normalize a WDIO or canonical Probierz report.
     #[command(after_help = crate::run::RUN_FLAGS_HELP)]
     Analyze {
         report: String,

@@ -9,24 +9,6 @@ pub(crate) fn setup_steps(harness: &Path, name: &str) -> Result<Vec<SetupStep>, 
         skip_driver: None,
         skip_cua: false,
     };
-    let pw = |pkg: &str, with_deps: bool| SetupStep {
-        name: format!("playwright browsers ({pkg})"),
-        command: "npm".into(),
-        args: [
-            "--workspace",
-            &format!("packages/{pkg}"),
-            "exec",
-            "playwright",
-            "install",
-        ]
-        .into_iter()
-        .map(str::to_string)
-        .chain(with_deps.then_some("--with-deps".into()))
-        .collect(),
-        output_dir: None,
-        skip_driver: None,
-        skip_cua: false,
-    };
     let driver = |name: &str, version: Option<&str>| SetupStep {
         name: format!("appium driver: {name}"),
         command: "npx".into(),
@@ -64,7 +46,6 @@ pub(crate) fn setup_steps(harness: &Path, name: &str) -> Result<Vec<SetupStep>, 
     Ok(match name {
         // Web journeys need only the weles binary, which is its own product.
         "web" => vec![],
-        "tui:jeden" => vec![npm, pw("web", true)],
         "mobile:ios" => vec![npm, driver("xcuitest", None)],
         "mobile:android" => vec![npm, driver("uiautomator2", None)],
         "desktop:mac" => vec![npm, driver("mac2", Some("2.2.2")), native],
