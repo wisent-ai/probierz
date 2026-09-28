@@ -132,9 +132,30 @@ pub(crate) fn complete_run(
         && evidence.get("report").and_then(Value::as_bool) == Some(true)
         && valid
         && present;
+    // Who the failure belongs to, from which evidence failed rather than from
+    // its wording: the runner's own verdict (surface.rs) first, then a failed
+    // check or crash of the app (product), then an evidence pipeline that did
+    // not deliver (harness). A run that fits none stays unclassified.
+    let product_failed =
+        analysis.is_some_and(|value| js_number(value.get("failed")) > 0.0) || !crashes.is_empty();
+    let evidence_missing = analysis_error.is_some()
+        || analysis
+            .and_then(|value| value.get("runId"))
+            .and_then(Value::as_str)
+            != Some(&run_id)
+        || !capture_errors.is_empty()
+        || !missing.is_empty()
+        || !present;
+    let origin = match run.get("failureOrigin").and_then(Value::as_str) {
+        _ if passed => Value::Null,
+        Some(declared) => json!(declared),
+        None if product_failed => json!("product"),
+        None if evidence_missing => json!("harness"),
+        None => Value::Null,
+    };
     update_json(
         &manifest_path,
-        &json!({"status":if passed{"passed"}else{"failed"},"completedAt":now_iso(),"exitCode":run.get("exitCode"),"timedOut":run.get("timedOut"),"reportValidation":run.get("reportValidation"),"evidence":evidence,"failure":Value::Null,"analysisPath":analysis_path,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
+        &json!({"status":if passed{"passed"}else{"failed"},"completedAt":now_iso(),"exitCode":run.get("exitCode"),"timedOut":run.get("timedOut"),"reportValidation":run.get("reportValidation"),"evidence":evidence,"failure":Value::Null,"failureOrigin":origin,"analysisPath":analysis_path,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
     )?;
     let object = run.as_object_mut().expect("object");
     object.insert("passed".into(), json!(passed));

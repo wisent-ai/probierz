@@ -85,8 +85,16 @@ pub(crate) fn normalized_status(manifest: &Value) -> &str {
 /// (`reportValidation.ok` false) stopped before any product assertion ran, so
 /// the failure belongs to the harness or its environment; a run that produced
 /// a valid report failed on the product's own assertions. Status and evidence
-/// both classify through this one function.
+/// both classify through this one function. A run that records its own
+/// `failureOrigin` (surface.rs for a runner that could not start or clean up,
+/// complete_run for a failed check or crash versus missing evidence) is
+/// classified by that first.
 pub(crate) fn failure_class(manifest: &Value) -> &'static str {
+    match manifest.get("failureOrigin").and_then(Value::as_str) {
+        Some("harness") => return "infrastructure",
+        Some("product") => return "product",
+        _ => {}
+    }
     let setup_failed = string(manifest.get("setupError")).is_some();
     let report_valid = manifest
         .pointer("/reportValidation/ok")
