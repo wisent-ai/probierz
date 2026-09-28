@@ -114,7 +114,7 @@ pub(crate) fn journey_history(runs: &[Value]) -> Vec<Value> {
                 .iter()
                 .filter(|run| {
                     run.get("status").and_then(Value::as_str) == Some("failed")
-                        && run.get("failureClass").and_then(Value::as_str) != Some("infrastructure")
+                        && run.get("failureClass").and_then(Value::as_str) == Some("product")
                 })
                 .count();
             let infrastructure_failures = relevant
@@ -131,6 +131,7 @@ pub(crate) fn journey_history(runs: &[Value]) -> Vec<Value> {
                 "failed": count_status("failed"),
                 "productFailures": product_failures,
                 "infrastructureFailures": infrastructure_failures,
+                "unclassifiedFailures": count_status("failed") - product_failures - infrastructure_failures,
                 "blocked": count_status("blocked"),
                 "canceled": count_status("canceled"),
                 "passRate": if passed + product_failures > 0 {
@@ -218,7 +219,13 @@ pub(crate) fn run_history_value(
                 && run.get("failureClass").and_then(Value::as_str) == Some("infrastructure")
         })
         .count();
-    let product_failures = failed - infrastructure_failures;
+    let product_failures = runs
+        .iter()
+        .filter(|run| {
+            run.get("status").and_then(Value::as_str) == Some("failed")
+                && run.get("failureClass").and_then(Value::as_str) == Some("product")
+        })
+        .count();
     let tests = test_history(&runs);
     let performance = performance_trend(&runs);
     Ok(json!({
@@ -234,6 +241,7 @@ pub(crate) fn run_history_value(
             "canceled": count_status("canceled"),
             "productFailures": product_failures,
             "infrastructureFailures": infrastructure_failures,
+            "unclassifiedFailures": failed - product_failures - infrastructure_failures,
             "passRate": if passed + product_failures > 0 {
                 json_number(passed as f64 / (passed + product_failures) as f64)
             } else { Value::Null },

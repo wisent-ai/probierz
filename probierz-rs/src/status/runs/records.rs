@@ -90,10 +90,14 @@ pub(crate) fn normalized_status(manifest: &Value) -> &str {
 /// complete_run for a failed check or crash versus missing evidence) is
 /// classified by that first.
 pub(crate) fn failure_class(manifest: &Value) -> &'static str {
-    match manifest.get("failureOrigin").and_then(Value::as_str) {
-        Some("harness") => return "infrastructure",
-        Some("product") => return "product",
-        _ => {}
+    // A run that recorded its origin is classified by it; a recorded null means
+    // the evidence decided neither way and stays unclassified. Only runs from
+    // before the field existed fall back to setupError/reportValidation.
+    match manifest.get("failureOrigin") {
+        Some(Value::String(origin)) if origin == "harness" => return "infrastructure",
+        Some(Value::String(origin)) if origin == "product" => return "product",
+        Some(_) => return "unclassified",
+        None => {}
     }
     let setup_failed = string(manifest.get("setupError")).is_some();
     let report_valid = manifest
