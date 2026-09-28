@@ -85,10 +85,19 @@ fn outcome(multi_row: bool, holds: bool) -> Option<Outcome> {
 }
 
 /// Lines of `pane` the command painted: not on screen before, not blank, and
-/// not the prompt echoing what was typed (the submitted text itself).
+/// not the prompt echoing what was typed (a line ending in the submitted
+/// text); output that merely names the command, such as a refusal, counts.
 fn fresh<'a>(before: &HashSet<&str>, pane: &'a str, command: &str) -> Vec<&'a str> {
     pane.lines()
-        .filter(|line| !line.trim().is_empty() && !before.contains(line) && !line.contains(command))
+        .filter(|line| {
+            !line.trim().is_empty()
+                && !before.contains(line)
+                && !line
+                    .trim_end()
+                    .trim_end_matches('│')
+                    .trim_end()
+                    .ends_with(command)
+        })
         .collect()
 }
 
