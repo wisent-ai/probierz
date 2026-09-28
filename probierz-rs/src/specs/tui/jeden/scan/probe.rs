@@ -84,25 +84,32 @@ fn outcome(multi_row: bool, holds: bool) -> Option<Outcome> {
     })
 }
 
+/// Lines of `pane` the command painted: not on screen before, not blank, and
+/// not the prompt echoing what was typed (the submitted text itself).
+fn fresh<'a>(before: &HashSet<&str>, pane: &'a str, command: &str) -> Vec<&'a str> {
+    pane.lines()
+        .filter(|line| !line.trim().is_empty() && !before.contains(line) && !line.contains(command))
+        .collect()
+}
+
 pub(super) fn probe(tmux: &Tmux, command: &str) -> Result<Probe, String> {
     let settle = || tmux.settled(Duration::from_secs(PAINT_SECONDS));
     tmux.key("Escape")?;
     let before = settle()?;
+    let seen: HashSet<&str> = before.lines().collect();
     let frames_before = box_frames(&tmux.history()?);
     let started = Instant::now();
     tmux.submit(command)?;
+    // The typed command echoes on the prompt at once; only output the command
+    // itself produced counts as paint, and the screen is read once it has.
     let painted = tmux
         .until(command, Duration::from_secs(PAINT_SECONDS), |pane| {
-            pane != before
+            !fresh(&seen, pane, command).is_empty()
         })
         .is_ok();
     let paint_ms = started.elapsed().as_millis();
     let screen = settle()?;
-    let seen: HashSet<&str> = before.lines().collect();
-    let new_paint: Vec<&str> = screen
-        .lines()
-        .filter(|line| !line.trim().is_empty() && !seen.contains(line))
-        .collect();
+    let new_paint = fresh(&seen, &screen, command);
     let picker = painted && picker_open(&screen);
     let (mut navigates, mut filters, mut closes) = (None, None, None);
     if picker {
