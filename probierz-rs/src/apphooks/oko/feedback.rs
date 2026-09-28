@@ -187,9 +187,6 @@ pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Va
 }
 
 pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
-    if !requires_oko_fixture(source) {
-        return Ok(json!({ "skipped": "autonomy journey uses isolated local fixtures" }));
-    }
     required_oko(source, false)?;
     let path = state_path(source);
     let state: Option<Value> = if path.exists() {

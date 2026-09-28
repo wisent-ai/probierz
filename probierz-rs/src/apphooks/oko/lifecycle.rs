@@ -1,9 +1,6 @@
 use serde_json::json;
 use crate::apphooks::*;
 pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
-    if !requires_oko_fixture(source) {
-        return Ok(json!({ "skipped": "autonomy journey uses isolated local fixtures" }));
-    }
     required_oko(source, requires_slack(source))?;
     let scoped = scoped_oko_source(source)?;
     let account = ensure_technical_account(&scoped)?;

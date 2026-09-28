@@ -195,14 +195,4 @@ mod tests {
         );
         fs::remove_dir_all(harness).expect("cleanup");
     }
-
-    #[test]
-    fn autonomy_only_seed_refuses_no_external_dependency() {
-        let environment =
-            BTreeMap::from([("PROBIERZ_JOURNEYS".into(), "autonomy-experimental".into())]);
-        assert_eq!(
-            oko_seed(&environment).expect("skip"),
-            json!({ "skipped": "autonomy journey uses isolated local fixtures" })
-        );
-    }
 }

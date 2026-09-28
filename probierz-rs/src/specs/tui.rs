@@ -92,11 +92,6 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
-            title: "oko-autonomy",
-            run: oko::autonomy::run,
-        },
-        Spec {
-            surface: "tui",
             title: "singularity-onboarding-first-use",
             run: singularity::onboarding_first_use::run,
         },
@@ -249,7 +244,6 @@ mod echo;
 mod jeden;
 mod las;
 mod most;
-mod oko;
 mod singularity;
 mod skarbiec;
 mod skrzynka;

@@ -147,14 +147,6 @@ pub(crate) fn requires_slack(source: &BTreeMap<String, String>) -> bool {
     journeys.is_empty() || journeys.contains("slack-feedback")
 }
 
-pub(crate) fn requires_oko_fixture(source: &BTreeMap<String, String>) -> bool {
-    let journeys = selected_journeys(source);
-    journeys.is_empty()
-        || journeys
-            .iter()
-            .any(|journey| *journey != "autonomy-experimental")
-}
-
 pub(crate) fn required_oko(source: &BTreeMap<String, String>, include_slack: bool) -> Result<(), Failure> {
     let mut names = OKO_REQUIRED.to_vec();
     if include_slack {

@@ -23,14 +23,8 @@ repositories:
           - Sources/Oko/Persistence/Orchestrator/Feedback/**
           - Sources/Oko/Persistence/OrchestratorSuggestionsPath.swift
           - Sources/OkoKit/Strategy/StrategicFeedback.swift
-          - Sources/oko-cli/Suggestions/**
+          - rust/src/suggestions/**
         journeys: [slack-feedback]
-      - paths:
-          - Sources/OkoKit/Autonomy/**
-          - Sources/oko-cli/Commands/AutonomyCommand.swift
-          - Sources/oko-cli/Commands/ServeCommand.swift
-          - Sources/oko-cli/Suggestions/Agents/SuggestionsAgents.swift
-        journeys: [autonomy-experimental]
       - paths:
           - Sources/Oko/**
           - Sources/OkoKit/**
@@ -112,9 +106,6 @@ surfaces:
     recording:
       primary: appium
       fallback: screencapturekit
-  tui:
-    spec: oko-autonomy
-    journeys: [autonomy-experimental]
 journeys:
   auth:
     owner: Oko maintainers
@@ -157,10 +148,6 @@ journeys:
     owner: Oko maintainers
     timeoutMs: 240000
     value: Network, session, duplicate-event and interrupted-operation failures are visible and non-destructive.
-  autonomy-experimental:
-    owner: Oko maintainers
-    timeoutMs: 21600000
-    value: Experimental Oko autonomy is local-user scoped, bounded against spending and irreversible actions, closes a goal only after a successful Pursuit receipt, and recovers from idle or failed ticks without false success.
 secretRefs:
   OKO_E2E_EMAIL: vault://wisent/oko/e2e/email
   OKO_E2E_SUPABASE_ANON_KEY: vault://wisent/oko/e2e/supabase-anon-key
