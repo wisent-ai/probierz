@@ -16,6 +16,7 @@ use crate::specs::*;
 
 mod compare;
 mod constants;
+mod measure;
 mod server;
 
 /// The thresholds must say what they raise and why: an override that is not
@@ -104,74 +105,33 @@ pub(crate) fn figma_parity(context: &Context) -> Result<(), String> {
             skipped.push(key.to_string());
             continue;
         };
-        let size = (
-            u32::try_from(width).map_err(|e| e.to_string())?,
-            u32::try_from(height).map_err(|e| e.to_string())?,
-        );
         let override_entry = &plan["overrides"][key];
-        let limit = override_entry["maxDifferingPixelRatio"]
-            .as_f64()
-            .unwrap_or(default);
-        let directory = context
-            .artifacts
-            .join("figma-parity")
-            .join(key.replace([':', '/'], "-"));
-        fs::create_dir_all(&directory)
-            .map_err(|error| format!("{}: {error}", directory.display()))?;
-        let (candidate, reference) = (
-            directory.join("candidate.png"),
-            directory.join("reference.png"),
-        );
-        let query = url::form_urlencoded::Serializer::new(String::new())
-            .append_pair("component", key)
-            .finish();
-        capture(
-            &candidate_page,
-            &format!("/?{query}"),
-            "#candidate",
-            size,
-            &candidate,
-        )?;
-        let query = url::form_urlencoded::Serializer::new(String::new())
-            .append_pair("asset", render)
-            .append_pair("width", &width.to_string())
-            .append_pair("height", &height.to_string())
-            .finish();
-        capture(
-            &reference_page,
-            &format!("/reference?{query}"),
-            "#reference",
-            size,
-            &reference,
-        )?;
-        let mut measured =
-            compare::compare(&reference_page, &candidate, &reference, tolerance, false)?;
-        let ratio = measured["ratio"]
-            .as_f64()
-            .ok_or("the comparison answered no ratio")?;
-        if ratio > limit {
-            measured = compare::compare(&reference_page, &candidate, &reference, tolerance, true)?;
-            let mask = measured["mask"]
-                .as_str()
-                .ok_or("the comparison answered no mask")?;
-            let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, mask)
-                .map_err(|e| e.to_string())?;
-            let difference = directory.join("difference.png");
-            fs::write(&difference, bytes)
-                .map_err(|error| format!("{}: {error}", difference.display()))?;
-            context.media_typed("screenshot", difference, "image/png");
-            failures.push(format!(
-                "{key} differs from its Figma export in {} of {} pixels ({:.3} %); the limit is {:.3} %{}",
-                measured["differing"], measured["total"], ratio * 100.0, limit * 100.0,
-                override_entry["reason"].as_str().map(|reason| format!(" ({reason})")).unwrap_or_default()
-            ));
+        let target = measure::Target {
+            key,
+            name: &component["name"],
+            render,
+            width,
+            height,
+            limit: override_entry["maxDifferingPixelRatio"]
+                .as_f64()
+                .unwrap_or(default),
+            reason: &override_entry["reason"],
+            tolerance,
+        };
+        // Every component gets its verdict: an error here is that component's
+        // failure, recorded, and the next component is still measured.
+        match measure::measure(context, &candidate_page, &reference_page, &target) {
+            Ok((verdict, failure)) => {
+                failures.extend(failure);
+                results.push(verdict);
+            }
+            Err(error) => {
+                failures.push(format!("{key} could not be measured: {error}"));
+                results.push(
+                    json!({ "componentKey": key, "name": component["name"], "error": error }),
+                );
+            }
         }
-        let verdict = json!({ "componentKey": key, "name": component["name"], "render": render, "box": { "width": width, "height": height }, "candidate": measured["candidate"], "reference": measured["reference"], "channelTolerance": tolerance, "differingPixels": measured["differing"], "comparedPixels": measured["total"], "differingPixelRatio": ratio, "maxDifferingPixelRatio": limit, "thresholdReason": override_entry["reason"], "within": ratio <= limit });
-        fs::write(directory.join("parity.json"), verdict.to_string())
-            .map_err(|error| error.to_string())?;
-        context.media_typed("screenshot", candidate, "image/png");
-        context.media_typed("screenshot", reference, "image/png");
-        results.push(verdict);
     }
     drop(weles);
     drop(server);

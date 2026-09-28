@@ -1,7 +1,8 @@
 //! jeden and omp walk the same script at one geometry in tmux, and the run
 //! leaves an HTML report a person can flip through. jeden's own screens (not
 //! the live catalogue) are also compared with text goldens, volatile values
-//! masked; PROBIERZ_UPDATE_GOLDEN=1, or a missing golden, writes the golden.
+//! masked. A missing golden is a failure; PROBIERZ_UPDATE_GOLDEN=1 writes
+//! them, and the written files are reviewed and committed under tests/tui/golden.
 
 use std::fs;
 use std::path::Path;
@@ -110,17 +111,22 @@ fn escape(text: &str) -> String {
         .replace('>', "&gt;")
 }
 
-/// Compare with the golden text, or write it when missing or asked to.
+/// Compare with the reviewed golden text; write it only when asked to.
 fn golden(context: &specs::Context, label: &str, pane: &str) -> Result<(), String> {
     let path = context
         .harness
         .join(format!("tests/tui/golden/jeden-{label}.txt"));
     let text = normalized(pane)?;
-    let update = context.optional("PROBIERZ_UPDATE_GOLDEN").is_some();
-    if update || !path.exists() {
+    if context.optional("PROBIERZ_UPDATE_GOLDEN").is_some() {
         fs::create_dir_all(path.parent().unwrap_or(Path::new(".")))
             .map_err(|error| error.to_string())?;
         return fs::write(&path, text).map_err(|error| format!("{}: {error}", path.display()));
+    }
+    if !path.exists() {
+        return Err(format!(
+            "{label} has no reviewed golden at {}: run once with PROBIERZ_UPDATE_GOLDEN=1, review the written text and commit it",
+            path.display()
+        ));
     }
     let expected =
         fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
