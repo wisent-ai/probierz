@@ -21,6 +21,7 @@ use std::time::{Duration, Instant};
 use crate::failure::{Code, Failure};
 
 mod screen;
+mod spawn;
 #[cfg(test)]
 mod tests;
 
@@ -69,32 +70,6 @@ impl Spawn {
             cols: 120,
             rows: 36,
         }
-    }
-
-    pub fn arg(mut self, value: impl Into<String>) -> Self {
-        self.args.push(value.into());
-        self
-    }
-
-    pub fn args<I: IntoIterator<Item = S>, S: Into<String>>(mut self, values: I) -> Self {
-        self.args.extend(values.into_iter().map(Into::into));
-        self
-    }
-
-    pub fn env(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
-        self.env.insert(name.into(), value.into());
-        self
-    }
-
-    pub fn cwd(mut self, path: impl Into<PathBuf>) -> Self {
-        self.cwd = Some(path.into());
-        self
-    }
-
-    pub fn size(mut self, cols: u16, rows: u16) -> Self {
-        self.cols = cols;
-        self.rows = rows;
-        self
     }
 }
 
