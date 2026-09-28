@@ -108,11 +108,6 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
-            title: "wisent-benchmark-onboarding-first-use",
-            run: wisent::benchmark_onboarding_first_use::run,
-        },
-        Spec {
-            surface: "tui",
             title: "wisent-onboarding-first-use",
             run: wisent::onboarding_first_use::run,
         },
