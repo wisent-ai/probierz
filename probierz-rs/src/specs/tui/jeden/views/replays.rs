@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 const PICKER: &str = "Select model route";
 
 /// Start jeden with `args` on the sandbox `home` and wait until it is ready.
-pub(super) fn launch(
+pub(crate) fn launch(
     context: &specs::Context,
     home: &Path,
     args: &[&str],
@@ -36,7 +36,7 @@ pub(super) fn launch(
     Ok(app)
 }
 
-pub(super) fn submit(app: &mut Terminal, command: &str) -> Result<(), String> {
+pub(crate) fn submit(app: &mut Terminal, command: &str) -> Result<(), String> {
     app.send(command).map_err(|error| error.detail)?;
     app.key("enter").map_err(|error| error.detail)
 }

@@ -16,7 +16,7 @@ use crate::specs::{self, tui::common};
 use crate::tui::Terminal;
 
 /// The fixtures the jeden journeys plant.
-fn fixture(context: &specs::Context, name: &str) -> PathBuf {
+pub(crate) fn fixture(context: &specs::Context, name: &str) -> PathBuf {
     context
         .harness
         .join("packages/web/harness/fixtures")
@@ -26,7 +26,7 @@ fn fixture(context: &specs::Context, name: &str) -> PathBuf {
 /// The screen with box borders removed and wrapped rows joined both ways a
 /// terminal splits them: glued (a path cut at the frame edge) and spaced (a
 /// sentence cut across rows).
-fn flattened(screen: &str) -> String {
+pub(crate) fn flattened(screen: &str) -> String {
     let rows: Vec<String> = screen
         .lines()
         .map(|row| {
@@ -52,17 +52,18 @@ fn workspace(
     Ok(cwd)
 }
 
-/// Run `steps` in a jeden session on `cwd` with a warm sandbox home, then clean both.
-fn in_session(
+/// Run `steps` in a jeden session on `cwd` with a warm sandbox home, then
+/// clean the home; `steps` gets the home so it can read what jeden wrote.
+pub(crate) fn in_session(
     context: &specs::Context,
     cwd: &Path,
     credentials: bool,
-    steps: impl FnOnce(&mut Terminal) -> Result<(), String>,
+    steps: impl FnOnce(&mut Terminal, &Path) -> Result<(), String>,
 ) -> Result<(), String> {
     let home = super::super::sandbox::home(true, credentials)?;
     let cwd_arg = cwd.display().to_string();
     let outcome = launch(context, &home, &["--cwd", &cwd_arg]).and_then(|mut app| {
-        let result = steps(&mut app);
+        let result = steps(&mut app, &home);
         let _ = app.close();
         result
     });
@@ -70,7 +71,11 @@ fn in_session(
     outcome
 }
 
-fn until(app: &Terminal, what: &str, holds: impl Fn(&str) -> bool) -> Result<String, String> {
+pub(crate) fn until(
+    app: &Terminal,
+    what: &str,
+    holds: impl Fn(&str) -> bool,
+) -> Result<String, String> {
     app.wait_until(what, Duration::from_secs(VIEW_SECONDS), false, |screen| {
         holds(&flattened(screen))
     })
@@ -85,7 +90,7 @@ pub fn extensions(context: &specs::Context) -> Result<(), String> {
         ".jeden/extensions",
         "probe-ext.mjs",
     )?;
-    let outcome = in_session(context, &cwd, true, |app| {
+    let outcome = in_session(context, &cwd, true, |app, _| {
         submit(app, "/extensions")?;
         // The row carries an absolute path the frame truncates, so the check is
         // the kind of row plus the absence of the empty state.
@@ -110,7 +115,7 @@ pub fn agents(context: &specs::Context) -> Result<(), String> {
         ".jeden/agents",
         "probe-agent.json",
     )?;
-    let outcome = in_session(context, &cwd, true, |app| {
+    let outcome = in_session(context, &cwd, true, |app, _| {
         submit(app, "/agents")?;
         until(app, "the probe-agent row", |screen| {
             screen.contains("probe-agent")
@@ -136,14 +141,14 @@ pub fn setup_checklist(context: &specs::Context) -> Result<(), String> {
     let reports =
         Regex::new(r"(?i)BRAMA_URL configured.*\[OK\]").map_err(|error| error.to_string())?;
     let cwd = common::scratch("probierz-setup")?;
-    let bare = in_session(context, &cwd, false, |app| {
+    let bare = in_session(context, &cwd, false, |app, _| {
         submit(app, "/setup")?;
         until(app, "the BRAMA_URL input prompt", |screen| {
             prompts.is_match(screen)
         })
         .map(drop)
     });
-    let configured = in_session(context, &cwd, true, |app| {
+    let configured = in_session(context, &cwd, true, |app, _| {
         submit(app, "/setup")?;
         until(app, "BRAMA_URL reported configured", |screen| {
             reports.is_match(screen)

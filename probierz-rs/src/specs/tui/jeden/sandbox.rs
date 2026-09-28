@@ -15,7 +15,7 @@ use crate::specs::tui::common;
 
 const SANDBOX_LANGUAGE: &str = "en";
 
-fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
+pub(crate) fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
     fs::create_dir_all(to).map_err(|error| format!("{}: {error}", to.display()))?;
     for entry in fs::read_dir(from).map_err(|error| format!("{}: {error}", from.display()))? {
         let entry = entry.map_err(|error| format!("{}: {error}", from.display()))?;

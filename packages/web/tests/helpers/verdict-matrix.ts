@@ -28,16 +28,6 @@ export const CHECK_IDS = {
   'ux.pane-crossing': '→/← cross the panes and the cursor follows',
   'ux.selection-applies': 'choosing a model closes the view and switches the route',
   'ux.confirm-guards': 'a destructive row asks first and Esc means no',
-  'fn.todo-roundtrip': 'a todo added through the TUI survives reopening the view',
-  'fn.branch-roundtrip': 'a branch created through the TUI shows up in the tree',
-  'fn.token-redacted': '/token never prints the raw secret',
-  'fn.mode-roundtrip': 'a mode switched on reads back as on',
-  'fn.settings-write-through': '/settings set reaches config.yml on disk',
-  'fn.rename-roundtrip': 'a renamed session reports the new name',
-  'fn.checkpoint-roundtrip': 'a created checkpoint is still listed afterwards',
-  'fn.omfg-persists': 'a forged rule lands in the rules file',
-  'fn.collab-relay': '/collab start opens a relay and /collab stop closes it',
-  'fn.marketplace-source': '/marketplace add registers a catalog and lists its plugins',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -56,10 +46,7 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
   { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close', 'ux.pane-crossing', 'ux.confirm-guards'] },
   { view: 'Model selection flow', verdict: 'parity', checks: ['ux.selection-applies'] },
-  { view: 'Command behaviour', verdict: 'parity', checks: ['fn.todo-roundtrip', 'fn.branch-roundtrip', 'fn.token-redacted', 'fn.mode-roundtrip', 'fn.settings-write-through', 'fn.rename-roundtrip', 'fn.checkpoint-roundtrip', 'fn.omfg-persists'] },
   { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
-  { view: 'Collab', verdict: 'parity', checks: ['fn.collab-relay'] },
-  { view: 'Marketplace', verdict: 'parity', checks: ['fn.marketplace-source'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
 ];

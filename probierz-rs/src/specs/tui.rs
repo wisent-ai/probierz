@@ -87,6 +87,56 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
+            title: "jeden-branch-roundtrip",
+            run: jeden::functional::state::branch,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-checkpoint-roundtrip",
+            run: jeden::functional::state::checkpoint,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-collab-relay",
+            run: jeden::functional::files::collab,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-marketplace-source",
+            run: jeden::functional::files::marketplace,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-mode-roundtrip",
+            run: jeden::functional::state::plan_mode,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-omfg-persists",
+            run: jeden::functional::files::omfg,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-rename-roundtrip",
+            run: jeden::functional::state::rename,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-settings-write-through",
+            run: jeden::functional::files::settings_write_through,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-todo-roundtrip",
+            run: jeden::functional::state::todo,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-token-redacted",
+            run: jeden::functional::files::token_redacted,
+        },
+        Spec {
+            surface: "tui",
             title: "jeden-agent-discovery",
             run: jeden::views::discovery::agents,
         },
