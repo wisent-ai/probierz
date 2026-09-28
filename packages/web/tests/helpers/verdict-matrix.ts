@@ -12,10 +12,6 @@ export type { CheckOutcome };
  */
 
 export const CHECK_IDS = {
-  'screen.geometry': 'overlay keeps title+footer inside the viewport',
-  'screen.replacement': 'a new overlay replaces the previous one',
-  'screen.transcript-budget': 'transcript growth stays bounded across overlays',
-  'screen.two-pane': 'model view has a two-pane brands/models structure',
   'golden.stable': 'step renders identically to its golden PNG',
   'scan.no-silent-commands': 'every advertised slash command paints something',
   'scan.no-panics': 'no advertised slash command panics',
@@ -38,15 +34,11 @@ export interface VerdictEntry {
 }
 
 export const VERDICT_MATRIX: VerdictEntry[] = [
-  // "Shell" is the app-wide view lifecycle the user reported first: in omp a
-  // command REPLACES the screen, in jeden each one appends another frame to
-  // the session. Without this row the transcript check graded nothing.
-  { view: 'Shell / view lifecycle', verdict: 'parity', checks: ['screen.replacement', 'screen.transcript-budget'] },
   { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
   { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close', 'ux.pane-crossing', 'ux.confirm-guards'] },
   { view: 'Model selection flow', verdict: 'parity', checks: ['ux.selection-applies'] },
-  { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'golden.stable'] },
-  { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
+  { view: 'Models', verdict: 'parity', checks: ['golden.stable'] },
+  { view: 'Settings', verdict: 'parity', checks: ['golden.stable'] },
 ];
 
 export interface BrokenVerdict {

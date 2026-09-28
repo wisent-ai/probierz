@@ -15,7 +15,14 @@ pub(crate) mod views;
 type Journey = fn(&crate::specs::Context) -> Result<(), String>;
 
 /// Every jeden journey: title and function, all on the tui surface.
-const JOURNEYS: [(&str, Journey); 32] = [
+const JOURNEYS: [(&str, Journey); 36] = [
+    ("jeden-screen-geometry", screens::semantics::geometry),
+    ("jeden-screen-replacement", screens::semantics::replacement),
+    (
+        "jeden-screen-transcript-budget",
+        screens::semantics::transcript_budget,
+    ),
+    ("jeden-screen-two-pane", screens::semantics::two_pane),
     ("jeden-model-loading-state", screens::model_loading),
     ("jeden-turn-busy-state", screens::turn_busy),
     ("jeden-usage-loading-state", screens::usage_loading),

@@ -11,6 +11,11 @@ use crate::tui::Terminal;
 use super::cli::network::brama;
 use super::views::replays::{launch, submit};
 
+mod constants;
+mod geometry;
+pub(crate) mod semantics;
+pub(crate) mod tmux;
+
 /// A view gets a minute to paint; a model turn gets a minute and a half.
 const VIEW_SECONDS: u64 = 60;
 const TURN_SECONDS: u64 = 90;
