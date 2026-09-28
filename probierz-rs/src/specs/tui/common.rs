@@ -44,12 +44,17 @@ pub fn required_file(context: &Context, name: &str, missing: &str) -> Result<Pat
     Ok(path)
 }
 
+/// A fresh scratch directory for one journey, inside this checkout's ignored
+/// build directory (probierz-rs/target/journey-scratch), never the system
+/// temporary directory: a run's throwaway state stays in the one checkout.
 pub fn scratch(prefix: &str) -> Result<PathBuf, String> {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
+        .map_err(|error| format!("the clock is before the epoch: {error}"))?
         .as_nanos();
-    let path = std::env::temp_dir().join(format!("{prefix}-{}-{stamp}", std::process::id()));
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target/journey-scratch")
+        .join(format!("{prefix}-{}-{stamp}", std::process::id()));
     fs::create_dir_all(&path)
         .map_err(|error| format!("cannot create {}: {error}", path.display()))?;
     Ok(path)
