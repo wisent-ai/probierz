@@ -9,7 +9,7 @@ mod ssh_auth_router_onboarding_first_use;
 
 /// Every journey registered for this surface.
 pub fn specs() -> Vec<Spec> {
-    vec![
+    let mut all = vec![
         Spec {
             surface: "tui",
             title: "adam-agent-toolkit-onboarding-first-use",
@@ -59,151 +59,6 @@ pub fn specs() -> Vec<Spec> {
             surface: "tui",
             title: "game-asset-creator-cli",
             run: game_asset_creator_cli::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-model-routing",
-            run: jeden::model_routing::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-onboarding-first-use",
-            run: jeden::onboarding_first_use::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-settings-screen",
-            run: jeden::settings_screen::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-task-contract-lifecycle",
-            run: jeden::task_contract_lifecycle::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-view-content",
-            run: jeden::views::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-basics",
-            run: jeden::cli::basics,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-collab-share",
-            run: jeden::cli::collab_share,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-doctor",
-            run: jeden::cli::network::doctor,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-gallery",
-            run: jeden::cli::gallery,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-model-catalog",
-            run: jeden::cli::network::model_catalog,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-run",
-            run: jeden::cli::network::run,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-settings-export",
-            run: jeden::cli::settings_export,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-token",
-            run: jeden::cli::network::token,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-cli-usage",
-            run: jeden::cli::network::usage,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-branch-roundtrip",
-            run: jeden::functional::state::branch,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-checkpoint-roundtrip",
-            run: jeden::functional::state::checkpoint,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-collab-relay",
-            run: jeden::functional::files::collab,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-marketplace-source",
-            run: jeden::functional::files::marketplace,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-mode-roundtrip",
-            run: jeden::functional::state::plan_mode,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-omfg-persists",
-            run: jeden::functional::files::omfg,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-rename-roundtrip",
-            run: jeden::functional::state::rename,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-settings-write-through",
-            run: jeden::functional::files::settings_write_through,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-todo-roundtrip",
-            run: jeden::functional::state::todo,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-token-redacted",
-            run: jeden::functional::files::token_redacted,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-agent-discovery",
-            run: jeden::views::discovery::agents,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-extension-discovery",
-            run: jeden::views::discovery::extensions,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-setup-checklist",
-            run: jeden::views::discovery::setup_checklist,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-identity",
-            run: jeden::views::replays::identity,
-        },
-        Spec {
-            surface: "tui",
-            title: "jeden-model-picker-after-login",
-            run: jeden::views::replays::model_picker_after_login,
         },
         Spec {
             surface: "tui",
@@ -360,7 +215,9 @@ pub fn specs() -> Vec<Spec> {
             title: "wisent-backend-production-latency",
             run: wisent::backend_production_latency::run,
         },
-    ]
+    ];
+    all.extend(jeden::specs());
+    all
 }
 mod adam;
 mod brama;
