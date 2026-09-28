@@ -11,7 +11,8 @@ use super::constants::RUN_MODEL;
 use super::succeeded;
 use crate::specs::{self, tui::common};
 
-fn brama(context: &specs::Context) -> Result<(), String> {
+/// Brama answers /health at BRAMA_URL (or the one in ~/.jeden/.env).
+pub(crate) fn brama(context: &specs::Context) -> Result<(), String> {
     let from_file = || {
         let env = PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".jeden/.env");
         fs::read_to_string(env).ok().and_then(|text| {

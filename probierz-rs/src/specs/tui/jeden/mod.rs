@@ -7,6 +7,7 @@ pub(crate) mod functional;
 pub(crate) mod model_routing;
 pub(crate) mod onboarding_first_use;
 pub(crate) mod sandbox;
+pub(crate) mod screens;
 pub(crate) mod settings_screen;
 pub(crate) mod task_contract_lifecycle;
 pub(crate) mod views;
@@ -14,7 +15,10 @@ pub(crate) mod views;
 type Journey = fn(&crate::specs::Context) -> Result<(), String>;
 
 /// Every jeden journey: title and function, all on the tui surface.
-const JOURNEYS: [(&str, Journey); 29] = [
+const JOURNEYS: [(&str, Journey); 32] = [
+    ("jeden-model-loading-state", screens::model_loading),
+    ("jeden-turn-busy-state", screens::turn_busy),
+    ("jeden-usage-loading-state", screens::usage_loading),
     ("jeden-agent-discovery", views::discovery::agents),
     ("jeden-branch-roundtrip", functional::state::branch),
     ("jeden-checkpoint-roundtrip", functional::state::checkpoint),

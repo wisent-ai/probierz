@@ -16,7 +16,6 @@ export const CHECK_IDS = {
   'screen.replacement': 'a new overlay replaces the previous one',
   'screen.transcript-budget': 'transcript growth stays bounded across overlays',
   'screen.two-pane': 'model view has a two-pane brands/models structure',
-  'screen.loading-state': 'spinner precedes content on network-bound views',
   'golden.stable': 'step renders identically to its golden PNG',
   'scan.no-silent-commands': 'every advertised slash command paints something',
   'scan.no-panics': 'no advertised slash command panics',
@@ -46,9 +45,8 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
   { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close', 'ux.pane-crossing', 'ux.confirm-guards'] },
   { view: 'Model selection flow', verdict: 'parity', checks: ['ux.selection-applies'] },
-  { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'screen.loading-state', 'golden.stable'] },
+  { view: 'Models', verdict: 'parity', checks: ['screen.geometry', 'screen.two-pane', 'screen.replacement', 'screen.transcript-budget', 'golden.stable'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
-  { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
 ];
 
 export interface BrokenVerdict {
