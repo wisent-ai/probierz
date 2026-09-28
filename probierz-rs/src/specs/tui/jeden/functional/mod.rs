@@ -14,6 +14,7 @@ use super::views::discovery::{flattened, in_session};
 use super::views::replays::submit;
 
 pub(crate) mod files;
+pub(crate) mod keys;
 pub(crate) mod state;
 
 /// How long a view gets to stop repainting after a command, in seconds.

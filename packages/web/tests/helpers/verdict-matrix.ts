@@ -20,9 +20,6 @@ export const CHECK_IDS = {
   'ui.picker-navigation': 'arrow keys move the cursor in every picker',
   'ui.picker-search': 'typing filters rows in every picker',
   'ui.picker-close': 'Esc closes every picker',
-  'ux.pane-crossing': '→/← cross the panes and the cursor follows',
-  'ux.selection-applies': 'choosing a model closes the view and switches the route',
-  'ux.confirm-guards': 'a destructive row asks first and Esc means no',
 } as const;
 
 export type CheckId = keyof typeof CHECK_IDS;
@@ -35,8 +32,7 @@ export interface VerdictEntry {
 
 export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
-  { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close', 'ux.pane-crossing', 'ux.confirm-guards'] },
-  { view: 'Model selection flow', verdict: 'parity', checks: ['ux.selection-applies'] },
+  { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close'] },
   { view: 'Models', verdict: 'parity', checks: ['golden.stable'] },
   { view: 'Settings', verdict: 'parity', checks: ['golden.stable'] },
 ];
