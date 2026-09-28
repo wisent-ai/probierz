@@ -18,8 +18,6 @@ export const CHECK_IDS = {
   'screen.two-pane': 'model view has a two-pane brands/models structure',
   'screen.loading-state': 'spinner precedes content on network-bound views',
   'golden.stable': 'step renders identically to its golden PNG',
-  'replay.hang': '/model opens within 30s (the ^C report)',
-  'replay.identity': 'agent identifies as jeden',
   'scan.no-silent-commands': 'every advertised slash command paints something',
   'scan.no-panics': 'no advertised slash command panics',
   'scan.no-unrouted-commands': 'every advertised slash command is routed by the dispatcher',
@@ -70,7 +68,6 @@ export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Setup', verdict: 'parity', checks: ['fn.setup-checklist'] },
   { view: 'Settings', verdict: 'parity', checks: ['screen.geometry', 'screen.replacement', 'golden.stable'] },
   { view: 'Usage', verdict: 'parity', checks: ['screen.loading-state'] },
-  { view: 'Login / auth', verdict: 'parity', checks: ['replay.hang', 'replay.identity'] },
 ];
 
 export interface BrokenVerdict {

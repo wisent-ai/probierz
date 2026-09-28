@@ -82,6 +82,8 @@ pub(super) const TEMPERATURE: u8 = 0;
 pub(super) const MAX_OUTPUT_TOKENS: u64 = 4000;
 /// The judge call gets three minutes.
 pub(super) const ROUTER_BUDGET_SECONDS: u64 = 180;
+/// The first-run screen a fresh home shows instead.
+pub(super) const FIRST_RUN_SCREEN: &str = "Tips";
 /// The first screen jeden paints once it is ready for input.
 pub(super) const READY_SCREEN: &str = "Welcome back!";
 /// How long jeden gets to start, and each view to paint, in seconds.

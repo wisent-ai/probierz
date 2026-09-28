@@ -87,6 +87,16 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
+            title: "jeden-identity",
+            run: jeden::views::replays::identity,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-model-picker-after-login",
+            run: jeden::views::replays::model_picker_after_login,
+        },
+        Spec {
+            surface: "tui",
             title: "las-onboarding-first-use",
             run: las::onboarding_first_use::run,
         },

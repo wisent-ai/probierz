@@ -63,15 +63,25 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         run_file_lifecycle(&binary, &workspace, &sessions, &env)?;
         run_without_tools(&binary, &workspace, &sessions, &env)?;
 
-        write_trace(&trace_path, &workspace, &sessions, "completed",
-            "Jeden task-contract lifecycle exited with status 0.")?;
+        write_trace(
+            &trace_path,
+            &workspace,
+            &sessions,
+            "completed",
+            "Jeden task-contract lifecycle exited with status 0.",
+        )?;
         context.media_typed("trace", trace_path.clone(), "application/json");
         Ok(())
     })();
 
     if result.is_err() {
-        let _ = write_trace(&trace_path, &workspace, &sessions, "failed",
-            "The task-contract lifecycle has not completed.");
+        let _ = write_trace(
+            &trace_path,
+            &workspace,
+            &sessions,
+            "failed",
+            "The task-contract lifecycle has not completed.",
+        );
     }
     result
 }

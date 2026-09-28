@@ -17,9 +17,7 @@ const ENTRY_STATUSES: [&str; 2] = ["done", "not_applicable"];
 /// The contract carries its version and exactly the requirements.
 pub(crate) fn check_contract(value: &Value) -> Result<(), String> {
     if value["version"] != CONTRACT_VERSION {
-        return Err(format!(
-            "task contract version must be {CONTRACT_VERSION}"
-        ));
+        return Err(format!("task contract version must be {CONTRACT_VERSION}"));
     }
     let mut ids = value["requirements"]
         .as_array()

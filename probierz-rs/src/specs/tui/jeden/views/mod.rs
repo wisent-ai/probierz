@@ -17,6 +17,7 @@ use crate::tui::{Spawn, Terminal};
 
 mod constants;
 pub(crate) mod judge;
+pub(crate) mod replays;
 
 /// Open one view and return its settled screen.
 fn open(app: &mut Terminal, command: &str) -> Result<String, String> {
