@@ -8,8 +8,8 @@ pub(crate) const OKO_REQUIRED: [&str; 5] = [
     "OKO_E2E_SUPABASE_SERVICE_ROLE_KEY",
 ];
 pub(crate) const OKO_SLACK_REQUIRED: [&str; 3] = [
-    "OKO_E2E_SLACK_BOT_TOKEN",
-    "OKO_E2E_SLACK_USER_TOKEN",
+    "STADO_INTEGRATION_API_URL",
+    "PROBIERZ_STADO_INTEGRATION_TOKEN",
     "OKO_E2E_SLACK_CHANNEL",
 ];
 pub(crate) const OKO_ACCOUNT_REQUIRED: [&str; 3] = [

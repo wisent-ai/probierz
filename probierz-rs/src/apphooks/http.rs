@@ -13,13 +13,18 @@ pub(crate) fn response_json(response: ureq::Response) -> Result<Value, Failure> 
     if (200..300).contains(&status) {
         Ok(body)
     } else {
+        // A plain message where the service gives one; a structured error
+        // (wisent-integrations answers `{"error": {"code": …}}`) whole, so its
+        // code and the provider's reason reach the run report.
         let detail = body
             .get("message")
             .and_then(Value::as_str)
             .or_else(|| body.get("error").and_then(Value::as_str))
             .or_else(|| body.pointer("/error/message").and_then(Value::as_str))
             .or_else(|| body.get("hint").and_then(Value::as_str))
-            .unwrap_or("request failed");
+            .map(str::to_string)
+            .or_else(|| body.get("error").map(Value::to_string))
+            .unwrap_or_else(|| "request failed".to_string());
         Err(Failure::new(
             "apphook.http",
             Code::Refused,
@@ -87,34 +92,46 @@ pub(crate) fn supabase(
     )
 }
 
+/// The Slack identities the Oko journey seeds its thread as: the bot that
+/// opens it and the user who answers in it. Their tokens are wisent-integrations'
+/// provider items `slack-oko-e2e-bot` and `slack-oko-e2e-user`.
+pub(crate) const SLACK_BOT: &str = "oko-e2e-bot";
+pub(crate) const SLACK_USER: &str = "oko-e2e-user";
+
+/// One `slack/<action>` call on wisent-integrations as `identity`, with the
+/// run's integration origin and bearer. Slack's own refusal comes back as the
+/// boundary's `slack_refused` with Slack's error word.
 pub(crate) fn slack(
-    token: &str,
-    method: &str,
-    payload: Value,
-    accepted_errors: &[&str],
+    source: &BTreeMap<String, String>,
+    identity: &str,
+    action: &str,
+    mut payload: Value,
 ) -> Result<Value, Failure> {
-    let body = request_json(
+    let base = source
+        .get("STADO_INTEGRATION_API_URL")
+        .map(|value| value.trim_end_matches('/'))
+        .unwrap_or_default();
+    let token = source
+        .get("PROBIERZ_STADO_INTEGRATION_TOKEN")
+        .cloned()
+        .unwrap_or_default();
+    payload["identity"] = json!(identity);
+    let envelope = request_json(
         "POST",
-        &format!("https://slack.com/api/{method}"),
+        &format!("{base}/api/integration/slack/{action}"),
         &[
             ("Authorization", format!("Bearer {token}")),
-            ("Content-Type", "application/json; charset=utf-8".into()),
+            ("Content-Type", "application/json".into()),
         ],
         Some(payload),
-    )?;
-    if body.get("ok").and_then(Value::as_bool) != Some(true) {
-        let error = body
-            .get("error")
-            .and_then(Value::as_str)
-            .unwrap_or("request failed");
-        if !accepted_errors.contains(&error) {
-            return Err(Failure::new(
-                "apphook.oko.slack",
-                Code::Refused,
-                format!("Slack {method}: {error}"),
-            ));
-        }
-    }
-    Ok(body)
+    )
+    .map_err(|failure| {
+        Failure::new(
+            "apphook.oko.slack",
+            Code::Refused,
+            format!("wisent-integrations slack/{action} as {identity}: {failure}"),
+        )
+    })?;
+    Ok(envelope.get("result").cloned().unwrap_or(Value::Null))
 }
 

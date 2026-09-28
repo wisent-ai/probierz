@@ -72,10 +72,10 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 "Decision: accept the deterministic correction for {run_id}. Set the north-star statement to \"Probierz Slack feedback applied [{run_id}]\" because every release needs traceable product evidence."
             );
             let parent = slack(
-                source.get("OKO_E2E_SLACK_BOT_TOKEN").expect("required"),
-                "chat.postMessage",
+                source,
+                SLACK_BOT,
+                "chat.post_message",
                 json!({ "channel": channel, "text": bot_context }),
-                &[],
             )?;
             let posted_parent = parent
                 .get("ts")
@@ -84,10 +84,10 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 .to_string();
             parent_ts = Some(posted_parent.clone());
             let reply = slack(
-                source.get("OKO_E2E_SLACK_USER_TOKEN").expect("required"),
-                "chat.postMessage",
+                source,
+                SLACK_USER,
+                "chat.post_message",
                 json!({ "channel": channel, "thread_ts": posted_parent, "text": reply_text }),
-                &[],
             )?;
             let posted_reply = reply
                 .get("ts")
@@ -110,10 +110,9 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 })),
             )?;
             let author = reply
-                .pointer("/message/user")
-                .or_else(|| reply.get("user"))
+                .get("user")
                 .and_then(Value::as_str)
-                .unwrap_or("oko-e2e-user");
+                .unwrap_or(SLACK_USER);
             json!({
                 "channel": channel,
                 "parentTs": posted_parent,
@@ -159,24 +158,18 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 .unwrap_or_default();
             if let Some(reply_ts) = reply_ts {
                 let _ = slack(
-                    source
-                        .get("OKO_E2E_SLACK_USER_TOKEN")
-                        .map(String::as_str)
-                        .unwrap_or_default(),
+                    source,
+                    SLACK_USER,
                     "chat.delete",
                     json!({ "channel": channel, "ts": reply_ts }),
-                    &["message_not_found"],
                 );
             }
             if let Some(parent_ts) = parent_ts {
                 let _ = slack(
-                    source
-                        .get("OKO_E2E_SLACK_BOT_TOKEN")
-                        .map(String::as_str)
-                        .unwrap_or_default(),
+                    source,
+                    SLACK_BOT,
                     "chat.delete",
                     json!({ "channel": channel, "ts": parent_ts }),
-                    &["message_not_found"],
                 );
             }
             let _ = delete_organization(&scoped, &org_id);

@@ -215,18 +215,18 @@ pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Fa
             .unwrap_or_default();
         if let Some(reply_ts) = slack_state.get("replyTs").and_then(Value::as_str) {
             slack(
-                source.get("OKO_E2E_SLACK_USER_TOKEN").expect("required"),
+                source,
+                SLACK_USER,
                 "chat.delete",
                 json!({ "channel": channel, "ts": reply_ts }),
-                &["message_not_found"],
             )?;
         }
         if let Some(parent_ts) = slack_state.get("parentTs").and_then(Value::as_str) {
             slack(
-                source.get("OKO_E2E_SLACK_BOT_TOKEN").expect("required"),
+                source,
+                SLACK_BOT,
                 "chat.delete",
                 json!({ "channel": channel, "ts": parent_ts }),
-                &["message_not_found"],
             )?;
         }
     }

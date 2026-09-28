@@ -169,8 +169,11 @@ secretRefs:
   OKO_E2E_SUPABASE_SERVICE_ROLE_KEY: vault://wisent/oko/e2e/supabase-service-role-key
   OKO_E2E_SUPABASE_URL: vault://wisent/oko/e2e/supabase-url
   OKO_E2E_SLACK_CHANNEL: vault://wisent/oko/e2e/slack-channel
+  # The Oko app under test reads its own bot token; the journey's seed thread
+  # is posted and deleted through wisent-integrations' slack domain.
   OKO_E2E_SLACK_BOT_TOKEN: vault://wisent/oko/e2e/slack-bot-token
-  OKO_E2E_SLACK_USER_TOKEN: vault://wisent/oko/e2e/slack-user-token
+  STADO_INTEGRATION_API_URL: vault://wisent/probierz/integration-api-url
+  PROBIERZ_STADO_INTEGRATION_TOKEN: vault://wisent/probierz/integration-token
   PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE: vault://wisent/probierz/artifact-encryption-key-file
 data:
   seed:
