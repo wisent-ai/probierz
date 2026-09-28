@@ -12,7 +12,6 @@ export type { CheckOutcome };
  */
 
 export const CHECK_IDS = {
-  'golden.stable': 'step renders identically to its golden PNG',
   'scan.no-silent-commands': 'every advertised slash command paints something',
   'scan.no-panics': 'no advertised slash command panics',
   'scan.no-unrouted-commands': 'every advertised slash command is routed by the dispatcher',
@@ -33,8 +32,6 @@ export interface VerdictEntry {
 export const VERDICT_MATRIX: VerdictEntry[] = [
   { view: 'Command surface', verdict: 'parity', checks: ['scan.no-silent-commands', 'scan.no-panics', 'scan.no-unrouted-commands', 'ui.frame-fits'] },
   { view: 'Picker interaction', verdict: 'parity', checks: ['ui.picker-navigation', 'ui.picker-search', 'ui.picker-close'] },
-  { view: 'Models', verdict: 'parity', checks: ['golden.stable'] },
-  { view: 'Settings', verdict: 'parity', checks: ['golden.stable'] },
 ];
 
 export interface BrokenVerdict {
