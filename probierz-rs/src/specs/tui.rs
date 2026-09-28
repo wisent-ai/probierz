@@ -82,6 +82,11 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
+            title: "jeden-view-content",
+            run: jeden::views::run,
+        },
+        Spec {
+            surface: "tui",
             title: "las-onboarding-first-use",
             run: las::onboarding_first_use::run,
         },

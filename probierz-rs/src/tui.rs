@@ -236,13 +236,27 @@ impl Terminal {
     }
 
     /// Wait until the screen — or the whole session, when asked — contains
-    /// `needle`. A timeout reports what was on the screen instead, because a
+    /// `needle`. A miss reports what was on the screen instead, because a
     /// journey that fails at "waiting for X" with no screen is unreadable.
     pub fn wait_for(
         &self,
         needle: &str,
+        limit: Duration,
+        use_full_log: bool,
+    ) -> Result<String, Failure> {
+        self.wait_until(&format!("{needle:?}"), limit, use_full_log, |value| {
+            value.contains(needle)
+        })
+    }
+
+    /// Wait until `holds` is true of the screen (or the whole session);
+    /// `what` names the awaited state in the failure.
+    pub fn wait_until(
+        &self,
+        what: &str,
         timeout: Duration,
         use_full_log: bool,
+        holds: impl Fn(&str) -> bool,
     ) -> Result<String, Failure> {
         let deadline = Instant::now() + timeout;
         loop {
@@ -251,7 +265,7 @@ impl Terminal {
             } else {
                 self.screen()
             };
-            if value.contains(needle) {
+            if holds(&value) {
                 return Ok(value);
             }
             if Instant::now() >= deadline {
@@ -259,7 +273,7 @@ impl Terminal {
                     "tui.wait_for",
                     Code::Refused,
                     format!(
-                        "waiting for {needle:?} in `{}` timed out after {}ms\n--- screen ---\n{}",
+                        "waiting for {what} in `{}` timed out after {}ms\n--- screen ---\n{}",
                         self.command,
                         timeout.as_millis(),
                         self.screen()
