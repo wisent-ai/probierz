@@ -21,7 +21,7 @@ screenshots and videos so that you can see exactly what is broken in the pipelin
 AI Agent That Tests All of Your Releases. Because the missing piece of vibe
 coding is Vibe QA, Vibe Testing and Vibe Assurance.
 
-[Quick start](#quick-start) · [Pipeline](https://probierz.wisent.com/docs/PIPELINE) ·
+[Quick start](#quick-start) · [Documentation](https://probierz.wisent.com/docs) ·
 [Agent interface](https://probierz.wisent.com/docs/mcp) ·
 [Source and issues](https://github.com/wisent-ai/probierz)
 
@@ -199,7 +199,7 @@ From there:
 Command and failure guidance for agents is in
 the published [agent interface](https://probierz.wisent.com/docs/mcp); the integrated
 Tama → Probierz → Stado workflow is in
-the published [pipeline documentation](https://probierz.wisent.com/docs/PIPELINE).
+the published [documentation](https://probierz.wisent.com/docs).
 
 ## Primary interfaces
 

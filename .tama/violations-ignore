@@ -10,18 +10,10 @@ probierz-rs/Cargo.lock
 # Resolved by npm from package.json for the workspace packages.
 package-lock.json
 # The repository root. npm reads package.json and package-lock.json from here,
-# tsc reads tsconfig.base.json, Vercel reads vercel.json, GitHub reads
-# README.md and LICENSE, and the pack's release tooling reads
-# platform-entitlements.json by that exact path from other repositories.
+# tsc reads tsconfig.base.json, GitHub reads README.md and LICENSE, and the
+# pack's release tooling reads platform-entitlements.json by that exact path
+# from other repositories.
 .
-# The published documentation URL space. Every file below is one page of
-# https://probierz.wisent.com/docs, served with `cleanUrls` by vercel.json:
-# moving a page into a sub-folder renames the page's public address. Only the
-# folder counts are declared here — each page is still held to the line
-# limit, and the shared stylesheet lives in docs/site.css instead of inside
-# every page.
-docs
-docs/concepts
 # One manifest per application, at the exact path the product reads:
 # `manifest::load` opens `apps/<id>/probierz.yaml` and nothing else, and the
 # format has no include mechanism, so an application's declaration cannot be
