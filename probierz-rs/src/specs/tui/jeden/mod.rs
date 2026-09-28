@@ -1,5 +1,6 @@
 //! The jeden journeys this surface runs.
 
+pub(crate) mod cli;
 pub(crate) mod functional;
 pub(crate) mod model_routing;
 pub(crate) mod onboarding_first_use;

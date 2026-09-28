@@ -87,6 +87,51 @@ pub fn specs() -> Vec<Spec> {
         },
         Spec {
             surface: "tui",
+            title: "jeden-cli-basics",
+            run: jeden::cli::basics,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-collab-share",
+            run: jeden::cli::collab_share,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-doctor",
+            run: jeden::cli::network::doctor,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-gallery",
+            run: jeden::cli::gallery,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-model-catalog",
+            run: jeden::cli::network::model_catalog,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-run",
+            run: jeden::cli::network::run,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-settings-export",
+            run: jeden::cli::settings_export,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-token",
+            run: jeden::cli::network::token,
+        },
+        Spec {
+            surface: "tui",
+            title: "jeden-cli-usage",
+            run: jeden::cli::network::usage,
+        },
+        Spec {
+            surface: "tui",
             title: "jeden-branch-roundtrip",
             run: jeden::functional::state::branch,
         },
