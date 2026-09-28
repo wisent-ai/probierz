@@ -16,6 +16,7 @@ use crate::specs::{self, tui::common};
 
 mod constants;
 pub(crate) mod network;
+pub(crate) mod perf;
 mod relay;
 
 /// Run jeden with `args` (and `input` on stdin) in a fresh scratch workspace.

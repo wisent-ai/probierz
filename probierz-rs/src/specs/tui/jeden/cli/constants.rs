@@ -4,6 +4,10 @@
 
 /// A jeden command gets a minute.
 pub(super) const COMMAND_SECONDS: u64 = 60;
+/// Generous ceilings, so a gross regression trips without flaking on shared
+/// hardware: a local command, and one that reaches Brama, in milliseconds.
+pub(super) const LOCAL_CEILING_MS: u128 = 15_000;
+pub(super) const NETWORK_CEILING_MS: u128 = 45_000;
 
 /// The settings export's tab sections and group headers.
 pub(super) const SETTINGS_SECTIONS: [&str; 6] = [
