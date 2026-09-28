@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::specs::*;
+use serde_json::json;
 
 /// Run one surface's journeys and write the canonical report.
 ///
@@ -37,6 +37,7 @@ pub fn execute(
         )
     })?;
 
+    crate::specs::tui::common::anchor_scratch(harness);
     let mut capture_errors: Vec<String> = Vec::new();
     let mut rows: Vec<Value> = Vec::new();
     for spec in &specs {
@@ -111,4 +112,3 @@ pub fn execute(
     let code = if passed == rows.len() { 0 } else { 1 };
     Ok((report, code))
 }
-

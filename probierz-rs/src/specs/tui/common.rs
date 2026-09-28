@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
@@ -44,16 +44,28 @@ pub fn required_file(context: &Context, name: &str, missing: &str) -> Result<Pat
     Ok(path)
 }
 
-/// A fresh scratch directory for one journey, inside this checkout's ignored
-/// build directory (probierz-rs/target/journey-scratch), never the system
-/// temporary directory: a run's throwaway state stays in the one checkout.
+/// The checkout the running journeys belong to (the runner's `--harness`),
+/// set once by the runner before any journey runs.
+static SCRATCH_ROOT: OnceLock<PathBuf> = OnceLock::new();
+
+/// Anchor every journey's scratch at `harness`; the first harness set wins.
+pub fn anchor_scratch(harness: &Path) {
+    let _ = SCRATCH_ROOT.set(harness.to_path_buf());
+}
+
+/// A fresh scratch directory for one journey, inside the running checkout's
+/// ignored build directory (<harness>/probierz-rs/target/journey-scratch),
+/// never the system temporary directory and never the build host's path.
 pub fn scratch(prefix: &str) -> Result<PathBuf, String> {
+    let root = SCRATCH_ROOT.get().ok_or(
+        "journey scratch has no checkout: the runner anchors it at --harness before a journey runs",
+    )?;
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| format!("the clock is before the epoch: {error}"))?
         .as_nanos();
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target/journey-scratch")
+    let path = root
+        .join("probierz-rs/target/journey-scratch")
         .join(format!("{prefix}-{}-{stamp}", std::process::id()));
     fs::create_dir_all(&path)
         .map_err(|error| format!("cannot create {}: {error}", path.display()))?;
