@@ -7,14 +7,18 @@ pub(crate) struct Target {
 
 pub(crate) fn target(name: &str) -> Option<Target> {
     Some(match name {
+        // Web pages are driven through a Weles browser by journeys registered
+        // in this crate (crate::specs::web); nothing links a browser library.
         "web" => Target {
             pkg: "packages/web",
-            script: "test:web",
-            tool: "playwright",
+            script: "probierz run web",
+            tool: "probierz",
         },
-        "electron" => Target {
-            pkg: "packages/electron",
-            script: "test:electron",
+        // The jeden/omp terminal comparison suite, still a Node suite under
+        // packages/web until it runs as registered tui journeys.
+        "tui:jeden" => Target {
+            pkg: "packages/web",
+            script: "test:tui:jeden",
             tool: "playwright",
         },
         "mobile:ios" => Target {
@@ -59,7 +63,7 @@ pub(crate) fn target(name: &str) -> Option<Target> {
 pub(crate) fn target_list() -> Vec<&'static str> {
     vec![
         "web",
-        "electron",
+        "tui:jeden",
         "mobile:ios",
         "mobile:ios:byk-auth",
         "mobile:android",
@@ -71,7 +75,7 @@ pub(crate) fn target_list() -> Vec<&'static str> {
 }
 
 pub(crate) fn accepted_preflight_targets() -> &'static str {
-    "web|electron|mobile:ios|mobile:ios:byk-auth|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
+    "web|tui:jeden|mobile:ios|mobile:ios:byk-auth|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
 }
 
 /// The flags the six execution commands accept, printed by each of their

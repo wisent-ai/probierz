@@ -52,10 +52,10 @@ pub(crate) fn remote_secret_env(harness: &Path, app_id: &str, names: &[&str]) ->
 
 pub(crate) fn setup_step_count(target: &str) -> Result<u64, Failure> {
     match target {
-        "web" | "electron" | "mobile:ios" | "mobile:android" | "desktop:win" | "desktop:cua" => Ok(2),
+        "web" | "tui:jeden" | "mobile:ios" | "mobile:android" | "desktop:win" | "desktop:cua" => Ok(2),
         "desktop:mac" => Ok(3),
         "tui" => Ok(1),
-        _ => Err(Failure::config("stado.submit", format!("unknown target: {target} (web|electron|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui)"))),
+        _ => Err(Failure::config("stado.submit", format!("unknown target: {target} (web|tui:jeden|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui)"))),
     }
 }
 

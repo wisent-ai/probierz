@@ -20,13 +20,13 @@ pub fn author_manifest(
             "authorManifest needs at least one repository",
         ));
     }
-    if !matches!(target, "web" | "electron") && app_path.is_none() {
+    if target != "web" && app_path.is_none() {
         return Err(Failure::invalid(
             "author-manifest",
             format!("{target} needs --app-path"),
         ));
     }
-    if matches!(target, "web" | "electron") && base_url.is_none() {
+    if target == "web" && base_url.is_none() {
         return Err(Failure::invalid(
             "author-manifest",
             format!("{target} needs --base-url"),

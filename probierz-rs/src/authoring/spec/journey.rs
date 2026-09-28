@@ -14,8 +14,14 @@ pub fn author_spec(
     rounds: u32,
     dry_run: bool,
 ) -> Result<JsonValue, Failure> {
+    if target == "tui:jeden" {
+        return Err(Failure::invalid(
+            "author-spec",
+            "tui:jeden journeys are the hand-written jeden/omp comparison suite; they are not authored",
+        ));
+    }
     let Some(directory) = target_spec_dir(harness, target) else {
-        return Err(if matches!(target, "tui" | "desktop:cua") {
+        return Err(if matches!(target, "tui" | "desktop:cua" | "web") {
             registry_surface_refusal("author-spec", target)
         } else {
             Failure::invalid("author-spec", format!("unsupported target: {target}"))
@@ -33,13 +39,7 @@ pub fn author_spec(
             format!("app {app_id} has no {target} surface"),
         ));
     }
-    if target == "web" && base_url.is_none() {
-        return Err(Failure::invalid(
-            "author-spec",
-            "web authoring needs --base-url",
-        ));
-    }
-    if !matches!(target, "web" | "electron") && app_path.is_none() {
+    if app_path.is_none() {
         return Err(Failure::invalid(
             "author-spec",
             format!("{target} authoring needs --app-path"),
@@ -49,7 +49,7 @@ pub fn author_spec(
         .map_err(|detail| Failure::unavailable("author-spec.probe", detail))?;
     let staged = directory.join(format!(
         ".author-staging-{journey}{}",
-        spec_extension(target)
+        SPEC_EXTENSION
     ));
     fs::create_dir_all(&directory)?;
     let first_brief =

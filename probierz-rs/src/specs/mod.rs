@@ -1,14 +1,14 @@
 //! The journeys this toolkit runs itself, and the runner that reports them.
 //!
-//! Two surfaces execute here rather than through a browser driver: terminal
-//! applications, driven over a real PTY, and native desktop applications,
-//! driven through the accessibility tree. Both used to be Node processes that
-//! a Node runner spawned one per journey. They are functions now, and the
-//! runner calls them, so a journey failure is a returned reason instead of a
+//! Three surfaces execute here rather than through an external test runner:
+//! terminal applications, driven over a real PTY; native desktop
+//! applications, driven through the accessibility tree; and web pages,
+//! driven through a Weles browser (`weles mcp`). Each journey is a function
+//! the runner calls, so a journey failure is a returned reason instead of a
 //! child process exit status.
 //!
-//! The report this writes is the canonical one: the same shape the Playwright
-//! reporter emits, so `analyze` treats every surface alike.
+//! The report this writes is the canonical one, so `analyze` treats every
+//! surface alike.
 //! | part | what it owns |
 //! |---|---|
 //! | [`context`] | one journey's context, the media it declares, and the registry it is selected from |
@@ -36,6 +36,7 @@ pub(crate) use crate::failure::{create_private, fail, iso_timestamp, Failure};
 
 pub mod cua;
 pub mod tui;
+pub mod web;
 
 mod runner;
 

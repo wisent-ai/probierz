@@ -17,18 +17,18 @@ pub const SURFACES: &[Surface] = &[
     Surface {
         name: "web",
         pkg: "packages/web",
-        tool: "Playwright",
-        script: "test:web",
-        targets: "Chromium / Firefox / WebKit + emulated mobile",
-        env: &["BASE_URL"],
+        tool: "Weles (weles mcp)",
+        script: "probierz run web",
+        targets: "web pages in a Weles browser: desktop, tablet and mobile viewports",
+        env: &["WELES_BIN", "BASE_URL"],
     },
     Surface {
-        name: "electron",
-        pkg: "packages/electron",
-        tool: "Playwright (_electron)",
-        script: "test:electron",
-        targets: "Electron desktop app",
-        env: &["ELECTRON_APP_MAIN"],
+        name: "tui:jeden",
+        pkg: "packages/web",
+        tool: "tmux",
+        script: "test:tui:jeden",
+        targets: "jeden and omp terminal sessions side by side",
+        env: &["JEDEN_BIN", "OMP_BIN"],
     },
     Surface {
         name: "mobile",
@@ -79,11 +79,8 @@ pub(crate) const SPEC_SUFFIXES: [&str; 3] = [".e2e.ts", ".spec.ts", ".spec.mjs"]
 /// prints it so an operator can run it, and `run` is the command that executes
 /// one.
 pub(crate) const RUN_COMMANDS: [(&str, &str); 8] = [
-    ("web", "BASE_URL=https://example.com npm run test:web"),
-    (
-        "electron",
-        "ELECTRON_APP_MAIN=/abs/app/main.js npm run test:electron",
-    ),
+    ("web", "BASE_URL=https://example.com probierz run web"),
+    ("tui:jeden", "npm run test:tui:jeden"),
     (
         "mobile:ios",
         "APP_IOS=/abs/App.app IOS_DEVICE='iPhone 17' npm run test:mobile:ios",
@@ -167,7 +164,7 @@ pub fn specs(harness: &Path, surface: Option<&str>) -> Answer {
     let mut answer = Vec::with_capacity(chosen.len());
     for (entry, surface_name) in chosen {
         let specs = match surface_name {
-            "tui" | "desktop:cua" => crate::specs::select(surface_name, None)
+            "tui" | "desktop:cua" | "web" => crate::specs::select(surface_name, None)
                 .into_iter()
                 .map(|spec| spec.title.to_string())
                 .collect(),

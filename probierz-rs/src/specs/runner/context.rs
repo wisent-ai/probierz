@@ -81,6 +81,7 @@ pub fn registry() -> Vec<Spec> {
     let mut all = Vec::new();
     all.extend(tui::specs());
     all.extend(cua::specs());
+    all.extend(web::specs());
     all.sort_by(|left, right| (left.surface, left.title).cmp(&(right.surface, right.title)));
     all
 }

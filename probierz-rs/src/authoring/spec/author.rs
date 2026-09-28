@@ -11,8 +11,14 @@ pub fn install_accepted_spec(
     candidate: &Path,
     mapping_paths: &[String],
 ) -> Result<JsonValue, Failure> {
+    if target == "tui:jeden" {
+        return Err(Failure::invalid(
+            "author-spec.accept",
+            "tui:jeden journeys are the hand-written jeden/omp comparison suite; they are not authored",
+        ));
+    }
     let directory = target_spec_dir(harness, target).ok_or_else(|| {
-        if matches!(target, "tui" | "desktop:cua") {
+        if matches!(target, "tui" | "desktop:cua" | "web") {
             registry_surface_refusal("author-spec.accept", target)
         } else {
             Failure::invalid(
@@ -94,7 +100,7 @@ pub fn install_accepted_spec(
     }
     manifest::validate(&document, &loaded.file)?;
     fs::create_dir_all(&directory)?;
-    let destination = directory.join(format!("{app_id}-{journey}{}", spec_extension(target)));
+    let destination = directory.join(format!("{app_id}-{journey}{SPEC_EXTENSION}"));
     fs::rename(candidate, &destination)?;
     fs::write(&loaded.file, serde_yaml::to_string(&document)?)?;
     Ok(json!({ "spec": destination.to_string_lossy(), "manifest": loaded.file.to_string_lossy() }))

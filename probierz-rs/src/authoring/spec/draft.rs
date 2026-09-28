@@ -113,7 +113,7 @@ pub(crate) fn draft_structured_artifact(
 }
 
 pub(crate) fn probe(target: &str, base_url: Option<&str>, app_path: Option<&str>) -> Result<String, String> {
-    if matches!(target, "web" | "electron") {
+    if target == "web" {
         let url = base_url.ok_or_else(|| format!("{target} needs --base-url"))?;
         let output = command_output(
             "curl",
@@ -158,19 +158,14 @@ pub(crate) fn probe(target: &str, base_url: Option<&str>, app_path: Option<&str>
 }
 
 /// Where a spec file for this target lives, from the one inventory
-/// `discovery` keeps. `tui` and `desktop:cua` have no answer: their journeys
-/// are functions in this crate, not files a spec author writes.
+/// `discovery` keeps. `tui`, `desktop:cua` and `web` have no answer: their
+/// journeys are functions in this crate, not files a spec author writes.
 pub(crate) fn target_spec_dir(harness: &Path, target: &str) -> Option<PathBuf> {
     crate::discovery::spec_dir(target).map(|relative| harness.join(relative))
 }
 
-pub(crate) fn spec_extension(target: &str) -> &'static str {
-    if matches!(target, "web" | "electron") {
-        ".spec.ts"
-    } else {
-        ".e2e.ts"
-    }
-}
+/// Authored spec files are WebdriverIO journeys (mobile and native desktop).
+pub(crate) const SPEC_EXTENSION: &str = ".e2e.ts";
 
 /// The refusal an authoring command owes a registry surface. Writing a file
 /// for it would produce a spec nothing runs.

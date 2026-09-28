@@ -64,7 +64,7 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
             format!("--local and --seed-resend apply to mobile:ios:byk-auth, not {name}"),
         ));
     }
-    if matches!(name, "tui" | "desktop:cua") {
+    if matches!(name, "tui" | "desktop:cua" | "web") {
         return run_registered_surface(harness, name, &opts);
     }
     if opts.seed_resend {

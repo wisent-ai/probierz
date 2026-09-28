@@ -2,8 +2,7 @@ use serde_json::json;
 use crate::stado::*;
 pub(crate) fn registration_directory(target: &str) -> Option<&'static str> {
     match target {
-        "web" => Some("packages/web/tests"),
-        "electron" => Some("packages/electron/tests"),
+        "tui:jeden" => Some("packages/web/tests"),
         "mobile:ios" | "mobile:android" => Some("packages/mobile/test/specs"),
         "desktop:mac" | "desktop:win" => Some("packages/desktop-native/test/specs"),
         "desktop:cua" => Some("packages/desktop-cua/specs"),
@@ -13,7 +12,7 @@ pub(crate) fn registration_directory(target: &str) -> Option<&'static str> {
 }
 
 pub(crate) fn registration_extension(target: &str) -> &'static str {
-    if matches!(target, "web" | "electron") {
+    if target == "tui:jeden" {
         ".spec.ts"
     } else if matches!(target, "tui" | "desktop:cua") {
         ".spec.mjs"

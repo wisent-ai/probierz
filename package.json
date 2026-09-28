@@ -6,18 +6,18 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "description": "Cross-platform test automation toolkit: web, mobile (iOS/Android), desktop (Electron + native). Agent surface (CLI + stdio MCP) with a read-only discovery layer (surfaces/specs/run commands) and an execution layer that runs a target under chosen conditions, records video/trace/screenshots, and analyzes the result.",
+  "description": "Cross-platform test automation toolkit: web pages through Weles, mobile (iOS/Android), native desktop and terminal applications. Agent surface (CLI + stdio MCP) with a read-only discovery layer (surfaces/specs/run commands) and an execution layer that runs a target under chosen conditions, records video/trace/screenshots, and analyzes the result.",
   "workspaces": [
     "packages/web",
-    "packages/electron",
     "packages/mobile",
     "packages/desktop-native",
     "packages/tui",
     "packages/desktop-cua"
   ],
   "scripts": {
-    "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps && npm --workspace packages/electron exec playwright install",
-    "test:web": "npm --workspace packages/web run test",
+    "setup": "npm install && npm --workspace packages/web exec playwright install --with-deps",
+    "test:web": "probierz run web",
+    "test:tui:jeden": "npm --workspace packages/web run test",
     "test:jeden": "npm --workspace packages/web exec playwright test jeden",
     "test:jeden:matrix": "npm --workspace packages/web exec -- playwright test jeden.matrix --project=jeden-matrix --no-deps",
     "test:jeden:scan": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"command surface\"",
@@ -25,7 +25,6 @@
     "test:jeden:screen": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"screen semantics\"",
     "test:jeden:journeys": "npm --workspace packages/web exec -- playwright test jeden.screen --project=jeden -g \"interaction journeys\"",
     "test:jeden:golden": "PROBIERZ_UPDATE_GOLDEN=yes npm --workspace packages/web exec -- playwright test jeden.sidebyside --project=jeden",
-    "test:electron": "npm --workspace packages/electron run test",
     "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
     "test:mobile:ios:byk-auth": "probierz run mobile:ios:byk-auth",
     "test:mobile:ios:byk-auth:remote": "probierz run mobile:ios:byk-auth --host stado:mini",

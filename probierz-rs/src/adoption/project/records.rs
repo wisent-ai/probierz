@@ -5,7 +5,7 @@ pub(crate) const INDEX_RELATIVE_PATH: &str = "apps/.adoptions.json";
 pub(crate) const SPEC_DIRECTORIES: [&str; 3] = ["test/specs", "tests", "specs"];
 pub(crate) const TARGET_PACKAGES: [(&str, &str); 9] = [
     ("web", "packages/web"),
-    ("electron", "packages/electron"),
+    ("tui:jeden", "packages/web"),
     ("mobile:ios", "packages/mobile"),
     ("mobile:ios:byk-auth", "packages/mobile"),
     ("mobile:android", "packages/mobile"),

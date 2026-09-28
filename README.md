@@ -40,7 +40,7 @@ a release was allowed.
 Probierz serves three audiences:
 
 - **Product and test engineers** define application journeys once and run them
-  across the supported browser, mobile, Electron, and native desktop surfaces.
+  across the supported web, mobile, native desktop and terminal surfaces.
 - **Release owners** inspect freshness, receipts, regressions, and explicit gate
   reasons instead of treating a green process exit as sufficient evidence.
 - **Automation and AI agents** discover coverage through stable CLI and MCP
@@ -59,7 +59,8 @@ one explainable release decision.
   specifications, journey outlines, and exact run commands;
 - preflight checks that distinguish missing Probierz-owned tooling from
   host-level prerequisites;
-- Playwright execution for web and Electron applications;
+- web journeys registered in `probierz-rs/src/specs/web`, driving pages through
+  a Weles browser (`weles mcp`); Probierz links no browser library itself;
 - WebdriverIO and Appium execution for iOS, Android, native macOS through Mac2,
   and native Windows applications;
 - `cua-driver` execution for native macOS applications when Accessibility-based
@@ -95,8 +96,8 @@ one explainable release decision.
   Authoring and figure evaluation use only the authenticated Stado model router.
 - Probierz does not install Xcode, Android SDKs, simulators, physical-device
   support, WinAppDriver, operating-system permissions, or application runtimes.
-- Probierz does not make Playwright video available for Electron or promise
-  screen recording from drivers that do not expose it.
+- Probierz does not drive a browser itself: a web journey needs the `weles`
+  binary (or `WELES_BIN`), and records the screenshots Weles takes.
 - Probierz is not currently a hosted testing service or a supported prebuilt
   binary distribution.
 
@@ -104,8 +105,8 @@ one explainable release decision.
 
 | Surface | Execution tool | Required environment | Current state |
 |---|---|---|---|
-| Web | Playwright: Chromium, Firefox, WebKit, emulated mobile | Node.js 22 or newer; installed browser | Implemented |
-| Electron | Playwright `_electron` | Node.js 22 or newer; application entry point | Implemented |
+| Web | Weles browser through `weles mcp`: desktop, tablet and mobile viewports | the `weles` binary (or `WELES_BIN`) | Implemented |
+| jeden terminal comparison (`tui:jeden`) | tmux sessions of jeden and omp, Node suite in `packages/web` | Node.js 22 or newer; tmux; both binaries | Implemented; moving to registered `tui` journeys |
 | Mobile iOS | WebdriverIO, Appium, XCUITest | macOS, Xcode, simulator or authorized device | Implemented when host prerequisites are available |
 | Mobile Android | WebdriverIO, Appium, UiAutomator2 | Android SDK, emulator or authorized device | Implemented when host prerequisites are available |
 | Native macOS (Mac2) | WebdriverIO, Appium Mac2 | macOS, full Xcode, target, and required Accessibility permission | Implemented when host prerequisites are available |
@@ -181,7 +182,7 @@ probierz list
 probierz apps
 ```
 
-`list` returns the web, Electron, mobile and native-desktop surfaces
+`list` returns the web, terminal, mobile and native-desktop surfaces
 with their targets and environment requirements; `apps` returns the
 validated application manifests in the checkout. Neither executes a
 test target.

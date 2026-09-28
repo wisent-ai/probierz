@@ -8,7 +8,16 @@ pub(crate) fn preflight(
     let env = env_snapshot(extra);
     let setup = |target: &str| format!("probierz setup {target}");
     let checks = match name {
-        "web" | "electron" => vec![
+        "web" => {
+            let weles = env.get("WELES_BIN").cloned().unwrap_or_else(|| "weles".into());
+            vec![check_row(
+                "weles (browser owner)",
+                successful(&weles, &["version"]),
+                false,
+                "web journeys drive pages through `weles mcp`: install weles or set WELES_BIN to its binary",
+            )]
+        }
+        "tui:jeden" => vec![
             check_row("@playwright/test", pkg_installed(harness, "@playwright/test"), true, setup(name)),
             check_row("playwright browsers", playwright_browsers_installed(harness), true, setup(name)),
         ],
