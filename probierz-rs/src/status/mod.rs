@@ -45,6 +45,7 @@ pub use intake::listener::intake_serve;
 pub use runs::dashboard::dashboard;
 pub use runs::history::history;
 pub(crate) use runs::history::run_history_value;
+pub(crate) use runs::records::failure_class;
 
 #[cfg(test)]
 mod tests {

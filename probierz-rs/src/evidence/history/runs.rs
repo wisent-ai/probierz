@@ -3,50 +3,6 @@ use crate::evidence::*;
 pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
     let source = try_json_file(manifest_path)?;
     let directory = manifest_path.parent()?;
-    let analysis_path = source
-        .get("analysisPath")
-        .and_then(Value::as_str)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| directory.join("analysis.json"));
-    let report_path = source
-        .pointer("/paths/reportPath")
-        .and_then(Value::as_str)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| directory.join("report.json"));
-    let analysis = try_json_file(&analysis_path);
-    let report = try_json_file(&report_path);
-    let failures = analysis
-        .as_ref()
-        .and_then(|value| value.get("failures"))
-        .and_then(Value::as_array)
-        .or_else(|| {
-            report
-                .as_ref()
-                .and_then(|value| value.get("failures"))
-                .and_then(Value::as_array)
-        });
-    let failure_text = failures
-        .into_iter()
-        .flatten()
-        .map(|failure| {
-            failure
-                .get("error")
-                .or_else(|| failure.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-        .to_ascii_lowercase();
-    let infrastructure = [
-        "executable doesn't exist",
-        "toolchain",
-        "connection refused",
-        "econnrefused",
-    ]
-    .iter()
-    .any(|needle| failure_text.contains(needle))
-        || (failure_text.contains("driver") && failure_text.contains("not installed"));
     let status = normalized_status(&source);
     let mut record = Map::new();
     record.insert(
@@ -99,11 +55,7 @@ pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
     record.insert(
         "failureClass".into(),
         if record.get("status").and_then(Value::as_str) == Some("failed") {
-            json!(if infrastructure {
-                "infrastructure"
-            } else {
-                "product"
-            })
+            json!(crate::status::failure_class(&source))
         } else {
             Value::Null
         },

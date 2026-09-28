@@ -79,34 +79,20 @@ pub(crate) fn normalized_status(manifest: &Value) -> &str {
     }
 }
 
-pub(crate) fn failure_class(analysis: Option<&Value>, report: Option<&Value>) -> &'static str {
-    let failures = analysis
-        .and_then(|value| value.get("failures"))
-        .and_then(Value::as_array)
-        .or_else(|| {
-            report
-                .and_then(|value| value.get("failures"))
-                .and_then(Value::as_array)
-        });
-    let text = failures
-        .into_iter()
-        .flatten()
-        .filter_map(|failure| {
-            string(failure.get("error")).or_else(|| string(failure.get("message")))
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-        .to_ascii_lowercase();
-    let driver_missing = text
-        .find("driver")
-        .and_then(|start| text[start..].find("not installed"))
-        .is_some();
-    if text.contains("executable doesn't exist")
-        || driver_missing
-        || text.contains("toolchain")
-        || text.contains("connection refused")
-        || text.contains("econnrefused")
-    {
+/// Where a failed run stopped, read from what the runner recorded in its
+/// manifest, never from the wording of a test failure. A run whose data seed
+/// failed (`setupError`) or whose test tool produced no valid report
+/// (`reportValidation.ok` false) stopped before any product assertion ran, so
+/// the failure belongs to the harness or its environment; a run that produced
+/// a valid report failed on the product's own assertions. Status and evidence
+/// both classify through this one function.
+pub(crate) fn failure_class(manifest: &Value) -> &'static str {
+    let setup_failed = string(manifest.get("setupError")).is_some();
+    let report_valid = manifest
+        .pointer("/reportValidation/ok")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if setup_failed || !report_valid {
         "infrastructure"
     } else {
         "product"
@@ -182,7 +168,7 @@ pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
         .collect::<Vec<_>>();
     let status = normalized_status(&manifest);
     let class = if status == "failed" {
-        Value::String(failure_class(analysis.as_ref(), report.as_ref()).to_string())
+        Value::String(failure_class(&manifest).to_string())
     } else {
         Value::Null
     };
