@@ -6,7 +6,7 @@ repositories:
     mappings:
       - paths:
           - apps/landing-page/**
-          - packages/web/tests/landing-page.spec.ts
+          - probierz-rs/src/specs/web/landing/**
         journeys: [first-screen, product-proof, responsive, conversion, release-eval]
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/product-guidelines
     mappings:
@@ -17,7 +17,7 @@ repositories:
 
 surfaces:
   web:
-    spec: landing-page.spec.ts
+    spec: landing-page-release-evaluation
     journeys: [first-screen, product-proof, responsive, conversion, release-eval]
 
 journeys:

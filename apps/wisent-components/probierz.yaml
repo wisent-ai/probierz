@@ -7,20 +7,20 @@ repositories:
       - paths:
           - src/**
           - tokens.json
-          - figma-component-inventory.json
+          - figma/catalog/**
           - figma/renders/**
           - tests/visual/**
-          - playwright.config.mjs
         journeys: [figma-parity]
   - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz
     mappings:
       - paths:
           - apps/wisent-components/**
+          - probierz-rs/src/specs/web/components/**
         journeys: [figma-parity]
 
 surfaces:
   web:
-    spec: figma-parity.spec.mjs
+    spec: wisent-components-figma-parity
     journeys: [figma-parity]
 
 journeys:

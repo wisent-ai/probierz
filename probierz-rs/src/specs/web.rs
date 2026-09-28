@@ -2,6 +2,7 @@
 
 use super::Spec;
 
+mod components;
 mod landing;
 mod onboarding;
 pub(crate) mod weles;
@@ -43,6 +44,11 @@ pub fn specs() -> Vec<Spec> {
             surface: "web",
             title: "wisent-gradio-onboarding-first-use",
             run: onboarding::results::wisent_gradio,
+        },
+        Spec {
+            surface: "web",
+            title: "wisent-components-figma-parity",
+            run: components::figma_parity,
         },
         Spec {
             surface: "web",
