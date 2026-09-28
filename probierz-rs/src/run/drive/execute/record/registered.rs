@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn run_registered_surface(harness: &Path, name: &str, opts: &RunArgs) -> Answer {
     let mut env = env_snapshot(&opts.env);
     let run_id = format!(
@@ -63,6 +63,26 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
             "cli.run",
             format!("--local and --seed-resend apply to mobile:ios:byk-auth, not {name}"),
         ));
+    }
+    // A web journey opens a Weles browser on the machine that runs it, and a
+    // browser runs only on a host Stado places it on. `probierz stado run web`
+    // is that placement; its job script exports PROBIERZ_SOURCE_IDENTITY, which
+    // is how a run here knows it is inside one.
+    if name == "web" {
+        if let Some(host) = opts.host.as_deref() {
+            return Err(fail(
+                "cli.run",
+                format!("web journeys are placed by Stado, not by --host: run `probierz stado run web --app <appId>` (requested host {host})"),
+            ));
+        }
+        let placed = std::env::var_os("PROBIERZ_SOURCE_IDENTITY").is_some()
+            || opts.env.contains_key("PROBIERZ_SOURCE_IDENTITY");
+        if !placed {
+            return Err(fail(
+                "cli.run",
+                "a web journey opens a Weles browser, which runs only on a Stado-placed host: run `probierz stado run web --app <appId>`",
+            ));
+        }
     }
     if matches!(name, "tui" | "desktop:cua" | "web") {
         return run_registered_surface(harness, name, &opts);
@@ -164,4 +184,3 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
     }
     Ok(())
 }
-
