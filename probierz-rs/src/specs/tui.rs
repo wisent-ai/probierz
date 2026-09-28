@@ -3,6 +3,7 @@
 use super::Spec;
 
 pub(crate) mod common;
+pub(crate) mod service;
 
 mod game_asset_creator_cli;
 mod ssh_auth_router_onboarding_first_use;

@@ -1,4 +1,5 @@
-use crate::specs::tui::common::{self, Output, Service};
+use crate::specs::tui::common::{self, Output};
+use crate::specs::tui::service::Service;
 use std::{
     collections::BTreeMap,
     fs,
