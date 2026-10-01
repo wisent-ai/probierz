@@ -72,14 +72,20 @@ pub enum EvidenceCommand {
     },
     /// Compare two recorded runs.
     Compare {
+        /// First run to compare.
         left_run_id: Option<String>,
+        /// Second run to compare.
         right_run_id: Option<String>,
+        /// Application both runs belong to.
         app_id: Option<String>,
     },
     /// Find the newest passing run.
     LastGreen {
+        /// Application whose runs are searched.
         app_id: Option<String>,
+        /// Only runs on this target.
         target: Option<String>,
+        /// Only runs of this journey.
         journey: Option<String>,
     },
     /// Sign exact runs and policy into an evidence receipt.
@@ -105,45 +111,67 @@ pub enum EvidenceCommand {
     },
     /// Verify a receipt signature, payload hash, and trust anchor.
     VerifyReceipt {
+        /// Receipt file to verify (required).
         file: Option<PathBuf>,
+        /// Trusted Ed25519 public key file; without it the key in the
+        /// receipt is used and must match `--fingerprint`.
         #[arg(long = "public-key")]
         public_key: Option<PathBuf>,
+        /// Expected SHA-256 fingerprint of the signing key; falls back to
+        /// PROBIERZ_RECEIPT_PUBLIC_KEY_FINGERPRINT.
         #[arg(long)]
         fingerprint: Option<String>,
     },
     /// Emit a verified immutable first-use publication manifest.
     Publication {
+        /// Signed evidence receipt the publication rests on.
         receipt: Option<PathBuf>,
+        /// Attempt to publish.
         attempt_id: Option<String>,
+        /// Journey the attempt ran.
         journey_id: Option<String>,
+        /// Directory of the attempt's published assets.
         #[arg(long)]
         assets: Option<PathBuf>,
+        /// Trusted public key that verifies the receipt.
         #[arg(long = "public-key")]
         public_key: Option<PathBuf>,
+        /// Expected SHA-256 fingerprint of the receipt's signing key.
         #[arg(long)]
         fingerprint: Option<String>,
     },
     /// Emit an Echo-ingestible onboarding proof manifest.
     PublishOnboarding {
+        /// Signed evidence receipt the proof rests on.
         receipt: Option<PathBuf>,
+        /// Run whose onboarding is published.
         #[arg(long = "run")]
         run_id: Option<String>,
+        /// Onboarding journey the run proves.
         #[arg(long = "journey")]
         journey_id: Option<String>,
+        /// Version of that journey.
         #[arg(long = "journey-version")]
         journey_version: Option<String>,
+        /// ID of that journey version.
         #[arg(long = "journey-version-id")]
         journey_version_id: Option<String>,
+        /// The fact the journey's first success established.
         #[arg(long = "first-success-fact")]
         first_success_fact: Option<String>,
+        /// Screen the proof shows.
         #[arg(long = "screen")]
         screen_id: Option<String>,
+        /// Directory of the run's published assets.
         #[arg(long)]
         assets: Option<PathBuf>,
+        /// File the manifest is written to.
         #[arg(long)]
         output: Option<PathBuf>,
+        /// Trusted public key that verifies the receipt.
         #[arg(long = "public-key")]
         public_key: Option<PathBuf>,
+        /// Expected SHA-256 fingerprint of the receipt's signing key.
         #[arg(long)]
         fingerprint: Option<String>,
     },
