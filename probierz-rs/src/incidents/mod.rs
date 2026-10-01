@@ -39,12 +39,14 @@ worth, and whether it was ever closed.
   probierz incident list [--state open|resolved|all] [--limit N] [--json]
   probierz incident show <id> [--json]
   probierz incident resolve <id> --note <text> [--run <runId>]
+  probierz incident reopen <id> --note <text>
 
 An envelope is a wisent-errors envelope: failure_point, error_code, service
 and detail are required, and a missing one is refused by name.";
 
 pub(crate) const INCIDENT_SCHEMA: &str = "ai.wisent.probierz.incident.v1";
 pub(crate) const RESOLUTION_SCHEMA: &str = "ai.wisent.probierz.incident-resolution.v1";
+pub(crate) const REOPENING_SCHEMA: &str = "ai.wisent.probierz.incident-reopening.v1";
 const REGISTER_DIRECTORY: &str = "test-results/.incidents";
 const REGISTER_FILE: &str = "register.jsonl";
 const IDENTITY_HEX: usize = 16;
@@ -98,6 +100,14 @@ pub enum IncidentCommand {
         #[arg(long)]
         json: bool,
     },
+    /// Open a resolved incident again, saying why its resolution did not hold.
+    Reopen {
+        id: String,
+        #[arg(long)]
+        note: String,
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 pub fn dispatch(harness: &Path, command: IncidentCommand) -> Answer {
@@ -134,6 +144,7 @@ pub fn dispatch(harness: &Path, command: IncidentCommand) -> Answer {
             run_id,
             json,
         } => commands::resolve(harness, &id, &note, run_id.as_deref(), json),
+        IncidentCommand::Reopen { id, note, json } => commands::reopen(harness, &id, &note, json),
     }
 }
 

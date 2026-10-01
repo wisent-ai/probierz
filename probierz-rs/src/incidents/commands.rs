@@ -8,7 +8,7 @@ use crate::failure::{Answer, Failure};
 
 use super::store::lock;
 use super::store::{append, envelope_from_flags, envelope_problem, field, folded, read_envelope};
-use super::{actor, identity, now, register_file, INCIDENT_SCHEMA, RESOLUTION_SCHEMA};
+use super::{actor, identity, now, register_file, INCIDENT_SCHEMA, REOPENING_SCHEMA, RESOLUTION_SCHEMA};
 
 /// What one recording carries, so the call site reads as the record does.
 pub struct Recorded<'a> {
@@ -245,4 +245,36 @@ pub(super) fn resolve_entry(
     });
     append(harness, &entry)?;
     Ok(entry)
+}
+
+/// Open a resolved incident again. An incident that is open is refused by
+/// name, so a repeated reopen records nothing twice.
+pub fn reopen(harness: &Path, id: &str, note: &str, json_output: bool) -> Answer {
+    if note.trim().is_empty() {
+        return Err(Failure::invalid(
+            "incident.reopen",
+            "--note must say why the resolution did not hold",
+        ));
+    }
+    let _lock = lock(harness)?;
+    let row = one_unlocked(harness, id)?;
+    if row.get("resolution").is_none() {
+        return Err(Failure::invalid(
+            "incident.reopen",
+            format!("{id} is open; only a resolved incident can be reopened"),
+        ));
+    }
+    let entry = json!({
+        "schema": REOPENING_SCHEMA,
+        "incident_id": id,
+        "reopened_at": now(),
+        "actor": actor(),
+        "note": note,
+    });
+    append(harness, &entry)?;
+    if json_output {
+        return print_json(&entry);
+    }
+    println!("reopened {id}");
+    Ok(())
 }

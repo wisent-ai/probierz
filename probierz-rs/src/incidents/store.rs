@@ -9,7 +9,7 @@ use serde_json::{json, Map, Value};
 
 use crate::failure::Failure;
 
-use super::{register_file, INCIDENT_SCHEMA, RESOLUTION_SCHEMA};
+use super::{register_file, INCIDENT_SCHEMA, REOPENING_SCHEMA, RESOLUTION_SCHEMA};
 
 pub(super) fn lock(harness: &Path) -> Result<std::fs::File, Failure> {
     let directory = harness.join("test-results/.incidents");
@@ -123,7 +123,7 @@ fn entries(harness: &Path) -> Result<Vec<Value>, Failure> {
         })?;
         if !matches!(
             entry.get("schema").and_then(Value::as_str),
-            Some(INCIDENT_SCHEMA | RESOLUTION_SCHEMA)
+            Some(INCIDENT_SCHEMA | RESOLUTION_SCHEMA | REOPENING_SCHEMA)
         ) {
             return Err(Failure::invalid(
                 "incident.register",
@@ -145,29 +145,35 @@ pub fn field<'a>(entry: &'a Value, name: &str) -> &'a str {
 
 /// One row per incident, newest first, with its resolution folded on. Nothing
 /// in the file is rewritten, so an incident's state is what the records say it
-/// is rather than what a later edit made it.
+/// is rather than what a later edit made it: the records are applied in the
+/// order they were written, a resolution closing the incident and a
+/// reopening opening it again, and every reopening is kept on the row.
 pub fn folded(harness: &Path) -> Result<Vec<Value>, Failure> {
-    let all = entries(harness)?;
-    let mut rows: Vec<Value> = all
-        .iter()
-        .filter(|entry| field(entry, "schema") == INCIDENT_SCHEMA)
-        .map(|entry| {
+    let mut rows: Vec<Value> = Vec::new();
+    for entry in entries(harness)? {
+        let schema = field(&entry, "schema");
+        if schema == INCIDENT_SCHEMA {
             let mut row = entry.clone();
             row["state"] = json!("open");
-            row
-        })
-        .collect();
-    for entry in all
-        .iter()
-        .filter(|entry| field(entry, "schema") == RESOLUTION_SCHEMA)
-    {
-        let id = field(entry, "incident_id");
-        if let Some(row) = rows
-            .iter_mut()
-            .find(|row| field(row, "incident_id") == id && field(row, "state") == "open")
-        {
+            rows.push(row);
+            continue;
+        }
+        let id = field(&entry, "incident_id").to_string();
+        let Some(row) = rows.iter_mut().find(|row| field(row, "incident_id") == id) else {
+            continue;
+        };
+        if schema == RESOLUTION_SCHEMA && field(row, "state") == "open" {
             row["state"] = json!("resolved");
             row["resolution"] = entry.clone();
+        } else if schema == REOPENING_SCHEMA && field(row, "state") == "resolved" {
+            row["state"] = json!("open");
+            if let Some(object) = row.as_object_mut() {
+                object.remove("resolution");
+            }
+            match row.get_mut("reopenings").and_then(Value::as_array_mut) {
+                Some(reopenings) => reopenings.push(entry.clone()),
+                None => row["reopenings"] = json!([entry]),
+            }
         }
     }
     rows.reverse();
