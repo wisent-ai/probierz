@@ -88,11 +88,10 @@ fn running_pid(printed: &str) -> Option<i32> {
 }
 
 /// `launchctl bootout` can return while the Node intake still holds its
-/// listener: on lukasz-macbook on 2026-09-23 the declared intake's first bind
-/// then failed with `Address already in use`, exited 75, and `stado service
-/// ensure` reported the unit loaded with no pid until launchd's restart bound
-/// the port. Binding waits until that process is gone, at most as long as
-/// launchd waits before killing it.
+/// listener: the declared intake's next bind then fails with `Address already
+/// in use`, exits 75, and `stado service ensure` reports the unit loaded with
+/// no pid until launchd's restart binds the port. Binding waits until that
+/// process is gone, at most as long as launchd waits before killing it.
 #[cfg(target_os = "macos")]
 fn await_exit(pid: i32) {
     use std::time::Instant;

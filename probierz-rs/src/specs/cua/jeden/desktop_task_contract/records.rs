@@ -3,7 +3,6 @@ pub(crate) const POLL: Duration = Duration::from_millis(500);
 pub(crate) const SHELL_TIMEOUT: Duration = Duration::from_secs(45);
 pub(crate) const CONTRACT_TIMEOUT: Duration = Duration::from_secs(60);
 pub(crate) const REPORT_TIMEOUT: Duration = Duration::from_secs(150);
-pub(crate) const DEDICATED_HOST: &str = "charless-mac-mini";
 pub(crate) const REQUIRED_REPORT_ENTRIES: [&str; 7] = [
     "functionality",
     "diagnostics",
@@ -71,18 +70,7 @@ pub(crate) fn require_remote(context: &specs::Context) -> Result<String, String>
                 .to_string(),
         );
     }
-    let hostname = Command::new("hostname")
-        .output()
-        .map(|output| {
-            String::from_utf8_lossy(&output.stdout)
-                .trim()
-                .to_ascii_lowercase()
-        })
-        .unwrap_or_default();
-    let hostname = hostname.strip_suffix(".local").unwrap_or(&hostname);
-    if hostname != DEDICATED_HOST {
-        return Err("This journey may run on the dedicated Mac mini, never on the operator's current computer".to_string());
-    }
+    this_host_target()?;
     if required(context, "PROBIERZ_APP_ID")? != "jeden-desktop" {
         return Err(
             "The native task-contract journey may only run for the registered jeden-desktop app"
@@ -121,4 +109,26 @@ pub(crate) fn observed_at() -> String {
         .unwrap_or_default()
         .as_millis();
     millis.to_string()
+}
+
+/// The Stado registry name of the host this journey runs on, as Stado itself
+/// answers it (`stado registry self`). The registry, not this file, says which
+/// hosts are in the fleet, so a host that is renamed or replaced is known
+/// without a release of Probierz, and a machine that is no registry target is
+/// refused with Stado's own reason.
+pub(crate) fn this_host_target() -> Result<String, String> {
+    let home = std::env::var("HOME")
+        .map_err(|_| "HOME is required to find the Stado executable".to_string())?;
+    let output = Command::new(PathBuf::from(home).join(".stado/bin/stado"))
+        .args(["registry", "self", "--name-only"])
+        .output()
+        .map_err(|error| format!("cannot ask Stado which registry target this machine is: {error}"))?;
+    let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !output.status.success() || name.is_empty() {
+        return Err(format!(
+            "This journey runs only on a Stado fleet host; `stado registry self` answered: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(name)
 }

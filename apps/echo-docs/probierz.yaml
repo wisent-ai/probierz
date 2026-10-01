@@ -3,7 +3,7 @@ appId: echo-docs
 productId: echo
 owner: Echo maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-landing
+  - root: ~/Documents/CodingProjects/Wisent/echo-landing
     mappings:
       - paths:
           - src/lib/docs/echo.mjs

@@ -9,9 +9,6 @@ use serde_json::Value;
 use crate::failure::write_private;
 use crate::{specs, tui};
 
-pub(crate) const DEFAULT_SKARBIEC_BINARY: &str =
-    "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec/target/release/skarbiec";
-
 pub(crate) struct CommandResult {
     pub status: i32,
     pub output: String,
@@ -136,7 +133,12 @@ impl Drop for Shell {
 pub(crate) fn binary(context: &specs::Context) -> String {
     context
         .optional("TUI_CMD")
-        .unwrap_or_else(|| DEFAULT_SKARBIEC_BINARY.to_string())
+        .unwrap_or_else(|| {
+            specs::wisent_checkout("skarbiec")
+                .join("target/release/skarbiec")
+                .to_string_lossy()
+                .into_owned()
+        })
 }
 
 pub(crate) fn required_binary(context: &specs::Context) -> Result<String, String> {

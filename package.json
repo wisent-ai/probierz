@@ -20,7 +20,7 @@
     "test:tui": "probierz run tui",
     "test:mobile:ios": "npm --workspace packages/mobile run test:ios",
     "test:mobile:ios:byk-auth": "probierz run mobile:ios:byk-auth",
-    "test:mobile:ios:byk-auth:remote": "probierz run mobile:ios:byk-auth --host stado:mini",
+    "test:mobile:ios:byk-auth:remote": "probierz run mobile:ios:byk-auth --host \"$BYK_HOST_SELECTOR\"",
     "test:mobile:ios:byk-auth:local": "probierz run mobile:ios:byk-auth --local",
     "probe:mobile:ios:byk-auth": "probierz check mobile:ios:byk-auth",
     "seed:mobile:ios:byk-auth": "probierz run mobile:ios:byk-auth --seed",

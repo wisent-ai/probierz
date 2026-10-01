@@ -58,7 +58,6 @@ pub(crate) fn submit_machine(
             request_file.display().to_string(),
         ],
         None,
-        Some(selected),
         None,
     );
     write_json(
@@ -85,7 +84,6 @@ pub(crate) fn submit_machine(
                 STADO_BIN,
                 &["machine".into(), "status".into(), candidate.clone()],
                 None,
-                Some(selected),
                 Some(STATUS_TIMEOUT),
             );
             if let Ok(value) = serde_json::from_str::<Value>(&status.stdout) {

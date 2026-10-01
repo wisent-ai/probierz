@@ -24,13 +24,9 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
 
 /// The source repository the Brama manifest points at.
 fn manifest_source(context: &specs::Context) -> Result<String, String> {
-    let manifest = fs::read_to_string(context.harness.join("apps/brama/probierz.yaml"))
-        .map_err(|e| e.to_string())?;
-    manifest
-        .lines()
-        .find_map(|l| l.strip_prefix("  - root: "))
-        .map(str::trim)
-        .map(str::to_string)
+    let manifest = crate::manifest::load(&context.harness, "brama").map_err(|e| e.to_string())?;
+    crate::manifest::primary_root(&manifest)
+        .map(|root| root.to_string_lossy().into_owned())
         .ok_or_else(|| "the Brama manifest must provide the source repository root".to_string())
 }
 

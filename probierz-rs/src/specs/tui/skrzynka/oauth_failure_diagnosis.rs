@@ -2,9 +2,10 @@ use crate::specs::{self, tui::common};
 use std::{path::PathBuf, process::Command};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let repo = PathBuf::from(context.optional("SKRZYNKA_REPO").unwrap_or_else(|| {
-        "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka".into()
-    }));
+    let repo = context
+        .optional("SKRZYNKA_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| specs::wisent_checkout("skrzynka"));
     if !repo.join("Cargo.toml").exists() {
         return Err(format!(
             "no skrzynka checkout at {}; set SKRZYNKA_REPO",

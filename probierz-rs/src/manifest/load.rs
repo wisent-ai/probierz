@@ -16,7 +16,8 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
             format!("app manifest not found: {}", file.display()),
         ));
     }
-    let document: Value = serde_yaml::from_str(&std::fs::read_to_string(&file)?)?;
+    let mut document: Value = serde_yaml::from_str(&std::fs::read_to_string(&file)?)?;
+    expand_home(&mut document);
     validate(&document, &file)?;
     let declared = string_of(&document, "appId").unwrap_or_default();
     if declared != clean {
@@ -30,6 +31,36 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
         file,
         document,
     })
+}
+
+/// A manifest names checkouts and executables under the operator's home as
+/// `~/...`, so the file carries no account name and reads the same for every
+/// operator. Every string that starts with `~/` is read under `$HOME`.
+pub fn expand_home(value: &mut Value) {
+    match value {
+        Value::String(text) => {
+            if let (Some(rest), Some(home)) = (text.strip_prefix("~/"), std::env::var_os("HOME")) {
+                *text = Path::new(&home).join(rest).to_string_lossy().into_owned();
+            }
+        }
+        Value::Sequence(items) => items.iter_mut().for_each(expand_home),
+        Value::Mapping(map) => map.iter_mut().for_each(|(_, item)| expand_home(item)),
+        Value::Tagged(tagged) => expand_home(&mut tagged.value),
+        _ => {}
+    }
+}
+
+/// The root of the manifest's first repository, the product's own source.
+pub fn primary_root(manifest: &Manifest) -> Option<PathBuf> {
+    manifest
+        .document
+        .get("repositories")?
+        .as_sequence()?
+        .first()?
+        .get("root")?
+        .as_str()
+        .filter(|root| !root.trim().is_empty())
+        .map(PathBuf::from)
 }
 
 /// Every product that declares a manifest, in the order an operator reads.

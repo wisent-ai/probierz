@@ -27,7 +27,7 @@ owner: skrzynka maintainers
 #    holds.
 
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka
+  - root: ~/Documents/CodingProjects/Wisent/skrzynka
     mappings:
       # Anything that can change what the binary is re-proves all three.
       - paths:
@@ -59,7 +59,7 @@ repositories:
         journeys:
           - crate-builds
           - mailbox-lifecycle
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka-landing
+  - root: ~/Documents/CodingProjects/Wisent/skrzynka-landing
     mappings:
       - paths:
           - src/lib/docs/**

@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::*;
+use serde_json::json;
 pub(crate) fn this_hostname() -> Result<String, String> {
     let output = Command::new("hostname").output().map_err(|error| {
         format!("this host has no hostname, so no fixture target can name it: {error}")
@@ -136,19 +136,24 @@ pub(crate) fn settled_state(version: &str, digest: &str, release_dir: &Path) -> 
 }
 
 pub(crate) fn source_identity() -> Result<Value, String> {
+    let repository = stado_repo();
     let revision = Command::new("git")
-        .args(["-C", STADO_REPO, "rev-parse", "HEAD"])
+        .arg("-C")
+        .arg(&repository)
+        .args(["rev-parse", "HEAD"])
         .output()
-        .map_err(|error| format!("cannot read the source revision of {STADO_REPO}: {error}"))?;
+        .map_err(|error| format!("cannot read the source revision of {}: {error}", repository.display()))?;
     let status = Command::new("git")
-        .args(["-C", STADO_REPO, "status", "--porcelain"])
+        .arg("-C")
+        .arg(&repository)
+        .args(["status", "--porcelain"])
         .output()
-        .map_err(|error| format!("cannot read the source state of {STADO_REPO}: {error}"))?;
+        .map_err(|error| format!("cannot read the source state of {}: {error}", repository.display()))?;
     if !revision.status.success() {
-        return Err(format!("cannot read the source revision of {STADO_REPO}"));
+        return Err(format!("cannot read the source revision of {}", repository.display()));
     }
     Ok(json!({
-        "repository": STADO_REPO,
+        "repository": repository.to_string_lossy(),
         "revision": String::from_utf8_lossy(&revision.stdout).trim(),
         "dirty": !String::from_utf8_lossy(&status.stdout).trim().is_empty(),
     }))
@@ -192,4 +197,3 @@ pub(crate) fn record_trace(
     context.media_typed("trace", trace_path, "application/json");
     Ok(())
 }
-

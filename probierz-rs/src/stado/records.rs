@@ -60,7 +60,7 @@ pub struct CollectArgs {
     pub job_id: Option<String>,
     #[arg(long)]
     pub app: Option<String>,
-    #[arg(long, default_value = "stado:mini")]
+    #[arg(long, default_value = "stado:any")]
     pub host: String,
 }
 
@@ -131,7 +131,8 @@ pub struct SeoArgs {
     pub adjudicator_model: Option<String>,
     #[arg(long, default_value = "probierz")]
     pub agent_id: String,
-    #[arg(long, default_value = "stado:mini")]
+    /// The `stado:<target>` the SEO run is placed on, from `probierz hosts`.
+    #[arg(long)]
     pub host: String,
     #[arg(long)]
     pub no_watch: bool,

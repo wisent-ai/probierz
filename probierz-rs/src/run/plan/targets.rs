@@ -95,9 +95,9 @@ Accepted arguments (parsed by the shared execution parser):
   --timeout <MS>        Give the suite this long before it is killed
   --resource-wait <MS>  Wait this long for a held resource before refusing
   --files <PATH>...     Changed files that select what runs (affected, ci)
-  --host <SELECTOR>     mobile:ios:byk-auth only: the fleet host its suite
-                        is placed on, from `probierz hosts`; default
-                        stado:mini
+  --host <SELECTOR>     mobile:ios:byk-auth only: the stado:<target> its
+                        suite is placed on, from `probierz hosts`; else
+                        BYK_HOST_SELECTOR
   --local               mobile:ios:byk-auth only: run its suite on this
                         machine instead of the dedicated host
   --seed-resend         mobile:ios:byk-auth only: seed the login mailbox's

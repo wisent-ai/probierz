@@ -3,7 +3,7 @@ appId: skarbiec
 productId: skarbiec
 owner: skarbiec maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec
+  - root: ~/Documents/CodingProjects/Wisent/skarbiec
     mappings:
       - paths:
           - src/**

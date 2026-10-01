@@ -17,10 +17,15 @@ pub(crate) use serde_json::Value;
 pub(crate) use crate::failure::{iso_timestamp, now_iso, write_private};
 pub(crate) use crate::{specs, tui};
 
-pub(crate) const STADO_REPO: &str =
-    "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute";
-pub(crate) const DEFAULT_STADO_BINARY: &str =
-    "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-compute/stado-rs/target/release/stado";
+/// The Stado checkout whose build this fixture drives.
+pub(crate) fn stado_repo() -> PathBuf {
+    specs::wisent_checkout("stado")
+}
+
+/// The Stado binary built from that checkout, when the run names none.
+pub(crate) fn default_stado_binary() -> String {
+    stado_repo().join("stado-rs/target/release/stado").to_string_lossy().into_owned()
+}
 pub(crate) const FIXTURE_HOST: &str = "probierz-fixture-host";
 pub(crate) const FIXTURE_PRODUCT: &str = "probierz-fixture-product";
 

@@ -1,8 +1,9 @@
 use crate::specs::{self, tui::common};
 use serde_json::json;
-use std::{collections::BTreeMap, path::Path, time::Duration};
+use std::{collections::BTreeMap, time::Duration};
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-landing");
+    let repo = specs::wisent_checkout("echo-landing");
+    let repo = repo.as_path();
     let (result, logs) = super::common::server_test(
         repo,
         "/docs",

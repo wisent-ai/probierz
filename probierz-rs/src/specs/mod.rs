@@ -41,3 +41,11 @@ pub mod web;
 mod runner;
 
 pub use runner::*;
+
+/// The one checkout of a Wisent repository on this machine. Every product
+/// repository lives under the same directory in the operator's home, so a
+/// journey names the repository and never the account it is checked out by.
+pub(crate) fn wisent_checkout(name: &str) -> PathBuf {
+    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+    home.join("Documents/CodingProjects/Wisent").join(name)
+}

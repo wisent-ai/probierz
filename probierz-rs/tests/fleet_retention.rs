@@ -2,10 +2,9 @@
 //!
 //! `retention` walks this harness's `test-results`; a run sent to the fleet
 //! writes its archives and logs into the `probierz` object namespace on the
-//! host that ran it, and until 2026-09-21 nothing expired them. On
-//! charless-mac-mini that store had reached 34.9 GiB — the largest occupant
-//! of a host sitting below its disk watermark, which is why no darwin-arm64
-//! release could be built.
+//! host that ran it, and nothing used to expire them. That store grew to tens
+//! of GiB, the largest occupant of a host sitting below its disk watermark,
+//! which is why no darwin-arm64 release could be built there.
 //!
 //! What is defended here is the shape of the decision, against the real
 //! store: a plan removes nothing, every object carries the date the age

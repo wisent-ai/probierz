@@ -3,7 +3,7 @@ appId: stado
 productId: stado
 owner: Stado maintainers
 repositories:
-- root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado
+- root: ~/Documents/CodingProjects/Wisent/stado
   mappings:
   - paths:
     - stado-rs/src/deploy/host_gui_automation.rs
@@ -355,7 +355,7 @@ surfaces:
       journeys:
       - public-release-channel
     conditions:
-      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
+      TUI_CMD: ~/Documents/CodingProjects/Wisent/stado/stado-rs/target/release/stado
   desktop:cua:
     spec: "*"
     journeys:
@@ -390,7 +390,7 @@ surfaces:
       journeys:
       - services-screen
     conditions:
-      CUA_APP_EXECUTABLE: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
+      CUA_APP_EXECUTABLE: ~/Documents/CodingProjects/Wisent/stado/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
   desktop:mac:
     spec: stado-onboarding-first-use.e2e.ts
     journeys:

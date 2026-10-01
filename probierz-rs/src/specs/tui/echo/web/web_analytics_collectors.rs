@@ -43,7 +43,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             "https://echo.wisent.com".into(),
         );
     }
-    let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web");
+    let repo = crate::specs::wisent_checkout("echo-web");
+    let repo = repo.as_path();
     let (result, logs) = crate::specs::tui::echo::common::server_test(
         repo,
         "/api/health",

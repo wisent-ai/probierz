@@ -2,13 +2,13 @@ schemaVersion: 1
 appId: landing-page
 owner: Wisent product and design maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz
+  - root: ~/Documents/CodingProjects/Wisent/probierz
     mappings:
       - paths:
           - apps/landing-page/**
           - probierz-rs/src/specs/web/landing/**
         journeys: [first-screen, product-proof, responsive, conversion, release-eval]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/product-guidelines
+  - root: ~/Documents/CodingProjects/Wisent/product-guidelines
     mappings:
       - paths:
           - landing-page-best-practices.md

@@ -80,9 +80,7 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     let root = temp.join("subject");
     fs::create_dir_all(temp.join("home")).map_err(|e| e.to_string())?;
     copy_dir(
-        Path::new(
-            "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/singularity/singularity",
-        ),
+        &crate::specs::wisent_checkout("singularity").join("singularity"),
         &root.join("singularity"),
     )?;
     let result = (|| {

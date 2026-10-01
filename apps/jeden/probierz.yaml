@@ -3,7 +3,7 @@ appId: jeden
 productId: jeden
 owner: jeden maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden
+  - root: ~/Documents/CodingProjects/Wisent/jeden
     mappings:
       - paths:
           - "**"

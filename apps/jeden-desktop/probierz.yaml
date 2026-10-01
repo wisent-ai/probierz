@@ -3,7 +3,7 @@ appId: jeden-desktop
 productId: jeden
 owner: Jeden Desktop maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden-desktop
+  - root: ~/Documents/CodingProjects/Wisent/jeden-desktop
     mappings:
       - paths:
           - Sources/Jeden/Store/ContractSettingsModel.swift
@@ -14,7 +14,7 @@ repositories:
           - Sources/Jeden/Store/AgentConversationModel.swift
           - tests/contracts/**
         journeys: [task-contract]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden
+  - root: ~/Documents/CodingProjects/Wisent/jeden
     mappings:
       - paths: [rust/agent/**, rust/cli/config/**, rust/session/**]
         journeys: [task-contract]

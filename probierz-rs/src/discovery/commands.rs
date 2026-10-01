@@ -34,11 +34,9 @@ pub struct Host {
     pub host: String,
     pub kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub platform: Option<&'static str>,
+    pub platform: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target: Option<&'static str>,
-    #[serde(rename = "apiUrl", skip_serializing_if = "Option::is_none")]
-    pub api_url: Option<&'static str>,
+    pub target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request: Option<serde_json::Value>,
     pub description: &'static str,
@@ -51,7 +49,6 @@ impl Host {
             kind: "stado",
             platform: None,
             target: None,
-            api_url: None,
             request: Some(request),
             description,
         }
@@ -63,32 +60,71 @@ impl Host {
 /// One inventory, read by `hosts` and by the Stado bridge: a selector cannot
 /// mean one placement when it is printed and another when it is submitted. A
 /// selector constrains placement only — it never replaces the queue endpoint,
-/// so `stado:mini` still submits through Stado's configured address.
+/// so `stado:<target>` still submits through Stado's configured address.
 pub fn host_inventory() -> Vec<Host> {
-    let dedicated = |host: &str,
-                     target: &'static str,
-                     api_url: Option<&'static str>,
-                     pinned: &str,
-                     description: &'static str| Host {
-        host: host.to_string(),
-        kind: "stado",
-        platform: Some("darwin"),
-        target: Some(target),
-        api_url,
-        request: Some(serde_json::json!({
-            "provider": "local",
-            "pin_to_provider": true,
-            "pinned_host": pinned,
-        })),
-        description,
+    let mut hosts = placement_hosts();
+    hosts.extend(registry_hosts());
+    hosts
+}
+
+/// One selector per registry host that runs a local Stado consumer:
+/// `stado:<target>` pins a run to that host. Stado's registry is asked each
+/// time, so a host that is added, renamed or retired is a selector the moment
+/// Stado knows it, and this file names no machine. A registry that cannot be
+/// read is said on standard error and leaves only the placement selectors.
+fn registry_hosts() -> Vec<Host> {
+    let answer = std::process::Command::new("stado")
+        .args(["registry", "pull"])
+        .output();
+    let document = match answer {
+        Ok(output) if output.status.success() => {
+            serde_json::from_slice::<serde_json::Value>(&output.stdout).map_err(|error| error.to_string())
+        }
+        Ok(output) => Err(String::from_utf8_lossy(&output.stderr).trim().to_string()),
+        Err(error) => Err(error.to_string()),
     };
+    let document = match document {
+        Ok(document) => document,
+        Err(reason) => {
+            eprintln!("probierz: the Stado registry is unreadable, so no registry host is listed: {reason}");
+            return Vec::new();
+        }
+    };
+    let text = |value: &serde_json::Value, key: &str| value.get(key).and_then(serde_json::Value::as_str).map(str::to_string);
+    document
+        .get("targets")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|target| text(target, "kind").as_deref() == Some("local"))
+        .filter_map(|target| {
+            let name = text(target, "name")?;
+            let hostname = target.get("hostnames")?.as_array()?.first()?.as_str()?.to_string();
+            Some(Host {
+                host: format!("stado:{name}"),
+                kind: "stado",
+                platform: text(target, "release_platform")
+                    .and_then(|platform| platform.split('-').next().map(str::to_string)),
+                target: Some(name),
+                request: Some(serde_json::json!({
+                    "provider": "local",
+                    "pin_to_provider": true,
+                    "pinned_host": format!("local-{hostname}"),
+                })),
+                description: "stado queue, pinned to this registry host's local consumer",
+            })
+        })
+        .collect()
+}
+
+/// The selectors that constrain placement without naming a host.
+fn placement_hosts() -> Vec<Host> {
     vec![
         Host {
             host: "local".to_string(),
             kind: "local",
             platform: None,
             target: None,
-            api_url: None,
             request: None,
             description: "this machine (default)",
         },
@@ -122,20 +158,6 @@ pub fn host_inventory() -> Vec<Host> {
             serde_json::json!({ "provider": "local", "pin_to_provider": true }),
             "stado queue, local-kind consumers only",
         ),
-        dedicated(
-            "stado:mini",
-            "charless-mac-mini",
-            None,
-            "local-charless-mac-mini.local",
-            "stado queue, dedicated Mac mini consumer",
-        ),
-        dedicated(
-            "stado:macbook",
-            "lukasz-macbook",
-            Some("http://127.0.0.1:18765"),
-            "local-lukaszs-macbook-pro-5485.local",
-            "stado queue, dedicated MacBook consumer",
-        ),
         Host::stado(
             "stado:t4",
             serde_json::json!({ "gpu_type": "nvidia-tesla-t4" }),
@@ -144,11 +166,13 @@ pub fn host_inventory() -> Vec<Host> {
     ]
 }
 
-/// One host by its selector, or nothing when the selector is unknown.
+/// One host by its selector, or nothing when the selector is unknown. A
+/// placement selector is answered without asking the registry.
 pub fn stado_host(name: &str) -> Option<Host> {
-    host_inventory()
+    placement_hosts()
         .into_iter()
         .find(|entry| entry.host == name)
+        .or_else(|| registry_hosts().into_iter().find(|entry| entry.host == name))
 }
 
 pub fn hosts() -> Answer {

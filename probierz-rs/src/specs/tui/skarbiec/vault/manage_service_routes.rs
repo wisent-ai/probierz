@@ -7,7 +7,6 @@ mod setup;
 mod trace;
 mod verify;
 
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 
@@ -20,16 +19,13 @@ use trace::{Outcome, Source};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
     let binary = fixture::binary(context);
-    let manifest = fs::read_to_string(context.harness.join("apps/skarbiec/probierz.yaml"))
-        .map_err(|error| {
-            format!("skarbiec manifest must provide the source repository root: {error}")
-        })?;
-    let source_root = manifest
-        .lines()
-        .find_map(|line| line.strip_prefix("  - root: "))
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
+    let manifest = crate::manifest::load(&context.harness, "skarbiec").map_err(|error| {
+        format!("skarbiec manifest must provide the source repository root: {error}")
+    })?;
+    let source_root = crate::manifest::primary_root(&manifest)
+        .map(|root| root.to_string_lossy().into_owned())
         .ok_or_else(|| "skarbiec manifest must provide the source repository root".to_string())?;
+    let source_root = source_root.as_str();
     let revision = Command::new("/usr/bin/git")
         .args(["-C", source_root, "rev-parse", "HEAD"])
         .output()

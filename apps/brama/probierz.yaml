@@ -3,7 +3,7 @@ appId: brama
 productId: brama
 owner: brama maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama
+  - root: ~/Documents/CodingProjects/Wisent/brama
     mappings:
       - paths:
           - Cargo.toml
@@ -31,7 +31,7 @@ surfaces:
       - when: {PROBIERZ_JOURNEY: subscription-pool}
         journeys: [subscription-pool]
     conditions:
-      TUI_CMD: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama/target/release/brama
+      TUI_CMD: ~/Documents/CodingProjects/Wisent/brama/target/release/brama
 journeys:
   onboarding-first-use:
     owner: brama maintainers

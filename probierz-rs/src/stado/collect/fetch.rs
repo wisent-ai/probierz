@@ -19,7 +19,6 @@ pub(crate) fn collection_directory(job_dir: &Path) -> Result<PathBuf, Failure> {
 pub(crate) fn fetch_run_evidence(
     harness: &Path,
     job_id: &str,
-    selected: &discovery::Host,
 ) -> Result<Retained, Failure> {
     let job_dir = harness.join("test-results").join(".remote").join(job_id);
     fs::create_dir_all(&job_dir)?;
@@ -42,7 +41,6 @@ pub(crate) fn fetch_run_evidence(
             staging.display().to_string(),
         ],
         None,
-        Some(selected),
         None,
     );
     let payload: Value = match serde_json::from_str(&output.stdout) {
@@ -126,7 +124,6 @@ pub(crate) fn fetch_run_evidence(
             &["-tzf".into(), tarball.display().to_string()],
             Some(harness),
             None,
-            None,
         );
         if listed.status != Some(0) {
             let _ = fs::remove_dir_all(&staging);
@@ -184,7 +181,6 @@ pub(crate) fn fetch_run_evidence(
             harness.display().to_string(),
         ],
         Some(harness),
-        None,
         None,
     );
     if extracted.status != Some(0) {

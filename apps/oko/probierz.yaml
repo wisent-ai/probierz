@@ -3,7 +3,7 @@ appId: oko
 productId: oko-ios
 owner: Oko maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko
+  - root: ~/Documents/CodingProjects/Wisent/oko
     mappings:
       - paths:
           - Sources/Oko/Auth/**
@@ -33,7 +33,7 @@ repositories:
           - Package.swift
           - Resources/**
         journeys: [auth, onboarding, strategy, writer-conflict, slack-feedback, resilience]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios
+  - root: ~/Documents/CodingProjects/Wisent/oko-ios
     mappings:
       - paths:
           - Sources/Features/AuthFeature.swift
@@ -58,7 +58,7 @@ repositories:
           - project.yml
           - Package.swift
         journeys: [auth, strategy, chat, onboarding-first-use]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web
+  - root: ~/Documents/CodingProjects/Wisent/echo-web
     mappings:
       - paths:
           - packages/onboarding-swift/Sources/WisentOnboarding/**
@@ -73,8 +73,8 @@ surfaces:
         journeys: [resilience]
     conditions:
       BUNDLE_ID: ai.wisent.oko
-      APP_IOS: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
-      PROBIERZ_BUILD_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
+      APP_IOS: ~/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
+      PROBIERZ_BUILD_PATH: ~/Documents/CodingProjects/Wisent/oko-ios/.build/Build/Products/Debug-iphonesimulator/Oko.app
       IOS_DEVICE: iPhone 17
     env:
       SUPABASE_URL: OKO_E2E_SUPABASE_URL
@@ -93,8 +93,8 @@ surfaces:
         journeys: [resilience]
     conditions:
       MAC_BUNDLE_ID: ai.wisent.oko
-      MAC_APP_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko/.build/Oko.app
-      PROBIERZ_BUILD_PATH: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko/.build/Oko.app
+      MAC_APP_PATH: ~/Documents/CodingProjects/Wisent/oko/.build/Oko.app
+      PROBIERZ_BUILD_PATH: ~/Documents/CodingProjects/Wisent/oko/.build/Oko.app
     env:
       SUPABASE_URL: OKO_E2E_SUPABASE_URL
       SUPABASE_ANON_KEY: OKO_E2E_SUPABASE_ANON_KEY

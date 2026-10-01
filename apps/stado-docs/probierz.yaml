@@ -3,7 +3,7 @@ appId: stado-docs
 productId: stado
 owner: Stado maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/stado-landing
+  - root: ~/Documents/CodingProjects/Wisent/stado-landing
     mappings:
       - paths:
           - src/cli/generate-cli-docs.mjs

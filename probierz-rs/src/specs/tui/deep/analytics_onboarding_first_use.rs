@@ -50,7 +50,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
         "DEEP_ANALYTICS_ECHO_ENV",
         "DEEP_ANALYTICS_ECHO_ENV is required; see the deep-analytics manifest prerequisites",
     )?;
-    let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/deep-analytics");
+    let repo = crate::specs::wisent_checkout("deep-analytics");
+    let repo = repo.as_path();
     let cli = repo.join("scripts/analyze-experiment.mjs");
     let home = common::scratch("probierz-deep-analytics")?;
     let subject = format!("probierz-{}", std::process::id());

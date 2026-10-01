@@ -3,7 +3,7 @@ appId: echo-web
 productId: echo
 owner: Echo maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo-web
+  - root: ~/Documents/CodingProjects/Wisent/echo-web
     mappings:
       - paths:
           - src/app/api/analytics/**

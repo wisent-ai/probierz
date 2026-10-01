@@ -14,13 +14,11 @@ pub(crate) fn collect_remote_run(
             "Collection requires a canonical Stado job ID and a known Stado host.",
         ));
     }
-    let selected = selected.expect("checked");
     manifest::load(harness, app_id)?;
     let status = sh(
         STADO_BIN,
         &["machine".into(), "status".into(), job_id.into()],
         None,
-        Some(&selected),
         Some(STATUS_TIMEOUT),
     );
     if status.status != Some(0) {
@@ -77,7 +75,7 @@ pub(crate) fn collect_remote_run(
         }));
         return Ok(result);
     }
-    let retained = fetch_run_evidence(harness, job_id, &selected)?;
+    let retained = fetch_run_evidence(harness, job_id)?;
     let manifest_matches = retained
         .manifest
         .as_ref()
@@ -156,7 +154,6 @@ pub(crate) fn collect_remote_run(
 
 pub(crate) fn capture_remote_logs(
     job_id: &str,
-    selected: &discovery::Host,
     directory: &Path,
 ) -> Result<(PathBuf, PathBuf, Option<Value>), Failure> {
     let log_path = directory.join("command.log");
@@ -177,7 +174,6 @@ pub(crate) fn capture_remote_logs(
                 "65536".into(),
             ],
             None,
-            Some(selected),
             Some(STATUS_TIMEOUT),
         );
         append_line(&receipts, page.stdout.trim())?;

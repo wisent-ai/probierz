@@ -47,17 +47,23 @@ mutable installation:
 
 ```bash
 node agent/cli.mjs stado run tui --app stado \
-  --host stado:mini \
+  --host stado:<target> \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
 
 STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
 node agent/cli.mjs stado author stado <journey> \
   --target tui --desc "<journey goal>" \
-  --host stado:mini \
+  --host stado:<target> \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
 ```
+
+`stado:<target>` is any local-consumer host in the Stado registry; `probierz
+hosts` lists them, read from `stado registry pull` on every call, next to the
+placement selectors (`stado:any`, `stado:gcp`, `stado:local`, ...). A registry
+that cannot be read is reported on standard error and only the placement
+selectors are listed.
 
 Both commands use the same provisioning path. Probierz uploads the executable
 and selected committed source as separate immutable job inputs, copies the
@@ -79,7 +85,7 @@ Cancel an existing job without submitting replacement work:
 
 ```bash
 node agent/cli.mjs stado cancel <jobId> \
-  --host stado:mini \
+  --host stado:<target> \
   --reason "operator-requested cancellation"
 ```
 

@@ -74,7 +74,7 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
         "-T".to_string(),
         list.display().to_string(),
     ];
-    let output = sh("tar", &args, Some(root), None, None);
+    let output = sh("tar", &args, Some(root), None);
     let _ = fs::remove_file(&list);
     if output.status != Some(0) {
         return Err(local_failure(
@@ -126,7 +126,7 @@ pub(crate) fn pack_app_bundle(app_id: &str, bundle: &Path) -> Result<(Packed, St
         parent.display().to_string(),
         name.clone(),
     ];
-    let output = sh("tar", &args, None, None, None);
+    let output = sh("tar", &args, None, None);
     if output.status != Some(0) {
         return Err(local_failure(
             "stado.pack",
@@ -167,7 +167,6 @@ pub(crate) fn upload(local_file: &Path, name: &str) -> Result<String, Failure> {
                     destination.into(),
                     source.display().to_string(),
                 ],
-                None,
                 None,
                 None,
             )

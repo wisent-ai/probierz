@@ -28,7 +28,9 @@ pub fn install_accepted_spec(
         ));
     }
     let loaded = manifest::load(harness, app_id)?;
-    let mut document = loaded.document;
+    // Written back as the operator wrote it: `loaded.document` has `~/` read
+    // under this operator's home, which must not land in the file.
+    let mut document: YamlValue = serde_yaml::from_str(&fs::read_to_string(&loaded.file)?)?;
     let owner = document
         .get("owner")
         .and_then(YamlValue::as_str)

@@ -176,8 +176,7 @@ pub(crate) fn split_object_uri(uri: &str) -> Result<(String, String), Failure> {
     // Capacity readings and the evidence a fleet run leaves behind. The
     // second is what retention has to reach: the results of runs this
     // harness dispatched to the fleet accumulate in the store on the host
-    // that ran them, and on charless-mac-mini they had grown to 34.9 GiB
-    // with nothing able to expire them.
+    // that ran them, and grow to tens of GiB when nothing expires them.
     // A listing addresses the root itself, a read addresses one object under
     // it, so both the bare prefix and a key below it are accepted.
     let under_root = |root: &str| key == root || key.starts_with(&format!("{root}/"));

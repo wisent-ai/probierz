@@ -45,7 +45,6 @@ pub(crate) fn terminal_failure(job_id: &str, state: &str, job: &Value) -> Value 
 pub(crate) fn watch_job(
     harness: &Path,
     job_id: &str,
-    selected: &discovery::Host,
     requested_budget: Option<u64>,
 ) -> Result<Value, Failure> {
     let now = Utc::now().timestamp_millis();
@@ -72,7 +71,6 @@ pub(crate) fn watch_job(
             STADO_BIN,
             &["machine".into(), "status".into(), job_id.into()],
             None,
-            Some(selected),
             Some(remaining),
         );
         let payload: Option<Value> = serde_json::from_str(&output.stdout).ok();

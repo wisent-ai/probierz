@@ -38,7 +38,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
             return Err(format!("{name} is required in ECHO_TEST_ENV"));
         }
     }
-    let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo");
+    let repo = crate::specs::wisent_checkout("echo");
+    let repo = repo.as_path();
     let result = common::run(
         "npm",
         &common::strings(&["run", "test:capabilities"]),

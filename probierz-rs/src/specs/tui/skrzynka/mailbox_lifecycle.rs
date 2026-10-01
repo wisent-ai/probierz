@@ -2,9 +2,10 @@ use crate::specs::{self, tui::common};
 use std::{path::PathBuf, process::Command};
 
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let repo = PathBuf::from(context.optional("SKRZYNKA_REPO").unwrap_or_else(|| {
-        "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skrzynka".into()
-    }));
+    let repo = context
+        .optional("SKRZYNKA_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| specs::wisent_checkout("skrzynka"));
     let owned = repo.join("tests/mailboxes/mailbox-lifecycle.probierz.spec.mjs");
     if !owned.exists() {
         return Err(format!("skrzynka no longer carries {}; this journey has no test to run, which is a failure and not a pass",owned.display()));

@@ -11,12 +11,12 @@ pub(crate) fn resolve_byk_target(selector: &str) -> Result<BykTarget, Failure> {
         return Err(Failure::config(
             "byk.remote",
             format!(
-                "Stado could not resolve Byk host selector {selector:?}: expected a stado:<target> selector"
+                "Stado could not resolve Byk host selector {selector:?}: name a stado:<target> from `probierz hosts` with --host or BYK_HOST_SELECTOR"
             ),
         ));
     }
     let registry_target = discovery::stado_host(selector)
-        .and_then(|selected| selected.target.map(str::to_string))
+        .and_then(|selected| selected.target)
         .or_else(|| {
             selector
                 .strip_prefix("stado:")

@@ -2,10 +2,10 @@
 //!
 //! `retention` walks this harness's own `test-results` tree. The evidence of
 //! a run dispatched to the fleet does not live there: it is written into the
-//! `probierz` object namespace on the host that ran it, and nothing has ever
-//! expired it. On charless-mac-mini on 2026-09-21 that store held 34.9 GiB —
-//! the single largest occupant of a host that was 15.4 GiB below its disk
-//! target and therefore refused as a release builder for darwin-arm64.
+//! `probierz` object namespace on the host that ran it, and nothing expired
+//! it: on a busy fleet host that store grew to tens of GiB, the largest
+//! occupant of a host already below its disk target, which Stado then refuses
+//! as a release builder.
 //!
 //! What is deleted is decided by the application's own manifest, the same
 //! `retention_days` the local plan uses, because the product that writes the

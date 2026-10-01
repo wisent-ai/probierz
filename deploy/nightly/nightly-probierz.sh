@@ -4,7 +4,8 @@
 # unified overview (journeys + eligibility + fleet) to ~/.stado/nightly/.
 set -eu
 
-PROBIERZ="/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz"
+PROBIERZ="$(cd "$(dirname "$0")/../.." && pwd -P)"
+WISENT="$(dirname "$PROBIERZ")"
 PROBIERZ_CLI="${PROBIERZ_CLI:-probierz}"
 # Tama is a product with a command, not a file in a checkout. This used to run
 # `node .../hooks-rotator/src/cli.mjs`, which stopped existing when Tama became
@@ -14,7 +15,7 @@ OUT_DIR="${HOME}/.stado/nightly"
 STAMP="$(date +%Y-%m-%dT%H-%M-%S)"
 mkdir -p "$OUT_DIR"
 
-REPOS="${PROBIERZ_NIGHTLY_REPOS:-/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/jeden /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/hooks-rotator /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/oko /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/tama-desktop}"
+REPOS="${PROBIERZ_NIGHTLY_REPOS:-$WISENT/skarbiec $WISENT/jeden $WISENT/oko $WISENT/tama-desktop}"
 
 {
     echo "== nightly ${STAMP} =="
@@ -41,7 +42,7 @@ REPOS="${PROBIERZ_NIGHTLY_REPOS:-/Users/lukaszbartoszcze/Documents/CodingProject
             --secondary-model "$PROBIERZ_SEO_SECONDARY_MODEL" \
             --adjudicator-model "$PROBIERZ_SEO_ADJUDICATOR_MODEL" \
             --agent-id "${PROBIERZ_MODEL_AGENT_ID:-probierz}" \
-            --host "${PROBIERZ_SEO_HOST:-stado:mini}"
+            --host "${PROBIERZ_SEO_HOST:?nightly SEO needs PROBIERZ_SEO_HOST, a stado:<target> from probierz hosts}"
     else
         echo "seo: not configured (PROBIERZ_SEO_BASE_URL is empty)"
     fi

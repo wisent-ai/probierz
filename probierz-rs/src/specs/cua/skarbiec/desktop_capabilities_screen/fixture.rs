@@ -7,10 +7,6 @@
 
 use super::*;
 
-/// Where the Skarbiec CLI is expected when the run does not name it.
-const DEFAULT_CLI: &str =
-    "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/skarbiec/target/release/skarbiec";
-
 /// How much of a non-JSON answer is quoted back.
 const ANSWER_EXCERPT: usize = 300;
 
@@ -34,7 +30,8 @@ impl Fixture {
         })?;
         let scratch =
             PathBuf::from(home).join("Library/Caches/probierz-vg-journeys/skarbiec-capabilities");
-        let cli = common::optional_path(context, "PROBIERZ_SKARBIEC_CLI", DEFAULT_CLI);
+        let default_cli = crate::specs::wisent_checkout("skarbiec").join("target/release/skarbiec");
+        let cli = common::optional_path(context, "PROBIERZ_SKARBIEC_CLI", &default_cli.to_string_lossy());
         let path = format!(
             "/opt/homebrew/bin:{}",
             std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin".to_string())

@@ -40,7 +40,8 @@ print(json.dumps(x,sort_keys=True,separators=(',',':')))"#;
     common::parse_json(&out.stdout, "process")
 }
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let repo = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/adam-services");
+    let repo = crate::specs::wisent_checkout("adam-services");
+    let repo = repo.as_path();
     let python = common::required(
         context,
         "ADAM_SERVICES_PYTHON",

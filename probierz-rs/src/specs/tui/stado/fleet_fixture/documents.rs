@@ -1,5 +1,5 @@
-use serde_json::json;
 use super::*;
+use serde_json::json;
 pub(crate) const FIXTURE_TRUSTED_KEY: &str = "nLCK4gGkYVMcTdVBFTtDMuHrX2W0EMMTNXZ3F8DGKgQ=";
 
 pub(crate) struct Invocation {
@@ -26,7 +26,7 @@ impl FleetFixture {
     pub(crate) fn open(context: &specs::Context, slug: &str) -> Result<Self, String> {
         let binary = context
             .optional("TUI_CMD")
-            .unwrap_or_else(|| DEFAULT_STADO_BINARY.to_string());
+            .unwrap_or_else(default_stado_binary);
         if !Path::new(&binary).exists() {
             return Err(format!("no stado binary at {binary}; build it first"));
         }
@@ -243,4 +243,3 @@ impl Drop for FleetFixture {
         tui::remove_scratch(&self.dir);
     }
 }
-

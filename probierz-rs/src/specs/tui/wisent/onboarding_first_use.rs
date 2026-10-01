@@ -74,7 +74,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     if operation.iter().any(|x| x == "--help") {
         return Err("--help exits before the product handler and is not first success".into());
     }
-    let root = Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent");
+    let root = crate::specs::wisent_checkout("wisent");
+    let root = root.as_path();
     let temp = common::scratch("probierz-wisent-first-use")?;
     let home = temp.join("home");
     let py_path = format!(

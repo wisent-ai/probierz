@@ -3,7 +3,7 @@ appId: echo
 productId: echo
 owner: Echo maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/echo
+  - root: ~/Documents/CodingProjects/Wisent/echo
     mappings:
       - paths:
           - cli.mjs

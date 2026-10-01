@@ -1,4 +1,5 @@
 #!/bin/sh
 set -eu
 
-exec "$HOME/.stado/bin/stado" agent --target lukasz-macbook
+# The agent finds its own registry target, so this script names no host.
+exec "$HOME/.stado/bin/stado" agent --auto

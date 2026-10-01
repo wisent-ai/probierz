@@ -91,8 +91,10 @@ probierz stado seo landing-page \
   --primary-model '<pinned-model-a>' \
   --secondary-model '<pinned-model-b>' \
   --adjudicator-model '<pinned-model-c>' \
-  --host stado:mini
+  --host stado:<target>
 ```
+
+`--host` is required: a `stado:<target>` from `probierz hosts`.
 
 Stado materializes only the manifest-declared Brama bearer, agent-auth secret,
 and, when the profile requires it, SEO receipt key. The private checkout and

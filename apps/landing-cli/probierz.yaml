@@ -3,24 +3,24 @@ appId: landing-cli
 productId: landing-cli
 owner: landing-cli maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/landing-cli-docs-publication
+  - root: ~/Documents/CodingProjects/Wisent/landing-cli-docs-publication
     mappings:
       - paths: [src/**, tests/publication/**, package.json]
         journeys: [docs-publication]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/onboarding-seeding-integration/spis-landing
+  - root: ~/Documents/CodingProjects/Wisent/onboarding-seeding-integration/spis-landing
     mappings:
       - paths: [src/content/**, landing.manifest.json]
         journeys: [docs-publication]
 surfaces:
   tui:
-    spec: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/landing-cli-docs-publication/tests/publication/docs-publication.probierz.spec.mjs
+    spec: ~/Documents/CodingProjects/Wisent/landing-cli-docs-publication/tests/publication/docs-publication.probierz.spec.mjs
     journeys: [docs-publication]
     conditions:
-      LANDING_SITE_REPO: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/onboarding-seeding-integration/spis-landing
+      LANDING_SITE_REPO: ~/Documents/CodingProjects/Wisent/onboarding-seeding-integration/spis-landing
       LANDING_SITE_BASE_REVISION: e04107aac3a1018b0a2ab23580922dd0655515a3
       LANDING_SITE_DOCS_REVISION: 029720b325ecdf6478aed76895ca9de4cafc6f29
       LANDING_VERCEL_TEAM: team_NpYIdK4B8yGCD2snT7xELPmd
-      LANDING_VERCEL_CLI: /Users/lukaszbartoszcze/.npm/_npx/69f9afb961c37556/node_modules/.bin/vercel
+      LANDING_VERCEL_CLI: ~/.npm/_npx/69f9afb961c37556/node_modules/.bin/vercel
 journeys:
   docs-publication:
     owner: landing-cli maintainers

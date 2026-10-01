@@ -40,11 +40,11 @@ fn object(output: &str) -> Result<serde_json::Value, String> {
     Err(format!("unbalanced JSON in output:\n{output}"))
 }
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let root = PathBuf::from(
-        context
-            .optional("GAC_ROOT")
-            .unwrap_or_else(|| "/Users/lukaszbartoszcze/work/game_asset_creator".into()),
-    );
+    let root = PathBuf::from(common::required(
+        context,
+        "GAC_ROOT",
+        "GAC_ROOT is required: set it to the game_asset_creator checkout",
+    )?);
     let fixtures = PathBuf::from(common::required(
         context,
         "GAC_FIXTURE_DIR",

@@ -2,14 +2,15 @@ use serde_json::json;
 use crate::run::*;
 
 /// Which fleet host the remote suite is placed on: what the operator asked
-/// for, what the run environment declares, or the dedicated Mac otherwise.
+/// for, else what the run environment declares. Nothing is assumed: a host
+/// is a `stado:<target>` from `probierz hosts`, and an empty answer is refused
+/// by the target resolution with the way to name one.
 pub(crate) fn byk_host_selector(selector: Option<&str>, env: &BTreeMap<String, String>) -> String {
     selector
         .map(str::to_string)
         .or_else(|| env.get("BYK_HOST_SELECTOR").cloned())
         .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "stado:mini".to_string())
+        .unwrap_or_default()
 }
 
 /// The byk-auth journey: a real Apple ID login whose one-time code arrives in

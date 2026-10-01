@@ -32,7 +32,7 @@ pub(crate) fn submit_remote_run(
         spec,
         provision.as_ref(),
         &packed.hash,
-        selected.platform,
+        selected.platform.as_deref(),
         mode,
         None,
         None,
@@ -100,7 +100,7 @@ pub(crate) fn submit_remote_run(
         object.insert("failure".into(), Value::Null);
         return Ok(result);
     }
-    let watched = watch_job(harness, &job_id, &selected, Some(watch_budget))?;
+    let watched = watch_job(harness, &job_id, Some(watch_budget))?;
     result
         .as_object_mut()
         .expect("object")
@@ -111,7 +111,7 @@ pub(crate) fn submit_remote_run(
         .unwrap_or("")
         .to_string();
     if matches!(state.as_str(), "completed" | "failed") {
-        let retained = fetch_run_evidence(harness, &job_id, &selected)?;
+        let retained = fetch_run_evidence(harness, &job_id)?;
         if let Some(path) = retained.results_dir {
             result.as_object_mut().expect("object").insert(
                 "resultsDir".into(),

@@ -21,12 +21,13 @@ pub(crate) fn record_backend(
     let home = std::env::var("HOME")
         .map_err(|_| "HOME is required for the Jeden Desktop task-contract journey".to_string())?;
     let command = PathBuf::from(home).join(".stado/bin/stado");
+    let target = this_host_target()?;
     let args = [
         "host",
         "jeden-connect",
         workspace_name,
         "--target",
-        DEDICATED_HOST,
+        target.as_str(),
     ];
     let stderr = Arc::new(Mutex::new(String::new()));
     let mut launch = Command::new(&command);

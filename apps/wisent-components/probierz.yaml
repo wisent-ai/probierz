@@ -2,7 +2,7 @@ schemaVersion: 1
 appId: wisent-components
 owner: Wisent design system maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-components
+  - root: ~/Documents/CodingProjects/Wisent/wisent-components
     mappings:
       - paths:
           - src/**
@@ -11,7 +11,7 @@ repositories:
           - figma/renders/**
           - tests/visual/**
         journeys: [figma-parity]
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/probierz
+  - root: ~/Documents/CodingProjects/Wisent/probierz
     mappings:
       - paths:
           - apps/wisent-components/**

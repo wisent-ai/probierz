@@ -4,7 +4,6 @@ pub(crate) fn sh(
     command: &str,
     args: &[String],
     cwd: Option<&Path>,
-    host: Option<&discovery::Host>,
     timeout: Option<Duration>,
 ) -> ProcessOutput {
     let mut process = Command::new(command);
@@ -14,9 +13,6 @@ pub(crate) fn sh(
         .stderr(Stdio::piped());
     if let Some(directory) = cwd {
         process.current_dir(directory);
-    }
-    if let Some(api_url) = host.and_then(|entry| entry.api_url) {
-        process.env("STADO_API_URL", api_url);
     }
     let display_args = args.to_vec();
     let mut child = match process.spawn() {
@@ -186,7 +182,7 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
     if target != "desktop:cua" {
         return Ok(());
     }
-    let registry_target = selected.target.ok_or_else(|| {
+    let registry_target = selected.target.as_deref().ok_or_else(|| {
         Failure::config(
             "stado.preflight",
             format!(
@@ -205,7 +201,6 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
             registry_target.into(),
         ],
         None,
-        Some(selected),
         Some(GUI_STATUS_TIMEOUT),
     );
     if output.error.as_deref() == Some("operation timed out") {

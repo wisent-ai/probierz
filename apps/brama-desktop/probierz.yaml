@@ -3,7 +3,7 @@ appId: brama-desktop
 productId: brama-desktop
 owner: Brama Desktop maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/brama-desktop
+  - root: ~/Documents/CodingProjects/Wisent/brama-desktop
     mappings:
       - paths:
           - Sources/BramaDesktop/**

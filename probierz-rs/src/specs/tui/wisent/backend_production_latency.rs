@@ -7,11 +7,8 @@ use crate::{
     specs::{self, tui::common},
 };
 
-const CANONICAL_REPOSITORY: &str =
-    "/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-backend";
-
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let canonical = PathBuf::from(CANONICAL_REPOSITORY);
+    let canonical = specs::wisent_checkout("wisent-backend");
     let repository = if canonical.exists() {
         canonical
     } else {

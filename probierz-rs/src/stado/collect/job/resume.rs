@@ -12,8 +12,8 @@ pub(crate) fn resume_remote_run(
             "Resuming remote evidence needs a valid existing Stado job ID.",
         ));
     }
-    let selected = host(host_name, "stado.watch")?;
-    let watched = watch_job(harness, job_id, &selected, None)?;
+    host(host_name, "stado.watch")?;
+    let watched = watch_job(harness, job_id, None)?;
     let mut result = json!({
         "host": host_name,
         "jobId": job_id,
@@ -31,7 +31,7 @@ pub(crate) fn resume_remote_run(
     if !matches!(state.as_str(), "completed" | "failed") {
         return Ok(result);
     }
-    let retained = fetch_run_evidence(harness, job_id, &selected)?;
+    let retained = fetch_run_evidence(harness, job_id)?;
     if let Some(path) = &retained.results_dir {
         result.as_object_mut().expect("object").insert(
             "resultsDir".into(),

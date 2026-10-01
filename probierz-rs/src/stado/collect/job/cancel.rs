@@ -13,7 +13,7 @@ pub(crate) fn cancel_remote_run(
             "Cancelling remote evidence needs a canonical Stado job ID.",
         ));
     }
-    let selected = host(host_name, "stado.watch")?;
+    host(host_name, "stado.watch")?;
     let reason = reason.trim();
     if reason.is_empty() || reason.contains('\0') {
         return Err(Failure::config(
@@ -51,7 +51,6 @@ pub(crate) fn cancel_remote_run(
         STADO_BIN,
         &["machine".into(), "status".into(), job_id.into()],
         None,
-        Some(&selected),
         Some(STATUS_TIMEOUT),
     );
     let before_path = directory.join("status-before.json");
@@ -87,7 +86,6 @@ pub(crate) fn cancel_remote_run(
         STADO_BIN,
         &["machine".into(), "cancel".into(), job_id.into()],
         None,
-        Some(&selected),
         Some(STATUS_TIMEOUT),
     );
     let receipt_path = directory.join("receipt.json");
@@ -119,7 +117,7 @@ pub(crate) fn cancel_remote_run(
             &cancellation,
         ));
     }
-    let (log_path, log_receipts, log_failure) = capture_remote_logs(job_id, &selected, &directory)?;
+    let (log_path, log_receipts, log_failure) = capture_remote_logs(job_id, &directory)?;
     let state = job
         .get("state")
         .and_then(Value::as_str)
@@ -133,7 +131,7 @@ pub(crate) fn cancel_remote_run(
             "cancelled" | "completed" | "uploaded" | "failed"
         )
     {
-        match fetch_run_evidence(harness, job_id, &selected) {
+        match fetch_run_evidence(harness, job_id) {
             Ok(value) => retained = Some(value),
             Err(failure) => {
                 evidence_failure = Some(failure_summary(&failure, failure.detail.clone()))

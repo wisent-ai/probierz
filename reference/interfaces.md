@@ -42,7 +42,7 @@ Every way into Probierz, and what each one is allowed to do.
   continue to use the manifest's scoped `secretRefs`, not command arguments.
   Submission requests and responses remain under `test-results/.remote/`;
   stderr prints the request receipt and accepted job ID before watching.
-  `probierz stado collect <job-id> --app <id> --host stado:mini` (also
+  `probierz stado collect <job-id> --app <id> --host stado:<target>` (also
   `probierz_stado_collect` over MCP) returns the current state immediately and
   retrieves a terminal job's retained evidence without submitting or running it again.
   A job cancelled before its worker starts remains `cancelled`; the result keeps

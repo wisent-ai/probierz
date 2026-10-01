@@ -3,7 +3,7 @@ appId: wisent-backend
 productId: wisent-backend
 owner: Wisent Backend maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-backend
+  - root: ~/Documents/CodingProjects/Wisent/wisent-backend
     mappings:
       - paths:
           - api_service/api_layer/routers/chat_routes/**

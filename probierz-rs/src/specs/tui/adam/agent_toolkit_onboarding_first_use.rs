@@ -38,8 +38,8 @@ fn invoke(
     Ok(payload["result"].clone())
 }
 pub fn run(context: &specs::Context) -> Result<(), String> {
-    let repo =
-        Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/adam-agent-toolkit");
+    let repo = crate::specs::wisent_checkout("adam-agent-toolkit");
+    let repo = repo.as_path();
     let python = common::required(
         context,
         "ADAM_AGENT_TOOLKIT_PYTHON",

@@ -84,8 +84,8 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
     if !(0.0 < ratio && ratio < 1.0) {
         return Err("PROBIERZ_WISENT_OPTIMIZER_TRAIN_RATIO must be between zero and one".into());
     }
-    let root =
-        Path::new("/Users/lukaszbartoszcze/Documents/CodingProjects/Wisent/wisent-optimizer");
+    let root = crate::specs::wisent_checkout("wisent-optimizer");
+    let root = root.as_path();
     let temp = common::scratch("probierz-wisent-optimizer-first-use")?;
     let state_home = temp.join("state");
     let result_path = temp.join("ranked-result.json");

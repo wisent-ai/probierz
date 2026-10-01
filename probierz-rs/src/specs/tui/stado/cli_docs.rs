@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs, path::PathBuf, time::Duration};
+use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
 use crate::specs::{self, tui::common};
 
@@ -73,21 +73,12 @@ pub fn run(context: &specs::Context) -> Result<(), String> {
 }
 
 fn manifest_source(context: &specs::Context) -> Result<PathBuf, String> {
-    let manifest_path = context.harness.join("apps/stado-docs/probierz.yaml");
-    let text = fs::read_to_string(&manifest_path)
-        .map_err(|error| format!("{}: {error}", manifest_path.display()))?;
-    let manifest: serde_yaml::Value = serde_yaml::from_str(&text)
-        .map_err(|error| format!("{}: {error}", manifest_path.display()))?;
-    let root = manifest
-        .get("repositories")
-        .and_then(serde_yaml::Value::as_sequence)
-        .and_then(|repositories| repositories.first())
-        .and_then(|repository| repository.get("root"))
-        .and_then(serde_yaml::Value::as_str)
-        .ok_or_else(|| {
-            "the stado-docs manifest must provide the source repository root".to_string()
-        })?;
-    Ok(resolve_from(&context.harness, root))
+    let manifest = crate::manifest::load(&context.harness, "stado-docs")
+        .map_err(|error| error.to_string())?;
+    let root = crate::manifest::primary_root(&manifest).ok_or_else(|| {
+        "the stado-docs manifest must provide the source repository root".to_string()
+    })?;
+    Ok(resolve_from(&context.harness, &root.to_string_lossy()))
 }
 
 fn resolve_from(base: &std::path::Path, value: &str) -> PathBuf {

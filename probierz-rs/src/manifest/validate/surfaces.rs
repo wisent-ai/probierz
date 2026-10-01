@@ -10,9 +10,9 @@ pub(crate) fn validate_repositories_and_surfaces(
     for repository in repositories {
         let root = string_of(repository, "root").unwrap_or_default();
         require(
-            !root.is_empty() && Path::new(root).is_absolute(),
+            !root.is_empty() && (root.starts_with("~/") || Path::new(root).is_absolute()),
             file,
-            "repository root must be absolute",
+            "repository root must be absolute or under ~/",
         )?;
         require(
             repository

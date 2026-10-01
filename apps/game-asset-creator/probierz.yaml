@@ -2,7 +2,7 @@ schemaVersion: 1
 appId: game-asset-creator
 owner: game_asset_creator maintainers
 repositories:
-  - root: /Users/lukaszbartoszcze/work/game_asset_creator
+  - root: ~/work/game_asset_creator
     mappings:
       - paths:
           - pipeline/**
@@ -16,7 +16,7 @@ repositories:
           - pipeline.config.example.json
           - SKILL.md
         journeys: [cli, verify, visual-eval]
-  - root: /Users/lukaszbartoszcze/work/simple-rts-unity
+  - root: ~/work/simple-rts-unity
     mappings:
       - paths:
           - web/game_asset_creator/**
