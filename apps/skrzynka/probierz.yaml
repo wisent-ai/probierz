@@ -85,7 +85,7 @@ journeys:
     owner: skrzynka maintainers
     timeoutMs: 900000
     description: 'The crate compiles from its committed dependency versions, including its test targets, and the binary it produces reports its own version.'
-    value: 'A drifted Cargo.lock is caught here rather than by whoever next tries to build a release, which is the defect that stopped every job in wisent-ai/weles until 2026-08-30.'
+    value: 'A drifted Cargo.lock is caught here rather than by whoever next tries to build a release, which is the defect that can stop every job of a repository.'
   oauth-failure-diagnosis:
     owner: skrzynka maintainers
     timeoutMs: 900000

@@ -1,13 +1,12 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 
 /// Where the mailbox broker executable comes from.
 ///
 /// A harness does not build another repository. This used to `cargo build
 /// --bin skarbiec-entitlements-router` inside `entitlements-rotator`, which
-/// stopped existing on 2026-07-28 when that repository removed its vendored
-/// copy of the vault (commit 525f7d6, "Stop being a second source and
-/// publisher of Skarbiec"). The journey kept building a binary nobody
+/// stopped existing when that repository removed its vendored copy of the
+/// vault. The journey kept building a binary nobody
 /// produced any more and reported it as a build failure, which hid what had
 /// actually happened.
 ///
@@ -29,7 +28,7 @@ pub(crate) fn byk_broker_binary(
         .ok_or_else(|| format!(
             "BYK_MAILBOX_BROKER is required: an executable serving `mailbox-broker --mailbox {BYK_MAILBOX} --socket <path>`, \
 `mailbox-probe --mailbox {BYK_MAILBOX}` and `seed-resend <env-file>`. \
-No installed product provides it: entitlements-rotator removed its vendored vault binary in 525f7d6 on 2026-07-28 and the surviving copy is the vendored-superset branch of wisent-ai/skarbiec"
+No installed product provides it: entitlements-rotator removed its vendored vault binary and the surviving copy is the vendored-superset branch of wisent-ai/skarbiec"
         ))?;
     let broker = PathBuf::from(&declared);
     if !broker.is_absolute() {
@@ -54,7 +53,10 @@ No installed product provides it: entitlements-rotator removed its vendored vaul
 /// Is the login mailbox reachable from here? This is the readiness question
 /// `check` asks, and it is the only one that cannot be answered by looking at
 /// a file: the broker has to open the mailbox and say so.
-pub(crate) fn byk_mailbox_reachable(harness: &Path, env: &BTreeMap<String, String>) -> (bool, String) {
+pub(crate) fn byk_mailbox_reachable(
+    harness: &Path,
+    env: &BTreeMap<String, String>,
+) -> (bool, String) {
     let (broker, rotator, broker_env) = match byk_broker_binary(harness, env, DEFAULT_TIMEOUT_MS) {
         Ok(parts) => parts,
         Err(reason) => return (false, reason),
@@ -132,4 +134,3 @@ pub(crate) fn seed_byk_resend(harness: &Path, env: &BTreeMap<String, String>) ->
         "seeded": true,
     }))
 }
-

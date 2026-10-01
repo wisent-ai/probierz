@@ -40,7 +40,7 @@ const OBJECT_API_FIELD: &str = "token";
 /// Read the object-store token the fleet holds for Probierz.
 ///
 /// A job on a fleet host is handed `STADO_API_TOKEN`; an operator running the
-/// same command from a terminal is not, and until 2026-09-21 every such run
+/// same command from a terminal is not, and every such run used to be
 /// refused with `STADO_API_TOKEN is required for remote object storage` — a
 /// sentence about a variable rather than about the credential the fleet
 /// already holds for this product. Reading it through Stado is the path
