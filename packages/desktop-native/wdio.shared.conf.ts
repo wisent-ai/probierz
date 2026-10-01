@@ -74,16 +74,11 @@ async function stopNativeCapture(): Promise<string | undefined> {
   nativeCaptureClosed = undefined;
   nativeCaptureFile = undefined;
   if (!child || !file || !closed) return undefined;
+  // SIGINT makes the capture finalize its file and exit; its exit status is
+  // the answer, and a nonzero one is recorded with the capture's own words.
   child.kill('SIGINT');
-  const timeout = Promise.withResolvers<'timeout'>();
-  const timeoutHandle = setTimeout(() => timeout.resolve('timeout'), 10_000);
-  const code = await Promise.race([closed, timeout.promise]);
-  clearTimeout(timeoutHandle);
-  if (code === 'timeout') {
-    child.kill('SIGKILL');
-    await closed;
-    captureErrors.push(`screen-capture-kit stop timed out`);
-  } else if (code !== 0) {
+  const code = await closed;
+  if (code !== 0) {
     captureErrors.push(`screen-capture-kit exited ${code}: ${nativeCaptureStderr.trim() || 'no diagnostic'}`);
   }
   if (existsSync(file) && statSync(file).size > 0) return file;
