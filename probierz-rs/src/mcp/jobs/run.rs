@@ -166,12 +166,7 @@ pub(crate) fn finish_job(
     }
     let stderr = String::from_utf8_lossy(&stderr);
     job.error = Some(if stderr.trim().is_empty() {
-        format!(
-            "exit {}",
-            process_status
-                .code()
-                .map_or_else(|| "null".to_string(), |code| code.to_string())
-        )
+        format!("probierz {} with no message", crate::failure::ended(&process_status))
     } else {
         stderr.trim().to_string()
     });

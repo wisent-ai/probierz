@@ -49,14 +49,10 @@ pub(crate) fn run_data_command(
         let detail = execution.error.unwrap_or_else(|| {
             let trimmed = safe_err.trim();
             if trimmed.is_empty() {
-                format!(
-                    "exit {}",
-                    execution
-                        .status
-                        .and_then(|status| status.code())
-                        .map(|value| value.to_string())
-                        .unwrap_or_else(|| "null".into())
-                )
+                match execution.status {
+                    Some(status) => format!("data command {} with no message", crate::failure::ended(&status)),
+                    None => "data command never started".to_string(),
+                }
             } else {
                 trimmed.into()
             }

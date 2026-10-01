@@ -14,6 +14,17 @@ use std::fmt;
 /// fleet's; the width is this product's, and it has always been 300.
 const MAX_DETAIL_CHARS: usize = 300;
 
+/// How a child process ended, in words: `exited N`, or `ended by signal N`
+/// when it was killed and has no exit code. Never `exit null`.
+pub(crate) fn ended(status: &std::process::ExitStatus) -> String {
+    use std::os::unix::process::ExitStatusExt;
+    match (status.code(), status.signal()) {
+        (Some(code), _) => format!("exited {code}"),
+        (None, Some(signal)) => format!("ended by signal {signal}"),
+        (None, None) => "ended with neither an exit code nor a signal".to_string(),
+    }
+}
+
 /// The vocabulary a failure may carry. Every code answers one question: whose
 /// problem is this, and is retrying worth anything.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

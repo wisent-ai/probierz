@@ -23,12 +23,8 @@ pub(crate) fn violations_for(root: &str) -> Value {
             .map(str::to_string)
             .unwrap_or_else(|| {
                 format!(
-                    "exit {}",
-                    output
-                        .status
-                        .code()
-                        .map(|code| code.to_string())
-                        .unwrap_or_else(|| "null".to_string())
+                    "tama find-violations {} with no message",
+                    crate::failure::ended(&output.status)
                 )
             });
         return json!({ "error": detail });
