@@ -91,7 +91,9 @@ pub(crate) fn start_byk_broker(
         socket_path,
         recipient: String::new(),
     };
-    let line = match receiver.recv_timeout(Duration::from_millis(15_000)) {
+    // The broker's readiness line or its exit ends this read; no deadline
+    // (cli.md rule 8).
+    let line = match receiver.recv() {
         Ok(Ok(line)) if line.len() <= 16_384 => line.trim_end_matches(['\r', '\n']).to_string(),
         Ok(Ok(_)) => {
             return Err(byk_startup_error(
@@ -99,19 +101,7 @@ pub(crate) fn start_byk_broker(
                 &stderr_tail,
             ));
         }
-        Ok(Err(_)) => {
-            return Err(byk_startup_error(
-                "Skarbiec mailbox broker exited before readiness",
-                &stderr_tail,
-            ));
-        }
-        Err(mpsc::RecvTimeoutError::Timeout) => {
-            return Err(byk_startup_error(
-                "timed out waiting for the Skarbiec mailbox broker",
-                &stderr_tail,
-            ));
-        }
-        Err(mpsc::RecvTimeoutError::Disconnected) => {
+        Ok(Err(_)) | Err(_) => {
             return Err(byk_startup_error(
                 "Skarbiec mailbox broker exited before readiness",
                 &stderr_tail,

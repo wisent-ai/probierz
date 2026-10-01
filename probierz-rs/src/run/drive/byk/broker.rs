@@ -8,20 +8,15 @@ pub(crate) struct BykBroker {
 
 impl Drop for BykBroker {
     fn drop(&mut self) {
+        // TERM asks the broker to stop; its exit ends the wait. No poll, no
+        // 2 s window and no KILL escalation (cli.md rule 8).
         if self.child.try_wait().ok().flatten().is_none() {
             let _ = Command::new("/bin/kill")
                 .args(["-TERM", &self.child.id().to_string()])
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
-            let until = Instant::now() + Duration::from_millis(2000);
-            while Instant::now() < until && self.child.try_wait().ok().flatten().is_none() {
-                thread::sleep(Duration::from_millis(20));
-            }
-            if self.child.try_wait().ok().flatten().is_none() {
-                let _ = self.child.kill();
-                let _ = self.child.wait();
-            }
+            let _ = self.child.wait();
         }
         let _ = fs::remove_dir_all(&self.directory);
     }
