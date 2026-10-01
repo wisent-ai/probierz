@@ -15,7 +15,7 @@ function requiredEnvironment(name: 'OKO_E2E_EMAIL'): string {
   return value;
 }
 
-function waitForOtp({ after, timeoutMs }: { after: Date; timeoutMs: number }): string {
+function readOtp({ after }: { after: Date }): string {
   const harness = process.env.PROBIERZ_TOOLKIT_ROOT;
   const binary = process.env.PROBIERZ_BIN
     ?? (harness ? join(harness, 'probierz-rs', 'target', 'debug', 'probierz') : 'probierz');
@@ -23,11 +23,9 @@ function waitForOtp({ after, timeoutMs }: { after: Date; timeoutMs: number }): s
   const output = execFileSync(binary, [
     ...harnessArgs,
     'apphook',
-    'oko.wait-for-otp',
+    'oko.otp',
     '--after',
     after.toISOString(),
-    '--timeout-ms',
-    String(timeoutMs),
   ], {
     encoding: 'utf8',
     env: process.env,
@@ -58,7 +56,7 @@ async function authenticateFreshSubject(): Promise<void> {
 
   const codeField = await $('~oko.auth.code');
   await codeField.waitForDisplayed();
-  const code = await waitForOtp({ after: requestedAfter, timeoutMs: 90_000 });
+  const code = readOtp({ after: requestedAfter });
   await codeField.setValue(code);
 
   const verify = await $('~oko.auth.verify');

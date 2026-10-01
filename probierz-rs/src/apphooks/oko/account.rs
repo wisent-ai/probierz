@@ -102,10 +102,12 @@ pub(crate) fn validated_otp(value: Option<&Value>, source_name: &str) -> Result<
     Ok(code.to_string())
 }
 
-pub(crate) fn oko_wait_for_otp(
+/// The one-time code delivered to the technical account after `after`, read
+/// once from the OTP broker. A broker that holds no such code yet answers a
+/// refusal naming the email and the instant, not a wait.
+pub(crate) fn oko_otp(
     source: &BTreeMap<String, String>,
     after: DateTime<Utc>,
-    timeout: Duration,
 ) -> Result<String, Failure> {
     let broker_url = source
         .get("OKO_E2E_OTP_BROKER_URL")
@@ -137,32 +139,30 @@ pub(crate) fn oko_wait_for_otp(
             query.append_pair("runId", run_id);
         }
     }
-    let deadline = Instant::now() + timeout;
-    while Instant::now() < deadline {
-        let body = request_json(
-            "GET",
-            endpoint.as_str(),
-            &[(
-                "Authorization",
-                format!("Bearer {}", broker_token.expect("required")),
-            )],
-            None,
-        )?;
-        if let Some(code) = body.get("code") {
-            return validated_otp(Some(code), "OTP broker");
-        }
-        thread::sleep(Duration::from_millis(1500));
+    let body = request_json(
+        "GET",
+        endpoint.as_str(),
+        &[(
+            "Authorization",
+            format!("Bearer {}", broker_token.expect("required")),
+        )],
+        None,
+    )?;
+    match body.get("code") {
+        Some(code) => validated_otp(Some(code), "OTP broker"),
+        None => Err(Failure::new(
+            "apphook.oko.otp",
+            Code::Refused,
+            format!(
+                "OTP broker holds no code for {email} delivered after {}",
+                after.to_rfc3339_opts(SecondsFormat::Millis, true)
+            ),
+        )),
     }
-    Err(Failure::new(
-        "apphook.oko.otp",
-        Code::Refused,
-        format!("OTP broker timed out after {}ms", timeout.as_millis()),
-    ))
 }
 
-pub(crate) fn otp_options(args: &[String]) -> Result<(DateTime<Utc>, Duration), Failure> {
-    let mut after = DateTime::<Utc>::from(SystemTime::now() - Duration::from_secs(30));
-    let mut timeout_ms = 90_000_u64;
+pub(crate) fn otp_after(args: &[String]) -> Result<DateTime<Utc>, Failure> {
+    let mut after = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -170,24 +170,13 @@ pub(crate) fn otp_options(args: &[String]) -> Result<(DateTime<Utc>, Duration), 
                 let value = args.get(index + 1).ok_or_else(|| {
                     Failure::invalid("apphook.oko.otp", "--after needs an ISO timestamp")
                 })?;
-                after = DateTime::parse_from_rfc3339(value)
-                    .map_err(|_| {
-                        Failure::invalid("apphook.oko.otp", "--after needs an ISO timestamp")
-                    })?
-                    .with_timezone(&Utc);
-                index += 2;
-            }
-            "--timeout-ms" => {
-                let value = args.get(index + 1).ok_or_else(|| {
-                    Failure::invalid("apphook.oko.otp", "--timeout-ms needs a positive integer")
-                })?;
-                timeout_ms = value
-                    .parse::<u64>()
-                    .ok()
-                    .filter(|value| *value > 0)
-                    .ok_or_else(|| {
-                        Failure::invalid("apphook.oko.otp", "--timeout-ms needs a positive integer")
-                    })?;
+                after = Some(
+                    DateTime::parse_from_rfc3339(value)
+                        .map_err(|_| {
+                            Failure::invalid("apphook.oko.otp", "--after needs an ISO timestamp")
+                        })?
+                        .with_timezone(&Utc),
+                );
                 index += 2;
             }
             other => {
@@ -198,7 +187,7 @@ pub(crate) fn otp_options(args: &[String]) -> Result<(DateTime<Utc>, Duration), 
             }
         }
     }
-    Ok((after, Duration::from_millis(timeout_ms)))
+    after.ok_or_else(|| Failure::invalid("apphook.oko.otp", "--after <ISO> is required"))
 }
 
 pub(crate) fn state_path(source: &BTreeMap<String, String>) -> PathBuf {

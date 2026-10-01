@@ -39,10 +39,9 @@ Capabilities (named by an application manifest):
                                       seeding created
   oko.ensure-technical-account        Create or confirm the technical account
                                       the journey signs in as
-  oko.wait-for-otp [OPTIONS]          Wait for the next one-time code and print
-                                      JSON containing it for the journey
-    --after <ISO>                     Ignore codes delivered before this instant
-    --timeout-ms <MS>                 Give up after this long (default 90000)
+  oko.otp --after <ISO>               Print JSON with the one-time code delivered
+                                      after that instant; refused when the
+                                      broker holds none yet
   oko.writer-update                   Apply the writer update the journey expects
   oko.apply-feedback                  Apply the editorial feedback fixture
   oko.verify-fixture                  Confirm the seeded state is intact
@@ -70,7 +69,7 @@ pub fn supports(name: &str) -> bool {
         "oko.seed"
             | "oko.cleanup"
             | "oko.ensure-technical-account"
-            | "oko.wait-for-otp"
+            | "oko.otp"
             | "oko.writer-update"
             | "oko.apply-feedback"
             | "oko.verify-fixture"
@@ -89,9 +88,9 @@ pub fn execute(
         "oko.seed" => oko_seed(environment),
         "oko.cleanup" => oko_cleanup(environment),
         "oko.ensure-technical-account" => ensure_technical_account(environment),
-        "oko.wait-for-otp" => {
-            let (after, timeout) = otp_options(args)?;
-            oko_wait_for_otp(environment, after, timeout).map(|code| json!({ "code": code }))
+        "oko.otp" => {
+            let after = otp_after(args)?;
+            oko_otp(environment, after).map(|code| json!({ "code": code }))
         }
         "oko.writer-update" => oko_writer_update(environment),
         "oko.apply-feedback" => oko_apply_feedback(environment),
