@@ -1,23 +1,28 @@
-//! The launch agent that ran the Node failure intake, retired when the
-//! declared intake starts.
+//! The units that ran Probierz's failure intake before the declared one,
+//! retired when the declared intake starts.
 //!
-//! A host ran Probierz's failure intake as `com.wisent.probierz-intake`: the
-//! earlier Node implementation, copied to `~/.local/share/probierz-intake` so
-//! a background agent could read it. `probierz intake serve` is the same
-//! listener in the product binary. Started by launchd as the declared unit,
-//! it boots the Node intake out, waits for that process to exit, and removes
-//! its launch agent before binding, so the port is free and no login loads the
-//! copy again. Run by hand or by a test, it retires nothing.
+//! A host ran the intake as `com.wisent.probierz-intake` (the earlier Node
+//! implementation, copied to `~/.local/share/probierz-intake` so a background
+//! agent could read it) and later as `com.wisent.compute.service.probierz`, a
+//! label Stado minted before the catalog named the unit. `probierz intake
+//! serve` is the same listener in the product binary. Started by launchd as
+//! the declared unit, it boots each predecessor out, waits for its process to
+//! exit, and removes its launch agent before binding, so the port is free and
+//! no login loads it again. Run by hand or by a test, it retires nothing.
 
 #[cfg(target_os = "macos")]
 use std::time::Duration;
 
-/// The label the fleet runs the one Probierz process under.
-pub(crate) const DECLARED_UNIT: &str = "com.wisent.compute.service.probierz";
+/// The one unit the fleet runs Probierz under, as the Stado catalog names it.
+pub(crate) const DECLARED_UNIT: &str = "com.wisent.probierz";
 
-/// The unit whose work the declared intake does.
+/// The units whose work the declared intake does: the catalog's retired
+/// units of Probierz, in the same order.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-const PREDECESSOR: &str = "com.wisent.probierz-intake";
+const PREDECESSORS: [&str; 2] = [
+    "com.wisent.compute.service.probierz",
+    "com.wisent.probierz-intake",
+];
 
 /// launchd's default `ExitTimeOut`: how long it gives a booted-out job before
 /// it kills it, so no predecessor outlives a wait this long.
@@ -31,12 +36,14 @@ const EXIT_POLL: Duration = Duration::from_millis(100);
 pub(crate) fn retire() {
     let declared = std::env::var("XPC_SERVICE_NAME").is_ok_and(|label| label == DECLARED_UNIT);
     if declared {
-        launchd();
+        for predecessor in PREDECESSORS {
+            launchd(predecessor);
+        }
     }
 }
 
 #[cfg(target_os = "macos")]
-fn launchd() {
+fn launchd(predecessor: &str) {
     use std::path::PathBuf;
     use std::process::Command;
 
@@ -44,12 +51,12 @@ fn launchd() {
         fn getuid() -> u32;
     }
     // SAFETY: getuid has no preconditions and cannot fail.
-    let target = format!("gui/{}/{PREDECESSOR}", unsafe { getuid() });
+    let target = format!("gui/{}/{predecessor}", unsafe { getuid() });
     let plist = std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_default()
         .join("Library/LaunchAgents")
-        .join(format!("{PREDECESSOR}.plist"));
+        .join(format!("{predecessor}.plist"));
     let printed = Command::new("/bin/launchctl")
         .arg("print")
         .arg(&target)
@@ -69,11 +76,11 @@ fn launchd() {
     }
     match std::fs::remove_file(&plist) {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => eprintln!(
-            "probierz intake: {PREDECESSOR} is stopped but {} stays: {error}",
+            "probierz intake: {predecessor} is stopped but {} stays: {error}",
             plist.display()
         ),
         _ => eprintln!(
-            "probierz intake: retired {PREDECESSOR}: this process is the host's one Probierz intake"
+            "probierz intake: retired {predecessor}: this process is the host's one Probierz intake"
         ),
     }
 }
@@ -107,4 +114,4 @@ fn await_exit(pid: i32) {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn launchd() {}
+fn launchd(_predecessor: &str) {}
