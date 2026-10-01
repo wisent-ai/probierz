@@ -13,6 +13,14 @@
 # is why this file once staged dependencies and verified an unpack. A compiled
 # binary needs none of that: what is built here is what runs on the host.
 set -euo pipefail
+# A release worker runs this without a login shell, so rustup's directory is
+# not on PATH: the job ended `cargo: command not found` on 2026-10-01. The same
+# directories skarbiec's release build adds, in the same order.
+export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+command -v cargo >/dev/null || {
+  echo "probierz build: cargo is not on PATH ($PATH); install the Rust toolchain on this builder" >&2
+  exit 1
+}
 
 : "${WISENT_SOURCE_DIR:?WISENT_SOURCE_DIR is required}"
 : "${WISENT_OUTPUT_DIR:?WISENT_OUTPUT_DIR is required}"
