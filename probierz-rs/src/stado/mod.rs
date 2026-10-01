@@ -14,7 +14,6 @@
 //! | [`submit`] | the remote script, the submission, and the watch over the job |
 //! | [`collect`] | fetching the evidence, the logs, and cancelling or resuming a run |
 //! | [`author`] | remote authoring: its inputs, its receipt, its restore and its submission |
-//! | [`byk`] | the iOS login journey's host, bridge and worker |
 //! | [`sources`] | the source file list a submission is bound to |
 //!
 //! Every part opens with `use crate::stado::*;`, so the list below is the
@@ -23,23 +22,17 @@
 pub(crate) use std::collections::BTreeMap;
 pub(crate) use std::fs::{self, File, OpenOptions};
 pub(crate) use std::io::{Read, Write};
-pub(crate) use std::net::{Shutdown, TcpListener, TcpStream};
-pub(crate) use std::os::unix::fs::{FileTypeExt, PermissionsExt};
-pub(crate) use std::os::unix::net::{UnixListener, UnixStream};
+pub(crate) use std::os::unix::fs::PermissionsExt;
 pub(crate) use std::os::unix::process::ExitStatusExt;
 pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::{Command, Stdio};
-pub(crate) use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
-pub(crate) use std::sync::Arc;
 pub(crate) use std::thread;
-pub(crate) use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+pub(crate) use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-pub(crate) use chrono::{DateTime, Utc};
+pub(crate) use chrono::Utc;
 pub(crate) use clap::{Args, Subcommand};
-pub(crate) use serde::Deserialize;
 pub(crate) use serde_json::{Map, Value};
 pub(crate) use sha2::{Digest, Sha256};
-pub(crate) use subtle::ConstantTimeEq;
 
 pub(crate) use crate::discovery;
 pub(crate) use crate::failure::{print_json, Answer, Code, Failure};
@@ -53,7 +46,6 @@ pub(crate) const MODEL_AGENT_REFERENCE: &str = "vault://wisent/probierz/model-ag
 pub(crate) const SEO_KEY_REFERENCE: &str = "vault://wisent/probierz/seo-receipt-private-key";
 
 mod author;
-mod byk;
 mod collect;
 mod dispatch;
 mod packing;
@@ -66,7 +58,6 @@ pub use dispatch::*;
 pub use records::*;
 pub use sources::*;
 pub(crate) use author::*;
-pub(crate) use byk::*;
 pub(crate) use collect::*;
 pub(crate) use packing::*;
 pub(crate) use provision::*;

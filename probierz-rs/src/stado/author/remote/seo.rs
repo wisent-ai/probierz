@@ -180,25 +180,3 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
     }
     Ok(result)
 }
-
-/// Inputs for the dedicated Byk iOS host bridge. The OTP broker stays local;
-/// Stado carries an authenticated loopback bridge to the worker's protected socket.
-#[derive(Debug)]
-pub struct RemoteBykRequest<'a> {
-    pub host_selector: &'a str,
-    pub root: &'a Path,
-    pub app_path: &'a Path,
-    pub ios_device: &'a str,
-    pub ios_version: &'a str,
-    pub socket_path: &'a Path,
-    pub recipient: &'a str,
-}
-
-#[derive(Debug)]
-pub struct RemoteBykOutcome {
-    pub code: Option<i32>,
-    pub signal: Option<i32>,
-}
-
-pub(crate) const BYK_QUARANTINE: Duration = Duration::from_secs(15 * 60);
-

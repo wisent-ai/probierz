@@ -8,7 +8,6 @@ pub fn dispatch(harness: &Path, command: StadoCommand) -> Answer {
         StadoCommand::Author(args) => dispatch_author(harness, args),
         StadoCommand::Seo(args) => dispatch_seo(harness, args),
         StadoCommand::AuthorReceipt(args) => write_author_receipt(harness, args),
-        StadoCommand::BykAuthWorker => byk_auth_worker(),
     }
 }
 

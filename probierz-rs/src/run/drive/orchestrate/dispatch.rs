@@ -129,8 +129,6 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             harness,
             cell.get("target").and_then(Value::as_str).unwrap_or(""),
             RunOptions {
-                local: false,
-                host_selector: byk_host_selector(None, &BTreeMap::new()),
                 env: cell_env,
                 record: plan.get("record").and_then(Value::as_bool).unwrap_or(true),
                 force: false,

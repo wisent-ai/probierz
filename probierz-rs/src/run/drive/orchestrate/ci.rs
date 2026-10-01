@@ -53,8 +53,6 @@ pub(crate) fn orchestrate(
             harness,
             target,
             RunOptions {
-                local: false,
-                host_selector: byk_host_selector(None, &BTreeMap::new()),
                 env: opts.env.clone(),
                 record: opts.record,
                 force: opts.force,

@@ -104,7 +104,7 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
     };
     result.as_object_mut().expect("object").insert(
         "preflight".into(),
-        preflight(harness, name, &BTreeMap::new())?,
+        preflight(name, &BTreeMap::new())?,
     );
     print_json(&result)?;
     if !ok {

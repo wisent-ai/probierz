@@ -1,10 +1,6 @@
 use serde_json::json;
 use crate::run::*;
-pub(crate) fn preflight(
-    harness: &Path,
-    name: &str,
-    extra: &BTreeMap<String, String>,
-) -> Result<Value, Failure> {
+pub(crate) fn preflight(name: &str, extra: &BTreeMap<String, String>) -> Result<Value, Failure> {
     let env = env_snapshot(extra);
     let setup = |target: &str| format!("probierz setup {target}");
     let checks = match name {
@@ -71,19 +67,6 @@ pub(crate) fn preflight(
         "tui" => vec![
             check_row("terminal session (script)", successful("script", &["-q", "/dev/null", "true"]), false, "script(1) gives a journey a controlling terminal; it ships with macOS and util-linux"),
         ],
-        // The one readiness question that cannot be answered from a file: the
-        // login mailbox has to open and say so, or the journey will sit waiting
-        // for a code that never arrives.
-        "mobile:ios:byk-auth" => {
-            let (reachable, hint) = byk_mailbox_reachable(harness, &env);
-            vec![
-                check_row("Xcode command-line tools (xcrun)", successful("xcrun", &["--version"]), false, "install Xcode from the App Store, then: xcode-select --install"),
-                check_row("appium driver: xcuitest", appium_driver_installed("xcuitest", &env), true, setup("mobile:ios")),
-                check_row("app under test declared", env.contains_key("APP_IOS") != env.contains_key("BUNDLE_ID"), false, "set exactly one of APP_IOS or BUNDLE_ID"),
-                check_row(format!("{BYK_MAILBOX} mailbox reachable"), reachable, false,
-                    if hint.is_empty() { "the login mailbox answers".to_string() } else { hint }),
-            ]
-        }
         "desktop:cua" => vec![
             check_row("macOS host", std::env::consts::OS == "macos", false, "the cua-driver drives the macOS Accessibility API"),
             check_row("logged-in macOS console session", has_console_session(), false, "select a dedicated macOS host with an active GUI login session"),
@@ -110,11 +93,11 @@ pub(crate) fn preflight(
     )
 }
 
-pub fn check(harness: &Path, name: &str) -> Answer {
+pub fn check(name: &str) -> Answer {
     if target(name).is_none() {
         return Err(fail("cli.check", format!("unknown target: {name}")));
     }
-    let result = preflight(harness, name, &BTreeMap::new())?;
+    let result = preflight(name, &BTreeMap::new())?;
     let ready = result
         .get("ready")
         .and_then(Value::as_bool)

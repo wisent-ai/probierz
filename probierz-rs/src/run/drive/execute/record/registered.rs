@@ -48,26 +48,11 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
         return Err(fail("cli.run", format!("unknown target: {name}")));
     }
     let opts = parse_run_args(args, false)?;
-    // A flag that belongs to one target is refused before anything executes:
-    // running a journey while silently ignoring what the operator asked for is
-    // worse than refusing.
-    if (opts.local || opts.seed_resend) && name != "mobile:ios:byk-auth" {
-        return Err(fail(
-            "cli.run",
-            format!("--local and --seed-resend apply to mobile:ios:byk-auth, not {name}"),
-        ));
-    }
     // A web journey opens a Weles browser on the machine that runs it, and a
     // browser runs only on a host Stado places it on. `probierz stado run web`
     // is that placement; its job script exports PROBIERZ_SOURCE_IDENTITY, which
     // is how a run here knows it is inside one.
     if name == "web" {
-        if let Some(host) = opts.host.as_deref() {
-            return Err(fail(
-                "cli.run",
-                format!("web journeys are placed by Stado, not by --host: run `probierz stado run web --app <appId>` (requested host {host})"),
-            ));
-        }
         let placed = std::env::var_os("PROBIERZ_SOURCE_IDENTITY").is_some()
             || opts.env.contains_key("PROBIERZ_SOURCE_IDENTITY");
         if !placed {
@@ -80,16 +65,11 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
     if matches!(name, "tui" | "desktop:cua" | "web") {
         return run_registered_surface(harness, name, &opts);
     }
-    if opts.seed_resend {
-        return seed_byk_resend(harness, &opts.env);
-    }
     let mut result = run_surface(
         harness,
         name,
         RunOptions {
-            host_selector: byk_host_selector(opts.host.as_deref(), &opts.env),
             env: opts.env,
-            local: opts.local,
             record: opts.record,
             force: opts.force,
             spec: opts.spec,

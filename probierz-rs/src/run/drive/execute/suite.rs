@@ -2,10 +2,6 @@ use crate::run::*;
 use serde_json::json;
 pub(crate) struct RunOptions {
     pub(crate) env: BTreeMap<String, String>,
-    /// Run the byk-auth suite on this machine instead of the dedicated host.
-    pub(crate) local: bool,
-    /// The fleet host the remote byk-auth suite is placed on.
-    pub(crate) host_selector: String,
     pub(crate) record: bool,
     pub(crate) force: bool,
     pub(crate) spec: Option<String>,
@@ -100,10 +96,6 @@ fn children_accounting() -> Option<(f64, f64)> {
 }
 
 pub(crate) fn execute_suite(
-    // Only `mobile:ios:byk-auth` reads these: run its suite here rather than on
-    // the fleet, and which fleet host to place it on when it is remote.
-    local: bool,
-    host_selector: &str,
     harness: &Path,
     script: &str,
     env: &BTreeMap<String, String>,
@@ -114,19 +106,6 @@ pub(crate) fn execute_suite(
     started_at: &str,
     artifacts: &Path,
 ) -> Result<(i32, String, String, Value, Value), Failure> {
-    if target_name == "mobile:ios:byk-auth" {
-        return execute_byk(
-            local,
-            host_selector,
-            harness,
-            env,
-            &secrets,
-            stdout_path,
-            stderr_path,
-            started_at,
-            artifacts,
-        );
-    }
     let mut command = Command::new("npm");
     command
         .args(["run", script])

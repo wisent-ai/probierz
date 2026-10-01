@@ -28,25 +28,7 @@ pub(crate) fn run_surface(
             .and_then(serde_yaml::Value::as_str)
             .map(str::to_string)
     });
-    let byk = name == "mobile:ios:byk-auth";
-    let record = if byk { false } else { opts.record };
-    if byk {
-        let allowed = [
-            "APP_IOS",
-            "BUNDLE_ID",
-            "IOS_DEVICE",
-            "IOS_VERSION",
-            "APPIUM_HOME",
-            "DEVELOPER_DIR",
-        ];
-        if opts
-            .env
-            .keys()
-            .any(|name| !allowed.contains(&name.as_str()))
-        {
-            return Err(fail("run.conditions","mobile:ios:byk-auth accepts only app, device, runtime, Appium, and Xcode path conditions"));
-        }
-    }
+    let record = opts.record;
     let started_date = Utc::now();
     let started_time = SystemTime::now();
     let started_at = started_date.to_rfc3339_opts(SecondsFormat::Millis, true);
@@ -106,12 +88,14 @@ pub(crate) fn run_surface(
     let host_name = capture_text("hostname", &[], None);
     let release = capture_text("uname", &["-r"], None);
     let node = capture_text("node", &["--version"], None);
+    // The platform as Node names it, from Node itself, beside its version.
+    let platform = capture_text("node", &["-p", "process.platform"], None);
     write_json(
         &manifest_path,
-        &json!({"schemaVersion":2,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":if byk{json!("byk-auth.e2e.ts")}else{configured_spec.clone().map(Value::String).unwrap_or(Value::Null)},"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":match std::env::consts::OS{"macos"=>"darwin","windows"=>"win32",other=>other},"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
+        &json!({"schemaVersion":2,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":configured_spec.clone().map(Value::String).unwrap_or(Value::Null),"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":text(&platform.stdout).trim(),"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
     )?;
     if !opts.force {
-        let pf = preflight(harness, if byk { "mobile:ios" } else { name }, &opts.env)?;
+        let pf = preflight(name, &opts.env)?;
         if !pf.get("ready").and_then(Value::as_bool).unwrap_or(false) {
             update_json(
                 &manifest_path,
@@ -127,11 +111,7 @@ pub(crate) fn run_surface(
             return Ok(Value::Object(result));
         }
     }
-    let spec = if byk {
-        Some("byk-auth.e2e.ts".to_string())
-    } else {
-        configured_spec
-    };
+    let spec = configured_spec;
     let mut env = suite_environment(
         harness,
         &app_id,
@@ -141,7 +121,6 @@ pub(crate) fn run_surface(
         &journeys,
         record,
         spec.as_deref(),
-        byk,
         &opts,
     );
     let resources = crate::evidence::resources_for(name, &opts.env);
@@ -227,7 +206,6 @@ pub(crate) fn run_surface(
         "npm run {}{}",
         config.script,
         spec.as_ref()
-            .filter(|_| !byk)
             .map(|spec| format!(" (PROBIERZ_SPEC={spec})"))
             .unwrap_or_default()
     );
@@ -237,8 +215,6 @@ pub(crate) fn run_surface(
     )?;
     // A runner that could not start or be waited on is the harness's failure.
     let suite = execute_suite(
-        opts.local,
-        &opts.host_selector,
         harness,
         config.script,
         &env,

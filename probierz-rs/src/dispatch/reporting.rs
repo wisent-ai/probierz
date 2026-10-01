@@ -55,7 +55,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::GateActivate { args } => gate::activate(harness, &args),
         ReportingCommand::GateDeactivate { args } => gate::deactivate(harness, &args),
         // PortRuns: execution, analysis, and matrix
-        ReportingCommand::Check { target } => run::check(harness, &target),
+        ReportingCommand::Check { target } => run::check(&target),
         ReportingCommand::Setup { target, args } => run::setup(harness, &target, &args),
         ReportingCommand::Run { target, args } => {
             let answer = run::run(harness, &target, &args);

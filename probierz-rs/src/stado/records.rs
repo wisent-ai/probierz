@@ -17,9 +17,6 @@ pub enum StadoCommand {
     /// Internal source-bound receipt writer used only inside an author job.
     #[command(hide = true)]
     AuthorReceipt(AuthorReceiptArgs),
-    /// Internal entry point copied to the dedicated iOS worker.
-    #[command(hide = true)]
-    BykAuthWorker,
 }
 
 #[derive(Debug, Args)]

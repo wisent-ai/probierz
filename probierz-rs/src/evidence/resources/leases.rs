@@ -7,7 +7,7 @@ pub fn resources_for(target: &str, env: &BTreeMap<String, String>) -> Vec<String
             .map(String::as_str)
     };
     let mut resources = match target {
-        "mobile:ios" | "mobile:ios:byk-auth" => vec![
+        "mobile:ios" => vec![
             format!(
                 "device:ios:{}:{}",
                 value("IOS_DEVICE").unwrap_or("default"),

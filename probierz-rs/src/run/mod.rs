@@ -10,7 +10,7 @@
 //! | [`plan`] | the target table, the arguments a run is asked for, what a machine must already have, and which targets a change selects |
 //! | [`session`] | starting a child, reading it, stopping its tree, and what the machine and its media said while it ran |
 //! | [`report`] | one report shape out of every driver, the timeline behind it, the verdict read off it, and the identity it is bound to |
-//! | [`drive`] | running one surface, the Byk broker an iOS login needs, and the CI and matrix fan-out |
+//! | [`drive`] | running one surface, and the CI and matrix fan-out |
 
 // One module, kept in parts small enough to read. Every part opens with
 // `use crate::run::*;`, so the list below is the module's single import list
@@ -19,10 +19,9 @@
 pub(crate) use std::collections::{BTreeMap, BTreeSet, HashMap};
 pub(crate) use std::fs::{self, File, OpenOptions};
 pub(crate) use std::io::{BufRead, BufReader, Read, Write};
-pub(crate) use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+pub(crate) use std::os::unix::fs::PermissionsExt;
 pub(crate) use std::path::{Component, Path, PathBuf};
-pub(crate) use std::process::{Child, Command, ExitStatus, Stdio};
-pub(crate) use std::sync::{mpsc, Arc, Mutex};
+pub(crate) use std::process::{Command, ExitStatus, Stdio};
 pub(crate) use std::thread;
 pub(crate) use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

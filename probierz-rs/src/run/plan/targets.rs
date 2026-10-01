@@ -19,11 +19,6 @@ pub(crate) fn target(name: &str) -> Option<Target> {
             script: "test:mobile:ios",
             tool: "wdio",
         },
-        "mobile:ios:byk-auth" => Target {
-            pkg: "packages/mobile",
-            script: "test:mobile:ios:byk-auth",
-            tool: "wdio",
-        },
         "mobile:android" => Target {
             pkg: "packages/mobile",
             script: "test:mobile:android",
@@ -57,7 +52,6 @@ pub(crate) fn target_list() -> Vec<&'static str> {
     vec![
         "web",
         "mobile:ios",
-        "mobile:ios:byk-auth",
         "mobile:android",
         "desktop:mac",
         "desktop:win",
@@ -67,7 +61,7 @@ pub(crate) fn target_list() -> Vec<&'static str> {
 }
 
 pub(crate) fn accepted_preflight_targets() -> &'static str {
-    "web|mobile:ios|mobile:ios:byk-auth|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
+    "web|mobile:ios|mobile:android|desktop:mac|desktop:cua|desktop:win|tui"
 }
 
 /// The flags the six execution commands accept, printed by each of their
@@ -92,14 +86,7 @@ Accepted arguments (parsed by the shared execution parser):
   --no-analyze          Skip report analysis and print the raw run
   --no-repair           Do not offer an authored repair for a failed run
   --frames <N>          Frames per second to extract from a recording
-  --files <PATH>...     Changed files that select what runs (affected, ci)
-  --host <SELECTOR>     mobile:ios:byk-auth only: the stado:<target> its
-                        suite is placed on, from `probierz hosts`; else
-                        BYK_HOST_SELECTOR
-  --local               mobile:ios:byk-auth only: run its suite on this
-                        machine instead of the dedicated host
-  --seed-resend         mobile:ios:byk-auth only: seed the login mailbox's
-                        resend source and stop, running no journey"
+  --files <PATH>...     Changed files that select what runs (affected, ci)"
     };
 }
 
@@ -130,12 +117,6 @@ pub(crate) struct RunArgs {
     pub(crate) spec: Option<String>,
     pub(crate) frames: f64,
     pub(crate) tool: Option<String>,
-    /// Run the byk-auth worker on this machine instead of the dedicated host.
-    pub(crate) local: bool,
-    /// The fleet host the remote byk-auth suite is placed on.
-    pub(crate) host: Option<String>,
-    /// Seed the login mailbox's resend source and stop, without a journey.
-    pub(crate) seed_resend: bool,
 }
 
 pub(crate) fn parse_non_negative(flag: &str, value: &str) -> Result<f64, Failure> {
@@ -191,12 +172,6 @@ pub(crate) fn parse_run_args(args: &[String], allow_positionals: bool) -> Result
                 opts.tool = Some(value_after(args, index, arg)?);
                 index += 1;
             }
-            "--local" => opts.local = true,
-            "--host" => {
-                opts.host = Some(value_after(args, index, arg)?);
-                index += 1;
-            }
-            "--seed-resend" => opts.seed_resend = true,
             "--files" => {}
             _ if arg.starts_with("--") => {
                 return Err(fail("cli.arguments", format!("unknown option: {arg}")))

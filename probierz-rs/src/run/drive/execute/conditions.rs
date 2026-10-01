@@ -53,8 +53,7 @@ pub(crate) fn declared_surface(
 
 /// The environment the suite process is started with: the caller's snapshot
 /// plus every coordinate the drivers read out of the environment rather than
-/// out of arguments, including the spec a surface declared. A Byk run names
-/// its spec to the broker instead, so it is not exported here.
+/// out of arguments, including the spec a surface declared.
 pub(crate) fn suite_environment(
     harness: &Path,
     app_id: &str,
@@ -64,7 +63,6 @@ pub(crate) fn suite_environment(
     journeys: &[String],
     record: bool,
     spec: Option<&str>,
-    byk: bool,
     opts: &RunOptions,
 ) -> BTreeMap<String, String> {
     let mut env = env_snapshot(&opts.env);
@@ -96,7 +94,7 @@ pub(crate) fn suite_environment(
     if let Ok(binary) = std::env::current_exe() {
         env.insert("PROBIERZ_BIN".into(), binary.to_string_lossy().into_owned());
     }
-    if let Some(spec) = spec.filter(|_| !byk) {
+    if let Some(spec) = spec {
         env.insert("PROBIERZ_SPEC".into(), spec.to_string());
     }
     env
