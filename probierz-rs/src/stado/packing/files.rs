@@ -29,7 +29,12 @@ pub(crate) fn work_path(name: &str) -> Result<PathBuf, Failure> {
     Ok(directory.join(name))
 }
 
-pub(crate) fn write_json(path: &Path, value: &Value, pretty: bool, newline: bool) -> Result<(), Failure> {
+pub(crate) fn write_json(
+    path: &Path,
+    value: &Value,
+    pretty: bool,
+    newline: bool,
+) -> Result<(), Failure> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -74,7 +79,7 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
         "-T".to_string(),
         list.display().to_string(),
     ];
-    let output = sh("tar", &args, Some(root), None);
+    let output = sh("tar", &args, Some(root));
     let _ = fs::remove_file(&list);
     if output.status != Some(0) {
         return Err(local_failure(
@@ -126,7 +131,7 @@ pub(crate) fn pack_app_bundle(app_id: &str, bundle: &Path) -> Result<(Packed, St
         parent.display().to_string(),
         name.clone(),
     ];
-    let output = sh("tar", &args, None, None);
+    let output = sh("tar", &args, None);
     if output.status != Some(0) {
         return Err(local_failure(
             "stado.pack",
