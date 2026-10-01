@@ -20,10 +20,10 @@ selected worktrees with portable Git metadata, keeps staging under
 `~/.stado/work/probierz`, and records the actual source revision and file hashes
 on the worker without rewriting the application manifest.
 
-If the watcher loses connectivity, resume the existing job instead of submitting
-the run again. If Probierz's own watch budget expires while Stado still answers,
-the result is `watch-expired` and recommends the same resume command; it is not
-reported as an infrastructure outage and no local bypass is recommended:
+Probierz waits for a submitted job with one held read, `stado machine status
+<jobId> --until terminal`, which answers when the job ends; there is no watch
+budget, interval or retry. If that read fails, the result is `unreachable` with
+Stado's own output, and the job is resumed instead of submitted again:
 
 ```bash
 node agent/cli.mjs stado resume <jobId> --host stado:ubuntu
@@ -35,11 +35,9 @@ The MCP equivalent is `probierz_stado_resume`.
 
 Remote Cargo provisioning builds the selected binary from its source directory
 with the locked dependency graph, so the repository's Rust toolchain is honored.
-An existing Rust installation is not upgraded by provisioning. Unless explicitly
-overridden with `--timeout`, the runner uses the sum of the selected journeys'
-declared time budgets, with the default budget for journeys that omit one.
-The staged Cargo output belongs only to that job and is removed on exit,
-including failed runs; retained reports and source identities are preserved.
+An existing Rust installation is not upgraded by provisioning. The staged Cargo
+output belongs only to that job and is removed on exit, including failed runs;
+retained reports and source identities are preserved.
 
 To run or author with an already signed native Stado executable against its
 exact, clean, committed product source without rebuilding or consulting a

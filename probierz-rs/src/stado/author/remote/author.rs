@@ -84,7 +84,6 @@ pub(crate) fn submit_remote_author(
         json!({ "stado_uri": identity_uri, "relative_path": "inputs/source-identity.json" }),
     );
     inputs.extend(provisioned);
-    let watch_budget = conservative_watch_budget(harness, app_id)?;
     let secrets = remote_secret_env(
         harness,
         app_id,
@@ -97,7 +96,6 @@ pub(crate) fn submit_remote_author(
         "author",
         inputs.clone(),
         secrets,
-        watch_budget,
     )?;
     let identity_fields = copy_submission_identity(
         &identity,
@@ -113,7 +111,6 @@ pub(crate) fn submit_remote_author(
         "journey": journey,
         "area": area,
         "submitted": submission.job_id.is_some(),
-        "watchBudgetMs": submission.watch_budget_ms,
     });
     result
         .as_object_mut()
@@ -153,7 +150,7 @@ pub(crate) fn submit_remote_author(
         object.insert("failure".into(), Value::Null);
         return Ok(result);
     }
-    let watched = watch_job(harness, &job_id, Some(watch_budget))?;
+    let watched = watch_job(&job_id)?;
     result
         .as_object_mut()
         .expect("object")

@@ -168,7 +168,6 @@ pub(crate) fn upload(local_file: &Path, name: &str) -> Result<String, Failure> {
                     source.display().to_string(),
                 ],
                 None,
-                None,
             )
         },
         |duration| thread::sleep(duration),

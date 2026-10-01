@@ -221,7 +221,6 @@ pub(crate) struct Identity {
 #[derive(Debug)]
 pub(crate) struct Submission {
     pub(crate) job_id: Option<String>,
-    pub(crate) watch_budget_ms: u64,
     pub(crate) receipt_dir: PathBuf,
     pub(crate) failure: Option<Value>,
 }

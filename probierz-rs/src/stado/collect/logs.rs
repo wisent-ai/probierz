@@ -19,7 +19,6 @@ pub(crate) fn collect_remote_run(
         STADO_BIN,
         &["machine".into(), "status".into(), job_id.into()],
         None,
-        Some(STATUS_TIMEOUT),
     );
     if status.status != Some(0) {
         return Err(remote_failure(
@@ -174,7 +173,6 @@ pub(crate) fn capture_remote_logs(
                 "65536".into(),
             ],
             None,
-            Some(STATUS_TIMEOUT),
         );
         append_line(&receipts, page.stdout.trim())?;
         let payload: Value = match serde_json::from_str(&page.stdout) {

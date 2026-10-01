@@ -7,14 +7,7 @@ pub(crate) fn submit_machine(
     kind: &str,
     input_objects: Map<String, Value>,
     secret_env: Value,
-    watch_budget_ms: u64,
 ) -> Result<Submission, Failure> {
-    if watch_budget_ms == 0 {
-        return Err(Failure::config(
-            "stado.submit",
-            "remote submission requires a positive watch budget",
-        ));
-    }
     let receipt_dir = harness
         .join("test-results")
         .join(".remote")
@@ -26,12 +19,7 @@ pub(crate) fn submit_machine(
         "client_request_id".into(),
         Value::String(format!("probierz-{kind}-{hash}")),
     );
-    request.insert(
-        "command".into(),
-        Value::String(format!(
-            "{WATCH_BUDGET_ENV}={watch_budget_ms} bash inputs/run.sh"
-        )),
-    );
+    request.insert("command".into(), Value::String("bash inputs/run.sh".into()));
     request.insert("output_uri".into(), Value::String(state_uri("results")));
     request.insert("input_objects".into(), Value::Object(input_objects));
     request.insert("secret_env".into(), secret_env);
@@ -58,7 +46,6 @@ pub(crate) fn submit_machine(
             request_file.display().to_string(),
         ],
         None,
-        None,
     );
     write_json(
         &receipt_dir.join("submission.json"),
@@ -84,7 +71,6 @@ pub(crate) fn submit_machine(
                 STADO_BIN,
                 &["machine".into(), "status".into(), candidate.clone()],
                 None,
-                Some(STATUS_TIMEOUT),
             );
             if let Ok(value) = serde_json::from_str::<Value>(&status.stdout) {
                 if value.get("ok").and_then(Value::as_bool) == Some(true)
@@ -107,7 +93,6 @@ pub(crate) fn submit_machine(
         );
         Ok(Submission {
             job_id: Some(job_id),
-            watch_budget_ms,
             receipt_dir,
             failure: None,
         })
@@ -119,7 +104,6 @@ pub(crate) fn submit_machine(
         );
         Ok(Submission {
             job_id: None,
-            watch_budget_ms,
             receipt_dir,
             failure: Some(failure_summary(
                 &failure,

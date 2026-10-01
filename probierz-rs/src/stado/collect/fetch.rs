@@ -41,7 +41,6 @@ pub(crate) fn fetch_run_evidence(
             staging.display().to_string(),
         ],
         None,
-        None,
     );
     let payload: Value = match serde_json::from_str(&output.stdout) {
         Ok(value) => value,
@@ -123,7 +122,6 @@ pub(crate) fn fetch_run_evidence(
             "tar",
             &["-tzf".into(), tarball.display().to_string()],
             Some(harness),
-            None,
         );
         if listed.status != Some(0) {
             let _ = fs::remove_dir_all(&staging);
@@ -181,7 +179,6 @@ pub(crate) fn fetch_run_evidence(
             harness.display().to_string(),
         ],
         Some(harness),
-        None,
     );
     if extracted.status != Some(0) {
         return Err(local_failure(

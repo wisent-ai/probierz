@@ -51,7 +51,6 @@ pub(crate) fn cancel_remote_run(
         STADO_BIN,
         &["machine".into(), "status".into(), job_id.into()],
         None,
-        Some(STATUS_TIMEOUT),
     );
     let before_path = directory.join("status-before.json");
     fs::write(&before_path, &before.stdout)?;
@@ -86,7 +85,6 @@ pub(crate) fn cancel_remote_run(
         STADO_BIN,
         &["machine".into(), "cancel".into(), job_id.into()],
         None,
-        Some(STATUS_TIMEOUT),
     );
     let receipt_path = directory.join("receipt.json");
     fs::write(&receipt_path, &cancellation.stdout)?;

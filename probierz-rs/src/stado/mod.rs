@@ -10,7 +10,7 @@
 //! | [`records`] | the command arguments and the shapes a submission is described by |
 //! | [`dispatch`] | which command an operator asked for, and the answer it returns |
 //! | [`provision`] | which host a run is placed on, and the shell it is reached through |
-//! | [`packing`] | the source packed and uploaded, and the budget a run is given |
+//! | [`packing`] | the source packed and uploaded, and the manifest values and secrets a run is given |
 //! | [`submit`] | the remote script, the submission, and the watch over the job |
 //! | [`collect`] | fetching the evidence, the logs, and cancelling or resuming a run |
 //! | [`author`] | remote authoring: its inputs, its receipt, its restore and its submission |
@@ -49,12 +49,6 @@ pub(crate) const STADO_BIN: &str = "stado";
 pub(crate) const NODE_VERSION: &str = "v22.20.0";
 pub(crate) const UPLOAD_ATTEMPTS: usize = 6;
 pub(crate) const UPLOAD_BACKOFF: Duration = Duration::from_secs(5);
-pub(crate) const WATCH_INTERVAL: Duration = Duration::from_secs(30);
-pub(crate) const STATUS_TIMEOUT: Duration = Duration::from_secs(180);
-pub(crate) const GUI_STATUS_TIMEOUT: Duration = Duration::from_secs(1800);
-pub(crate) const STATUS_FAILURE_TOLERANCE: usize = 3;
-pub(crate) const SETUP_STEP_TIMEOUT_MS: u64 = 30 * 60 * 1000;
-pub(crate) const WATCH_BUDGET_ENV: &str = "PROBIERZ_WATCH_BUDGET_MS";
 pub(crate) const STADO_RETRY_EXIT: i32 = 69;
 
 pub(crate) const MODEL_ROUTER_REFERENCE: &str = "vault://wisent/probierz/model-router-token";

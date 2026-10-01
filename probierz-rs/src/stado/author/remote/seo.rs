@@ -118,7 +118,6 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
         secret_names.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
     }
     let secrets = remote_secret_env(harness, app_id, &secret_names)?;
-    let watch_budget = conservative_watch_budget(harness, app_id)?;
     let submission = submit_machine(
         harness,
         &selected,
@@ -126,7 +125,6 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
         "seo",
         inputs,
         secrets,
-        watch_budget,
     )?;
     let mut result = json!({
         "host": args.host,
@@ -134,7 +132,6 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
         "appId": app_id,
         "mode": args.mode,
         "submitted": submission.job_id.is_some(),
-        "watchBudgetMs": submission.watch_budget_ms,
     });
     let Some(job_id) = submission.job_id else {
         let object = result.as_object_mut().expect("object");
@@ -148,7 +145,7 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
         object.insert("failure".into(), Value::Null);
         return Ok(result);
     }
-    let watched = watch_job(harness, &job_id, Some(watch_budget))?;
+    let watched = watch_job(&job_id)?;
     result
         .as_object_mut()
         .expect("object")

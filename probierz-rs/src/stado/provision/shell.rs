@@ -1,11 +1,9 @@
 use serde_json::json;
 use crate::stado::*;
-pub(crate) fn sh(
-    command: &str,
-    args: &[String],
-    cwd: Option<&Path>,
-    timeout: Option<Duration>,
-) -> ProcessOutput {
+/// Run `command` to its end and keep its output. The child is waited for,
+/// never polled or killed on a timer: a command that fails reports its own
+/// exit and stderr.
+pub(crate) fn sh(command: &str, args: &[String], cwd: Option<&Path>) -> ProcessOutput {
     let mut process = Command::new(command);
     process
         .args(args)
@@ -45,35 +43,13 @@ pub(crate) fn sh(
         }
         bytes
     });
-    let started = Instant::now();
-    let (status, timed_out) = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break (Some(status), false),
-            Ok(None)
-                if timeout
-                    .map(|limit| started.elapsed() >= limit)
-                    .unwrap_or(false) =>
-            {
-                let _ = child.kill();
-                break (child.wait().ok(), true);
-            }
-            Ok(None) => thread::sleep(Duration::from_millis(10)),
-            Err(error) => {
-                let _ = child.kill();
-                return ProcessOutput {
-                    command: command.to_string(),
-                    args: display_args,
-                    status: None,
-                    signal: None,
-                    stdout: String::new(),
-                    stderr: String::new(),
-                    error: Some(error.to_string()),
-                };
-            }
-        }
-    };
+    let waited = child.wait();
     let stdout = stdout_reader.join().unwrap_or_default();
     let stderr = stderr_reader.join().unwrap_or_default();
+    let (status, error) = match waited {
+        Ok(status) => (Some(status), None),
+        Err(error) => (None, Some(format!("waiting for {command} failed: {error}"))),
+    };
     ProcessOutput {
         command: command.to_string(),
         args: display_args,
@@ -81,7 +57,7 @@ pub(crate) fn sh(
         signal: status.as_ref().and_then(|value| value.signal()),
         stdout: String::from_utf8_lossy(&stdout).into_owned(),
         stderr: String::from_utf8_lossy(&stderr).into_owned(),
-        error: timed_out.then(|| "operation timed out".to_string()),
+        error,
     }
 }
 
@@ -191,7 +167,6 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
             ),
         )
     })?;
-    let started = Instant::now();
     let output = sh(
         STADO_BIN,
         &[
@@ -201,14 +176,7 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
             registry_target.into(),
         ],
         None,
-        Some(GUI_STATUS_TIMEOUT),
     );
-    if output.error.as_deref() == Some("operation timed out") {
-        return Err(Failure::config(
-            "stado.preflight",
-            format!("The GUI readiness audit for {registry_target} exceeded its deadline. Readiness is unknown; no GUI job was submitted. elapsed_ms={}", started.elapsed().as_millis()),
-        ));
-    }
     if output.status != Some(0) {
         return Err(remote_failure(
             "stado.preflight",

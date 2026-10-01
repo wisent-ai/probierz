@@ -13,7 +13,7 @@ pub(crate) fn resume_remote_run(
         ));
     }
     host(host_name, "stado.watch")?;
-    let watched = watch_job(harness, job_id, None)?;
+    let watched = watch_job(job_id)?;
     let mut result = json!({
         "host": host_name,
         "jobId": job_id,

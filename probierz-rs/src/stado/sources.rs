@@ -12,7 +12,6 @@ pub fn source_file_list(root: &Path) -> Result<Vec<u8>, Failure> {
             "-z".into(),
         ],
         None,
-        None,
     );
     if output.status != Some(0) {
         return Err(Failure::config(

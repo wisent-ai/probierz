@@ -17,8 +17,6 @@ pub(crate) fn submit_remote_run(
     require_gui_ready(target, &selected)?;
     let identity = pack_source_identity(harness, app_id, app_repo)?;
     require_immutable_native(target, provision.as_ref(), app_repo, &identity)?;
-    let watch_budget =
-        selected_run_budget(harness, app_id, target, environment, provision.as_ref())?;
     let packed = pack_repo(harness, &[app_id])?;
     let repo_uri = upload(&packed.file, &format!("probierz-{}.tar.gz", packed.hash))?;
     let identity_uri = upload(
@@ -68,7 +66,6 @@ pub(crate) fn submit_remote_run(
         "run",
         inputs.clone(),
         secrets,
-        watch_budget,
     )?;
     let identity_fields = copy_submission_identity(
         &identity,
@@ -82,7 +79,6 @@ pub(crate) fn submit_remote_run(
         "target": target,
         "appId": app_id,
         "submitted": submission.job_id.is_some(),
-        "watchBudgetMs": submission.watch_budget_ms,
     });
     result
         .as_object_mut()
@@ -100,7 +96,7 @@ pub(crate) fn submit_remote_run(
         object.insert("failure".into(), Value::Null);
         return Ok(result);
     }
-    let watched = watch_job(harness, &job_id, Some(watch_budget))?;
+    let watched = watch_job(&job_id)?;
     result
         .as_object_mut()
         .expect("object")
