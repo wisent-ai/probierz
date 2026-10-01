@@ -1,5 +1,4 @@
 use crate::cua::*;
-pub(crate) const COMMAND_TIMEOUT: Duration = Duration::from_secs(15);
 pub(crate) const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 pub(crate) const LAUNCH_WAIT: Duration = Duration::from_secs(8);
 pub(crate) const POLL: Duration = Duration::from_millis(400);

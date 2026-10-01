@@ -117,28 +117,9 @@ pub(crate) fn tail_chars(text: &str, count: usize) -> String {
     characters.into_iter().collect()
 }
 
-pub(crate) fn run_timeout(command: &mut Command, timeout: Duration) -> Result<Output, String> {
-    let mut child: Child = command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| error.to_string())?;
-    let deadline = Instant::now() + timeout;
-    while Instant::now() < deadline {
-        match child.try_wait() {
-            Ok(Some(_)) => return child.wait_with_output().map_err(|error| error.to_string()),
-            Ok(None) => thread::sleep(Duration::from_millis(25)),
-            Err(error) => return Err(error.to_string()),
-        }
-    }
-    let _ = child.kill();
-    let output = child
-        .wait_with_output()
-        .map_err(|error| error.to_string())?;
-    Err(if output_detail(&output).trim().is_empty() {
-        "command timed out".to_string()
-    } else {
-        output_detail(&output)
-    })
+/// Runs `command` to its own exit and captures both streams; no deadline and
+/// no poll (cli.md rule 8). `output()` drains both pipes while it waits.
+pub(crate) fn run_to_exit(command: &mut Command) -> Result<Output, String> {
+    command.output().map_err(|error| error.to_string())
 }
 

@@ -133,12 +133,11 @@ impl Driver {
             } else {
                 "cua-driver".to_string()
             };
-            let _ = run_timeout(
+            let _ = run_to_exit(
                 Command::new(&daemon_binary)
                     .arg("stop")
                     .arg("--socket")
                     .arg(&self.socket),
-                COMMAND_TIMEOUT,
             );
             let _ = fs::remove_file(&self.socket);
             let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
@@ -146,7 +145,7 @@ impl Driver {
             let daemon_log = parent.join("probierz-daemon.log");
             let _ = fs::remove_file(&daemon_log);
 
-            let launched = run_timeout(
+            let launched = run_to_exit(
                 Command::new("/usr/bin/open")
                     .arg("-n")
                     .arg("-g")
@@ -156,7 +155,6 @@ impl Driver {
                     .arg("serve")
                     .arg("--socket")
                     .arg(&self.socket),
-                COMMAND_TIMEOUT,
             )
             .map_err(|error| format!("CuaDriver app launch failed: {error}"))?;
             if !launched.status.success() {
@@ -201,14 +199,13 @@ impl Driver {
     }
 
     pub(crate) fn probe_permissions(&self) -> Option<Value> {
-        let output = run_timeout(
+        let output = run_to_exit(
             Command::new(&self.binary)
                 .arg("call")
                 .arg("check_permissions")
                 .arg(r#"{"prompt":false}"#)
                 .arg("--socket")
                 .arg(&self.socket),
-            COMMAND_TIMEOUT,
         )
         .ok()?;
         if !output.status.success() {

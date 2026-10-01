@@ -16,7 +16,7 @@
 pub(crate) use std::collections::BTreeMap;
 pub(crate) use std::fs;
 pub(crate) use std::path::{Path, PathBuf};
-pub(crate) use std::process::{Child, Command, Output, Stdio};
+pub(crate) use std::process::{Command, Output, Stdio};
 pub(crate) use std::thread;
 pub(crate) use std::time::{Duration, Instant};
 
