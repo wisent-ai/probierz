@@ -200,6 +200,5 @@ pub struct RemoteBykOutcome {
     pub signal: Option<i32>,
 }
 
-pub(crate) const BYK_RETRIES: usize = 3;
 pub(crate) const BYK_QUARANTINE: Duration = Duration::from_secs(15 * 60);
 

@@ -168,7 +168,8 @@ impl BykLocalBridge {
                 format!("could not bind the local Stado OTP bridge: {error}"),
             )
         })?;
-        listener.set_nonblocking(true)?;
+        // Blocking accept: `Drop` sets `stop` and connects once, which wakes
+        // the accept so the loop ends without polling.
         let port = listener.local_addr()?.port();
         let socket_path = socket_path.to_path_buf();
         let mut expected = bridge_token.as_bytes().to_vec();
@@ -176,28 +177,23 @@ impl BykLocalBridge {
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = Arc::clone(&stop);
         let thread = thread::spawn(move || {
-            while !thread_stop.load(Ordering::SeqCst) {
-                match listener.accept() {
-                    Ok((mut tcp, _)) => {
-                        let socket_path = socket_path.clone();
-                        let expected = expected.clone();
-                        thread::spawn(move || {
-                            let _ = tcp.set_read_timeout(Some(Duration::from_secs(5)));
-                            let mut received = vec![0_u8; expected.len()];
-                            if tcp.read_exact(&mut received).is_ok()
-                                && bool::from(received.ct_eq(&expected))
-                            {
-                                if let Ok(unix) = UnixStream::connect(socket_path) {
-                                    relay_tcp_and_unix(tcp, unix);
-                                }
-                            }
-                        });
-                    }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(Duration::from_millis(10));
-                    }
-                    Err(_) => break,
+            for accepted in listener.incoming() {
+                if thread_stop.load(Ordering::SeqCst) {
+                    break;
                 }
+                let Ok(mut tcp) = accepted else { break };
+                let socket_path = socket_path.clone();
+                let expected = expected.clone();
+                thread::spawn(move || {
+                    let mut received = vec![0_u8; expected.len()];
+                    if tcp.read_exact(&mut received).is_ok()
+                        && bool::from(received.ct_eq(&expected))
+                    {
+                        if let Ok(unix) = UnixStream::connect(socket_path) {
+                            relay_tcp_and_unix(tcp, unix);
+                        }
+                    }
+                });
             }
         });
         Ok(Self {

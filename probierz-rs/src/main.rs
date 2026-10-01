@@ -23,7 +23,6 @@ mod authoring;
 mod cua;
 mod readme_gif;
 mod specs;
-mod tui;
 // PortStatus: status/history/dashboard/overview/intake
 mod status;
 // PortIncidents: the register of attempts that did not hold

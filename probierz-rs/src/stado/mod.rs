@@ -47,9 +47,6 @@ pub(crate) use crate::manifest;
 
 pub(crate) const STADO_BIN: &str = "stado";
 pub(crate) const NODE_VERSION: &str = "v22.20.0";
-pub(crate) const UPLOAD_ATTEMPTS: usize = 6;
-pub(crate) const UPLOAD_BACKOFF: Duration = Duration::from_secs(5);
-pub(crate) const STADO_RETRY_EXIT: i32 = 69;
 
 pub(crate) const MODEL_ROUTER_REFERENCE: &str = "vault://wisent/probierz/model-router-token";
 pub(crate) const MODEL_AGENT_REFERENCE: &str = "vault://wisent/probierz/model-agent-secret";

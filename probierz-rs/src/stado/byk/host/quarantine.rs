@@ -76,29 +76,16 @@ pub(crate) fn clear_byk_quarantine(home: &Path) -> Answer {
     Ok(())
 }
 
-pub(crate) fn retry_byk<F>(label: &str, mut operation: F) -> Answer
-where
-    F: FnMut() -> ProcessOutput,
-{
-    let mut last = None;
-    for attempt in 0..BYK_RETRIES {
-        let output = operation();
-        if output.status == Some(0) {
-            return Ok(());
-        }
-        last = Some(output);
-        if attempt + 1 < BYK_RETRIES {
-            thread::sleep(Duration::from_secs(1_u64 << attempt));
-        }
+/// Run one Stado step once. A step that fails is the failure, reported with
+/// Stado's own output; nothing is retried or slept on.
+pub(crate) fn require_byk(label: &str, operation: impl FnOnce() -> ProcessOutput) -> Answer {
+    let output = operation();
+    if output.status == Some(0) {
+        return Ok(());
     }
-    let detail = last
-        .as_ref()
-        .map(process_text)
+    let detail = Some(process_text(&output))
         .filter(|text| !text.is_empty())
         .unwrap_or_else(|| "exit unknown".into());
-    Err(Failure::unavailable(
-        "byk.remote",
-        format!("{label} failed after {BYK_RETRIES} attempts ({detail})"),
-    ))
+    Err(Failure::unavailable("byk.remote", format!("{label} failed ({detail})")))
 }
 

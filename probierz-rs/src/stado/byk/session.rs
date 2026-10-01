@@ -16,7 +16,7 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
         .ok_or_else(|| Failure::config("byk.remote", "HOME is required"))?;
     assert_byk_host_available(&home)?;
     let target = resolve_byk_target(request.host_selector)?;
-    retry_byk("Stado reachability check", || {
+    require_byk("Stado reachability check", || {
         sh_with_input(
             STADO_BIN,
             &[
@@ -65,11 +65,11 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
     let mut forward_opened = false;
     let mut created = false;
     let result = (|| {
-        retry_byk("Stado OTP forwarding channel", || {
+        require_byk("Stado OTP forwarding channel", || {
             sh_with_input(STADO_BIN, &forward_args, &[])
         })?;
         forward_opened = true;
-        retry_byk("dedicated-host preparation", || {
+        require_byk("dedicated-host preparation", || {
             sh_with_input(
                 STADO_BIN,
                 &[
@@ -85,7 +85,7 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
             )
         })?;
         created = true;
-        retry_byk("Probierz source delivery", || {
+        require_byk("Probierz source delivery", || {
             sh_with_input(
                 STADO_BIN,
                 &[
@@ -101,7 +101,7 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
                 &source_files,
             )
         })?;
-        retry_byk("Byk app delivery", || {
+        require_byk("Byk app delivery", || {
             sh_with_input(
                 STADO_BIN,
                 &[
@@ -115,7 +115,7 @@ pub fn run_remote_byk_auth(request: RemoteBykRequest<'_>) -> Result<RemoteBykOut
                 &[],
             )
         })?;
-        retry_byk("dedicated-host worker build", || {
+        require_byk("dedicated-host worker build", || {
             sh_with_input(
                 STADO_BIN,
                 &[

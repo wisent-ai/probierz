@@ -10,9 +10,6 @@
 //! exit, and removes its launch agent before binding, so the port is free and
 //! no login loads it again. Run by hand or by a test, it retires nothing.
 
-#[cfg(target_os = "macos")]
-use std::time::Duration;
-
 /// The one unit the fleet runs Probierz under, as the Stado catalog names it.
 pub(crate) const DECLARED_UNIT: &str = "com.wisent.probierz";
 
@@ -28,15 +25,6 @@ const PREDECESSORS: [&str; 4] = [
     "com.wisent.probierz-cua-driver",
     "com.wisent.compute.service.com.wisent.probierz-cua-driver",
 ];
-
-/// launchd's default `ExitTimeOut`: how long it gives a booted-out job before
-/// it kills it, so no predecessor outlives a wait this long.
-#[cfg(target_os = "macos")]
-const LAUNCHD_EXIT_TIMEOUT: Duration = Duration::from_secs(20);
-
-/// How often the wait asks whether the predecessor is gone.
-#[cfg(target_os = "macos")]
-const EXIT_POLL: Duration = Duration::from_millis(100);
 
 pub(crate) fn retire() {
     let declared = std::env::var("XPC_SERVICE_NAME").is_ok_and(|label| label == DECLARED_UNIT);
@@ -102,20 +90,68 @@ fn running_pid(printed: &str) -> Option<i32> {
 /// `launchctl bootout` can return while the Node intake still holds its
 /// listener: the declared intake's next bind then fails with `Address already
 /// in use`, exits 75, and `stado service ensure` reports the unit loaded with
-/// no pid until launchd's restart binds the port. Binding waits until that
-/// process is gone, at most as long as launchd waits before killing it.
+/// no pid until launchd's restart binds the port. Binding waits for that
+/// process's exit through the kernel's process-exit event (kqueue
+/// `EVFILT_PROC`/`NOTE_EXIT`): no timer, no polling. A pid that is already
+/// gone fails registration and is not waited for; a kqueue that cannot be
+/// opened is reported and the bind then fails with its own error.
 #[cfg(target_os = "macos")]
 fn await_exit(pid: i32) {
-    use std::time::Instant;
-
+    #[repr(C)]
+    struct KEvent {
+        ident: usize,
+        filter: i16,
+        flags: u16,
+        fflags: u32,
+        data: isize,
+        udata: *mut std::ffi::c_void,
+    }
     extern "C" {
-        fn kill(pid: i32, signal: i32) -> i32;
+        fn kqueue() -> i32;
+        fn kevent(
+            kq: i32,
+            changelist: *const KEvent,
+            nchanges: i32,
+            eventlist: *mut KEvent,
+            nevents: i32,
+            timeout: *const std::ffi::c_void,
+        ) -> i32;
+        fn close(fd: i32) -> i32;
     }
-    let deadline = Instant::now() + LAUNCHD_EXIT_TIMEOUT;
-    // SAFETY: signal 0 only asks whether the pid exists; nothing is delivered.
-    while unsafe { kill(pid, 0) } == 0 && Instant::now() < deadline {
-        std::thread::sleep(EXIT_POLL);
+    const EVFILT_PROC: i16 = -5;
+    const EV_ADD: u16 = 0x1;
+    const NOTE_EXIT: u32 = 0x8000_0000;
+    /// `kevent` answers this for a pid that has already exited.
+    const ESRCH: i32 = 3;
+    // SAFETY: kqueue takes no arguments; a negative answer is its error.
+    let kq = unsafe { kqueue() };
+    if kq < 0 {
+        eprintln!(
+            "probierz intake: cannot watch pid {pid} exit: kqueue failed: {}",
+            std::io::Error::last_os_error()
+        );
+        return;
     }
+    let change = KEvent {
+        ident: pid as usize,
+        filter: EVFILT_PROC,
+        flags: EV_ADD,
+        fflags: NOTE_EXIT,
+        data: 0,
+        udata: std::ptr::null_mut(),
+    };
+    let mut fired = KEvent { ident: 0, filter: 0, flags: 0, fflags: 0, data: 0, udata: std::ptr::null_mut() };
+    // SAFETY: one valid change and one writable event slot; a null timeout
+    // blocks until the process exits. A pid already gone answers -1/ESRCH.
+    let answered = unsafe { kevent(kq, &change, 1, &mut fired, 1, std::ptr::null()) };
+    if answered < 0 {
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() != Some(ESRCH) {
+            eprintln!("probierz intake: watching pid {pid} exit failed: {error}");
+        }
+    }
+    // SAFETY: kq is the descriptor kqueue returned above.
+    unsafe { close(kq) };
 }
 
 #[cfg(not(target_os = "macos"))]

@@ -83,29 +83,26 @@ impl BykRemoteBridge {
             )
         })?;
         fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600))?;
-        listener.set_nonblocking(true)?;
+        // Blocking accept: `Drop` sets `stop` and connects once, which wakes
+        // the accept so the loop ends without polling.
         let mut authentication = bridge_token.as_bytes().to_vec();
         authentication.push(b'\n');
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = Arc::clone(&stop);
         let thread = thread::spawn(move || {
-            while !thread_stop.load(Ordering::SeqCst) {
-                match listener.accept() {
-                    Ok((unix, _)) => {
-                        let authentication = authentication.clone();
-                        thread::spawn(move || {
-                            if let Ok(mut tcp) = TcpStream::connect(("127.0.0.1", port)) {
-                                if tcp.write_all(&authentication).is_ok() {
-                                    relay_tcp_and_unix(tcp, unix);
-                                }
-                            }
-                        });
-                    }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(Duration::from_millis(10));
-                    }
-                    Err(_) => break,
+            for accepted in listener.incoming() {
+                if thread_stop.load(Ordering::SeqCst) {
+                    break;
                 }
+                let Ok(unix) = accepted else { break };
+                let authentication = authentication.clone();
+                thread::spawn(move || {
+                    if let Ok(mut tcp) = TcpStream::connect(("127.0.0.1", port)) {
+                        if tcp.write_all(&authentication).is_ok() {
+                            relay_tcp_and_unix(tcp, unix);
+                        }
+                    }
+                });
             }
         });
         Ok(Self {

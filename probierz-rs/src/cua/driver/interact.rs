@@ -35,30 +35,6 @@ impl Driver {
         Ok(snapshot)
     }
 
-    pub fn wait_for_text(
-        &self,
-        pid: u32,
-        window_id: u64,
-        needle: &str,
-        timeout: Duration,
-    ) -> Result<Snapshot, String> {
-        let deadline = Instant::now() + timeout;
-        let mut last = String::new();
-        while Instant::now() < deadline {
-            let snapshot = self.snapshot(pid, window_id)?;
-            if snapshot.tree.contains(needle) {
-                return Ok(snapshot);
-            }
-            last = snapshot.tree;
-            thread::sleep(POLL);
-        }
-        Err(format!(
-            "timed out waiting for {}; last tree (tail): {}",
-            serde_json::to_string(needle).unwrap_or_else(|_| format!("\"{needle}\"")),
-            tail_chars(&last, 600)
-        ))
-    }
-
     pub fn click_element(
         &self,
         pid: u32,

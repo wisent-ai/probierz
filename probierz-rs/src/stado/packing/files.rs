@@ -154,55 +154,26 @@ pub(crate) fn pack_source_identity(
     })
 }
 
+/// Put one file into the Stado object store, once. A refused put is the
+/// failure, reported with Stado's own output; nothing is retried or slept on.
 pub(crate) fn upload(local_file: &Path, name: &str) -> Result<String, Failure> {
-    upload_with(
-        local_file,
-        name,
-        |destination, source| {
-            sh(
-                STADO_BIN,
-                &[
-                    "storage".into(),
-                    "put".into(),
-                    destination.into(),
-                    source.display().to_string(),
-                ],
-                None,
-            )
-        },
-        |duration| thread::sleep(duration),
-    )
-}
-
-pub(crate) fn upload_with<F, S>(
-    local_file: &Path,
-    name: &str,
-    mut call: F,
-    mut sleep: S,
-) -> Result<String, Failure>
-where
-    F: FnMut(&str, &Path) -> ProcessOutput,
-    S: FnMut(Duration),
-{
     let destination = format!("{}/{name}", state_uri("inputs"));
-    let mut last = None;
-    for attempt in 1..=UPLOAD_ATTEMPTS {
-        let output = call(&destination, local_file);
-        if output.status == Some(0) {
-            return Ok(destination);
-        }
-        let retry = output.status == Some(STADO_RETRY_EXIT) && attempt < UPLOAD_ATTEMPTS;
-        last = Some(output);
-        if !retry {
-            break;
-        }
-        sleep(UPLOAD_BACKOFF.saturating_mul(attempt as u32));
+    let mut output = sh(
+        STADO_BIN,
+        &[
+            "storage".into(),
+            "put".into(),
+            destination.clone(),
+            local_file.display().to_string(),
+        ],
+        None,
+    );
+    if output.status == Some(0) {
+        return Ok(destination);
     }
-    let mut output = last.expect("at least one upload attempt");
-    output.stderr.push_str(&format!(
-        " (source {}, {UPLOAD_ATTEMPTS} attempts)",
-        local_file.display()
-    ));
+    output
+        .stderr
+        .push_str(&format!(" (source {})", local_file.display()));
     Err(remote_failure(
         "stado.upload",
         &format!("Uploading {name} to the stado object store failed"),
