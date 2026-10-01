@@ -12,26 +12,38 @@ pub enum EvidenceCommand {
     // PortEvidence: durable evidence, signing, publication, and retention
     /// Encrypt and authenticate one run's evidence artifacts.
     Protect {
+        /// Application whose run is protected (required).
         app_id: Option<String>,
+        /// Run to protect (required).
         run_id: Option<String>,
+        /// Retention kind whose period the bundle carries; the run's own
+        /// kind, else `adhoc`, when omitted.
         kind: Option<String>,
+        /// File holding the encryption key.
         #[arg(long)]
         key_file: Option<PathBuf>,
+        /// Delete the plaintext artifacts once the bundle is written.
         #[arg(long = "remove-source")]
         remove_source: bool,
     },
     /// Authenticate and restore an encrypted evidence bundle.
     Restore {
+        /// Encrypted bundle to restore.
         bundle: Option<PathBuf>,
+        /// Directory the artifacts are restored into.
         destination: Option<PathBuf>,
+        /// File holding the decryption key.
         #[arg(long)]
         key_file: Option<PathBuf>,
     },
     /// Plan or apply application evidence retention.
     Retention {
+        /// Application whose evidence is planned (required).
         app_id: Option<String>,
+        /// RFC 3339 time expiry is judged at; now when omitted.
         #[arg(long)]
         at: Option<String>,
+        /// Delete what has expired instead of only listing it.
         #[arg(long)]
         apply: bool,
         /// Read the evidence this harness left in the fleet's object store
@@ -40,14 +52,21 @@ pub enum EvidenceCommand {
         fleet: bool,
     },
     /// Find credentials and tokens in an evidence directory.
-    SecretScan { directory: Option<PathBuf> },
+    SecretScan {
+        /// Evidence directory to scan.
+        directory: Option<PathBuf>,
+    },
     /// Query the tamper-evident access audit.
     Audit {
+        /// Only records of this application.
         app_id: Option<String>,
+        /// Only records of this run.
         #[arg(long = "run")]
         run_id: Option<String>,
+        /// Only records of this action, for example `artifact.protect`.
         #[arg(long)]
         action: Option<String>,
+        /// Most records to print; a positive number.
         #[arg(long, default_value = "200")]
         limit: String,
     },
@@ -65,15 +84,22 @@ pub enum EvidenceCommand {
     },
     /// Sign exact runs and policy into an evidence receipt.
     Receipt {
+        /// Application the receipt is for (required).
         app_id: Option<String>,
+        /// Release the receipt is for (required).
         release: Option<String>,
+        /// Lowercase SHA-256 of the harness the runs used (required).
         expected_harness_sha: Option<String>,
+        /// Lowercase SHA-256 of the product source the runs used (required).
         #[arg(long = "source-sha")]
         expected_source_sha: Option<String>,
+        /// Comma-separated run IDs to sign; at least one.
         #[arg(long)]
         runs: Option<String>,
+        /// Comma-separated journeys the signed runs must cover.
         #[arg(long)]
         journeys: Option<String>,
+        /// Lowest evidence level accepted, `E0` to `E5`.
         #[arg(long, default_value = "E3")]
         minimum: String,
     },
