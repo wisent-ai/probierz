@@ -183,14 +183,9 @@ impl Driver {
                 });
             }
 
-            let probe_deadline = Instant::now() + STARTUP_TIMEOUT;
-            while Instant::now() < probe_deadline {
-                permissions = self.probe_permissions();
-                if permissions.is_some() {
-                    break;
-                }
-                thread::sleep(Duration::from_millis(250));
-            }
+            // The socket exists, so the daemon is answering: one read, and a
+            // refusal is the named error below (cli.md rule 8).
+            permissions = self.probe_permissions();
         }
         if permissions.is_none() {
             return Err("Probierz CuaDriver daemon cannot use macOS Accessibility".to_string());
