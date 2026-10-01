@@ -164,24 +164,7 @@ impl Driver {
                 ));
             }
 
-            let socket_deadline = Instant::now() + STARTUP_TIMEOUT;
-            while Instant::now() < socket_deadline && !self.socket.exists() {
-                thread::sleep(Duration::from_millis(100));
-            }
-            if !self.socket.exists() {
-                let detail = fs::read_to_string(&daemon_log)
-                    .ok()
-                    .map(|text| tail_chars(&text, 2000))
-                    .unwrap_or_default();
-                return Err(if detail.is_empty() {
-                    format!("CuaDriver did not create {}", self.socket.display())
-                } else {
-                    format!(
-                        "CuaDriver did not create {}:\n{detail}",
-                        self.socket.display()
-                    )
-                });
-            }
+            self.await_socket(&daemon_log)?;
 
             // The socket exists, so the daemon is answering: one read, and a
             // refusal is the named error below (cli.md rule 8).

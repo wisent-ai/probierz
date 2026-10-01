@@ -1,5 +1,4 @@
 use crate::cua::*;
-pub(crate) const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 pub(crate) const LAUNCH_WAIT: Duration = Duration::from_secs(8);
 pub(crate) const POLL: Duration = Duration::from_millis(400);
 pub(crate) const BUNDLED_DRIVER: &str = "/Applications/CuaDriver.app/Contents/MacOS/cua-driver";
