@@ -110,7 +110,7 @@ export const shared: Partial<Options.Testrunner> = {
         passed,
         failed: results.length - passed,
         tests: results,
-      }, null, Number('2')),
+      }, null, 2),
     );
   },
 };
