@@ -33,7 +33,6 @@ pub(crate) fn simctl_devices() -> Value {
         "xcrun",
         &["simctl", "list", "devices", "available", "--json"],
         None,
-        Some(PROBE_MS),
     );
     if !result.status.is_some_and(|status| status.success()) {
         return json!({});
@@ -85,7 +84,6 @@ pub(crate) fn app_build_sdk(app: &str) -> Option<String> {
         ],
         None,
         None,
-        Some(PROBE_MS),
     );
     if !result.status.is_some_and(|status| status.success()) {
         return None;
@@ -107,7 +105,6 @@ pub(crate) fn cua_accessibility_granted() -> bool {
         ],
         None,
         None,
-        Some(PROBE_MS),
     );
     if !result.status.is_some_and(|status| status.success()) {
         return false;
@@ -124,7 +121,7 @@ pub(crate) fn has_console_session() -> bool {
     if std::env::consts::OS != "macos" {
         return false;
     }
-    let result = capture_text("who", &[], None, Some(PROBE_MS));
+    let result = capture_text("who", &[], None);
     result.status.is_some_and(|status| status.success())
         && text(&result.stdout)
             .lines()
@@ -135,7 +132,7 @@ pub(crate) fn mac_automation_mode() -> bool {
     if std::env::consts::OS != "macos" {
         return false;
     }
-    let result = capture_text("/usr/bin/automationmodetool", &[], None, Some(PROBE_MS));
+    let result = capture_text("/usr/bin/automationmodetool", &[], None);
     result.status.is_some_and(|status| status.success())
         && text(&result.stdout)
             .to_ascii_lowercase()

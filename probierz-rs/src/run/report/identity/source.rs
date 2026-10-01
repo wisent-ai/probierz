@@ -36,7 +36,6 @@ pub(crate) fn repository_identity(
         ],
         None,
         None,
-        None,
     );
     let diff = capture(
         "git",
@@ -50,7 +49,6 @@ pub(crate) fn repository_identity(
         ],
         None,
         None,
-        None,
     );
     let others = capture(
         "git",
@@ -62,7 +60,6 @@ pub(crate) fn repository_identity(
             "--exclude-standard".into(),
             "-z".into(),
         ],
-        None,
         None,
         None,
     );

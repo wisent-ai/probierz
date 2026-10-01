@@ -95,7 +95,6 @@ pub(crate) fn git_source_paths(
         ],
         None,
         None,
-        None,
     );
     if !result.status.is_some_and(|status| status.success()) {
         return Err(Failure::config(

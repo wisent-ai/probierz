@@ -183,7 +183,6 @@ pub(crate) fn changed_files(harness: &Path, reference: &str) -> Result<Vec<Strin
         ],
         None,
         None,
-        None,
     );
     if !result.status.is_some_and(|status| status.success()) {
         return Err(fail(

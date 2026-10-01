@@ -4,7 +4,6 @@ pub(crate) struct Captured {
     pub(crate) stdout: Vec<u8>,
     pub(crate) stderr: Vec<u8>,
     pub(crate) error: Option<String>,
-    pub(crate) timed_out: bool,
 }
 
 pub(crate) fn terminate_tree(child: &mut std::process::Child, hard: bool) {
@@ -32,12 +31,13 @@ pub(crate) fn terminate_tree(child: &mut std::process::Child, hard: bool) {
     }
 }
 
+/// Runs `program` to its own exit and captures both streams. There is no
+/// deadline: the program's exit or its own error is the result (cli.md rule 8).
 pub(crate) fn capture(
     program: &str,
     args: &[String],
     cwd: Option<&Path>,
     env: Option<&BTreeMap<String, String>>,
-    timeout_ms: Option<u64>,
 ) -> Captured {
     let mut command = Command::new(program);
     command
@@ -63,7 +63,6 @@ pub(crate) fn capture(
                 stdout: Vec::new(),
                 stderr: Vec::new(),
                 error: Some(error.to_string()),
-                timed_out: false,
             }
         }
     };
@@ -83,31 +82,11 @@ pub(crate) fn capture(
         }
         bytes
     });
-    let started = Instant::now();
-    let mut timed_out = false;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break Some(status),
-            Ok(None) => {
-                if timeout_ms
-                    .is_some_and(|timeout| started.elapsed() >= Duration::from_millis(timeout))
-                {
-                    timed_out = true;
-                    terminate_tree(&mut child, false);
-                    thread::sleep(Duration::from_millis(25));
-                    if child.try_wait().ok().flatten().is_none() {
-                        terminate_tree(&mut child, true);
-                    }
-                    break child.wait().ok();
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            Err(_error) => {
-                break {
-                    let _ = child.kill();
-                    None
-                }
-            }
+    let status = match child.wait() {
+        Ok(status) => Some(status),
+        Err(_error) => {
+            let _ = child.kill();
+            None
         }
     };
     Captured {
@@ -115,16 +94,10 @@ pub(crate) fn capture(
         stdout: out_thread.join().unwrap_or_default(),
         stderr: err_thread.join().unwrap_or_default(),
         error: None,
-        timed_out,
     }
 }
 
-pub(crate) fn capture_text(
-    program: &str,
-    args: &[&str],
-    cwd: Option<&Path>,
-    timeout_ms: Option<u64>,
-) -> Captured {
+pub(crate) fn capture_text(program: &str, args: &[&str], cwd: Option<&Path>) -> Captured {
     capture(
         program,
         &args
@@ -133,12 +106,11 @@ pub(crate) fn capture_text(
             .collect::<Vec<_>>(),
         cwd,
         None,
-        timeout_ms,
     )
 }
 
 pub(crate) fn successful(program: &str, args: &[&str]) -> bool {
-    capture_text(program, args, None, Some(PROBE_MS))
+    capture_text(program, args, None)
         .status
         .is_some_and(|status| status.success())
 }

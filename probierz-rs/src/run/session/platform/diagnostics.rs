@@ -75,7 +75,7 @@ pub(crate) fn collect_platform_diagnostics(
         } else {
             return json!({ "supported": false, "file": null });
         };
-    let result = capture(command, &args, None, None, Some(20_000));
+    let result = capture(command, &args, None, None);
     let output = redact_diagnostic(&text(&result.stdout));
     let error = redact_diagnostic(&text(&result.stderr));
     let _ = write_secure_text(&file, &output);
@@ -104,7 +104,7 @@ pub(crate) fn named_process_sample(process_name: Option<&str>) -> Option<Value> 
     if cfg!(windows) {
         return None;
     }
-    let result = capture_text("ps", &["-axo", "comm=,rss=,%cpu="], None, Some(3000));
+    let result = capture_text("ps", &["-axo", "comm=,rss=,%cpu="], None);
     if !result.status.is_some_and(|status| status.success()) {
         return None;
     }
@@ -140,7 +140,7 @@ pub(crate) fn performance_sample(pgid: u32, process_name: Option<&str>) -> Optio
     if cfg!(windows) {
         return None;
     }
-    let result = capture_text("ps", &["-axo", "pgid=,rss=,%cpu="], None, Some(3000));
+    let result = capture_text("ps", &["-axo", "pgid=,rss=,%cpu="], None);
     if !result.status.is_some_and(|status| status.success()) {
         return None;
     }

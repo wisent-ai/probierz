@@ -70,7 +70,6 @@ pub(crate) fn byk_mailbox_reachable(
         ],
         Some(&rotator),
         Some(&broker_env),
-        Some(DEFAULT_TIMEOUT_MS),
     );
     if probe.status.is_some_and(|status| status.success()) {
         return (true, String::new());

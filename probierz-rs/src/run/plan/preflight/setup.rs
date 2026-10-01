@@ -86,18 +86,8 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
         if let Some(directory) = &step.output_dir {
             fs::create_dir_all(directory)?;
         }
-        let result = capture(
-            &step.command,
-            &step.args,
-            Some(harness),
-            None,
-            Some(if opts.timeout_ms > 0 {
-                opts.timeout_ms
-            } else {
-                30 * 60 * 1000
-            }),
-        );
-        let ok = result.status.is_some_and(|status| status.success()) && !result.timed_out;
+        let result = capture(&step.command, &step.args, Some(harness), None);
+        let ok = result.status.is_some_and(|status| status.success());
         let exit_code = result.status.and_then(|status| status.code()).unwrap_or(-1);
         done.push(json!({ "step": step.name, "command": line, "ok": ok, "exitCode": exit_code }));
         if !ok {

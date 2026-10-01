@@ -36,12 +36,7 @@ pub(crate) fn run_data_command(
         .and_then(serde_yaml::Value::as_str)
         .map(|cwd| normalize_path(&harness.join(cwd)))
         .unwrap_or_else(|| harness.to_path_buf());
-    let timeout = config
-        .get("timeoutMs")
-        .and_then(serde_yaml::Value::as_u64)
-        .filter(|value| *value > 0)
-        .unwrap_or(120_000);
-    let execution = capture(command, &args, Some(&cwd), Some(env), Some(timeout));
+    let execution = capture(command, &args, Some(&cwd), Some(env));
     let safe_out = redact_text(&text(&execution.stdout), secrets);
     let safe_err = redact_text(&text(&execution.stderr), secrets);
     if !safe_out.is_empty() {

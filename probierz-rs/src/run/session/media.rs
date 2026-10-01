@@ -52,7 +52,6 @@ pub(crate) fn probe_video(file: &Path) -> Option<Value> {
         ],
         None,
         None,
-        None,
     );
     if !result.status.is_some_and(|status| status.success()) || result.stdout.is_empty() {
         return None;
@@ -102,7 +101,6 @@ pub(crate) fn extract_frames(video: &Path, artifacts: &Path, count: f64) -> Vec<
             format!("fps={fps}"),
             pattern.to_string_lossy().into_owned(),
         ],
-        None,
         None,
         None,
     );

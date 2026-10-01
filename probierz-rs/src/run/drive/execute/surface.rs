@@ -99,9 +99,9 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
     let conditions = run_conditions(record, &opts.env);
     let mut base = json!({"runId":run_id,"startedAt":started_at,"appId":app_id,"kind":kind,"target":name,"tool":config.tool,"pkg":config.pkg,"script":config.script,"artifactsDir":artifacts,"reportPath":report_path,"manifestPath":manifest_path,"stdoutPath":stdout_path,"stderrPath":stderr_path,"conditions":conditions});
     let app_manifest=app.as_ref().map(|declaration|json!({"file":declaration.file,"owner":declaration.document.get("owner").and_then(serde_yaml::Value::as_str).unwrap_or(""),"journeys":journeys})).unwrap_or(Value::Null);
-    let host_name = capture_text("hostname", &[], None, Some(3000));
-    let release = capture_text("uname", &["-r"], None, Some(3000));
-    let node = capture_text("node", &["--version"], None, Some(3000));
+    let host_name = capture_text("hostname", &[], None);
+    let release = capture_text("uname", &["-r"], None);
+    let node = capture_text("node", &["--version"], None);
     write_json(
         &manifest_path,
         &json!({"schemaVersion":2,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":if byk{json!("byk-auth.e2e.ts")}else{configured_spec.clone().map(Value::String).unwrap_or(Value::Null)},"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":match std::env::consts::OS{"macos"=>"darwin","windows"=>"win32",other=>other},"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
