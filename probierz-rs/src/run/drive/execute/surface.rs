@@ -141,12 +141,7 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
         &opts,
     );
     let resources = crate::evidence::resources_for(name, &opts.env);
-    let lease = match crate::evidence::acquire_resources_wait(
-        harness,
-        &resources,
-        &run_id,
-        opts.resource_wait_ms,
-    ) {
+    let lease = match crate::evidence::acquire_resources(harness, &resources, &run_id) {
         Ok(lease) => lease,
         Err(error) => {
             let lock = json!({"error":error.to_string(),"resource":null,"owner":null});

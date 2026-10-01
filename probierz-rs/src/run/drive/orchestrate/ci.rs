@@ -62,7 +62,6 @@ pub(crate) fn orchestrate(
                 spec: opts.spec.clone(),
                 app_id: opts.app_id.clone(),
                 kind: Some("pull-request".into()),
-                resource_wait_ms: Some(opts.resource_wait_ms.unwrap_or(10 * 60 * 1000)),
             },
         )?;
         if run.get("skipped").and_then(Value::as_bool) == Some(true) {

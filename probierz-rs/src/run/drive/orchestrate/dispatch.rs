@@ -138,7 +138,6 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
                 spec: cell.get("spec").and_then(Value::as_str).map(str::to_string),
                 app_id: Some(app_id.into()),
                 kind: Some(profile.into()),
-                resource_wait_ms: plan.get("resourceWaitMs").and_then(Value::as_u64),
             },
         )?;
         let mut public = cell.clone();

@@ -93,7 +93,6 @@ Accepted arguments (parsed by the shared execution parser):
   --no-repair           Do not offer an authored repair for a failed run
   --frames <N>          Frames per second to extract from a recording
   --timeout <MS>        Give the suite this long before it is killed
-  --resource-wait <MS>  Wait this long for a held resource before refusing
   --files <PATH>...     Changed files that select what runs (affected, ci)
   --host <SELECTOR>     mobile:ios:byk-auth only: the stado:<target> its
                         suite is placed on, from `probierz hosts`; else
@@ -132,7 +131,6 @@ pub(crate) struct RunArgs {
     pub(crate) spec: Option<String>,
     pub(crate) frames: f64,
     pub(crate) timeout_ms: u64,
-    pub(crate) resource_wait_ms: Option<u64>,
     pub(crate) tool: Option<String>,
     /// Run the byk-auth worker on this machine instead of the dedicated host.
     pub(crate) local: bool,
@@ -188,11 +186,6 @@ pub(crate) fn parse_run_args(args: &[String], allow_positionals: bool) -> Result
                 opts.timeout_ms = parse_non_negative(arg, &value)? as u64;
                 index += 1;
             }
-            "--resource-wait" => {
-                let value = value_after(args, index, arg)?;
-                opts.resource_wait_ms = Some(parse_non_negative(arg, &value)? as u64);
-                index += 1;
-            }
             "--spec" => {
                 opts.spec = Some(value_after(args, index, arg)?);
                 index += 1;
@@ -234,7 +227,6 @@ pub(crate) fn files_after_flag(args: &[String]) -> Option<Vec<String>> {
     let valued = [
         "--frames",
         "--timeout",
-        "--resource-wait",
         "--spec",
         "--app",
         "--tool",

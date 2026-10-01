@@ -183,7 +183,6 @@ matrix:
     record: true
     frames: 3
     timeoutMs: 1200000
-    resourceWaitMs: 600000
     maximumParallel: 4
     minimumCellEvidence: E3
     artifactEncryption: required
@@ -208,7 +207,6 @@ matrix:
     record: true
     frames: 8
     timeoutMs: 1200000
-    resourceWaitMs: 600000
     maximumParallel: 2
     minimumCellEvidence: E3
     maxCells: 16

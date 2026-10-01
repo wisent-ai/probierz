@@ -177,7 +177,6 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "appRepo" => "app-repo",
             "noRepair" => "no-repair",
             "timeoutMs" => "timeout",
-            "resourceWaitMs" => "resource-wait",
             "startSeconds" => "start",
             "durationSeconds" => "duration",
             "framesPerSecond" => "fps",

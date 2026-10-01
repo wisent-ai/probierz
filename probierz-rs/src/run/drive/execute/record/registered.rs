@@ -103,7 +103,6 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
             spec: opts.spec,
             app_id: opts.app_id,
             kind: None,
-            resource_wait_ms: opts.resource_wait_ms,
         },
     )?;
     if result.get("skipped").and_then(Value::as_bool) == Some(true) {

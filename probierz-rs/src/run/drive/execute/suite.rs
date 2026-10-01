@@ -12,7 +12,6 @@ pub(crate) struct RunOptions {
     pub(crate) spec: Option<String>,
     pub(crate) app_id: Option<String>,
     pub(crate) kind: Option<String>,
-    pub(crate) resource_wait_ms: Option<u64>,
 }
 
 pub(crate) fn drain_run_stream<R: Read>(
