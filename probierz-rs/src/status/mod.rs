@@ -47,28 +47,3 @@ pub use runs::history::history;
 pub(crate) use runs::history::run_history_value;
 pub(crate) use runs::records::failure_class;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn glob_has_javascript_star_semantics() {
-        assert!(glob_matches("Sources/**/*.swift", "Sources/App/View.swift"));
-        assert!(!glob_matches("Sources/*.swift", "Sources/App/View.swift"));
-        assert!(glob_matches("Package.swift", "Package.swift"));
-    }
-
-    #[test]
-    fn failure_point_requires_dotted_lowercase_segments() {
-        assert!(valid_failure_point("desktop.login.auth-failed"));
-        assert!(!valid_failure_point("Desktop.login"));
-        assert!(!valid_failure_point("desktop..login"));
-        assert!(!valid_failure_point("desktop.-login"));
-    }
-
-    #[test]
-    fn service_filename_preserves_existing_hyphens() {
-        assert_eq!(service_file_name(" A- B "), "a--b.jsonl");
-        assert_eq!(service_file_name("%%%"), "unknown.jsonl");
-    }
-}

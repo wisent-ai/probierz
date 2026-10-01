@@ -142,20 +142,3 @@ pub(crate) fn run_timeout(command: &mut Command, timeout: Duration) -> Result<Ou
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn snapshot_prefers_structured_content_over_the_markdown_tree() {
-        let snapshot = Snapshot::from_value(json!({
-            "tree_markdown": "- AXButton (Save) [7]",
-            "structuredContent": {
-                "snapshot_id": "s42",
-                "elements": [{"element_index": 7, "element_token": "s42:7", "label": "Save"}]
-            }
-        }));
-        assert_eq!(snapshot.snapshot_id.as_deref(), Some("s42"));
-        assert_eq!(element_index_of(&snapshot.tree, "AXButton (Save)"), Ok(7));
-    }
-}

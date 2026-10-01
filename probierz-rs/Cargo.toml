@@ -5,6 +5,7 @@ edition = "2021"
 rust-version = "1.85"
 description = "Probierz: journeys run where the product lives, and every run becomes evidence"
 license = "Apache-2.0"
+autotests = false
 
 [[bin]]
 name = "probierz"

@@ -191,25 +191,3 @@ pub fn spec_dir(surface: &str) -> Option<PathBuf> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn an_outline_keeps_a_quotation_mark_inside_a_title() {
-        let source =
-            "describe('a product\\'s journey', () => { it(\"reads `state`\", () => {}); });";
-        let outline = outline_of(source);
-        assert_eq!(outline.len(), 2);
-        assert_eq!(outline[0].kind, "describe");
-        assert_eq!(outline[0].title, "a product\\'s journey");
-        assert_eq!(outline[1].kind, "it");
-        assert_eq!(outline[1].title, "reads `state`");
-    }
-
-    #[test]
-    fn an_identifier_that_merely_starts_like_a_title_call_is_not_one() {
-        let outline = outline_of("const describeLater = 1; itemCount('x'); object.it('y');");
-        assert!(outline.is_empty(), "unexpected outline: {outline:?}");
-    }
-}

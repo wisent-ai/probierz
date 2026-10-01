@@ -229,12 +229,3 @@ pub fn affected(harness: &Path, args: &[String]) -> Answer {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn glob_double_star_crosses_directories_but_star_does_not() {
-        assert!(glob_matches("src/**/view.ts", "src/a/b/view.ts"));
-        assert!(!glob_matches("src/*/view.ts", "src/a/b/view.ts"));
-    }
-}

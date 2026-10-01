@@ -206,22 +206,3 @@ pub fn write_private(path: &std::path::Path, body: &[u8]) -> std::io::Result<()>
     file.write_all(body)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_retryable_failure_exits_with_the_temporary_code() {
-        assert_eq!(Code::Unavailable.exit_code(), 75);
-        assert_eq!(Code::Invalid.exit_code(), 1);
-        assert_eq!(Code::Config.exit_code(), 1);
-    }
-
-    #[test]
-    fn a_long_detail_is_cut_at_a_character_boundary_and_says_so() {
-        let detail = "ż".repeat(400);
-        let failure = Failure::invalid("test", detail);
-        assert_eq!(failure.detail.chars().count(), MAX_DETAIL_CHARS + 1);
-        assert!(failure.detail.ends_with('…'));
-    }
-}

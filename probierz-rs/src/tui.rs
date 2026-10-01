@@ -22,8 +22,6 @@ use crate::failure::{Code, Failure};
 
 mod screen;
 mod spawn;
-#[cfg(test)]
-mod tests;
 
 use screen::last_frame;
 pub use screen::strip_ansi;

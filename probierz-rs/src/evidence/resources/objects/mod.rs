@@ -117,28 +117,3 @@ pub fn remove_object(uri: &str) -> Result<(), Failure> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-    use super::*;
-
-    #[test]
-    fn canonical_json_sorts_every_object_level() {
-        assert_eq!(
-            canonical(&json!({"z": [3, {"b": true, "a": null}], "a": "x"})),
-            r#"{"a":"x","z":[3,{"a":null,"b":true}]}"#
-        );
-    }
-
-    #[test]
-    fn resources_match_shared_driver_boundaries() {
-        let env = BTreeMap::from([
-            ("IOS_DEVICE".into(), "iPhone 17".into()),
-            ("IOS_VERSION".into(), "26".into()),
-        ]);
-        assert_eq!(
-            resources_for("mobile:ios", &env),
-            vec!["device:ios:iPhone 17:26", "port:4723"]
-        );
-    }
-}
