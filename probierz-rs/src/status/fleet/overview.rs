@@ -104,7 +104,7 @@ pub(crate) fn fleet_health() -> Value {
             };
             let action = match failure.point.as_str() {
                 "objects.config" => "Stado object storage is unusable",
-                "objects.read" if failure.detail.contains("rejected") => {
+                "objects.read" if failure.code == Code::Refused => {
                     "Stado object storage rejected the request"
                 }
                 "objects.read" => "Stado object storage did not answer",
