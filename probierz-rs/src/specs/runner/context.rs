@@ -76,12 +76,68 @@ impl Context {
     }
 }
 
-/// Every journey this toolkit owns, in the order a report lists them.
+/// The directories of compiled journeys the operator approved with `tama
+/// tests approve`, read through `tama tests list --json`. A journey is a test,
+/// and a test runs only from an approved path; an approval of
+/// `…/probierz-rs/src/specs` covers every surface, one of
+/// `…/probierz-rs/src/specs/{tui,cua,web}` covers that surface.
+fn approved_journey_modules() -> Result<Vec<&'static str>, String> {
+    let output = Command::new("tama")
+        .args(["tests", "list", "--json"])
+        .output()
+        .map_err(|error| format!("tama tests list --json could not run: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "tama tests list --json exited {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let document: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("tama tests list --json printed no approval record: {error}"))?;
+    let paths: Vec<PathBuf> = document["approved"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row["path"].as_str().map(PathBuf::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    let root = Path::new("probierz-rs/src/specs");
+    let whole = paths.iter().any(|path| path.ends_with(root));
+    Ok(["tui", "cua", "web"]
+        .into_iter()
+        .filter(|module| whole || paths.iter().any(|path| path.ends_with(root.join(module))))
+        .collect())
+}
+
+/// Every compiled journey the operator approved, in the order a report lists
+/// them. Without an approval this is empty and stderr says why, so a surface
+/// that runs nothing is never mistaken for one that passed.
 pub fn registry() -> Vec<Spec> {
+    let modules = match approved_journey_modules() {
+        Ok(modules) => modules,
+        Err(reason) => {
+            eprintln!("probierz: no compiled journey runs: {reason}");
+            Vec::new()
+        }
+    };
+    if modules.is_empty() {
+        eprintln!(
+            "probierz: no compiled journey is approved; the operator approves them with \
+             tama tests approve <checkout>/probierz-rs/src/specs (or …/specs/tui, …/cua, …/web)"
+        );
+    }
     let mut all = Vec::new();
-    all.extend(tui::specs());
-    all.extend(cua::specs());
-    all.extend(web::specs());
+    if modules.contains(&"tui") {
+        all.extend(tui::specs());
+    }
+    if modules.contains(&"cua") {
+        all.extend(cua::specs());
+    }
+    if modules.contains(&"web") {
+        all.extend(web::specs());
+    }
     all.sort_by(|left, right| (left.surface, left.title).cmp(&(right.surface, right.title)));
     all
 }
