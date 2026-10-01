@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) struct RunOptions {
     pub(crate) env: BTreeMap<String, String>,
     /// Run the byk-auth suite on this machine instead of the dedicated host.
@@ -7,7 +7,6 @@ pub(crate) struct RunOptions {
     /// The fleet host the remote byk-auth suite is placed on.
     pub(crate) host_selector: String,
     pub(crate) record: bool,
-    pub(crate) timeout_ms: u64,
     pub(crate) force: bool,
     pub(crate) spec: Option<String>,
     pub(crate) app_id: Option<String>,
@@ -40,6 +39,66 @@ pub(crate) fn drain_run_stream<R: Read>(
     (tail, first_output_ms)
 }
 
+/// Resource accounting the kernel keeps for the children this process has
+/// waited for: CPU time and peak resident size. Read once after the runner
+/// exits, so no timer samples the process while it runs.
+#[repr(C)]
+struct Timeval {
+    tv_sec: i64,
+    #[cfg(target_os = "macos")]
+    tv_usec: i32,
+    #[cfg(not(target_os = "macos"))]
+    tv_usec: i64,
+}
+
+#[repr(C)]
+struct Rusage {
+    ru_utime: Timeval,
+    ru_stime: Timeval,
+    ru_maxrss: i64,
+    ru_ixrss: i64,
+    ru_idrss: i64,
+    ru_isrss: i64,
+    ru_minflt: i64,
+    ru_majflt: i64,
+    ru_nswap: i64,
+    ru_inblock: i64,
+    ru_oublock: i64,
+    ru_msgsnd: i64,
+    ru_msgrcv: i64,
+    ru_nsignals: i64,
+    ru_nvcsw: i64,
+    ru_nivcsw: i64,
+}
+
+const RUSAGE_CHILDREN: i32 = -1;
+
+/// `(cpu seconds, peak resident KiB)` of the waited-for children, or `None`
+/// when the kernel refuses the read.
+fn children_accounting() -> Option<(f64, f64)> {
+    extern "C" {
+        fn getrusage(who: i32, usage: *mut Rusage) -> i32;
+    }
+    let mut usage = std::mem::MaybeUninit::<Rusage>::uninit();
+    // SAFETY: getrusage writes a full rusage into the buffer it is handed.
+    let usage = unsafe {
+        if getrusage(RUSAGE_CHILDREN, usage.as_mut_ptr()) != 0 {
+            return None;
+        }
+        usage.assume_init()
+    };
+    let seconds =
+        |time: &Timeval| time.tv_sec as f64 + f64::from(time.tv_usec as i32) / 1_000_000.0;
+    let cpu = seconds(&usage.ru_utime) + seconds(&usage.ru_stime);
+    // macOS reports ru_maxrss in bytes, Linux in kibibytes.
+    let peak_kib = if cfg!(target_os = "macos") {
+        usage.ru_maxrss as f64 / 1024.0
+    } else {
+        usage.ru_maxrss as f64
+    };
+    Some((cpu, peak_kib))
+}
+
 pub(crate) fn execute_suite(
     // Only `mobile:ios:byk-auth` reads these: run its suite here rather than on
     // the fleet, and which fleet host to place it on when it is remote.
@@ -48,21 +107,19 @@ pub(crate) fn execute_suite(
     harness: &Path,
     script: &str,
     env: &BTreeMap<String, String>,
-    timeout_ms: u64,
     secrets: Vec<(String, String)>,
     stdout_path: &Path,
     stderr_path: &Path,
     target_name: &str,
     started_at: &str,
     artifacts: &Path,
-) -> Result<(i32, bool, String, String, Value, Value), Failure> {
+) -> Result<(i32, String, String, Value, Value), Failure> {
     if target_name == "mobile:ios:byk-auth" {
         return execute_byk(
             local,
             host_selector,
             harness,
             env,
-            timeout_ms,
             &secrets,
             stdout_path,
             stderr_path,
@@ -89,7 +146,6 @@ pub(crate) fn execute_suite(
             format!("Starting the {target_name} runner failed: {error}"),
         )
     })?;
-    let pid = child.id();
     let child_out = child.stdout.take().expect("piped stdout");
     let child_err = child.stderr.take().expect("piped stderr");
     let out_path = stdout_path.to_path_buf();
@@ -116,79 +172,31 @@ pub(crate) fn execute_suite(
             .and_then(|name| name.to_str())
             .map(str::to_string)
     };
-    let mut samples = Vec::new();
-    if let Some(sample) = performance_sample(pid, process_name.as_deref()) {
-        samples.push(sample);
-    }
-    let mut next_sample = Instant::now() + Duration::from_millis(SAMPLE_INTERVAL_MS);
-    let mut timed_out = false;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break status,
-            Ok(None) => {
-                if started.elapsed() >= Duration::from_millis(timeout_ms) {
-                    timed_out = true;
-                    terminate_tree(&mut child, false);
-                    thread::sleep(Duration::from_millis(25));
-                    if child.try_wait().ok().flatten().is_none() {
-                        terminate_tree(&mut child, true);
-                    }
-                    break child.wait()?;
-                }
-                if Instant::now() >= next_sample {
-                    if let Some(sample) = performance_sample(pid, process_name.as_deref()) {
-                        samples.push(sample);
-                    }
-                    next_sample = Instant::now() + Duration::from_millis(SAMPLE_INTERVAL_MS);
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            Err(error) => return Err(Failure::unavailable("run.wait", error.to_string())),
-        }
-    };
-    if let Some(sample) = performance_sample(pid, process_name.as_deref()) {
-        samples.push(sample);
-    }
+    // The runner runs to its own end. Its exit status is its result; nothing
+    // here decides it took too long.
+    let status = child
+        .wait()
+        .map_err(|error| Failure::unavailable("run.wait", error.to_string()))?;
+    let wall = started.elapsed().as_secs_f64();
     let (safe_out, first_out) = out_thread.join().unwrap_or_default();
     let (safe_err, first_err) = err_thread.join().unwrap_or_default();
     let first_output_ms = match (first_out, first_err) {
         (Some(left), Some(right)) => Some(left.min(right)),
         (left, right) => left.or(right),
     };
-    let rss: Vec<f64> = samples
-        .iter()
-        .filter_map(|sample| sample.get("rssKb").and_then(Value::as_f64))
-        .collect();
-    let cpu: Vec<f64> = samples
-        .iter()
-        .filter_map(|sample| sample.get("cpuPercent").and_then(Value::as_f64))
-        .collect();
-    let app_rss: Vec<f64> = samples
-        .iter()
-        .filter_map(|sample| sample.pointer("/app/rssKb").and_then(Value::as_f64))
-        .collect();
-    let app_cpu: Vec<f64> = samples
-        .iter()
-        .filter_map(|sample| sample.pointer("/app/cpuPercent").and_then(Value::as_f64))
-        .collect();
-    let average = |values: &[f64]| {
-        if values.is_empty() {
-            Value::Null
-        } else {
-            number(values.iter().sum::<f64>() / values.len() as f64)
-        }
-    };
+    let accounting = children_accounting();
     let performance = json!({
-        "schemaVersion": 1,
-        "subject": "run-and-app-processes",
+        "schemaVersion": 2,
+        "subject": "run-process-exit-accounting",
         "firstOutputMs": first_output_ms,
-        "intervalMs": SAMPLE_INTERVAL_MS,
-        "peakRssKb": rss.iter().copied().max_by(f64::total_cmp).map(number).unwrap_or(Value::Null),
-        "averageCpuPercent": average(&cpu),
+        "wallSeconds": number(wall),
+        "cpuSeconds": accounting.map(|(cpu, _)| number(cpu)).unwrap_or(Value::Null),
+        "averageCpuPercent": accounting
+            .filter(|_| wall > 0.0)
+            .map(|(cpu, _)| number(cpu / wall * 100.0))
+            .unwrap_or(Value::Null),
+        "peakRssKb": accounting.map(|(_, rss)| number(rss)).unwrap_or(Value::Null),
         "appProcessName": process_name,
-        "appPeakRssKb": app_rss.iter().copied().max_by(f64::total_cmp).map(number).unwrap_or(Value::Null),
-        "appAverageCpuPercent": average(&app_cpu),
-        "samples": samples,
     });
     let performance_path = artifacts.join("performance.json");
     write_json(&performance_path, &performance)?;
@@ -197,18 +205,12 @@ pub(crate) fn execute_suite(
         .as_object_mut()
         .expect("object")
         .insert("file".into(), json!(performance_path));
-    public
-        .as_object_mut()
-        .expect("object")
-        .shift_remove("samples");
     let diagnostics = collect_platform_diagnostics(target_name, env, artifacts, started_at);
     Ok((
         status.code().unwrap_or(-1),
-        timed_out,
         safe_out,
         safe_err,
         public,
         diagnostics,
     ))
 }
-

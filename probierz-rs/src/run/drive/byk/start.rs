@@ -5,10 +5,9 @@ pub(crate) fn start_byk_broker(
     secrets: &[(String, String)],
     stdout_path: &Path,
     stderr_path: &Path,
-    timeout_ms: u64,
 ) -> Result<BykBroker, String> {
     // The broker is provisioned, not built: see `byk_broker_binary`.
-    let (broker, rotator, broker_env) = byk_broker_binary(harness, env, timeout_ms)?;
+    let (broker, rotator, broker_env) = byk_broker_binary(harness, env)?;
     let _ = (secrets, stdout_path, stderr_path);
 
     let stamp = SystemTime::now()

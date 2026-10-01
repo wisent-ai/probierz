@@ -92,7 +92,6 @@ Accepted arguments (parsed by the shared execution parser):
   --no-analyze          Skip report analysis and print the raw run
   --no-repair           Do not offer an authored repair for a failed run
   --frames <N>          Frames per second to extract from a recording
-  --timeout <MS>        Give the suite this long before it is killed
   --files <PATH>...     Changed files that select what runs (affected, ci)
   --host <SELECTOR>     mobile:ios:byk-auth only: the stado:<target> its
                         suite is placed on, from `probierz hosts`; else
@@ -130,7 +129,6 @@ pub(crate) struct RunArgs {
     pub(crate) app_id: Option<String>,
     pub(crate) spec: Option<String>,
     pub(crate) frames: f64,
-    pub(crate) timeout_ms: u64,
     pub(crate) tool: Option<String>,
     /// Run the byk-auth worker on this machine instead of the dedicated host.
     pub(crate) local: bool,
@@ -181,11 +179,6 @@ pub(crate) fn parse_run_args(args: &[String], allow_positionals: bool) -> Result
                 opts.frames = parse_non_negative(arg, &value)?;
                 index += 1;
             }
-            "--timeout" => {
-                let value = value_after(args, index, arg)?;
-                opts.timeout_ms = parse_non_negative(arg, &value)? as u64;
-                index += 1;
-            }
             "--spec" => {
                 opts.spec = Some(value_after(args, index, arg)?);
                 index += 1;
@@ -226,7 +219,6 @@ pub(crate) fn files_after_flag(args: &[String]) -> Option<Vec<String>> {
     let start = args.iter().position(|arg| arg == "--files")? + 1;
     let valued = [
         "--frames",
-        "--timeout",
         "--spec",
         "--app",
         "--tool",

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn collect_platform_diagnostics(
     target: &str,
     env: &BTreeMap<String, String>,
@@ -98,76 +98,3 @@ pub(crate) fn collect_platform_diagnostics(
         "error": failure,
     })
 }
-
-pub(crate) fn named_process_sample(process_name: Option<&str>) -> Option<Value> {
-    let process_name = process_name?;
-    if cfg!(windows) {
-        return None;
-    }
-    let result = capture_text("ps", &["-axo", "comm=,rss=,%cpu="], None);
-    if !result.status.is_some_and(|status| status.success()) {
-        return None;
-    }
-    let expression = Regex::new(r"^(.*?)\s+(\d+)\s+([\d.]+)$").expect("regex");
-    let mut rss_kb = 0.0;
-    let mut cpu_percent = 0.0;
-    let mut processes = 0;
-    for line in text(&result.stdout).lines() {
-        let Some(parts) = expression.captures(line.trim()) else {
-            continue;
-        };
-        if Path::new(&parts[1])
-            .file_name()
-            .and_then(|name| name.to_str())
-            != Some(process_name)
-        {
-            continue;
-        }
-        rss_kb += parts[2].parse::<f64>().unwrap_or(0.0);
-        cpu_percent += parts[3].parse::<f64>().unwrap_or(0.0);
-        processes += 1;
-    }
-    (processes > 0).then(|| {
-        json!({
-            "processes": processes,
-            "rssKb": number(rss_kb),
-            "cpuPercent": number(cpu_percent),
-        })
-    })
-}
-
-pub(crate) fn performance_sample(pgid: u32, process_name: Option<&str>) -> Option<Value> {
-    if cfg!(windows) {
-        return None;
-    }
-    let result = capture_text("ps", &["-axo", "pgid=,rss=,%cpu="], None);
-    if !result.status.is_some_and(|status| status.success()) {
-        return None;
-    }
-    let mut rss_kb = 0.0;
-    let mut cpu_percent = 0.0;
-    let mut processes = 0;
-    for line in text(&result.stdout).lines() {
-        let values: Vec<&str> = line.split_whitespace().collect();
-        if values.first().and_then(|value| value.parse::<u32>().ok()) != Some(pgid) {
-            continue;
-        }
-        rss_kb += values
-            .get(1)
-            .and_then(|value| value.parse::<f64>().ok())
-            .unwrap_or(0.0);
-        cpu_percent += values
-            .get(2)
-            .and_then(|value| value.parse::<f64>().ok())
-            .unwrap_or(0.0);
-        processes += 1;
-    }
-    Some(json!({
-        "at": now_iso(),
-        "processes": processes,
-        "rssKb": number(rss_kb),
-        "cpuPercent": number(cpu_percent),
-        "app": named_process_sample(process_name),
-    }))
-}
-

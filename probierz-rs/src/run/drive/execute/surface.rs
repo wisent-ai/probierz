@@ -1,6 +1,10 @@
-use serde_json::json;
 use crate::run::*;
-pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> Result<Value, Failure> {
+use serde_json::json;
+pub(crate) fn run_surface(
+    harness: &Path,
+    name: &str,
+    mut opts: RunOptions,
+) -> Result<Value, Failure> {
     let config = target(name).ok_or_else(|| {
         fail(
             "run.target",
@@ -211,7 +215,7 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
         let error = seed.get("error").and_then(Value::as_str).unwrap_or("");
         let validation = json!({"ok":false,"error":format!("seed failed: {error}")});
         let mut result = base.as_object().expect("object").clone();
-        result.extend(json!({"ready":true,"skipped":false,"command":null,"spec":spec,"exitCode":1,"signal":null,"timedOut":false,"passed":false,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"setupError":error,"cleanup":cleanup,"stdoutTail":"","stderrTail":error}).as_object().expect("object").clone());
+        result.extend(json!({"ready":true,"skipped":false,"command":null,"spec":spec,"exitCode":1,"signal":null,"passed":false,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"setupError":error,"cleanup":cleanup,"stdoutTail":"","stderrTail":error}).as_object().expect("object").clone());
         update_json(
             &manifest_path,
             &json!({"status":"failed","completedAt":now_iso(),"setupError":error,"cleanup":cleanup,"reportValidation":validation,"failureOrigin":"harness"}),
@@ -227,14 +231,9 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
             .map(|spec| format!(" (PROBIERZ_SPEC={spec})"))
             .unwrap_or_default()
     );
-    let timeout = if opts.timeout_ms > 0 {
-        opts.timeout_ms
-    } else {
-        DEFAULT_TIMEOUT_MS
-    };
     update_json(
         &manifest_path,
-        &json!({"status":"running","command":command_text,"timeoutMs":timeout,"dataSeeded":data_seeded}),
+        &json!({"status":"running","command":command_text,"dataSeeded":data_seeded}),
     )?;
     // A runner that could not start or be waited on is the harness's failure.
     let suite = execute_suite(
@@ -243,7 +242,6 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
         harness,
         config.script,
         &env,
-        timeout,
         secret_values(&opts.env),
         &stdout_path,
         &stderr_path,
@@ -257,7 +255,7 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
             &json!({"status":"failed","completedAt":now_iso(),"failureOrigin":"harness"}),
         )?;
     }
-    let (exit_code, timed_out, out, err, performance, platform) = suite?;
+    let (exit_code, out, err, performance, platform) = suite?;
     let validation = report_identity(&report_path, &run_id, started_time);
     let cleanup = if data_seeded {
         run_data_command(
@@ -272,7 +270,6 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
         json!({"ok":true,"result":null})
     };
     let passed = exit_code == 0
-        && !timed_out
         && validation.get("ok").and_then(Value::as_bool) == Some(true)
         && cleanup.get("ok").and_then(Value::as_bool) == Some(true);
     // No valid report or a failed cleanup is the harness's; checks decide the rest.
@@ -285,11 +282,10 @@ pub(crate) fn run_surface(harness: &Path, name: &str, mut opts: RunOptions) -> R
         Value::Null
     };
     let mut result = base.as_object().expect("object").clone();
-    result.extend(json!({"ready":true,"command":command_text,"spec":spec,"exitCode":exit_code,"signal":null,"timedOut":timed_out,"canceled":false,"passed":passed,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"stdoutTail":out,"stderrTail":err,"cleanup":cleanup,"cleanupError":if cleanup.get("ok").and_then(Value::as_bool)==Some(true){Value::Null}else{cleanup.get("error").cloned().unwrap_or(Value::Null)},"performance":performance,"platformDiagnostics":platform,"failureOrigin":origin}).as_object().expect("object").clone());
+    result.extend(json!({"ready":true,"command":command_text,"spec":spec,"exitCode":exit_code,"signal":null,"canceled":false,"passed":passed,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"stdoutTail":out,"stderrTail":err,"cleanup":cleanup,"cleanupError":if cleanup.get("ok").and_then(Value::as_bool)==Some(true){Value::Null}else{cleanup.get("error").cloned().unwrap_or(Value::Null)},"performance":performance,"platformDiagnostics":platform,"failureOrigin":origin}).as_object().expect("object").clone());
     update_json(
         &manifest_path,
-        &json!({"status":if passed{"executed"}else{"failed"},"completedAt":now_iso(),"exitCode":exit_code,"signal":null,"timedOut":timed_out,"canceled":false,"durationMs":result.get("durationMs"),"reportValidation":validation,"cleanup":cleanup,"cleanupError":result.get("cleanupError"),"performance":performance,"platformDiagnostics":platform,"failureOrigin":result.get("failureOrigin"),"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
+        &json!({"status":if passed{"executed"}else{"failed"},"completedAt":now_iso(),"exitCode":exit_code,"signal":null,"canceled":false,"durationMs":result.get("durationMs"),"reportValidation":validation,"cleanup":cleanup,"cleanupError":result.get("cleanupError"),"performance":performance,"platformDiagnostics":platform,"failureOrigin":result.get("failureOrigin"),"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
     )?;
     Ok(Value::Object(result))
 }
-

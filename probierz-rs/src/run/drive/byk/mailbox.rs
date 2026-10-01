@@ -16,7 +16,6 @@ use serde_json::json;
 pub(crate) fn byk_broker_binary(
     _harness: &Path,
     env: &BTreeMap<String, String>,
-    _timeout_ms: u64,
 ) -> Result<(PathBuf, PathBuf, BTreeMap<String, String>), String> {
     // The operator's shell counts: a `KEY=VALUE` argument wins, and an
     // exported variable is honoured, exactly as every other condition is.
@@ -57,7 +56,7 @@ pub(crate) fn byk_mailbox_reachable(
     harness: &Path,
     env: &BTreeMap<String, String>,
 ) -> (bool, String) {
-    let (broker, rotator, broker_env) = match byk_broker_binary(harness, env, DEFAULT_TIMEOUT_MS) {
+    let (broker, rotator, broker_env) = match byk_broker_binary(harness, env) {
         Ok(parts) => parts,
         Err(reason) => return (false, reason),
     };
@@ -91,8 +90,8 @@ pub(crate) fn byk_mailbox_reachable(
 /// resend can come from; seeding it is an operator action on real mail state,
 /// so it is its own mode and never a side effect of running the journey.
 pub(crate) fn seed_byk_resend(harness: &Path, env: &BTreeMap<String, String>) -> Answer {
-    let (broker, rotator, broker_env) = byk_broker_binary(harness, env, DEFAULT_TIMEOUT_MS)
-        .map_err(|reason| fail("run.byk.seed", reason))?;
+    let (broker, rotator, broker_env) =
+        byk_broker_binary(harness, env).map_err(|reason| fail("run.byk.seed", reason))?;
     let source = harness
         .parent()
         .unwrap_or(harness)

@@ -37,8 +37,6 @@ pub(crate) use crate::failure::{fail, now_iso, print_json, Answer, Failure};
 pub(crate) use crate::manifest;
 
 pub(crate) const TAIL: usize = 4000;
-pub(crate) const DEFAULT_TIMEOUT_MS: u64 = 20 * 60 * 1000;
-pub(crate) const SAMPLE_INTERVAL_MS: u64 = 1000;
 
 mod drive;
 mod plan;

@@ -155,7 +155,7 @@ pub(crate) fn complete_run(
     };
     update_json(
         &manifest_path,
-        &json!({"status":if passed{"passed"}else{"failed"},"completedAt":now_iso(),"exitCode":run.get("exitCode"),"timedOut":run.get("timedOut"),"reportValidation":run.get("reportValidation"),"evidence":evidence,"failure":Value::Null,"failureOrigin":origin,"analysisPath":analysis_path,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
+        &json!({"status":if passed{"passed"}else{"failed"},"completedAt":now_iso(),"exitCode":run.get("exitCode"),"reportValidation":run.get("reportValidation"),"evidence":evidence,"failure":Value::Null,"failureOrigin":origin,"analysisPath":analysis_path,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
     )?;
     let object = run.as_object_mut().expect("object");
     object.insert("passed".into(), json!(passed));

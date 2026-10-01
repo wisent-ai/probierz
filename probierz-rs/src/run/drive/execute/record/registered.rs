@@ -91,7 +91,6 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
             env: opts.env,
             local: opts.local,
             record: opts.record,
-            timeout_ms: opts.timeout_ms,
             force: opts.force,
             spec: opts.spec,
             app_id: opts.app_id,

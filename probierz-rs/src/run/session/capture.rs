@@ -6,31 +6,6 @@ pub(crate) struct Captured {
     pub(crate) error: Option<String>,
 }
 
-pub(crate) fn terminate_tree(child: &mut std::process::Child, hard: bool) {
-    #[cfg(windows)]
-    {
-        let mut command = Command::new("taskkill");
-        command.args(["/PID", &child.id().to_string(), "/T"]);
-        if hard {
-            command.arg("/F");
-        }
-        let _ = command.stdout(Stdio::null()).stderr(Stdio::null()).status();
-    }
-    #[cfg(not(windows))]
-    {
-        let signal = if hard { "-KILL" } else { "-TERM" };
-        let group = format!("-{}", child.id());
-        let _ = Command::new("/bin/kill")
-            .args([signal, &group])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        if !hard {
-            let _ = child.kill();
-        }
-    }
-}
-
 /// Runs `program` to its own exit and captures both streams. There is no
 /// deadline: the program's exit or its own error is the result (cli.md rule 8).
 pub(crate) fn capture(
@@ -123,4 +98,3 @@ pub(crate) fn home_dir() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
 }
-

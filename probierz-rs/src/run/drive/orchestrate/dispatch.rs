@@ -133,7 +133,6 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
                 host_selector: byk_host_selector(None, &BTreeMap::new()),
                 env: cell_env,
                 record: plan.get("record").and_then(Value::as_bool).unwrap_or(true),
-                timeout_ms: plan.get("timeoutMs").and_then(Value::as_u64).unwrap_or(0),
                 force: false,
                 spec: cell.get("spec").and_then(Value::as_str).map(str::to_string),
                 app_id: Some(app_id.into()),

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 
 /// Which fleet host the remote suite is placed on: what the operator asked
 /// for, else what the run environment declares. Nothing is assumed: a host
@@ -25,16 +25,14 @@ pub(crate) fn execute_byk(
     host_selector: &str,
     harness: &Path,
     env: &BTreeMap<String, String>,
-    timeout_ms: u64,
     secrets: &[(String, String)],
     stdout_path: &Path,
     stderr_path: &Path,
     started_at: &str,
     artifacts: &Path,
-) -> Result<(i32, bool, String, String, Value, Value), Failure> {
+) -> Result<(i32, String, String, Value, Value), Failure> {
     let app = env.get("APP_IOS").map(String::as_str).unwrap_or("");
     let bundle = env.get("BUNDLE_ID").map(String::as_str).unwrap_or("");
-    let started = Instant::now();
     let result = (|| -> Result<i32, String> {
         if app != app.trim() || bundle != bundle.trim() {
             return Err("APP_IOS and BUNDLE_ID must not contain surrounding whitespace".into());
@@ -42,7 +40,7 @@ pub(crate) fn execute_byk(
         if app.is_empty() == bundle.is_empty() {
             return Err("set exactly one of APP_IOS or BUNDLE_ID".into());
         }
-        let broker = start_byk_broker(harness, env, secrets, stdout_path, stderr_path, timeout_ms)?;
+        let broker = start_byk_broker(harness, env, secrets, stdout_path, stderr_path)?;
         if local {
             // The same suite the `mobile:ios` target runs, told which socket
             // carries the code and which address it was sent to.
@@ -59,7 +57,6 @@ pub(crate) fn execute_byk(
                 harness,
                 "test:mobile:ios",
                 &suite_env,
-                timeout_ms,
                 secrets.to_vec(),
                 stdout_path,
                 stderr_path,
@@ -97,17 +94,17 @@ pub(crate) fn execute_byk(
             (1, safe)
         }
     };
+    // The byk suite runs through the broker or the fleet, outside this
+    // process's children, so no exit accounting of it is readable here.
     let performance = json!({
-        "schemaVersion": 1,
-        "subject": "run-and-app-processes",
+        "schemaVersion": 2,
+        "subject": "run-process-exit-accounting",
         "firstOutputMs": Value::Null,
-        "intervalMs": SAMPLE_INTERVAL_MS,
-        "peakRssKb": Value::Null,
+        "wallSeconds": Value::Null,
+        "cpuSeconds": Value::Null,
         "averageCpuPercent": Value::Null,
+        "peakRssKb": Value::Null,
         "appProcessName": Path::new(app).file_stem().and_then(|name| name.to_str()),
-        "appPeakRssKb": Value::Null,
-        "appAverageCpuPercent": Value::Null,
-        "samples": [],
     });
     let performance_path = artifacts.join("performance.json");
     write_json(&performance_path, &performance)?;
@@ -116,20 +113,7 @@ pub(crate) fn execute_byk(
         .as_object_mut()
         .expect("performance object")
         .insert("file".into(), json!(performance_path));
-    public
-        .as_object_mut()
-        .expect("performance object")
-        .shift_remove("samples");
     let diagnostics =
         collect_platform_diagnostics("mobile:ios:byk-auth", env, artifacts, started_at);
-    let timed_out = started.elapsed() >= Duration::from_millis(timeout_ms) && exit_code != 0;
-    Ok((
-        exit_code,
-        timed_out,
-        String::new(),
-        stderr_tail,
-        public,
-        diagnostics,
-    ))
+    Ok((exit_code, String::new(), stderr_tail, public, diagnostics))
 }
-
