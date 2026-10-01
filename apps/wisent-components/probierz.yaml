@@ -15,7 +15,6 @@ repositories:
     mappings:
       - paths:
           - apps/wisent-components/**
-          - probierz-rs/src/specs/web/components/**
         journeys: [figma-parity]
 
 surfaces:

@@ -6,7 +6,6 @@ repositories:
     mappings:
       - paths:
           - apps/landing-page/**
-          - probierz-rs/src/specs/web/landing/**
         journeys: [first-screen, product-proof, responsive, conversion, release-eval]
   - root: ~/Documents/CodingProjects/Wisent/product-guidelines
     mappings:

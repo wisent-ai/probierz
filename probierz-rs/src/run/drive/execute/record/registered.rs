@@ -25,8 +25,8 @@ pub(crate) fn run_registered_surface(harness: &Path, name: &str, opts: &RunArgs)
         "PROBIERZ_REPORT_PATH".into(),
         report_path.to_string_lossy().into_owned(),
     );
-    // A registered journey is named by its title; an application-owned one is
-    // named by its absolute path, and a path must arrive whole.
+    // A journey belongs to its application and is named by its absolute path,
+    // which must arrive whole; a bare name drops the .spec.mjs suffix.
     let filter = opts.spec.as_deref().map(|value| {
         if value.contains('/') {
             value
@@ -34,15 +34,8 @@ pub(crate) fn run_registered_surface(harness: &Path, name: &str, opts: &RunArgs)
             value.strip_suffix(".spec.mjs").unwrap_or(value)
         }
     });
-    let (report, code) = crate::specs::execute(
-        name,
-        harness,
-        &artifacts,
-        &report_path,
-        filter,
-        env,
-        Some(run_id),
-    )?;
+    let (report, code) =
+        crate::specs::execute(name, &artifacts, &report_path, filter, env, Some(run_id))?;
     print_json(&report)?;
     if code != 0 {
         std::process::exit(code);

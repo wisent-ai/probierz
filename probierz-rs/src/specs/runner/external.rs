@@ -2,12 +2,10 @@ use crate::specs::*;
 
 /// A journey an application owns in its own repository.
 ///
-/// Most journeys live in this crate. A product whose journey needs its own
-/// tree — a manifest that points at an absolute path in that product's
-/// checkout — keeps it there and declares the program to run. Probierz
-/// executes that program with the run's environment and reads the canonical
-/// report it writes, which is how the old Node runner treated an
-/// application-owned spec, minus the assumption that it is JavaScript.
+/// Every journey lives in the tree of the product it checks; Probierz keeps
+/// none of its own. The product declares the program to run, Probierz
+/// executes it with the run's environment and reads the canonical report it
+/// writes, whatever language the product chose.
 pub struct External {
     pub title: String,
     pub program: PathBuf,
@@ -15,7 +13,7 @@ pub struct External {
 }
 
 impl External {
-    /// What a manifest's `spec:` means when it is not a registered title.
+    /// What a manifest's `spec:` names.
     ///
     /// An absolute path is the program. A file this crate can identify as a
     /// script is run through the interpreter its shebang names, because the
@@ -66,7 +64,11 @@ program that writes the canonical report"
         })
     }
 
-    pub(crate) fn run(&self, artifacts: &Path, env: &BTreeMap<String, String>) -> Result<(), String> {
+    pub(crate) fn run(
+        &self,
+        artifacts: &Path,
+        env: &BTreeMap<String, String>,
+    ) -> Result<(), String> {
         let output = Command::new(&self.program)
             .args(&self.args)
             .current_dir(artifacts)
@@ -117,4 +119,3 @@ pub(crate) fn interpreter_of(path: &Path) -> Result<PathBuf, Failure> {
     }
     Ok(PathBuf::from(first))
 }
-

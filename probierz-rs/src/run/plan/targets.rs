@@ -7,8 +7,8 @@ pub(crate) struct Target {
 
 pub(crate) fn target(name: &str) -> Option<Target> {
     Some(match name {
-        // Web pages are driven through a Weles browser by journeys registered
-        // in this crate (crate::specs::web); nothing links a browser library.
+        // Web pages are driven by journeys that live in the product's own
+        // tree; nothing here links a browser library.
         "web" => Target {
             pkg: "packages/web",
             script: "probierz run web",

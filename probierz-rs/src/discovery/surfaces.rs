@@ -154,11 +154,11 @@ pub fn specs(harness: &Path, surface: Option<&str>) -> Answer {
     };
     let mut answer = Vec::with_capacity(chosen.len());
     for (entry, surface_name) in chosen {
+        // The tui, desktop:cua and web surfaces carry no journeys of their
+        // own: each journey lives in its application's tree and is run by
+        // naming it, so none is listed here.
         let specs = match surface_name {
-            "tui" | "desktop:cua" | "web" => crate::specs::select(surface_name, None)
-                .into_iter()
-                .map(|spec| spec.title.to_string())
-                .collect(),
+            "tui" | "desktop:cua" | "web" => Vec::new(),
             _ => spec_files(harness, entry.pkg)?,
         };
         answer.push(SurfaceSpecs {
@@ -168,4 +168,3 @@ pub fn specs(harness: &Path, surface: Option<&str>) -> Answer {
     }
     print_json(&answer)
 }
-

@@ -59,8 +59,9 @@ one explainable release decision.
   specifications, journey outlines, and exact run commands;
 - preflight checks that distinguish missing Probierz-owned tooling from
   host-level prerequisites;
-- web journeys registered in `probierz-rs/src/specs/web`, driving pages through
-  a Weles browser (`weles mcp`); Probierz links no browser library itself;
+- web, terminal and desktop journeys that live in the tree of the product they
+  check and run by naming them (`--filter <absolute path>`); Probierz carries
+  no journeys of its own and links no browser library itself;
 - WebdriverIO and Appium execution for iOS, Android, native macOS through Mac2,
   and native Windows applications;
 - `cua-driver` execution for native macOS applications when Accessibility-based
