@@ -48,6 +48,17 @@ pub struct InstallArgs {
     pub repo: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Args)]
+pub struct DeactivateArgs {
+    /// Application whose gate mode is withdrawn.
+    pub app_id: String,
+    /// The mode to withdraw, as gate-activate named it.
+    pub mode: String,
+    /// Why enforcement is withdrawn; recorded in the access audit.
+    #[arg(long)]
+    pub reason: String,
+}
+
 pub(crate) fn object(entries: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
     let mut map = Map::new();
     for (key, value) in entries {

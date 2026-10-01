@@ -97,6 +97,11 @@ pub enum ReportingCommand {
         #[command(flatten)]
         args: gate::GateArgs,
     },
+    /// Withdraw one activated gate mode, so its policy is no longer enforced.
+    GateDeactivate {
+        #[command(flatten)]
+        args: gate::DeactivateArgs,
+    },
     // PortRuns: execution, analysis, and matrix
     /// Is the target toolchain ready?
     Check { target: String },

@@ -221,3 +221,60 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
     ]))
 }
 
+/// The inverse of [`activate`]: one mode's activation leaves the gate
+/// configuration, so the policy is evaluated but no longer enforced. The
+/// write is atomic like activation's and audited with its reason; a mode
+/// that is not active is reported unchanged and nothing is written.
+pub fn deactivate(harness: &Path, args: &DeactivateArgs) -> Answer {
+    if args.reason.trim().is_empty() {
+        return Err(Failure::invalid(
+            "gate.deactivate",
+            "--reason must say why enforcement is withdrawn",
+        ));
+    }
+    let app = manifest::load(harness, &args.app_id)?;
+    let file = config_file(&app);
+    if !file.exists() {
+        return print_json(&object([
+            ("file", Value::String(file.to_string_lossy().into_owned())),
+            ("deactivated", Value::Bool(false)),
+        ]));
+    }
+    let mut current = serde_json::from_str::<Value>(&fs::read_to_string(&file)?)?;
+    let removed = current
+        .get_mut("modes")
+        .and_then(Value::as_object_mut)
+        .and_then(|modes| modes.remove(&args.mode))
+        .is_some();
+    if removed {
+        let temporary = PathBuf::from(format!(
+            "{}.tmp-{}-{}",
+            file.to_string_lossy(),
+            std::process::id(),
+            Utc::now().timestamp_millis()
+        ));
+        let mut output = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&temporary)?;
+        output.write_all(serde_json::to_string_pretty(&current)?.as_bytes())?;
+        output.write_all(b"\n")?;
+        drop(output);
+        fs::rename(&temporary, &file)?;
+        audit_access(
+            harness,
+            "gate.deactivate",
+            "allowed",
+            Some(&args.app_id),
+            Some(&args.mode),
+            object([("reason", Value::String(args.reason.clone()))]),
+        )?;
+    }
+    print_json(&object([
+        ("file", Value::String(file.to_string_lossy().into_owned())),
+        ("deactivated", Value::Bool(removed)),
+        ("config", current),
+    ]))
+}
+
