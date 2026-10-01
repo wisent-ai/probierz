@@ -5,9 +5,10 @@ Every way into Probierz, and what each one is allowed to do.
 - **Human CLI:** `probierz` is canonical for discovery, setup, execution,
   analysis, figure and SEO evaluation, authoring, automatic repair, evidence,
   gate, retention, security, and Stado workflows.
-- **Machine CLI output:** status, overview, run, analysis, figure evaluation,
-  SEO evaluation, and gate commands expose structured data; automation must not
-  infer state from prose.
+- **Machine CLI output:** status, overview, errors and failures print text for a
+  person and the same report as JSON with `--json`; run, analysis, figure
+  evaluation, SEO evaluation, and gate commands expose structured data;
+  automation must not infer state from prose.
 - **MCP:** the `probierz-mcp` binary exposes the same discovery and explicitly
   named side-effecting operations over stdio JSON-RPC. Tool descriptions
   preserve the read-only versus mutation boundary;

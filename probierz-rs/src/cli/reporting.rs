@@ -29,20 +29,23 @@ pub enum ReportingCommand {
         app_id: String,
         #[arg(long, default_value = "origin/main")]
         base: String,
+        /// Print the report as JSON instead of text.
         #[arg(long)]
-        text: bool,
+        json: bool,
     },
     /// Unified app status, repository violations, and Stado fleet health.
     Overview {
         app_ids: Vec<String>,
+        /// Print the report as JSON instead of text.
         #[arg(long)]
-        text: bool,
+        json: bool,
     },
     /// Fast all-app failure view without repository violation scans.
     Errors {
         app_ids: Vec<String>,
+        /// Print the report as JSON instead of text.
         #[arg(long)]
-        text: bool,
+        json: bool,
     },
     /// Receive failure envelopes from desktop applications.
     Intake {

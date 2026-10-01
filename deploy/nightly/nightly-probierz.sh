@@ -29,7 +29,7 @@ REPOS="${PROBIERZ_NIGHTLY_REPOS:-$WISENT/skarbiec $WISENT/jeden $WISENT/oko $WIS
     done
     echo "--- overview"
     cd "$PROBIERZ"
-    "$PROBIERZ_CLI" overview --text
+    "$PROBIERZ_CLI" overview
     echo "--- seo"
     if [ -n "${PROBIERZ_SEO_BASE_URL:-}" ]; then
         : "${PROBIERZ_SEO_PRIMARY_MODEL:?nightly SEO needs PROBIERZ_SEO_PRIMARY_MODEL}"

@@ -23,18 +23,18 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::Dashboard { app_id, limit } => {
             status::dashboard(harness, &app_id, dashboard_limit(limit.as_deref()))
         }
-        ReportingCommand::Status { app_id, base, text } => {
-            let eligible = status::status(harness, &app_id, &base, text)?;
+        ReportingCommand::Status { app_id, base, json } => {
+            let eligible = status::status(harness, &app_id, &base, !json)?;
             if !eligible {
                 std::process::exit(1);
             }
             Ok(())
         }
-        ReportingCommand::Overview { app_ids, text } => {
-            status::overview(harness, &app_ids, text, true)
+        ReportingCommand::Overview { app_ids, json } => {
+            status::overview(harness, &app_ids, !json, true)
         }
-        ReportingCommand::Errors { app_ids, text } => {
-            status::overview(harness, &app_ids, text, false)
+        ReportingCommand::Errors { app_ids, json } => {
+            status::overview(harness, &app_ids, !json, false)
         }
         ReportingCommand::Intake { command } => match command {
             IntakeCommand::Serve { bind } => status::intake_serve(Some(&bind)),
