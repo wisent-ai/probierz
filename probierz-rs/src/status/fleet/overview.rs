@@ -6,8 +6,11 @@ pub(crate) fn violations_for(root: &str) -> Value {
     let output = Command::new("tama")
         .args(["find-violations", "--repo", root, "--json"])
         .output();
-    let Ok(output) = output else {
-        return json!({ "error": "exit null" });
+    let output = match output {
+        Ok(output) => output,
+        Err(error) => {
+            return json!({ "error": format!("tama find-violations cannot be run: {error}") })
+        }
     };
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
