@@ -90,30 +90,22 @@ pub(crate) fn execute_job(job: Arc<Mutex<Job>>, mut args: Map<String, Value>) {
     };
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
-    let child = Arc::new(Mutex::new(child));
+    let pid = child.id();
     {
         let Ok(mut job) = job.lock() else {
-            terminate_tree(&child);
+            terminate_tree(pid);
             return;
         };
-        job.child = Some(Arc::clone(&child));
+        job.child = Some(pid);
         if job.cancel_requested {
-            terminate_tree(&child);
+            terminate_tree(pid);
         }
     }
     let stdout_reader = thread::spawn(move || read_pipe(stdout));
     let stderr_reader = thread::spawn(move || read_pipe(stderr));
-    let status = loop {
-        let waited = child
-            .lock()
-            .map_err(|_| "run process state unavailable".to_string())
-            .and_then(|mut child| child.try_wait().map_err(|error| error.to_string()));
-        match waited {
-            Ok(Some(status)) => break Ok(status),
-            Ok(None) => thread::sleep(Duration::from_millis(20)),
-            Err(error) => break Err(error),
-        }
-    };
+    // The run ends when the process exits; a cancel kills it by pid, so no
+    // poll is needed to stay cancellable (cli.md rule 8).
+    let status = child.wait().map_err(|error| error.to_string());
     let stdout = stdout_reader.join().unwrap_or_default();
     let stderr = stderr_reader.join().unwrap_or_default();
     finish_job(&job, status, stdout, stderr);
@@ -217,11 +209,7 @@ pub(crate) fn artifact_root(job: &Arc<Mutex<Job>>) -> Result<PathBuf, String> {
     Ok(root)
 }
 
-pub(crate) fn terminate_tree(child: &Arc<Mutex<Child>>) {
-    let Ok(mut child) = child.lock() else {
-        return;
-    };
-    let pid = child.id();
+pub(crate) fn terminate_tree(pid: u32) {
     #[cfg(windows)]
     {
         let _ = Command::new("taskkill")
@@ -257,13 +245,7 @@ pub(crate) fn terminate_tree(child: &Arc<Mutex<Child>>) {
         let mut tree = Vec::new();
         descendants(pid, &processes, &mut tree);
         let ids = tree.iter().map(u32::to_string).collect::<Vec<_>>();
-        let _ = Command::new("/bin/kill")
-            .arg("-TERM")
-            .args(&ids)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        thread::sleep(Duration::from_millis(100));
+        // One KILL to the whole tree; no TERM-then-pause escalation.
         let _ = Command::new("/bin/kill")
             .arg("-KILL")
             .args(&ids)
@@ -271,6 +253,5 @@ pub(crate) fn terminate_tree(child: &Arc<Mutex<Child>>) {
             .stderr(Stdio::null())
             .status();
     }
-    let _ = child.kill();
 }
 

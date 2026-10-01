@@ -13,7 +13,7 @@ pub(crate) struct Job {
     pub(crate) error: Option<String>,
     pub(crate) result: Option<Value>,
     pub(crate) cancel_requested: bool,
-    pub(crate) child: Option<Arc<Mutex<Child>>>,
+    pub(crate) child: Option<u32>,
 }
 
 #[derive(Default)]
@@ -105,7 +105,7 @@ impl Control {
             (answer, job.child.clone())
         };
         if let Some(child) = child {
-            terminate_tree(&child);
+            terminate_tree(child);
         }
         Ok(answer)
     }
@@ -219,7 +219,7 @@ impl Control {
                 }
             });
             if let Some(child) = child {
-                terminate_tree(&child);
+                terminate_tree(child);
             }
         }
     }

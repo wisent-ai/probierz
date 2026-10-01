@@ -19,10 +19,9 @@ pub(crate) use std::collections::HashMap;
 pub(crate) use std::fs;
 pub(crate) use std::io::{self, BufRead, Read, Write};
 pub(crate) use std::path::{Component, Path, PathBuf};
-pub(crate) use std::process::{Child, Command, ExitStatus, Stdio};
+pub(crate) use std::process::{Command, ExitStatus, Stdio};
 pub(crate) use std::sync::{Arc, Mutex};
 pub(crate) use std::thread;
-pub(crate) use std::time::Duration;
 
 pub(crate) use base64::engine::general_purpose::STANDARD as BASE64;
 pub(crate) use base64::Engine;
