@@ -14,8 +14,8 @@
 # binary needs none of that: what is built here is what runs on the host.
 set -euo pipefail
 # A release worker runs this without a login shell, so rustup's directory is
-# not on PATH: the job ended `cargo: command not found` on 2026-10-01. The same
-# directories skarbiec's release build adds, in the same order.
+# not on PATH and `cargo` would not be found. The same directories skarbiec's
+# release build adds, in the same order.
 export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 command -v cargo >/dev/null || {
   echo "probierz build: cargo is not on PATH ($PATH); install the Rust toolchain on this builder" >&2
