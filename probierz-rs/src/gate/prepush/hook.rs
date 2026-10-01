@@ -116,3 +116,49 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
         ("appId", Value::String(args.app_id.clone())),
     ]))
 }
+
+/// The inverse of [`install`]: the managed pre-push hook leaves the working
+/// tree and the hook it chained, kept as `pre-push.before-probierz-gate`, is
+/// put back. A `pre-push` this command did not write is refused by name and
+/// left alone; a tree with no managed hook is reported unchanged.
+pub fn uninstall(harness: &Path, args: &InstallArgs) -> Answer {
+    let repo = args.repo.clone().unwrap_or(std::env::current_dir()?);
+    let hooks = repo.join(".git").join("hooks");
+    if !hooks.exists() {
+        return Err(Failure::config(
+            "gate.uninstall",
+            format!("not a git working tree: {}", repo.display()),
+        ));
+    }
+    let target = hooks.join("pre-push");
+    let backup = hooks.join("pre-push.before-probierz-gate");
+    let rust_command = std::env::current_exe()?.to_string_lossy().into_owned();
+    let legacy_command = harness
+        .join("agent")
+        .join("prepush-gate.mjs")
+        .to_string_lossy()
+        .into_owned();
+    if present(&target) && !managed(&target, &legacy_command, &rust_command) {
+        return Err(Failure::config(
+            "gate.uninstall",
+            format!(
+                "{} is not the hook gate-install wrote; it was left as it is",
+                target.display()
+            ),
+        ));
+    }
+    let removed = present(&target);
+    if removed {
+        fs::remove_file(&target)?;
+    }
+    let restored = present(&backup);
+    if restored {
+        fs::rename(&backup, &target)?;
+    }
+    print_json(&object([
+        ("removed", Value::Bool(removed)),
+        ("restored", Value::Bool(restored)),
+        ("hook", Value::String(target.to_string_lossy().into_owned())),
+        ("appId", Value::String(args.app_id.clone())),
+    ]))
+}

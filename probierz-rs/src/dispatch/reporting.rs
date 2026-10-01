@@ -49,6 +49,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::GateStatus { app_id } => gate::status(harness, &app_id),
         ReportingCommand::GatePrepush { args } => gate::prepush(harness, &args),
         ReportingCommand::GateInstall { args } => gate::install(harness, &args),
+        ReportingCommand::GateUninstall { args } => gate::uninstall(harness, &args),
         ReportingCommand::GateEvaluate { args } => gate::evaluate(harness, &args),
         ReportingCommand::GateEnforce { args } => gate::enforce(harness, &args),
         ReportingCommand::GateActivate { args } => gate::activate(harness, &args),

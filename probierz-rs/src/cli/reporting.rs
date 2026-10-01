@@ -77,6 +77,11 @@ pub enum ReportingCommand {
         #[command(flatten)]
         args: gate::InstallArgs,
     },
+    /// Remove the pre-push gate gate-install wrote and put back the hook it chained.
+    GateUninstall {
+        #[command(flatten)]
+        args: gate::InstallArgs,
+    },
     /// Evaluate evidence against a merge or release policy.
     GateEvaluate {
         #[command(flatten)]

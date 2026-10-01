@@ -13,8 +13,10 @@ Every way into Probierz, and what each one is allowed to do.
   preserve the read-only versus mutation boundary;
   `probierz_evaluate_figure` and `probierz_evaluate_seo` use the same evaluators
   and evidence contracts as the CLI.
-- **Repository gate:** `probierz gate-install` installs the pre-push integration;
-  gate evaluation and enforcement remain distinct commands.
+- **Repository gate:** `probierz gate-install` installs the pre-push integration
+  and `probierz gate-uninstall` removes it, putting back the hook it chained and
+  refusing a `pre-push` it did not write; gate evaluation and enforcement remain
+  distinct commands.
 - **Stado bridge:** `probierz stado run`, `probierz stado author`, and
   `probierz stado seo` submit exact remote contracts and return evidence through
   the configured object store; `probierz stado resume`, `collect`, and `cancel`
