@@ -111,7 +111,7 @@ one explainable release decision.
 | Mobile iOS | WebdriverIO, Appium, XCUITest | macOS, Xcode, simulator or authorized device | Implemented when host prerequisites are available |
 | Mobile Android | WebdriverIO, Appium, UiAutomator2 | Android SDK, emulator or authorized device | Implemented when host prerequisites are available |
 | Native macOS (Mac2) | WebdriverIO, Appium Mac2 | macOS, full Xcode, target, and required Accessibility permission | Implemented when host prerequisites are available |
-| Native macOS (CUA) | `cua-driver` | macOS target and CuaDriver Accessibility permission | Implemented |
+| Native macOS (CUA) | `cua-driver`; Probierz's own process starts the CuaDriver app through LaunchServices on its first desktop run and owns its socket — no launch agent of the driver's own exists, and the one Stado used to install is retired when `com.wisent.probierz` starts | macOS target and CuaDriver Accessibility permission | Implemented |
 | Native Windows | WebdriverIO, WinAppDriver | Windows target, Developer Mode, WinAppDriver | Implemented when host prerequisites are available |
 | Remote execution | Stado bridge | admitted host, capacity, object store, target toolchain | Implemented; availability depends on the selected host |
 | Prebuilt public binary or hosted service | — | — | Not published; build the Rust binaries from source |

@@ -16,12 +16,17 @@ use std::time::Duration;
 /// The one unit the fleet runs Probierz under, as the Stado catalog names it.
 pub(crate) const DECLARED_UNIT: &str = "com.wisent.probierz";
 
-/// The units whose work the declared intake does: the catalog's retired
-/// units of Probierz, in the same order.
+/// The units whose work the declared process does: the catalog's retired
+/// units of Probierz, in the same order. The desktop driver's LaunchAgent is
+/// among them: Probierz starts the CuaDriver app on demand from its own
+/// process and owns its socket, so an agent that started the same app was a
+/// second owner of that socket.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-const PREDECESSORS: [&str; 2] = [
+const PREDECESSORS: [&str; 4] = [
     "com.wisent.compute.service.probierz",
     "com.wisent.probierz-intake",
+    "com.wisent.probierz-cua-driver",
+    "com.wisent.compute.service.com.wisent.probierz-cua-driver",
 ];
 
 /// launchd's default `ExitTimeOut`: how long it gives a booted-out job before
