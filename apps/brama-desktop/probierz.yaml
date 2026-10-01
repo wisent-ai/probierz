@@ -19,17 +19,6 @@ repositories:
           - Sources/BramaDesktop/BramaStore.swift
         journeys: [subscription-pool-screen]
 surfaces:
-  desktop:mac:
-    spec: brama-desktop-critical-operations.e2e.ts
-    journeys: [critical-operations]
-    conditions:
-      PROBIERZ_DATA_STATE: fresh
-      BRAMA_LOCAL_RUNTIME: "1"
-    device:
-      platform: macOS
-      minimumVersion: "14"
-    recording:
-      primary: appium-mac2
   desktop:cua:
     spec: brama-desktop-*
     journeys: [critical-operations, subscription-pool-screen]

@@ -391,19 +391,6 @@ surfaces:
       - services-screen
     conditions:
       CUA_APP_EXECUTABLE: ~/Documents/CodingProjects/Wisent/stado/desktop/StadoDesktop/.build/Stado.app/Contents/MacOS/Stado
-  desktop:mac:
-    spec: stado-onboarding-first-use.e2e.ts
-    journeys:
-    - onboarding-first-use
-    conditions:
-      MAC_BUNDLE_ID: ai.wisent.stado
-      PROBIERZ_DATA_STATE: fresh
-    device:
-      platform: macOS
-      minimumVersion: '14'
-    recording:
-      primary: appium
-      fallback: screencapturekit
 journeys:
   host-dynamic-capacity:
     owner: Stado maintainers
