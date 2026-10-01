@@ -47,6 +47,7 @@ use failure::Failure;
 
 fn main() {
     let parsed = cli::Cli::parse();
+    failure::answer_as_text(parsed.text);
     // The failure intake and its reader are host-level: they keep envelopes
     // under ~/.probierz and never read a harness, so a service started with no
     // project directory - launchd starts it in / - is not refused for lacking

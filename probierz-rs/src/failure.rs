@@ -191,10 +191,64 @@ pub fn iso_timestamp(value: std::time::SystemTime) -> String {
         .to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
-/// One JSON answer on stdout, pretty-printed, as every command prints it.
+/// Whether this invocation asked for `--text`; `main` records it once,
+/// before any command prints. A `OnceLock`: the answer is runtime input.
+static TEXT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+/// Record whether answers print as text for a person.
+pub fn answer_as_text(text: bool) {
+    let _ = TEXT.set(text);
+}
+
+/// One answer on stdout: pretty-printed JSON, or with `--text` the same
+/// document as indented `key: value` lines, list entries as `- ` lines.
 pub fn print_json<T: serde::Serialize + ?Sized>(value: &T) -> Answer {
-    println!("{}", serde_json::to_string_pretty(value)?);
+    if !TEXT.get().copied().unwrap_or(false) {
+        println!("{}", serde_json::to_string_pretty(value)?);
+        return Ok(());
+    }
+    let mut out = String::new();
+    render(&serde_json::to_value(value)?, 0, &mut out);
+    print!("{out}");
     Ok(())
+}
+
+fn render(value: &serde_json::Value, depth: usize, out: &mut String) {
+    use serde_json::Value;
+    let pad = "  ".repeat(depth);
+    let scalar = |value: &Value| match value {
+        Value::Null => Some("none".to_string()),
+        Value::String(text) => Some(text.clone()),
+        Value::Bool(_) | Value::Number(_) => Some(value.to_string()),
+        Value::Array(items) if items.is_empty() => Some("(none)".to_string()),
+        Value::Object(fields) if fields.is_empty() => Some("(none)".to_string()),
+        Value::Array(_) | Value::Object(_) => None,
+    };
+    match value {
+        Value::Object(fields) => {
+            for (key, field) in fields {
+                match scalar(field) {
+                    Some(text) => out.push_str(&format!("{pad}{key}: {text}\n")),
+                    None => {
+                        out.push_str(&format!("{pad}{key}:\n"));
+                        render(field, depth + 1, out);
+                    }
+                }
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                match scalar(item) {
+                    Some(text) => out.push_str(&format!("{pad}- {text}\n")),
+                    None => {
+                        out.push_str(&format!("{pad}-\n"));
+                        render(item, depth + 1, out);
+                    }
+                }
+            }
+        }
+        other => out.push_str(&format!("{pad}{}\n", scalar(other).unwrap_or_default())),
+    }
 }
 
 /// A file only its owner can read. Evidence, reports, receipts and captured

@@ -28,6 +28,11 @@ pub struct Cli {
     #[arg(long, global = true, value_name = "DIR")]
     pub harness: Option<PathBuf>,
 
+    /// Print each JSON answer as indented `key: value` lines for a person.
+    /// Without it every command prints its answer as JSON.
+    #[arg(long, global = true)]
+    pub text: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
