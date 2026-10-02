@@ -175,7 +175,7 @@ pub(crate) fn select_author_provision(
     {
         return Err(Failure::config(
             "stado.author",
-            "stado author --target tui needs --app-path <installed-command>, --app-binary-path <file> --app-repo <path>, or --cargo-release --app-repo <path> [--binary <name>]",
+            "remote author --target tui needs --app-path <installed-command>, --app-binary-path <file> --app-repo <path>, or --cargo-release --app-repo <path> [--binary <name>]",
         ));
     }
     Ok(candidates

@@ -177,9 +177,9 @@ pub enum EvidenceCommand {
         #[arg(long)]
         fingerprint: Option<String>,
     },
-    // PortStado: remote Stado bridge
-    /// Submit, recover, resume, cancel, or author work on the Stado fleet.
-    Stado {
+    // PortStado: remote fleet bridge; Stado is the adapter behind it.
+    /// Submit, recover, resume, cancel, or author work on a remote fleet host.
+    Remote {
         #[command(subcommand)]
         command: stado::StadoCommand,
     },

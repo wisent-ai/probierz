@@ -85,7 +85,7 @@ Run the same evaluator on a dedicated Stado-selected host without putting any
 secret in `argv`:
 
 ```bash
-probierz stado seo landing-page \
+probierz remote seo landing-page \
   --base-url https://product.example.com \
   --mode release \
   --primary-model '<pinned-model-a>' \

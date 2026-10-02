@@ -49,7 +49,7 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
     }
     let opts = parse_run_args(args, false)?;
     // A web journey opens a Weles browser on the machine that runs it, and a
-    // browser runs only on a host Stado places it on. `probierz stado run web`
+    // browser runs only on a host Stado places it on. `probierz remote run web`
     // is that placement; its job script exports PROBIERZ_SOURCE_IDENTITY, which
     // is how a run here knows it is inside one.
     if name == "web" {
@@ -58,7 +58,7 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
         if !placed {
             return Err(fail(
                 "cli.run",
-                "a web journey opens a Weles browser, which runs only on a Stado-placed host: run `probierz stado run web --app <appId>`",
+                "a web journey opens a Weles browser, which runs only on a Stado-placed host: run `probierz remote run web --app <appId> --host <selector>`",
             ));
         }
     }

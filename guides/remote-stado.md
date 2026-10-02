@@ -8,7 +8,7 @@ replacement work.
 ## Verify Stado public command documentation
 
 ```bash
-node agent/cli.mjs stado run tui --app stado-docs \
+probierz remote run tui --app stado-docs \
   --host stado:ubuntu --node-source \
   --app-repo /absolute/path/stado-landing
 ```
@@ -26,7 +26,7 @@ budget, interval or retry. If that read fails, the result is `unreachable` with
 Stado's own output, and the job is resumed instead of submitted again:
 
 ```bash
-probierz stado resume <jobId> --host stado:ubuntu
+probierz remote resume <jobId> --host stado:ubuntu
 ```
 
 This waits for the original job and imports its retained report without
@@ -44,13 +44,13 @@ exact, clean, committed product source without rebuilding or consulting a
 mutable installation:
 
 ```bash
-node agent/cli.mjs stado run tui --app stado \
+probierz remote run tui --app stado \
   --host stado:<target> \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
 
 STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
-node agent/cli.mjs stado author stado <journey> \
+probierz remote author stado <journey> \
   --target tui --desc "<journey goal>" \
   --host stado:<target> \
   --app-binary-path /absolute/path/to/signed/stado \
@@ -85,7 +85,7 @@ can produce that verdict. An empty initial screen is still refused.
 Cancel an existing job without submitting replacement work:
 
 ```bash
-node agent/cli.mjs stado cancel <jobId> \
+probierz remote cancel <jobId> \
   --host stado:<target> \
   --reason "operator-requested cancellation"
 ```

@@ -20,9 +20,10 @@ Every way into Probierz, and what each one is allowed to do.
   and `probierz gate-uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
   distinct commands.
-- **Stado bridge:** `probierz stado run`, `probierz stado author`, and
-  `probierz stado seo` submit exact remote contracts and return evidence through
-  the configured object store; `probierz stado resume`, `collect`, and `cancel`
+- **Remote fleet bridge:** `probierz remote run`, `probierz remote author`, and
+  `probierz remote seo` submit exact remote contracts to a Stado-placed host and
+  return evidence through the configured object store; `probierz remote resume`,
+  `collect`, and `cancel`
   operate on the original job without submitting replacement work.
   Authoring applies the surface's matching single-journey override before
   executing its candidate, including on a remote worker. Native `desktop:cua`
@@ -36,18 +37,18 @@ Every way into Probierz, and what each one is allowed to do.
   with `sourceIdentityOrigin: "submitter"` rather than hashing absent checkouts.
   `--app-repo` selects the product tree that is packed and measured.
   For native TUI releases, `--app-binary-path FILE --app-repo REPO` gives
-  `stado run tui` and `stado author ... --target tui` the same immutable
+  `remote run tui` and `remote author ... --target tui` the same immutable
   executable and exact source inputs without a provisioning-time Cargo build,
   and records the source revision and executable SHA-256 in submission metadata
   and nested run evidence. A selected journey can still invoke its own declared
   commands.
-  `stado run --env NAME=VALUE` supplies non-secret execution conditions for
+  `remote run --env NAME=VALUE` supplies non-secret execution conditions for
   remote jobs; `--env=NAME=VALUE` is equivalent.
   Values are passed literally, including embedded `=` characters. Credentials
   continue to use the manifest's scoped `secretRefs`, not command arguments.
   Submission requests and responses remain under `test-results/.remote/`;
   stderr prints the request receipt and accepted job ID before watching.
-  `probierz stado collect <job-id> --app <id> --host stado:<target>` returns the
+  `probierz remote collect <job-id> --app <id> --host stado:<target>` returns the
   current state immediately and retrieves a terminal job's retained evidence
   without submitting or running it again; `--host` is required. MCP exposes the
   same operation as `probierz_stado_collect` (`jobId`, `appId`, `host`).
@@ -56,7 +57,7 @@ Every way into Probierz, and what each one is allowed to do.
   required, without asking the artifact store for output the worker never made.
   A structured, non-retryable `NO_ARTIFACTS` response for evidence that was
   required is reported as missing evidence, not as an object-store outage.
-  `probierz stado cancel <job-id> --host <host> --reason <reason>` retains the
+  `probierz remote cancel <job-id> --host <host> --reason <reason>` retains the
   original job identity, actual machine cancellation receipt, canonical logs,
   and available evidence under `test-results/.remote/cancellations/<job-id>/`
   and `test-results/.remote/<job-id>/`. The command exits 0 when cancellation

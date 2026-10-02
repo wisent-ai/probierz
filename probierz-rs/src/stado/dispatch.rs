@@ -15,11 +15,11 @@ pub(crate) fn dispatch_run(harness: &Path, args: RunArgs) -> Answer {
     let target = args
         .target
         .as_deref()
-        .ok_or_else(|| Failure::config("stado.run", "stado run needs a target (e.g. tui)"))?;
+        .ok_or_else(|| Failure::config("stado.run", "remote run needs a target (e.g. tui)"))?;
     let app_id = args
         .app
         .as_deref()
-        .ok_or_else(|| Failure::config("stado.run", "stado run needs --app <appId>"))?;
+        .ok_or_else(|| Failure::config("stado.run", "remote run needs --app <appId>"))?;
     let environment = parse_environment(&args.env)?;
     let provision = select_run_provision(&args, app_id, target)?;
     if args.script.is_some() && !matches!(provision, Some(Provision::NodeSource { .. })) {
@@ -51,7 +51,7 @@ pub(crate) fn dispatch_run(harness: &Path, args: RunArgs) -> Answer {
 pub(crate) fn dispatch_collect(harness: &Path, args: CollectArgs) -> Answer {
     let app_id = args
         .app
-        .ok_or_else(|| Failure::config("stado.collect", "stado collect needs --app <appId>"))?;
+        .ok_or_else(|| Failure::config("stado.collect", "remote collect needs --app <appId>"))?;
     let result = collect_remote_run(harness, args.job_id.as_deref(), &app_id, &args.host)?;
     let must_finish = result
         .get("collected")
@@ -77,10 +77,10 @@ pub(crate) fn dispatch_resume(harness: &Path, args: ResumeArgs) -> Answer {
 pub(crate) fn dispatch_cancel(harness: &Path, args: CancelArgs) -> Answer {
     let host = args
         .host
-        .ok_or_else(|| Failure::config("stado.cancel", "stado cancel needs --host <host>"))?;
+        .ok_or_else(|| Failure::config("stado.cancel", "remote cancel needs --host <host>"))?;
     let reason = args
         .reason
-        .ok_or_else(|| Failure::config("stado.cancel", "stado cancel needs --reason <reason>"))?;
+        .ok_or_else(|| Failure::config("stado.cancel", "remote cancel needs --reason <reason>"))?;
     let result = cancel_remote_run(harness, args.job_id.as_deref(), &host, &reason)?;
     print_json(&result)?;
     if result.get("cancellationSucceeded").and_then(Value::as_bool) == Some(true) {
@@ -91,24 +91,18 @@ pub(crate) fn dispatch_cancel(harness: &Path, args: CancelArgs) -> Answer {
 }
 
 pub(crate) fn dispatch_author(harness: &Path, args: AuthorArgs) -> Answer {
-    let app_id = args.app_id.as_deref().ok_or_else(|| {
-        Failure::config(
+    let (Some(app_id), Some(journey)) = (args.app_id.as_deref(), args.journey.as_deref()) else {
+        return Err(Failure::config(
             "stado.author",
-            "stado author needs an app ID and a journey name",
-        )
-    })?;
-    let journey = args.journey.as_deref().ok_or_else(|| {
-        Failure::config(
-            "stado.author",
-            "stado author needs an app ID and a journey name",
-        )
-    })?;
+            "remote author needs an app ID and a journey name",
+        ));
+    };
     let target = args
         .target
         .as_deref()
-        .ok_or_else(|| Failure::config("stado.author", "stado author needs --target <t>"))?;
+        .ok_or_else(|| Failure::config("stado.author", "remote author needs --target <t>"))?;
     let desc = args.desc.as_deref().ok_or_else(|| {
-        Failure::config("stado.author", "stado author needs --desc <journey goal>")
+        Failure::config("stado.author", "remote author needs --desc <journey goal>")
     })?;
     let provision = select_author_provision(&args, app_id, target)?;
     let result = submit_remote_author(
@@ -130,7 +124,7 @@ pub(crate) fn dispatch_seo(harness: &Path, args: SeoArgs) -> Answer {
     let app_id = args
         .app_id
         .clone()
-        .ok_or_else(|| Failure::config("stado.seo", "stado seo needs an app ID"))?;
+        .ok_or_else(|| Failure::config("stado.seo", "remote seo needs an app ID"))?;
     let result = submit_remote_seo(harness, &app_id, args)?;
     finish_remote(result)
 }

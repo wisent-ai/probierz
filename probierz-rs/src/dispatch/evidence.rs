@@ -147,7 +147,7 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             public_key.as_deref(),
             fingerprint.as_deref(),
         ),
-        // PortStado: remote Stado bridge
-        EvidenceCommand::Stado { command } => stado::dispatch(harness, command),
+        // PortStado: remote fleet bridge
+        EvidenceCommand::Remote { command } => stado::dispatch(harness, command),
     }
 }

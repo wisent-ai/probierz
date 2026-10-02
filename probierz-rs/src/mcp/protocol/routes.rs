@@ -105,19 +105,19 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_stado_run" => {
             positional.push("target");
-            "stado run"
+            "remote run"
         }
         "probierz_stado_collect" => {
             positional.push("jobId");
-            "stado collect"
+            "remote collect"
         }
         "probierz_stado_resume" => {
             positional.push("jobId");
-            "stado resume"
+            "remote resume"
         }
         "probierz_stado_evaluate_seo" => {
             positional.push("appId");
-            "stado seo"
+            "remote seo"
         }
         "probierz_gate_evaluate" => {
             positional.push("appId");
