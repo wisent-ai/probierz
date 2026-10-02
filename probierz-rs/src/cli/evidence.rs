@@ -76,16 +76,18 @@ pub enum EvidenceCommand {
         left_run_id: Option<String>,
         /// Second run to compare.
         right_run_id: Option<String>,
-        /// Application both runs belong to.
-        app_id: Option<String>,
+        /// Application both runs belong to; no application is assumed.
+        app_id: String,
     },
     /// Find the newest passing run.
     LastGreen {
-        /// Application whose runs are searched.
-        app_id: Option<String>,
+        /// Application whose runs are searched; no application is assumed.
+        app_id: String,
         /// Only runs on this target.
+        #[arg(long)]
         target: Option<String>,
         /// Only runs of this journey.
+        #[arg(long)]
         journey: Option<String>,
     },
     /// Sign exact runs and policy into an evidence receipt.

@@ -132,7 +132,8 @@ pub enum InspectCommand {
         policy: Option<PathBuf>,
         #[arg(long)]
         brief: Option<PathBuf>,
-        #[arg(long, default_value = "release")]
+        /// The SEO profile to evaluate: pull-request, release, nightly or production.
+        #[arg(long)]
         mode: String,
         #[arg(long = "out")]
         output: Option<PathBuf>,

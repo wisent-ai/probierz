@@ -160,7 +160,7 @@ pub(crate) fn overview_value(
     };
     let mut apps = Vec::new();
     for app_id in ids {
-        let status = app_status_value(harness, &app_id, "origin/main")?;
+        let status = app_status_value(harness, &app_id, None)?;
         let root = status
             .pointer("/repositories/0/root")
             .and_then(Value::as_str);

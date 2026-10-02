@@ -2,11 +2,10 @@ use serde_json::json;
 use crate::evidence::*;
 pub fn last_green(
     harness: &Path,
-    app_id: Option<&str>,
+    app_id: &str,
     target: Option<&str>,
     journey: Option<&str>,
 ) -> Answer {
-    let app_id = app_id.unwrap_or("probierz");
     let root = match target {
         Some(value) => harness
             .join("test-results")

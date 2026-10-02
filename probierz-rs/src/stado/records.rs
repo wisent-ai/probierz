@@ -118,7 +118,8 @@ pub struct SeoArgs {
     pub app_id: Option<String>,
     #[arg(long)]
     pub base_url: Option<String>,
-    #[arg(long, default_value = "release")]
+    /// The SEO profile to evaluate: pull-request, release, nightly or production.
+    #[arg(long)]
     pub mode: String,
     #[arg(long)]
     pub policy: Option<String>,

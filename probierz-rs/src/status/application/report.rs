@@ -2,11 +2,17 @@
 
 use crate::status::*;
 
+/// The ref a repository is measured against when the caller names none: the
+/// branch this checkout tracks, which git itself records. Nothing about a
+/// remote's name or its default branch is assumed.
+pub(crate) const TRACKED_UPSTREAM: &str = "@{upstream}";
+
 pub(crate) fn app_status_value(
     harness: &Path,
     app_id: &str,
-    base_ref: &str,
+    base_ref: Option<&str>,
 ) -> Result<Value, Failure> {
+    let base_ref = base_ref.unwrap_or(TRACKED_UPSTREAM);
     let (loaded, document) = manifest_object(harness, app_id)?;
     let history = run_history_value(harness, app_id, None, 1000)?;
     let gates = gate_status(&loaded, app_id)?;
@@ -29,7 +35,7 @@ pub(crate) fn app_status_value(
                     .map(|file| Path::new(root).join(file)),
             );
         }
-        repositories.push(json!({ "root": root, "headSha": head, "baseSha": base }));
+        repositories.push(json!({ "root": root, "headSha": head, "baseRef": base_ref, "baseSha": base }));
     }
     let affected = affected_journeys(harness, &diff_files)?;
     let runs = history
@@ -242,7 +248,7 @@ pub(crate) fn render_app_status(status: &Value) -> String {
     lines.join("\n")
 }
 
-pub fn status(harness: &Path, app_id: &str, base_ref: &str, text: bool) -> Result<bool, Failure> {
+pub fn status(harness: &Path, app_id: &str, base_ref: Option<&str>, text: bool) -> Result<bool, Failure> {
     let report = app_status_value(harness, app_id, base_ref)?;
     let eligible = report
         .pointer("/mergeEligibility/eligible")

@@ -116,7 +116,7 @@ pub fn compare(
     harness: &Path,
     left_id: Option<&str>,
     right_id: Option<&str>,
-    app_id: Option<&str>,
+    app_id: &str,
 ) -> Answer {
     let left_id = left_id.ok_or_else(|| {
         Failure::invalid("evidence.compare", "compare needs left and right run IDs")
@@ -124,7 +124,6 @@ pub fn compare(
     let right_id = right_id.ok_or_else(|| {
         Failure::invalid("evidence.compare", "compare needs left and right run IDs")
     })?;
-    let app_id = app_id.unwrap_or("probierz");
     let left = get_run(harness, app_id, left_id)?;
     let right = get_run(harness, app_id, right_id)?;
     let tests = compare_named(&left, &right, "tests", "title", true);

@@ -32,7 +32,7 @@ pub(crate) fn prepush_value(
         if let Some(base) = base.filter(|base| !base.is_empty() && *base != ZERO_SHA) {
             git(repo, &["rev-parse", base])
         } else if let Some(head) = &resolved_head {
-            git(repo, &["merge-base", head, "origin/main"])
+            git(repo, &["merge-base", head, crate::status::TRACKED_UPSTREAM])
         } else {
             None
         };
@@ -43,7 +43,7 @@ pub(crate) fn prepush_value(
             (
                 "reason",
                 Value::String(
-                    "cannot resolve a merge base with origin/main; fetch first or pass --base"
+                    "cannot resolve a merge base with the branch this checkout tracks; set an upstream or pass --base"
                         .to_string(),
                 ),
             ),

@@ -36,7 +36,7 @@ worth, and whether it was ever closed.
 
   probierz incident record --claim <text> --envelope <file|->
   probierz incident record --claim <text> --service <name> --failure-point <point> --code <code> --detail <text>
-  probierz incident list [--state open|resolved|all] [--limit N] [--json]
+  probierz incident list --state open|resolved|all [--limit N] [--json]
   probierz incident show <id> [--json]
   probierz incident resolve <id> --note <text> [--run <runId>]
   probierz incident reopen <id> --note <text>
@@ -77,7 +77,8 @@ pub enum IncidentCommand {
     },
     /// Every recorded incident, newest first.
     List {
-        #[arg(long, default_value = "open")]
+        /// Which incidents to print: open, resolved or all.
+        #[arg(long)]
         state: String,
         #[arg(long, default_value_t = 20, value_parser = crate::cli::reporting::positive_history_limit)]
         limit: usize,

@@ -46,7 +46,10 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_affected" => "affected",
         "probierz_ci" => "ci",
-        "probierz_history" => "history",
+        "probierz_history" => {
+            positional.push("appId");
+            "history"
+        }
         "probierz_dashboard" => {
             positional.push("appId");
             "dashboard"
@@ -129,10 +132,13 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "gate-activate"
         }
         "probierz_compare_runs" => {
-            positional.extend(["leftRunId", "rightRunId"]);
+            positional.extend(["leftRunId", "rightRunId", "appId"]);
             "compare"
         }
-        "probierz_last_green" => "last-green",
+        "probierz_last_green" => {
+            positional.push("appId");
+            "last-green"
+        }
         "probierz_create_receipt" => {
             positional.extend(["appId", "release"]);
             "receipt-create"

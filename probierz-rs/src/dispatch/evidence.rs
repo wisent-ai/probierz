@@ -67,7 +67,7 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             harness,
             left_run_id.as_deref(),
             right_run_id.as_deref(),
-            app_id.as_deref(),
+            &app_id,
         ),
         EvidenceCommand::LastGreen {
             app_id,
@@ -75,7 +75,7 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             journey,
         } => evidence::last_green(
             harness,
-            app_id.as_deref(),
+            &app_id,
             target.as_deref(),
             journey.as_deref(),
         ),

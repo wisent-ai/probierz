@@ -14,7 +14,10 @@ pub enum ReportingCommand {
     // PortStatus: status/history/dashboard/overview/intake
     /// Stability by run, journey, and test.
     History {
-        app_id: Option<String>,
+        /// Application whose runs are read; no application is assumed.
+        app_id: String,
+        /// Only runs on this target.
+        #[arg(long)]
         target: Option<String>,
         #[arg(long, default_value_t = 50, value_parser = positive_history_limit)]
         limit: usize,
@@ -24,11 +27,12 @@ pub enum ReportingCommand {
         app_id: String,
         limit: Option<String>,
     },
-    /// Journey coverage, freshness against HEAD, and merge eligibility.
+    /// Journey coverage, freshness against a base ref, and merge eligibility.
     Status {
         app_id: String,
-        #[arg(long, default_value = "origin/main")]
-        base: String,
+        /// The ref the checkout is compared with; the branch it tracks when omitted.
+        #[arg(long)]
+        base: Option<String>,
         /// Print the report as JSON instead of text.
         #[arg(long)]
         json: bool,

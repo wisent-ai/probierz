@@ -39,6 +39,7 @@ use intake::*;
 use runs::*;
 
 pub use application::report::status;
+pub(crate) use application::report::TRACKED_UPSTREAM;
 pub use fleet::failures::failures;
 pub use fleet::overview::overview;
 pub use intake::listener::intake_serve;
