@@ -193,13 +193,23 @@ impl ModelSettings {
         )
         .map_err(|detail| Failure::config("seo-evaluate", detail))?;
 
+        // The agent identity signs requests for Brama; another
+        // OpenAI-compatible provider takes the bearer alone.
+        let agent_id = contract.optional_setting(agent_id, "PROBIERZ_MODEL_AGENT_ID");
+        let agent_secret = contract.optional_setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET");
+        if agent_id.is_empty() != agent_secret.is_empty() {
+            return Err(Failure::config(
+                "seo-evaluate",
+                "agent identity needs both an agent ID and an agent secret",
+            ));
+        }
         Ok(Self {
             primary,
             secondary,
             router_url,
             token: contract.setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?,
-            agent_id: contract.setting(agent_id, "PROBIERZ_MODEL_AGENT_ID")?,
-            agent_secret: contract.setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET")?,
+            agent_id,
+            agent_secret,
         })
     }
 }
@@ -215,6 +225,15 @@ impl Contract {
             name,
         )
         .map_err(|detail| Failure::config("seo-evaluate", detail))
+    }
+
+    /// An optional setting, resolved like [`Contract::setting`]; empty when
+    /// neither the argument nor the surface names it.
+    pub(crate) fn optional_setting(&self, explicit: Option<&str>, name: &str) -> String {
+        explicit
+            .map(|value| value.trim().to_string())
+            .or_else(|| selected_setting(Some(&self.loaded), Some(SURFACE), name, None))
+            .unwrap_or_default()
     }
 }
 

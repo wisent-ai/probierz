@@ -12,7 +12,11 @@ reaches for, and how it behaves when something fails.
 - **Credentials:** local discovery requires none. Model authoring and figure
   evaluation reach Brama through `STADO_MODEL_ROUTER_URL`, a router-scoped
   `STADO_MODEL_ROUTER_TOKEN`, and a signed Probierz identity
-  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). Figure evaluation
+  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). Without Brama,
+  point `STADO_MODEL_ROUTER_URL` at any OpenAI-compatible provider, put its key in
+  `STADO_MODEL_ROUTER_TOKEN` and leave both identity variables unset: local
+  authoring, figure evaluation and SEO evaluation then send unsigned requests to
+  that provider. Setting only one of the identity pair is refused. Figure evaluation
   also requires `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs set
   the Probierz identity and materialize the token and signing secret from the
   scoped `probierz-model-router` and `probierz-agent-auth` references instead

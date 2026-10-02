@@ -34,14 +34,14 @@ pub(crate) fn draft_structured_artifact(
         selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_TOKEN", None),
         "STADO_MODEL_ROUTER_TOKEN",
     )?;
-    let agent_id = required_setting(
-        selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_ID", None),
-        "PROBIERZ_MODEL_AGENT_ID",
-    )?;
-    let agent_secret = required_setting(
-        selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_SECRET", None),
-        "PROBIERZ_MODEL_AGENT_SECRET",
-    )?;
+    // Brama needs a signed agent identity; another OpenAI-compatible provider
+    // named by STADO_MODEL_ROUTER_URL takes the bearer alone, so the pair is
+    // optional here and `post_router` refuses only half of it.
+    let agent_id = selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_ID", None)
+        .unwrap_or_default();
+    let agent_secret =
+        selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_SECRET", None)
+            .unwrap_or_default();
     let model = selected_setting(loaded.as_ref(), target, "PROBIERZ_AUTHOR_MODEL", None)
         .unwrap_or_else(|| "any".to_string());
     let body = json!({
