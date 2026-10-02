@@ -205,10 +205,11 @@ the published [documentation](https://probierz.wisent.com/docs).
 ## Primary interfaces
 
 The `probierz` CLI is canonical, and every command that produces
-machine output says so in structured form rather than prose. The
-`probierz-mcp` binary exposes the same discovery and the same
-explicitly named side-effecting operations over stdio JSON-RPC, and
-`probierz gate-install` installs the pre-push integration and `probierz gate-uninstall` removes it again. The Stado
+machine output says so in structured form rather than prose.
+`probierz mcp` exposes the same discovery and the same explicitly named
+side-effecting operations over stdio JSON-RPC, running each tool in the
+product's own process, and `probierz gate-install` installs the pre-push
+integration and `probierz gate-uninstall` removes it again. The Stado
 bridge submits exact remote contracts and returns their evidence.
 Each interface, with what it is allowed to do, is in
 [`reference/interfaces.md`](reference/interfaces.md).

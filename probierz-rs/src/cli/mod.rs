@@ -48,4 +48,7 @@ pub enum Command {
     /// Durable evidence, signing, publication, retention and the Stado bridge.
     #[command(flatten)]
     Evidence(evidence::EvidenceCommand),
+    /// Serve the MCP protocol on stdio: the same commands as tools, run in
+    /// this process, until the client closes its end.
+    Mcp,
 }

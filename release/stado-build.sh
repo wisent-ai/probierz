@@ -2,11 +2,10 @@
 # Build the Probierz command-line release for darwin-arm64.
 #
 # Writes, under $WISENT_OUTPUT_DIR and nowhere else:
-#   bin/probierz       the product binary
-#   bin/probierz-mcp   the stdio MCP server
-#   evidence/DIGESTS   sha256 of both
+#   bin/probierz       the product binary; `probierz mcp` is its MCP server
+#   evidence/DIGESTS   its sha256
 #
-# Those three are exactly the stage keys in .wisent-release.json.
+# Those two are exactly the stage keys in .wisent-release.json.
 #
 # Probierz is a Rust product. It used to ship as a self-extracting shell
 # launcher carrying a tarball of JavaScript plus two node_modules trees, which
@@ -74,18 +73,16 @@ export SOURCE_DATE_EPOCH="$commit_time"
 cargo build --locked --release --manifest-path "$source_tree/probierz-rs/Cargo.toml" --bins
 
 built="$source_tree/probierz-rs/target/release"
-for binary in probierz probierz-mcp; do
-  if [ ! -x "$built/$binary" ]; then
-    printf 'cargo did not produce %s from %s\n' "$binary" "$revision" >&2
-    exit 1
-  fi
-  install -m 0755 "$built/$binary" "$WISENT_OUTPUT_DIR/bin/$binary"
-done
-stado product signing sign --product probierz "$WISENT_OUTPUT_DIR/bin/probierz" "$WISENT_OUTPUT_DIR/bin/probierz-mcp"
+if [ ! -x "$built/probierz" ]; then
+  printf 'cargo did not produce probierz from %s\n' "$revision" >&2
+  exit 1
+fi
+install -m 0755 "$built/probierz" "$WISENT_OUTPUT_DIR/bin/probierz"
+stado product signing sign --product probierz "$WISENT_OUTPUT_DIR/bin/probierz"
 
-# An artifact that cannot start is not a release. Each binary answers a
-# read-only question: the product prints its command surface, and the MCP
-# server answers one discovery call over stdio.
+# An artifact that cannot start is not a release. The binary answers two
+# read-only questions: it prints its command surface, and its MCP server
+# answers one discovery call over stdio.
 if ! "$WISENT_OUTPUT_DIR/bin/probierz" list >/dev/null; then
   printf 'the built probierz could not answer `list` at %s\n' "$revision" >&2
   exit 1
@@ -100,12 +97,11 @@ case "$reported" in
 esac
 discovery='{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 if ! printf '%s\n' "$discovery" \
-  | "$WISENT_OUTPUT_DIR/bin/probierz-mcp" 2>/dev/null \
+  | "$WISENT_OUTPUT_DIR/bin/probierz" mcp 2>/dev/null \
   | grep -q '"tools"'; then
-  printf 'the built probierz-mcp did not answer tools/list at %s\n' "$revision" >&2
+  printf 'the built probierz mcp did not answer tools/list at %s\n' "$revision" >&2
   exit 1
 fi
 
 /usr/bin/shasum -a 256 \
-  "$WISENT_OUTPUT_DIR/bin/probierz" \
-  "$WISENT_OUTPUT_DIR/bin/probierz-mcp" > "$WISENT_OUTPUT_DIR/evidence/DIGESTS"
+  "$WISENT_OUTPUT_DIR/bin/probierz" > "$WISENT_OUTPUT_DIR/evidence/DIGESTS"

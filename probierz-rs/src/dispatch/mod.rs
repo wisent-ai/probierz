@@ -15,5 +15,9 @@ pub fn dispatch(harness: &Path, command: Command) -> Answer {
         Command::Inspect(command) => inspect::dispatch(harness, command),
         Command::Reporting(command) => reporting::dispatch(harness, command),
         Command::Evidence(command) => evidence::dispatch(harness, command),
+        Command::Mcp => {
+            crate::mcp::serve(harness);
+            Ok(())
+        }
     }
 }

@@ -11,10 +11,6 @@ autotests = false
 name = "probierz"
 path = "src/main.rs"
 
-[[bin]]
-name = "probierz-mcp"
-path = "src/mcp/main.rs"
-
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }

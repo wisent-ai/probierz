@@ -9,9 +9,11 @@ Every way into Probierz, and what each one is allowed to do.
   person and the same report as JSON with `--json`; run, analysis, figure
   evaluation, SEO evaluation, and gate commands expose structured data;
   automation must not infer state from prose.
-- **MCP:** the `probierz-mcp` binary exposes the same discovery and explicitly
-  named side-effecting operations over stdio JSON-RPC. Tool descriptions
-  preserve the read-only versus mutation boundary;
+- **MCP:** `probierz mcp` exposes the same discovery and explicitly named
+  side-effecting operations over stdio JSON-RPC; every tool is the CLI command
+  of the same name run inside the server's process, and only an asynchronous
+  run is a child process so its process tree can be cancelled. Tool
+  descriptions preserve the read-only versus mutation boundary;
   `probierz_evaluate_figure` and `probierz_evaluate_seo` use the same evaluators
   and evidence contracts as the CLI.
 - **Repository gate:** `probierz gate-install` installs the pre-push integration

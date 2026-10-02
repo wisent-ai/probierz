@@ -1,4 +1,4 @@
-use crate::*;
+use crate::mcp::*;
 pub(crate) fn send(value: &Value) {
     let mut stdout = io::stdout().lock();
     let _ = serde_json::to_writer(&mut stdout, value);
@@ -6,24 +6,10 @@ pub(crate) fn send(value: &Value) {
     let _ = stdout.flush();
 }
 
-pub(crate) fn harness_root() -> PathBuf {
-    if let Some(root) = std::env::var_os("PROBIERZ_HARNESS") {
-        return PathBuf::from(root);
-    }
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")))
-        .to_path_buf()
-}
-
+/// This binary, for the one tool that runs as a child process: an
+/// asynchronous run, whose process tree is cancelled as a whole.
 pub(crate) fn probierz_binary() -> PathBuf {
-    if let Some(binary) = std::env::var_os("PROBIERZ_BIN") {
-        return PathBuf::from(binary);
-    }
-    std::env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(|parent| parent.join("probierz")))
-        .unwrap_or_else(|| PathBuf::from("probierz"))
+    std::env::current_exe().unwrap_or_else(|_| PathBuf::from("probierz"))
 }
 
 pub(crate) fn non_empty<'a>(value: Option<&'a Value>, name: &str) -> Result<&'a str, String> {

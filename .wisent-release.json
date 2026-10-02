@@ -19,7 +19,6 @@
       },
       "stage": {
         "bin/probierz": "bin/probierz",
-        "bin/probierz-mcp": "bin/probierz-mcp",
         "evidence/DIGESTS": "evidence/DIGESTS"
       }
     }

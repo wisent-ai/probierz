@@ -200,16 +200,18 @@ pub fn answer_as_text(text: bool) {
     let _ = TEXT.set(text);
 }
 
+use crate::capture::emit;
+
 /// One answer on stdout: pretty-printed JSON, or with `--text` the same
 /// document as indented `key: value` lines, list entries as `- ` lines.
 pub fn print_json<T: serde::Serialize + ?Sized>(value: &T) -> Answer {
     if !TEXT.get().copied().unwrap_or(false) {
-        println!("{}", serde_json::to_string_pretty(value)?);
+        emit(&format!("{}\n", serde_json::to_string_pretty(value)?));
         return Ok(());
     }
     let mut out = String::new();
     render(&serde_json::to_value(value)?, 0, &mut out);
-    print!("{out}");
+    emit(&out);
     Ok(())
 }
 

@@ -36,8 +36,11 @@ mod evidence;
 // PortStado: remote Stado bridge
 mod stado;
 
+mod capture;
 mod cli;
 mod dispatch;
+// The stdio MCP server, `probierz mcp`: the same commands, run in-process.
+mod mcp;
 
 use std::path::{Path, PathBuf};
 
@@ -70,6 +73,28 @@ fn main() {
     let answer = dispatch::dispatch(&harness, parsed.command);
     if let Err(failure) = answer {
         std::process::exit(failure.report());
+    }
+}
+
+/// Run one CLI invocation in this process and answer what it printed. The
+/// MCP server calls this for every tool: `arguments` is the argv the tool
+/// routes to, without the program name, and a refusal comes back as the
+/// failure's structured line so the caller reads the same words a shell
+/// would have read on stderr.
+pub(crate) fn run_in_process(harness: &Path, arguments: &[String]) -> Result<String, String> {
+    let mut argv = Vec::with_capacity(arguments.len() + 1);
+    argv.push("probierz".to_string());
+    argv.extend(arguments.iter().cloned());
+    let parsed = cli::Cli::try_parse_from(&argv).map_err(|error| error.to_string())?;
+    let (answer, output) = capture::captured(|| dispatch::dispatch(harness, parsed.command));
+    match answer {
+        Ok(()) => Ok(output),
+        Err(failure) => Err(format!(
+            "{} at {}: {}",
+            failure.code.as_str(),
+            failure.point,
+            failure.detail
+        )),
     }
 }
 

@@ -22,8 +22,7 @@ pub struct Recorded<'a> {
 }
 
 fn print_json(value: &Value) -> Answer {
-    println!("{}", serde_json::to_string_pretty(value)?);
-    Ok(())
+    crate::failure::print_json(value)
 }
 
 pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answer {

@@ -35,6 +35,6 @@ reaches for, and how it behaves when something fails.
   publication. Infrastructure failures and unsafe repairs are recorded refusals,
   not model guesses.
 - **Upgrades:** the repository is currently a source distribution.
-  `probierz-rs/Cargo.toml` owns the Rust product version; rebuild both
-  `probierz` and `probierz-mcp` from the desired source revision.
+  `probierz-rs/Cargo.toml` owns the Rust product version; rebuild `probierz`
+  from the desired source revision. `probierz mcp` is the same binary.
 

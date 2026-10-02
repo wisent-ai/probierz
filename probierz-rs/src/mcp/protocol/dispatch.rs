@@ -1,5 +1,5 @@
 use serde_json::json;
-use crate::*;
+use crate::mcp::*;
 pub(crate) fn tool_answer(value: Value) -> Result<Value, String> {
     let pretty = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
     Ok(json!({ "content": [{ "type": "text", "text": pretty }] }))
@@ -27,27 +27,14 @@ pub(crate) fn call_tool(
     }
 
     // Read-only and side-effecting operations share transport, not authority:
-    // no operation runs until this explicit call is routed. Discovery commands
-    // remain the CLI's static, non-executing surfaces.
+    // no operation runs until this explicit call is routed. The routed argv is
+    // the CLI's own, run in this process; what the command answered is the
+    // tool's answer, and its refusal is the tool's error.
     let arguments = route(name, args)?;
-    let output = Command::new(probierz_binary())
-        .arg("--harness")
-        .arg(harness_root())
-        .args(&arguments)
-        .output()
-        .map_err(|error| format!("cannot run probierz: {error}"))?;
-    if !output.stdout.is_empty() {
-        let value: Value = serde_json::from_slice(&output.stdout)
-            .map_err(|error| format!("probierz returned invalid JSON: {error}"))?;
-        return tool_answer(value);
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let message = stderr
-        .lines()
-        .last()
-        .filter(|line| !line.is_empty())
-        .unwrap_or("probierz command failed");
-    Err(message.to_string())
+    let output = crate::run_in_process(&harness_root(), &arguments)?;
+    let value: Value = serde_json::from_str(output.trim())
+        .map_err(|error| format!("probierz answered invalid JSON: {error}"))?;
+    tool_answer(value)
 }
 
 pub(crate) fn handle(request: Value, tools: &Value, control: &Arc<Control>) {
@@ -112,7 +99,7 @@ pub(crate) fn serve() {
     let tools = match tools {
         Ok(parts) => Value::Array(parts.into_iter().flatten().collect()),
         Err(error) => {
-            eprintln!("probierz-mcp tool contract is invalid: {error}");
+            eprintln!("probierz mcp tool contract is invalid: {error}");
             std::process::exit(1);
         }
     };
