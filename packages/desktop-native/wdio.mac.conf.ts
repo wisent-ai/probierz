@@ -13,6 +13,8 @@ export const config: Options.Testrunner = {
     {
       platformName: 'mac',
       'appium:automationName': 'Mac2',
+      // Appium's documented off value preserves a session until its owner ends it.
+      'appium:newCommandTimeout': 0,
       ...(process.env.MAC_BUNDLE_ID ? { 'appium:bundleId': process.env.MAC_BUNDLE_ID } : {}),
       ...(process.env.MAC_APP_PATH ? { 'appium:appPath': process.env.MAC_APP_PATH } : {}),
       'appium:processArguments': { env: {}, args: [] },

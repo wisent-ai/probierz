@@ -91,10 +91,11 @@ export const shared: Partial<Options.Testrunner> = {
   logLevel: 'info',
   waitforTimeout: 20000,
   connectionRetryTimeout: 120000,
-  connectionRetryCount: 3,
+  connectionRetryCount: 0,
   framework: 'mocha',
   reporters: ['spec'],
-  mochaOpts: { ui: 'bdd', timeout: 120000 },
+  // Mocha documents zero as disabling its test and hook clock limit.
+  mochaOpts: { ui: 'bdd', timeout: 0 },
   beforeTest: async (test: { title: string }) => {
     testStartedAt.set(test.title, new Date().toISOString());
     if (!record) return;

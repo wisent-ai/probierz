@@ -53,10 +53,11 @@ export const shared: Partial<Options.Testrunner> = {
   bail: 0,
   waitforTimeout: 20000,
   connectionRetryTimeout: 120000,
-  connectionRetryCount: 3,
+  connectionRetryCount: 0,
   framework: 'mocha',
   reporters: ['spec'],
-  mochaOpts: { ui: 'bdd', timeout: 120000 },
+  // Mocha documents zero as disabling its test and hook clock limit.
+  mochaOpts: { ui: 'bdd', timeout: 0 },
   // The runner owns Appium for this run, including remote authoring validation.
   services: [['appium', { args: { relaxedSecurity: true } }]],
   port: 4723,

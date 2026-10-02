@@ -30,7 +30,8 @@ export const config: Options.Testrunner = {
       'appium:locale': locale === 'pl' ? 'pl_PL' : 'en_US',
       'appium:processArguments': { env: appEnvironment, args: [] },
       'appium:autoDismissAlerts': true,
-      'appium:newCommandTimeout': 240,
+      // Appium's documented off value preserves a session until its owner ends it.
+      'appium:newCommandTimeout': 0,
     },
   ],
 } as Options.Testrunner;

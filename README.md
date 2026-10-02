@@ -88,6 +88,14 @@ The remote launcher does not kill another Appium process, start a shared
 background server or poll a TCP port. Windows continues to use the separately
 provisioned WinAppDriver rather than an Appium server.
 
+The mobile and native runners disable Mocha's test and hook clock limit with
+its documented zero value and do not retry failed WebDriver requests.
+Appium sessions on iOS, Android and macOS disable idle expiration with
+`appium:newCommandTimeout: 0`; their owner still closes them at completion.
+WebdriverIO's request and element-readiness clocks remain a separate limitation.
+Setting `connectionRetryTimeout` to zero does not disable that clock in the
+installed WebdriverIO version: it restores the library default instead.
+
 The macOS recording helper takes `--bundle-id` and `--output`. It asks
 ScreenCaptureKit for the application's existing capturable windows once and
 selects the largest matching window. An absent window is reported immediately;

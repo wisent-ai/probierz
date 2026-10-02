@@ -16,7 +16,8 @@ export const config: Options.Testrunner = {
       ...(process.env.APP_ANDROID ? { 'appium:app': process.env.APP_ANDROID } : {}),
       ...(process.env.APP_PACKAGE ? { 'appium:appPackage': process.env.APP_PACKAGE } : {}),
       ...(process.env.APP_ACTIVITY ? { 'appium:appActivity': process.env.APP_ACTIVITY } : {}),
-      'appium:newCommandTimeout': 240,
+      // Appium's documented off value preserves a session until its owner ends it.
+      'appium:newCommandTimeout': 0,
     },
   ],
 } as Options.Testrunner;
