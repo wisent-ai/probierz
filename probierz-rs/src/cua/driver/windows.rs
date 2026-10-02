@@ -84,19 +84,6 @@ impl Driver {
         }))
     }
 
-    pub(crate) fn wait_for_window(&self, pid: u32) -> Result<App, String> {
-        let deadline = Instant::now() + LAUNCH_WAIT;
-        while Instant::now() < deadline {
-            if let Some(window) = self.find_window(pid)? {
-                if let Some(window_id) = window.get("window_id").and_then(Value::as_u64) {
-                    return Ok(App { pid, window_id });
-                }
-            }
-            thread::sleep(POLL);
-        }
-        Err(format!("pid {pid} produced no window within 8000ms"))
-    }
-
     pub(crate) fn find_window(&self, pid: u32) -> Result<Option<Value>, String> {
         let mut candidates: Vec<Value> = self
             .list_windows(Some(pid))?

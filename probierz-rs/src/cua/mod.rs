@@ -17,8 +17,6 @@ pub(crate) use std::collections::BTreeMap;
 pub(crate) use std::fs;
 pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::{Command, Output, Stdio};
-pub(crate) use std::thread;
-pub(crate) use std::time::{Duration, Instant};
 
 pub(crate) use serde_json::Value;
 
@@ -26,5 +24,6 @@ mod driver;
 mod elements;
 mod records;
 
+pub(crate) use driver::accessibility_trusted;
 pub use elements::*;
 pub use records::*;

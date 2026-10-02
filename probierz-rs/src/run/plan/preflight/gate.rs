@@ -72,6 +72,7 @@ pub(crate) fn preflight(name: &str, extra: &BTreeMap<String, String>) -> Result<
             check_row("logged-in macOS console session", has_console_session(), false, "select a dedicated macOS host with an active GUI login session"),
             check_row("cua-driver binary", successful("cua-driver", &["--version"]), false, "install cua-driver (macOS Accessibility driver)"),
             check_row("cua-driver accessibility", cua_accessibility_granted(), true, "grant CuaDriver in System Settings > Privacy & Security > Accessibility (once per host)"),
+            check_row("probierz accessibility", crate::cua::accessibility_trusted(), true, "grant the program that runs probierz in System Settings > Privacy & Security > Accessibility, so it can observe a launched app open its window"),
         ],
         _ => return Err(fail("run.preflight", format!("unknown target: {name} ({})", accepted_preflight_targets()))),
     };
