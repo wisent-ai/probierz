@@ -58,10 +58,13 @@ node agent/cli.mjs stado author stado <journey> \
 ```
 
 `stado:<target>` is any local-consumer host in the Stado registry; `probierz
-hosts` lists them, read from `stado registry pull` on every call, next to the
-placement selectors (`stado:any`, `stado:gcp`, `stado:local`, ...). A registry
-that cannot be read is reported on standard error and only the placement
-selectors are listed.
+hosts` lists them, read from `stado registry pull` on every call, next to
+`local` (this machine) and `stado` (any consumer with capacity). A placement
+constraint is written into the selector as `stado?key=value&key=value`, and
+every pair becomes a field of the Stado placement request — for example
+`stado?provider=<name>&pin_to_provider=true` or
+`stado?max_cost_per_hour_usd=<n>`; nothing is built in. A registry that cannot
+be read is reported on standard error and only `local` and `stado` are listed.
 
 Both commands use the same provisioning path. Probierz uploads the executable
 and selected committed source as separate immutable job inputs, copies the

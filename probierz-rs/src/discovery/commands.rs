@@ -117,7 +117,9 @@ fn registry_hosts() -> Vec<Host> {
         .collect()
 }
 
-/// The selectors that constrain placement without naming a host.
+/// The two selectors that need no registry: this machine, and Stado's
+/// queue with no constraint. Constraints are written by the operator as
+/// `stado?key=value&key=value`; no provider, cost cap or GPU model is built in.
 fn placement_hosts() -> Vec<Host> {
     vec![
         Host {
@@ -126,52 +128,56 @@ fn placement_hosts() -> Vec<Host> {
             platform: None,
             target: None,
             request: None,
-            description: "this machine (default)",
+            description: "this machine",
         },
         Host::stado(
-            "stado:gcp",
-            serde_json::json!({ "provider": "gcp", "pin_to_provider": true }),
-            "stado queue, GCP consumers only",
-        ),
-        Host::stado(
-            "stado:azure",
-            serde_json::json!({ "provider": "azure", "pin_to_provider": true }),
-            "stado queue, Azure consumers only",
-        ),
-        Host::stado(
-            "stado:aws",
-            serde_json::json!({ "provider": "aws", "pin_to_provider": true }),
-            "stado queue, AWS consumers only",
-        ),
-        Host::stado(
-            "stado:any",
+            "stado",
             serde_json::json!({}),
-            "stado queue, any consumer with capacity",
-        ),
-        Host::stado(
-            "stado:spot",
-            serde_json::json!({ "max_cost_per_hour_usd": 4 }),
-            "stado queue, cost-capped capacity",
-        ),
-        Host::stado(
-            "stado:local",
-            serde_json::json!({ "provider": "local", "pin_to_provider": true }),
-            "stado queue, local-kind consumers only",
-        ),
-        Host::stado(
-            "stado:t4",
-            serde_json::json!({ "gpu_type": "nvidia-tesla-t4" }),
-            "stado queue, nvidia-tesla-t4 capacity",
+            "stado queue, any consumer with capacity; append ?key=value&... to constrain the placement request",
         ),
     ]
 }
 
-/// One host by its selector, or nothing when the selector is unknown. A
-/// placement selector is answered without asking the registry.
+/// `stado?key=value&...`: every pair becomes a field of the placement
+/// request. A value that reads as a number or as `true`/`false` is sent as
+/// one; anything else is sent as text. The selector is what the operator
+/// wrote, so `probierz hosts` and a submission read the same constraint.
+fn constrained_stado_host(name: &str) -> Option<Host> {
+    let query = name.strip_prefix("stado?")?;
+    let mut request = serde_json::Map::new();
+    for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+        let (key, value) = pair.split_once('=')?;
+        if key.is_empty() {
+            return None;
+        }
+        let value = match value {
+            "true" => serde_json::Value::Bool(true),
+            "false" => serde_json::Value::Bool(false),
+            other => match other.parse::<f64>() {
+                Ok(number) => serde_json::json!(number),
+                Err(_) => serde_json::Value::String(other.to_string()),
+            },
+        };
+        request.insert(key.to_string(), value);
+    }
+    if request.is_empty() {
+        return None;
+    }
+    Some(Host::stado(
+        name,
+        serde_json::Value::Object(request),
+        "stado queue, constrained by the selector's query",
+    ))
+}
+
+/// One host by its selector, or nothing when the selector is unknown. `local`,
+/// `stado` and `stado?...` are answered without asking the registry;
+/// `stado:<target>` is answered by it.
 pub fn stado_host(name: &str) -> Option<Host> {
     placement_hosts()
         .into_iter()
         .find(|entry| entry.host == name)
+        .or_else(|| constrained_stado_host(name))
         .or_else(|| registry_hosts().into_iter().find(|entry| entry.host == name))
 }
 
