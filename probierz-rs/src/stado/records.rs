@@ -28,7 +28,9 @@ pub struct RunArgs {
     pub spec: Option<String>,
     #[arg(long)]
     pub record: bool,
-    #[arg(long, default_value = "stado:gcp")]
+    /// The `stado:<target>` or placement selector the run is placed on, from
+    /// `probierz hosts`. No provider is assumed.
+    #[arg(long)]
     pub host: String,
     #[arg(long)]
     pub cargo_release: bool,
@@ -87,7 +89,9 @@ pub struct AuthorArgs {
     pub desc: Option<String>,
     #[arg(long)]
     pub area: Option<String>,
-    #[arg(long, default_value = "stado:gcp")]
+    /// The `stado:<target>` or placement selector the authoring job is
+    /// placed on, from `probierz hosts`. No provider is assumed.
+    #[arg(long)]
     pub host: String,
     #[arg(long, num_args = 0..=1)]
     pub app_path: Option<Option<PathBuf>>,
