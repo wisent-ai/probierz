@@ -4,7 +4,6 @@ use crate::status::*;
 
 pub(crate) const MAX_LINE_BYTES: usize = 64 * 1024;
 pub(crate) const MAX_FILE_BYTES: usize = 10 * 1024 * 1024;
-pub(crate) const DEFAULT_BIND: &str = "127.0.0.1:9790";
 pub(crate) const ERROR_CODES: [&str; 7] = [
     "config",
     "auth",

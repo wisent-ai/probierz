@@ -59,14 +59,16 @@ pub struct CollectArgs {
     pub job_id: Option<String>,
     #[arg(long)]
     pub app: Option<String>,
-    #[arg(long, default_value = "stado:any")]
+    /// The `stado:<target>` the job was placed on, from `probierz hosts`.
+    #[arg(long)]
     pub host: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ResumeArgs {
     pub job_id: Option<String>,
-    #[arg(long, default_value = "stado:any")]
+    /// The `stado:<target>` the job was placed on, from `probierz hosts`.
+    #[arg(long)]
     pub host: String,
 }
 

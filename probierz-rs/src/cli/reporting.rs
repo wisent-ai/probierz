@@ -156,7 +156,9 @@ pub enum ReportingCommand {
 pub enum IntakeCommand {
     /// Listen for wisent-errors envelopes.
     Serve {
-        #[arg(long, default_value = "127.0.0.1:9790")]
+        /// host:port the intake listens on. No address is assumed: the
+        /// service declaration that runs the intake names it.
+        #[arg(long)]
         bind: String,
     },
 }

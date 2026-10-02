@@ -37,7 +37,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             status::overview(harness, &app_ids, !json, false)
         }
         ReportingCommand::Intake { command } => match command {
-            IntakeCommand::Serve { bind } => status::intake_serve(Some(&bind)),
+            IntakeCommand::Serve { bind } => status::intake_serve(&bind),
         },
         ReportingCommand::Failures {
             service,
