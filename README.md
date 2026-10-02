@@ -120,13 +120,6 @@ and `SCULPT_OUT` defaults to its `models` directory. Each completed stage leaves
 its JSON report there. `SCULPT_ROUNDS` is optional; without it Glina applies its
 configured policy. Select a separate results directory for each concurrent job.
 
-Run `node --test tests/game-assets/sculpt-job.test.mjs` to exercise missing and
-malformed configuration refusals through the real shell entrypoint and Glina
-CLI. Reports, command statuses, source revisions and hashes are retained under
-`probierz-rs/target/sculpt-job-tests`. These checks do not qualify a successful
-sculpt; that requires the real Blender and model dependencies on the selected
-worker.
-
 ### Explicit non-goals
 
 - Probierz is not a unit-test framework and does not replace application-level
