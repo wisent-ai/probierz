@@ -31,6 +31,7 @@ probierz stado resume <jobId> --host stado:ubuntu
 
 This waits for the original job and imports its retained report without
 changing the recorded source identities or executing another workload.
+The MCP equivalent is `probierz_stado_resume` (`jobId`, `host`).
 
 Remote Cargo provisioning builds the selected binary from its source directory
 with the locked dependency graph, so the repository's Rust toolchain is honored.

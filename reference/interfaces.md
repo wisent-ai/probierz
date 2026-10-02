@@ -47,7 +47,8 @@ Every way into Probierz, and what each one is allowed to do.
   stderr prints the request receipt and accepted job ID before watching.
   `probierz stado collect <job-id> --app <id> --host stado:<target>` returns the
   current state immediately and retrieves a terminal job's retained evidence
-  without submitting or running it again; `--host` is required.
+  without submitting or running it again; `--host` is required. MCP exposes the
+  same operation as `probierz_stado_collect` (`jobId`, `appId`, `host`).
   A job cancelled before its worker starts remains `cancelled`; the result keeps
   the exact Stado job and source-input metadata and marks run evidence as not
   required, without asking the artifact store for output the worker never made.

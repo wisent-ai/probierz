@@ -105,8 +105,12 @@ pub(crate) fn handle(request: Value, tools: &Value, control: &Arc<Control>) {
 
 /// Serve the MCP protocol on stdio until the client closes it.
 pub(crate) fn serve() {
-    let tools: Value = match serde_json::from_str(TOOLS_JSON) {
-        Ok(value) => value,
+    let tools = [TOOLS_JSON, STADO_JOB_TOOLS_JSON]
+        .iter()
+        .map(|catalogue| serde_json::from_str::<Vec<Value>>(catalogue))
+        .collect::<Result<Vec<_>, _>>();
+    let tools = match tools {
+        Ok(parts) => Value::Array(parts.into_iter().flatten().collect()),
         Err(error) => {
             eprintln!("probierz-mcp tool contract is invalid: {error}");
             std::process::exit(1);

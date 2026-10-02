@@ -102,9 +102,20 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_stado_run" => {
             positional.push("target");
-            "stado"
+            "stado run"
         }
-        "probierz_stado_evaluate_seo" => "stado-seo",
+        "probierz_stado_collect" => {
+            positional.push("jobId");
+            "stado collect"
+        }
+        "probierz_stado_resume" => {
+            positional.push("jobId");
+            "stado resume"
+        }
+        "probierz_stado_evaluate_seo" => {
+            positional.push("appId");
+            "stado seo"
+        }
         "probierz_gate_evaluate" => {
             positional.push("appId");
             "gate-evaluate"
@@ -133,7 +144,8 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         "probierz_create_publication_manifest" => "publication-create",
         _ => return Err(format!("unknown tool: {name}")),
     };
-    output.push(command.to_string());
+    // A command of two words is a group and its verb (`stado run`).
+    output.extend(command.split(' ').map(str::to_string));
     for key in &positional {
         if let Some(value) = args.get(*key) {
             output.push(non_empty(Some(value), key)?.to_string());
@@ -152,6 +164,14 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
                         .unwrap_or_else(|| value.to_string());
                     output.push(format!("{name}={text}"));
                 }
+            }
+            continue;
+        }
+        // `stado` jobs are watched unless the caller says otherwise; the CLI
+        // spells that choice `--no-watch`, and has no `--watch` flag.
+        if key == "watch" {
+            if value == &Value::Bool(false) {
+                output.push("--no-watch".to_string());
             }
             continue;
         }
