@@ -23,14 +23,6 @@
       }
     }
   },
-  "runtime": {
-    "binary": "bin/probierz",
-    "launcher": "bin/probierz",
-    "config_schema": 1,
-    "state_schema": 1,
-    "minimum_stado_version": "0.13.19",
-    "rollback_compatible_with": []
-  },
   "promotion": {
     "channels": [
       "candidate",
