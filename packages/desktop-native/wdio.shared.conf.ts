@@ -51,7 +51,6 @@ function startNativeCapture(testTitle: string) {
   const child = spawn(captureBinary, [
     '--bundle-id', process.env.MAC_BUNDLE_ID,
     '--output', nativeCaptureFile,
-    '--wait-seconds', '60',
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
   nativeCapture = child;
   const completion = Promise.withResolvers<number | null>();

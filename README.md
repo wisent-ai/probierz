@@ -88,6 +88,14 @@ The remote launcher does not kill another Appium process, start a shared
 background server or poll a TCP port. Windows continues to use the separately
 provisioned WinAppDriver rather than an Appium server.
 
+The macOS recording helper takes `--bundle-id` and `--output`. It asks
+ScreenCaptureKit for the application's existing capturable windows once and
+selects the largest matching window. An absent window is reported immediately;
+the recorder does not poll for a later launch. The runner starts it after the
+application session exists. Unknown, duplicate or incomplete options exit 2
+before capture starts; capture and writer failures exit 1. The former
+`--wait-seconds` option is refused, not ignored.
+
 The Glina worker entrypoint, `apps/game-asset-creator/remote/sculpt-job.sh`,
 uses Glina's `check-config`, `setup`, `doctor`, `sculpt`, and `verify` commands.
 The Stado-selected worker must supply a live Blender addon. Probierz does not

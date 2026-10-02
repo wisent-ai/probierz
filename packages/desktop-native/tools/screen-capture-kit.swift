@@ -9,12 +9,17 @@ private enum CaptureError: LocalizedError {
     case writer(String)
     case noFrames
 
+    var exitStatus: Int32 {
+        if case .usage = self { return 2 }
+        return EXIT_FAILURE
+    }
+
     var errorDescription: String? {
         switch self {
         case .usage:
-            "usage: screen-capture-kit --bundle-id <id> --output <file.mp4> [--wait-seconds <n>]"
+            "usage: screen-capture-kit --bundle-id <id> --output <file.mp4>"
         case let .appWindowNotFound(bundleID):
-            "no capturable window appeared for \(bundleID)"
+            "ScreenCaptureKit reported no capturable window for \(bundleID)"
         case let .writer(message):
             "asset writer failed: \(message)"
         case .noFrames:
@@ -152,54 +157,47 @@ private extension DispatchQueue {
 }
 
 @available(macOS 13.0, *)
-private func waitForWindow(bundleID: String, seconds: Int) async throws -> SCWindow {
-    let attempts = max(1, seconds * 2)
-    for _ in 0..<attempts {
-        let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
-        let applications = Set(
-            content.applications
-                .filter { $0.bundleIdentifier == bundleID }
-                .map(\.processID)
-        )
-        if let window = content.windows
-            .filter({ window in
-                guard let app = window.owningApplication else { return false }
-                return applications.contains(app.processID)
-                    && window.frame.width >= 200
-                    && window.frame.height >= 120
-            })
-            .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }) {
-            return window
-        }
-        try await Task.sleep(for: .milliseconds(500))
-    }
-    throw CaptureError.appWindowNotFound(bundleID)
+private func capturableWindow(bundleID: String) async throws -> SCWindow {
+    let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+    guard let window = content.windows.lazy
+        .filter({ window in
+            window.owningApplication?.bundleIdentifier == bundleID
+                && window.frame.width >= 200
+                && window.frame.height >= 120
+        })
+        .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
+    else { throw CaptureError.appWindowNotFound(bundleID) }
+    return window
 }
 
 @main
 private enum ScreenCaptureKitRecorder {
     static func main() async {
         do {
-            let arguments = Array(CommandLine.arguments.dropFirst())
-            guard let bundleIndex = arguments.firstIndex(of: "--bundle-id"),
-                  arguments.indices.contains(bundleIndex + 1),
-                  let outputIndex = arguments.firstIndex(of: "--output"),
-                  arguments.indices.contains(outputIndex + 1)
-            else { throw CaptureError.usage }
-            let bundleID = arguments[bundleIndex + 1]
-            let output = URL(fileURLWithPath: arguments[outputIndex + 1])
-            let waitSeconds: Int
-            if let waitIndex = arguments.firstIndex(of: "--wait-seconds"),
-               arguments.indices.contains(waitIndex + 1) {
-                waitSeconds = Int(arguments[waitIndex + 1]) ?? 60
-            } else {
-                waitSeconds = 60
+            var arguments = CommandLine.arguments.dropFirst().makeIterator()
+            var selectedBundleID: String?
+            var selectedOutput: String?
+            while let option = arguments.next() {
+                guard let value = arguments.next(), !value.isEmpty else { throw CaptureError.usage }
+                switch option {
+                case "--bundle-id":
+                    guard selectedBundleID == nil else { throw CaptureError.usage }
+                    selectedBundleID = value
+                case "--output":
+                    guard selectedOutput == nil else { throw CaptureError.usage }
+                    selectedOutput = value
+                default:
+                    throw CaptureError.usage
+                }
             }
+            guard let bundleID = selectedBundleID, let outputPath = selectedOutput
+            else { throw CaptureError.usage }
+            let output = URL(fileURLWithPath: outputPath)
             try FileManager.default.createDirectory(
                 at: output.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            let window = try await waitForWindow(bundleID: bundleID, seconds: waitSeconds)
+            let window = try await capturableWindow(bundleID: bundleID)
             let width = max(2, Int(window.frame.width.rounded(.up)))
             let height = max(2, Int(window.frame.height.rounded(.up)))
             let recorder = try WindowRecorder(
@@ -216,7 +214,7 @@ private enum ScreenCaptureKitRecorder {
             FileHandle.standardOutput.write(Data("\n".utf8))
         } catch {
             FileHandle.standardError.write(Data("screen-capture-kit: \(error.localizedDescription)\n".utf8))
-            Foundation.exit(EXIT_FAILURE)
+            Foundation.exit((error as? CaptureError)?.exitStatus ?? EXIT_FAILURE)
         }
     }
 }
