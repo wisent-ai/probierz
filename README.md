@@ -82,6 +82,12 @@ one explainable release decision.
   through the authenticated Stado model router;
 - a human CLI and a stdio MCP server backed by the same Rust product core.
 
+For iOS, Android and native macOS, WebdriverIO's Appium service owns the
+server for each run, including the accepted run during remote authoring.
+The remote launcher does not kill another Appium process, start a shared
+background server or poll a TCP port. Windows continues to use the separately
+provisioned WinAppDriver rather than an Appium server.
+
 The Glina worker entrypoint, `apps/game-asset-creator/remote/sculpt-job.sh`,
 uses Glina's `check-config`, `setup`, `doctor`, `sculpt`, and `verify` commands.
 The Stado-selected worker must supply a live Blender addon. Probierz does not

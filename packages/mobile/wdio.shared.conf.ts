@@ -57,10 +57,8 @@ export const shared: Partial<Options.Testrunner> = {
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: { ui: 'bdd', timeout: 120000 },
-  // Remote authoring keeps one probe server alive for the accepted real run.
-  services: process.env.PROBIERZ_EXTERNAL_APPIUM === '1'
-    ? []
-    : [['appium', { args: { relaxedSecurity: true } }]],
+  // The runner owns Appium for this run, including remote authoring validation.
+  services: [['appium', { args: { relaxedSecurity: true } }]],
   port: 4723,
   beforeTest: async (test: { title: string }) => {
     testStartedAt.set(test.title, new Date().toISOString());

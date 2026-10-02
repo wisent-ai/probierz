@@ -8,9 +8,7 @@ import type { Options } from '@wdio/types';
 export const config: Options.Testrunner = {
   ...shared,
   port: 4723,
-  services: process.env.PROBIERZ_EXTERNAL_APPIUM === '1'
-    ? []
-    : [['appium', { logPath: process.env.PROBIERZ_ARTIFACTS, args: { relaxedSecurity: true } }]],
+  services: [['appium', { logPath: process.env.PROBIERZ_ARTIFACTS, args: { relaxedSecurity: true } }]],
   capabilities: [
     {
       platformName: 'mac',

@@ -86,20 +86,6 @@ pub(crate) fn script_body(
             ": \"${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}\"".into(),
             format!("export PROBIERZ_AUTHOR_RECEIPT_ID={}", shell_quote(receipt_id)),
         ]);
-        if matches!(
-            target,
-            "mobile:ios" | "mobile:android" | "desktop:mac" | "desktop:win"
-        ) {
-            lines.extend([
-                "pkill -f '[a]ppium.*--port 4723' >/dev/null 2>&1 || true".into(),
-                "npx appium --relaxed-security --port 4723 > /tmp/appium.log 2>&1 &".into(),
-                "APPIUM_PID=$!".into(),
-                "trap 'kill \"$APPIUM_PID\" >/dev/null 2>&1 || true' EXIT".into(),
-                "export PROBIERZ_EXTERNAL_APPIUM=1".into(),
-                "for i in $(seq 1 30); do nc -z 127.0.0.1 4723 && break; sleep 2; done".into(),
-                "nc -z 127.0.0.1 4723".into(),
-            ]);
-        }
         let app_path = if target == "web" {
             String::new()
         } else if target == "tui" {
