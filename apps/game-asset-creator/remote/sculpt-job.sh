@@ -104,8 +104,13 @@ PY
 nohup "$BLENDER_BIN" -b --python /tmp/blender_mcp_bootstrap.py > /tmp/blender.log 2>&1 &
 BLENDER_PID=$!
 echo "blender pid: $BLENDER_PID"
-sleep 10
-tail -50 /tmp/blender.log || true
+# The bootstrap prints "mcp-server: started" once the socket server is up, or
+# exits 3. Follow the log until that line or until Blender exits.
+if ! grep -m1 -q 'mcp-server: started' <(tail -n +1 -f --pid="$BLENDER_PID" /tmp/blender.log); then
+  echo "blender exited before the MCP server started; blender.log:" >&2
+  cat /tmp/blender.log >&2
+  exit 1
+fi
 
 # --- 4. health + sculpt ---
 node pipeline/cli.js blender-health
