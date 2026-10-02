@@ -123,7 +123,8 @@ pub enum InspectCommand {
     },
     /// Crawl and evaluate a declared SEO contract.
     SeoEvaluate {
-        #[arg(long = "app", default_value = "landing-page")]
+        /// Manifest app whose SEO profile is evaluated; no app is assumed.
+        #[arg(long = "app")]
         app_id: String,
         #[arg(long)]
         base_url: String,
