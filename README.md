@@ -89,10 +89,11 @@ patch the addon, start an unmanaged Blender process, or infer readiness from a
 log line. A failed command ends the job with its actual exit status; verification
 and artifact-copy errors are not suppressed.
 
-`GAC_ROOT` selects the Glina checkout and defaults to the sibling `glina`
-directory. `RESOLVED_CONFIG` selects a read-only input file, defaulting to that
+`GAC_ROOT` selects the Glina checkout. Otherwise the runner uses Stado's
+`PROBIERZ_APP_SOURCE`, then the sibling `glina` directory. `RESOLVED_CONFIG`
+selects a read-only input file, defaulting to that
 checkout's `pipeline.config.json`; it never replaces the worker's configuration.
-`RESULTS_DIR` defaults to `probierz-rs/target/sculpt-job` in this checkout,
+`RESULTS_DIR` defaults to `test-results/sculpt-job` for Stado's artifact collector,
 and `SCULPT_OUT` defaults to its `models` directory. Each completed stage leaves
 its JSON report there. `SCULPT_ROUNDS` is optional; without it Glina applies its
 configured policy. Select a separate results directory for each concurrent job.

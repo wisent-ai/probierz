@@ -5,11 +5,11 @@
 set -euo pipefail
 
 REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-GAC_ROOT="${GAC_ROOT:-$(dirname "$REPOSITORY_ROOT")/glina}"
+GAC_ROOT="${GAC_ROOT:-${PROBIERZ_APP_SOURCE:-$(dirname "$REPOSITORY_ROOT")/glina}}"
 RESOLVED_CONFIG="${RESOLVED_CONFIG:-$GAC_ROOT/pipeline.config.json}"
 SCULPT_PROMPT="${SCULPT_PROMPT:-low-poly boulder, Thronefall style}"
 SCULPT_FILENAME="${SCULPT_FILENAME:-sculpt-output.glb}"
-RESULTS_DIR="${RESULTS_DIR:-$REPOSITORY_ROOT/probierz-rs/target/sculpt-job}"
+RESULTS_DIR="${RESULTS_DIR:-$REPOSITORY_ROOT/test-results/sculpt-job}"
 SCULPT_OUT="${SCULPT_OUT:-$RESULTS_DIR/models}"
 
 if [ ! -f "$GAC_ROOT/pipeline/cli.js" ]; then
