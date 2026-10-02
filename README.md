@@ -82,6 +82,28 @@ one explainable release decision.
   through the authenticated Stado model router;
 - a human CLI and a stdio MCP server backed by the same Rust product core.
 
+The Glina worker entrypoint, `apps/game-asset-creator/remote/sculpt-job.sh`,
+uses Glina's `check-config`, `setup`, `doctor`, `sculpt`, and `verify` commands.
+The Stado-selected worker must supply a live Blender addon. Probierz does not
+patch the addon, start an unmanaged Blender process, or infer readiness from a
+log line. A failed command ends the job with its actual exit status; verification
+and artifact-copy errors are not suppressed.
+
+`GAC_ROOT` selects the Glina checkout and defaults to the sibling `glina`
+directory. `RESOLVED_CONFIG` selects a read-only input file, defaulting to that
+checkout's `pipeline.config.json`; it never replaces the worker's configuration.
+`RESULTS_DIR` defaults to `probierz-rs/target/sculpt-job` in this checkout,
+and `SCULPT_OUT` defaults to its `models` directory. Each completed stage leaves
+its JSON report there. `SCULPT_ROUNDS` is optional; without it Glina applies its
+configured policy. Select a separate results directory for each concurrent job.
+
+Run `node --test tests/game-assets/sculpt-job.test.mjs` to exercise missing and
+malformed configuration refusals through the real shell entrypoint and Glina
+CLI. Reports, command statuses, source revisions and hashes are retained under
+`probierz-rs/target/sculpt-job-tests`. These checks do not qualify a successful
+sculpt; that requires the real Blender and model dependencies on the selected
+worker.
+
 ### Explicit non-goals
 
 - Probierz is not a unit-test framework and does not replace application-level
