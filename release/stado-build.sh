@@ -72,7 +72,10 @@ export CARGO_TERM_COLOR=never
 export SOURCE_DATE_EPOCH="$commit_time"
 cargo build --locked --release --manifest-path "$source_tree/probierz-rs/Cargo.toml" --bins
 
-built="$source_tree/probierz-rs/target/release"
+# The release worker hands every build of one product and platform a shared
+# target directory in CARGO_TARGET_DIR, so the binary is read from the
+# directory cargo actually used; a checkout without one builds under the tree.
+built="${CARGO_TARGET_DIR:-$source_tree/probierz-rs/target}/release"
 if [ ! -x "$built/probierz" ]; then
   printf 'cargo did not produce probierz from %s\n' "$revision" >&2
   exit 1
