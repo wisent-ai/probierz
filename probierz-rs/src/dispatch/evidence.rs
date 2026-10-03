@@ -65,8 +65,8 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             app_id,
         } => evidence::compare(
             harness,
-            left_run_id.as_deref(),
-            right_run_id.as_deref(),
+            Some(&left_run_id),
+            Some(&right_run_id),
             &app_id,
         ),
         EvidenceCommand::LastGreen {

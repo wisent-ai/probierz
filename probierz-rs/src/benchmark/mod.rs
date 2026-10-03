@@ -24,7 +24,7 @@ use std::path::Path;
 use clap::Subcommand;
 
 use crate::failure::Answer;
-use record::{catalog, commands};
+use record::{catalog, commands, pursue};
 
 pub const HELP: &str = "\
 A benchmark runs our product and its rivals on the same versioned cases and
@@ -38,6 +38,7 @@ records who passed, how fast, and at what cost.
   probierz benchmark standing <app> --suite <id>
   probierz benchmark rivals <app>
   probierz benchmark roadmap <app> --suite <id>
+  probierz benchmark pursue <app> --suite <id> --case <id> --budget-usd <USD>
   probierz benchmark author-suite <app> --suite <id> [--cases N] [--rounds N]
   probierz benchmark author <app> --contender <id> --suite <id> [--ours] [--rounds N]
 
@@ -61,7 +62,14 @@ a rival the catalog names, places it under benchmark/contenders/<id>/ or
 benchmark/rivals/<id>/ in the product's tree, declares it, and verifies it
 with a recorded run of that contender alone, redrafting while an attempt
 breaks the contract or fails with an error. A declared driver is verified
-first and redrafted only if it fails.";
+first and redrafted only if it fails.
+
+`pursue` hands one case the newest run lost to Jeden as a durable pursuit
+request in our contender's checkout. Jeden's verdict does not close it:
+Probierz then records a new run of the suite itself, accepts the case only
+when ours wins or ties it in that run, and brings the roadmap in line with
+that run. A pursuit that reports success while the case is still lost is
+refused.";
 
 pub(crate) const SUITE_SCHEMA: &str = "ai.wisent.probierz.benchmark.suite.v1";
 pub(crate) const TASK_SCHEMA: &str = "ai.wisent.probierz.benchmark.task.v1";
@@ -145,6 +153,18 @@ pub enum BenchmarkCommand {
         #[arg(long, default_value_t = 3)]
         rounds: u32,
     },
+    /// Hand one lost case to a Jeden pursuit, then decide it with a new run.
+    Pursue {
+        app_id: String,
+        #[arg(long)]
+        suite: String,
+        /// The case the newest run of the suite lost.
+        #[arg(long)]
+        case: String,
+        /// The most the pursuit may spend on models, in US dollars.
+        #[arg(long)]
+        budget_usd: String,
+    },
 }
 
 pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
@@ -185,5 +205,11 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
             ours,
             rounds,
         } => author::contender(harness, &app_id, &contender, &suite, ours, rounds),
+        BenchmarkCommand::Pursue {
+            app_id,
+            suite,
+            case,
+            budget_usd,
+        } => pursue::pursue(harness, &app_id, &suite, &case, &budget_usd),
     }
 }

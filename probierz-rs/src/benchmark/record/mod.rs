@@ -2,4 +2,5 @@
 
 pub(crate) mod catalog;
 pub(crate) mod commands;
+pub(crate) mod pursue;
 pub(crate) mod store;

@@ -73,9 +73,9 @@ pub enum EvidenceCommand {
     /// Compare two recorded runs.
     Compare {
         /// First run to compare.
-        left_run_id: Option<String>,
+        left_run_id: String,
         /// Second run to compare.
-        right_run_id: Option<String>,
+        right_run_id: String,
         /// Application both runs belong to; no application is assumed.
         app_id: String,
     },

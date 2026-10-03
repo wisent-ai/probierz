@@ -43,7 +43,7 @@ pub(crate) fn suites(harness: &Path, app_id: &str) -> Answer {
 
 /// The revision a contender's program was built from, when it lives in a
 /// git checkout: its commit and whether the tree differs from it.
-fn source(contender: &Contender) -> Json {
+pub(crate) fn source(contender: &Contender) -> Json {
     let Some(directory) = contender.program.parent() else {
         return Json::Null;
     };

@@ -180,6 +180,12 @@ fn title(suite: &str, case: &str) -> String {
 }
 
 pub(crate) fn roadmap(harness: &Path, app_id: &str, suite_id: &str) -> Answer {
+    print_json(&roadmap_of(harness, app_id, suite_id)?)
+}
+
+/// Bring the product's catalog roadmap in line with the newest run of one
+/// suite and answer what was added and withdrawn.
+pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result<Json, Failure> {
     let manifest = manifest::load(harness, app_id)?;
     let product = product_id(&manifest);
     let standing = standing_of(harness, app_id, suite_id)?;
@@ -258,7 +264,7 @@ pub(crate) fn roadmap(harness: &Path, app_id: &str, suite_id: &str) -> Answer {
             ),
         ));
     }
-    print_json(&json!({
+    Ok(json!({
         "appId": app_id,
         "product": product,
         "runId": run_id,
