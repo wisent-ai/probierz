@@ -33,7 +33,7 @@ fn cycle_refuses_without_a_written_policy_and_records_nothing() {
 
     assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("autonomy.yaml cannot be read"), "{stderr}");
+    assert!(stderr.contains("the loop acts only under a written policy"), "{stderr}");
     assert!(stderr.contains("pursuitBudgetUsd"), "{stderr}");
     assert!(!root.join("test-results").join(".autonomy").exists(), "a refused cycle recorded a report");
 }

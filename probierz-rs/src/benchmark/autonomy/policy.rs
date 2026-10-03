@@ -44,7 +44,7 @@ pub(super) fn load(harness: &Path, explicit: Option<&Path>) -> Result<(PathBuf, 
         Failure::config(
             POINT,
             format!(
-                "{} cannot be read ({error}); the loop acts only under a written policy: schemaVersion, owner, productsPerWeek, observations, rounds, cases, pursuitBudgetUsd, pursuitsPerProduct",
+                "the loop acts only under a written policy (schemaVersion, owner, productsPerWeek, observations, rounds, cases, pursuitBudgetUsd, pursuitsPerProduct), and {} cannot be read: {error}",
                 file.display()
             ),
         )
@@ -76,4 +76,27 @@ pub(super) fn load(harness: &Path, explicit: Option<&Path>) -> Result<(PathBuf, 
     }
     let digest = hex::encode(Sha256::digest(text.as_bytes()));
     Ok((file, policy, digest))
+}
+
+/// Products the loop created in the last seven days, from its ledger.
+pub(super) fn adopted_this_week(ledger: &Path) -> usize {
+    let since = chrono::Utc::now() - chrono::Duration::days(7);
+    std::fs::read_to_string(ledger)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .filter(|entry| {
+            entry["at"]
+                .as_str()
+                .and_then(|at| chrono::DateTime::parse_from_rfc3339(at).ok())
+                .is_some_and(|at| at >= since)
+        })
+        .count()
+}
+
+/// Add one adoption to the ledger the weekly limit is counted from.
+pub(super) fn append(ledger: &Path, entry: &serde_json::Value) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(ledger)?;
+    writeln!(file, "{entry}")
 }

@@ -16,7 +16,6 @@ mod model;
 mod policy;
 mod steps;
 
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -24,6 +23,7 @@ use serde_json::{json, Value as Json};
 
 use super::record::catalog;
 use super::scout::identity;
+use policy::{adopted_this_week, append};
 use crate::failure::{now_iso, print_json, Answer, Failure};
 use crate::stado::{shell_quote, STADO_BIN};
 
@@ -32,25 +32,11 @@ const TRENDS: &str = "trends";
 /// The one schedule of the loop; `stado schedule edit` changes it.
 const SCHEDULE_ID: &str = "probierz-autonomy";
 
-/// Products the loop created in the last seven days, from its ledger.
-fn adopted_this_week(ledger: &Path) -> usize {
-    let since = chrono::Utc::now() - chrono::Duration::days(7);
-    std::fs::read_to_string(ledger)
-        .unwrap_or_default()
-        .lines()
-        .filter_map(|line| serde_json::from_str::<Json>(line).ok())
-        .filter(|entry| {
-            entry["at"]
-                .as_str()
-                .and_then(|at| chrono::DateTime::parse_from_rfc3339(at).ok())
-                .is_some_and(|at| at >= since)
-        })
-        .count()
-}
-
-fn append(ledger: &Path, entry: &Json) -> std::io::Result<()> {
-    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(ledger)?;
-    writeln!(file, "{entry}")
+/// Topics a cycle report shows Trends accepted.
+fn watched_ok(report: &Json) -> usize {
+    report["topics"]["added"]
+        .as_array()
+        .map_or(0, |added| added.iter().filter(|entry| entry["topic"]["ok"] == true).count())
 }
 
 /// The source kinds Trends asks by query, read from the sources it already
@@ -200,7 +186,14 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     let trends = Path::new(TRENDS);
 
     let products = catalog::products()?;
-    let listed = steps::run(trends, &steps::args(&["topic-list"]), harness);
+    let mut listed = steps::run(trends, &steps::args(&["topic-list"]), harness);
+    // A Trends that has no state yet is given one, read from its own error code.
+    let missing = serde_json::from_str::<Json>(listed["refusal"].as_str().unwrap_or_default())
+        .is_ok_and(|refusal| refusal["error"]["code"] == "state_missing");
+    if missing {
+        steps::run(trends, &steps::args(&["init"]), harness);
+        listed = steps::run(trends, &steps::args(&["topic-list"]), harness);
+    }
     let present: Vec<String> = listed["answer"]["topics"]
         .as_array()
         .into_iter()
@@ -256,12 +249,18 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     });
     let report_file = directory.join(format!("cycle-{}.json", chrono::Utc::now().format("%Y%m%d%H%M%S")));
     std::fs::write(&report_file, serde_json::to_string_pretty(&report)? + "\n")?;
+    let count = |key: &str, ok: &dyn Fn(&Json) -> bool| report[key].as_array().map_or(0, |all| all.iter().filter(|entry| ok(entry)).count());
+    let topics = report["topics"]["added"].as_array().map_or(0, Vec::len);
+    let suites = report["measured"].as_array().map_or(0, Vec::len);
+    let ran = count("measured", &|entry| entry["run"]["ok"] == true);
     print_json(&json!({
         "report": report_file.to_string_lossy(),
-        "topicsAdded": report["topics"]["added"].as_array().map_or(0, Vec::len),
-        "scouted": report["scouted"].as_array().map_or(0, Vec::len),
+        "topicsAdded": watched_ok(&report),
+        "topicsRefused": topics - watched_ok(&report),
+        "scouted": count("scouted", &|entry| entry["scout"]["ok"] == true),
         "adopted": adopted,
-        "suitesMeasured": report["measured"].as_array().map_or(0, Vec::len),
+        "suitesMeasured": ran,
+        "suitesRefused": suites - ran,
         "roadmapChanges": report["feedback"]["changes"],
     }))
 }
