@@ -23,7 +23,7 @@ use std::path::Path;
 use clap::Subcommand;
 
 use crate::failure::Answer;
-use record::commands;
+use record::{catalog, commands};
 
 pub const HELP: &str = "\
 A benchmark runs our product and its rivals on the same versioned cases and
@@ -35,11 +35,19 @@ records who passed, how fast, and at what cost.
   probierz benchmark show <app> <run-id>
   probierz benchmark compare <app> --baseline <run-id> --candidate <run-id>
   probierz benchmark standing <app> --suite <id>
+  probierz benchmark rivals <app>
+  probierz benchmark roadmap <app> --suite <id>
 
 The manifest declares `benchmark.suites.<id>: <suite.json>` and
 `benchmark.contenders.<id>: {program, args, env, ours}`. A contender reads one
 ai.wisent.probierz.benchmark.task.v1 document on stdin and writes one
-ai.wisent.probierz.benchmark.result.v1 document on stdout.";
+ai.wisent.probierz.benchmark.result.v1 document on stdout. Its environment is
+empty except for the variables its `env` names.
+
+The product catalog Stado serves names the product's rivals and the suites
+that measure them. `rivals` refuses while a named rival has no contender or a
+named suite is not declared. `roadmap` writes one catalog roadmap item per
+case the newest run lost, and withdraws the item once ours wins that case.";
 
 pub(crate) const SUITE_SCHEMA: &str = "ai.wisent.probierz.benchmark.suite.v1";
 pub(crate) const TASK_SCHEMA: &str = "ai.wisent.probierz.benchmark.task.v1";
@@ -87,6 +95,16 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         suite: String,
     },
+    /// The catalog's rivals for this product against the declared contenders
+    /// and suites; refuses while any rival or suite is unmeasured.
+    Rivals { app_id: String },
+    /// Write the newest run's lost cases into the product's catalog roadmap,
+    /// and withdraw the items of cases ours now wins.
+    Roadmap {
+        app_id: String,
+        #[arg(long)]
+        suite: String,
+    },
 }
 
 pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
@@ -112,5 +130,7 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
         BenchmarkCommand::Standing { app_id, suite } => {
             commands::standing(harness, &app_id, &suite)
         }
+        BenchmarkCommand::Rivals { app_id } => catalog::rivals(harness, &app_id),
+        BenchmarkCommand::Roadmap { app_id, suite } => catalog::roadmap(harness, &app_id, &suite),
     }
 }
