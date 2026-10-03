@@ -1,0 +1,109 @@
+schemaVersion: 1
+appId: weles
+productId: weles
+owner: weles maintainers
+repositories:
+  - root: ~/Documents/CodingProjects/Wisent/weles
+    mappings:
+      - paths:
+          - src/cli.ts
+          - src/onboarding.ts
+          - src/weles-client.d.ts
+          - package.json
+          - package-lock.json
+        journeys: [onboarding-first-use]
+  - root: ~/Documents/CodingProjects/Wisent/weles-client
+    mappings:
+      - paths:
+          - src/index.mjs
+          - package.json
+          - package-lock.json
+        journeys: [onboarding-first-use]
+
+surfaces:
+  tui:
+    spec: weles-onboarding-first-use
+    journeys: [onboarding-first-use]
+    env:
+      WELES_CLI: WELES_CLI
+      WELES_EXPECTED_CLI_SHA256: WELES_EXPECTED_CLI_SHA256
+      WELES_RECEIPT_PATH: WELES_RECEIPT_PATH
+      WELES_RECEIPT_KEYS_PATH: WELES_RECEIPT_KEYS_PATH
+      STADO_INTEGRATION_API_URL: STADO_INTEGRATION_API_URL
+      WELES_STADO_INTEGRATION_TOKEN: WELES_STADO_INTEGRATION_TOKEN
+
+journeys:
+  onboarding-first-use:
+    owner: weles maintainers
+    timeoutMs: 180000
+    journeyId: first-use
+    journeyVersion: 2026-08-04.1
+    journeyVersionId: 3a2ba59e-8a7e-4da4-9a76-bb4abf286e6d
+    firstSuccessFact: workflow_receipt_verified
+    value: A new operator resumes the authorization and host-execution explanation, then verifies a real terminal Weles service receipt with the official client and a trusted release key.
+    publication:
+      screenId: receipt-verification
+      artifactKinds: [trace]
+      minimumEvidence: E2
+      redactionRequired: true
+    prerequisites:
+      requiredEnvironment:
+        - name: WELES_CLI
+          kind: release-executable
+          requirement: Absolute path to the weles release executable built from the mapped Weles and @wisent-ai/weles-client revisions.
+        - name: WELES_EXPECTED_CLI_SHA256
+          kind: release-identity
+          requirement: SHA-256 digest published for the exact mapped-source Weles CLI release executable.
+        - name: WELES_RECEIPT_PATH
+          kind: evidence-file
+          requirement: Absolute path to the exported receipt from a real terminal workflow response, not a submit/accepted/queued response.
+        - name: WELES_RECEIPT_KEYS_PATH
+          kind: trust-file
+          requirement: Absolute path to the non-empty trusted key-ID to PEM public-key map for that receipt's release.
+      receiptGeneration:
+        host: WELES_URL must be the explicit approved Weles API base used by @wisent-ai/weles-client; execution runs only on the deployment-managed Weles host.
+        secrets: WELES_TOKEN must be an organization-scoped bearer token and WISENT_ORGANIZATION_ID must match it; product credentials remain scoped references resolved by the approved host.
+        requirement: Generate and export the receipt through the normal submit-then-terminal-get workflow before this scenario; no browser or provider operation is launched by onboarding.
+      optionalControlPlane:
+        requirement: Supply both STADO_INTEGRATION_API_URL and WELES_STADO_INTEGRATION_TOKEN to bind central journey state; omit both for the product's durable offline fallback.
+
+artifacts:
+  retain:
+    pullRequestDays: 14
+    nightlyDays: 30
+    adhocDays: 7
+  redact: [TOKEN, SECRET, PASSWORD, KEY, COOKIE, AUTH, RECEIPT, ORGANIZATION]
+  pii: possible
+
+matrix:
+  release:
+    targets: [tui]
+    record: false
+    timeoutMs: 180000
+    maximumParallel: 1
+    minimumCellEvidence: E2
+    artifactEncryption: required
+    removePlaintextAfterProtection: true
+
+pullRequestPolicy:
+  minimumEvidence: E2
+  requireSecretScan: true
+releasePolicy:
+  minimumEvidence: E2
+  requiredJourneys: [onboarding-first-use]
+  requiredTargets: [tui]
+  requiredMatrixProfile: release
+  requireProtectedArtifacts: true
+  requireSecretScan: true
+
+benchmark:
+  suites:
+    web-agent-v1: ~/Documents/CodingProjects/Wisent/weles/benchmark/web-agent-v1.json
+  contenders:
+    weles:
+      ours: true
+      program: ~/Documents/CodingProjects/Wisent/weles/benchmark/contenders/weles.mjs
+      env: [PATH, HOME, WELES_BENCHMARK_FIXTURE_ORIGIN, WELES_API_BASE, WELES_TOKEN]
+    stagehand:
+      program: ~/Documents/CodingProjects/Wisent/weles/benchmark/contenders/stagehand.mjs
+      env: [PATH, HOME, WELES_BENCHMARK_FIXTURE_ORIGIN, STAGEHAND_MODULES, BRAMA_BASE_URL, BRAMA_API_KEY, BRAMA_MODEL, BROWSER_EXECUTABLE_PATH]
