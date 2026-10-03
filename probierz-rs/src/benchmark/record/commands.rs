@@ -1,7 +1,7 @@
 //! The benchmark commands: declare-time reads, the run that records, and the
 //! projections over recorded runs.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde_json::{json, Value as Json};
@@ -74,10 +74,29 @@ pub(crate) fn run(
     requested: &[String],
     repetitions: Option<usize>,
 ) -> Answer {
+    let (run, file) = recorded_run(harness, app_id, suite_id, requested, repetitions)?;
+    print_json(&json!({
+        "runId": run["runId"],
+        "file": file.to_string_lossy(),
+        "summary": run["summary"],
+        "standing": assess::standing(&run),
+    }))
+}
+
+/// Run the chosen contenders on every case of one suite and record the run;
+/// answers the run as written and the file it was written to.
+pub(crate) fn recorded_run(
+    harness: &Path,
+    app_id: &str,
+    suite_id: &str,
+    requested: &[String],
+    repetitions: Option<usize>,
+) -> Result<(Json, PathBuf), Failure> {
     let manifest = manifest::load(harness, app_id)?;
     let declared = declared(&manifest)?;
     let file = declared.suite(suite_id)?;
     let loaded = suite::load(file, suite_id)?;
+    let values = suite::bound(&loaded)?;
     let contenders = declared.chosen(requested)?;
     for contender in &contenders {
         execute::ready(contender)?;
@@ -88,7 +107,7 @@ pub(crate) fn run(
     for case in &loaded.suite.cases {
         for repetition in 1..=repetitions {
             for contender in &contenders {
-                let attempt = execute::attempt(contender, &loaded, case, repetition)?;
+                let attempt = execute::attempt(contender, &loaded, &values, case, repetition)?;
                 let sample = assess::sample(contender, case, repetition, attempt);
                 eprintln!(
                     "probierz benchmark: {} {} #{repetition}: {} in {} ms",
@@ -125,13 +144,8 @@ pub(crate) fn run(
     });
     let run_id = store::identity(&started_at, &run);
     run["runId"] = json!(run_id);
-    let file = store::write(harness, app_id, &run_id, &run)?;
-    print_json(&json!({
-        "runId": run_id,
-        "file": file.to_string_lossy(),
-        "summary": run["summary"],
-        "standing": assess::standing(&run),
-    }))
+    let written = store::write(harness, app_id, &run_id, &run)?;
+    Ok((run, written))
 }
 
 pub(crate) fn list(harness: &Path, app_id: &str, suite_id: Option<&str>, limit: usize) -> Answer {

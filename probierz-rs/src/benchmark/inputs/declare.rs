@@ -146,18 +146,24 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
     let section = manifest.document.get("benchmark").ok_or_else(|| {
         refuse(
             manifest,
-            "declares no benchmark; add benchmark.suites and benchmark.contenders",
+            format!(
+                "declares no benchmark; probierz benchmark author-suite {} --suite <id> starts one",
+                manifest.app_id
+            ),
         )
     })?;
     let section: Section = serde_yaml::from_value(section.clone())
         .map_err(|error| refuse(manifest, format!("benchmark is malformed: {error}")))?;
     if section.suites.is_empty() {
-        return Err(refuse(manifest, "benchmark.suites declares no suite"));
+        return Err(refuse(
+            manifest,
+            format!("benchmark.suites declares no suite; probierz benchmark author-suite {} --suite <id> drafts one", manifest.app_id),
+        ));
     }
     if section.contenders.is_empty() {
         return Err(refuse(
             manifest,
-            "benchmark.contenders declares no contender",
+            format!("benchmark.contenders declares no contender; probierz benchmark author {} --contender <id> --ours --suite <id> drafts ours", manifest.app_id),
         ));
     }
     let suites = section

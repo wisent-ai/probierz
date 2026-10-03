@@ -14,6 +14,7 @@
 //! hash and every contender's source revision, and nothing in it is ever
 //! rewritten.
 
+mod author;
 mod inputs;
 mod measure;
 mod record;
@@ -37,17 +38,30 @@ records who passed, how fast, and at what cost.
   probierz benchmark standing <app> --suite <id>
   probierz benchmark rivals <app>
   probierz benchmark roadmap <app> --suite <id>
+  probierz benchmark author-suite <app> --suite <id> [--cases N] [--rounds N]
+  probierz benchmark author <app> --contender <id> --suite <id> [--ours] [--rounds N]
 
 The manifest declares `benchmark.suites.<id>: <suite.json>` and
 `benchmark.contenders.<id>: {program, args, env, ours}`. A contender reads one
 ai.wisent.probierz.benchmark.task.v1 document on stdin and writes one
 ai.wisent.probierz.benchmark.result.v1 document on stdout. Its environment is
-empty except for the variables its `env` names.
+empty except for the variables its `env` names. A suite's `variables` map each
+`${NAME}` placeholder in a case input to the variable Probierz fills it from.
 
 The product catalog Stado serves names the product's rivals and the suites
 that measure them. `rivals` refuses while a named rival has no contender or a
 named suite is not declared. `roadmap` writes one catalog roadmap item per
-case the newest run lost, and withdraws the item once ours wins that case.";
+case the newest run lost, and withdraws the item once ours wins that case.
+
+Nothing in a benchmark is written by hand for one product. `author-suite`
+drafts a suite from the catalog record of the product and its rivals through
+the Stado model router, judges it and declares it; an existing suite file is
+never overwritten. `author` drafts the driver of our contender (--ours) or of
+a rival the catalog names, places it under benchmark/contenders/<id>/ or
+benchmark/rivals/<id>/ in the product's tree, declares it, and verifies it
+with a recorded run of that contender alone, redrafting while an attempt
+breaks the contract or fails with an error. A declared driver is verified
+first and redrafted only if it fails.";
 
 pub(crate) const SUITE_SCHEMA: &str = "ai.wisent.probierz.benchmark.suite.v1";
 pub(crate) const TASK_SCHEMA: &str = "ai.wisent.probierz.benchmark.task.v1";
@@ -105,6 +119,32 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         suite: String,
     },
+    /// Draft, judge, write and declare a suite for this product and its rivals.
+    AuthorSuite {
+        app_id: String,
+        #[arg(long)]
+        suite: String,
+        /// How many cases the suite holds.
+        #[arg(long, default_value_t = 5)]
+        cases: usize,
+        /// Drafts allowed before the command refuses.
+        #[arg(long, default_value_t = 3)]
+        rounds: u32,
+    },
+    /// Draft, place, declare and verify one contender's driver.
+    Author {
+        app_id: String,
+        #[arg(long)]
+        contender: String,
+        #[arg(long)]
+        suite: String,
+        /// The contender is our own product rather than a catalog rival.
+        #[arg(long)]
+        ours: bool,
+        /// Drafts allowed before the command refuses.
+        #[arg(long, default_value_t = 3)]
+        rounds: u32,
+    },
 }
 
 pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
@@ -132,5 +172,18 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
         }
         BenchmarkCommand::Rivals { app_id } => catalog::rivals(harness, &app_id),
         BenchmarkCommand::Roadmap { app_id, suite } => catalog::roadmap(harness, &app_id, &suite),
+        BenchmarkCommand::AuthorSuite {
+            app_id,
+            suite,
+            cases,
+            rounds,
+        } => author::suite(harness, &app_id, &suite, cases, rounds),
+        BenchmarkCommand::Author {
+            app_id,
+            contender,
+            suite,
+            ours,
+            rounds,
+        } => author::contender(harness, &app_id, &contender, &suite, ours, rounds),
     }
 }

@@ -19,7 +19,7 @@ use crate::manifest::{self, Manifest};
 use crate::stado::STADO_BIN;
 
 /// The catalog id of the product a manifest describes.
-fn product_id(manifest: &Manifest) -> String {
+pub(crate) fn product_id(manifest: &Manifest) -> String {
     match manifest
         .document
         .get("productId")
@@ -55,7 +55,7 @@ fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
 }
 
 /// One product's record in the catalog Stado serves.
-fn record(product: &str) -> Result<Json, Failure> {
+pub(crate) fn record(product: &str) -> Result<Json, Failure> {
     let mut read = Command::new(STADO_BIN);
     read.arg("product").arg("catalog").arg("--json");
     let catalog: Json = serde_json::from_slice(&stado(&mut read)?).map_err(|error| {
@@ -135,16 +135,18 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
     }
     for rival in rivals.iter().filter(|rival| rival["measured"] == false) {
         gaps.push(format!(
-            "rival {} has no contender in {}",
+            "rival {} has no contender in {}; probierz benchmark author {app_id} --contender {} --suite <id> drafts and verifies one",
             rival["id"],
-            manifest.file.display()
+            manifest.file.display(),
+            rival["id"].as_str().unwrap_or_default()
         ));
     }
     for suite in suites.iter().filter(|suite| suite["declared"] == false) {
         gaps.push(format!(
-            "suite {} is named by the catalog but not declared in {}",
+            "suite {} is named by the catalog but not declared in {}; probierz benchmark author-suite {app_id} --suite {} drafts one",
             suite["id"],
-            manifest.file.display()
+            manifest.file.display(),
+            suite["id"].as_str().unwrap_or_default()
         ));
     }
     for id in &undeclared {

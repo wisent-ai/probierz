@@ -5,6 +5,7 @@
 //! its declaration names in `env`, so one rival never reads another's
 //! credentials and a run depends on nothing it did not declare.
 
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::process::{Command, Stdio};
@@ -14,7 +15,7 @@ use serde::Deserialize;
 use serde_json::{json, Value as Json};
 
 use crate::benchmark::inputs::declare::Contender;
-use crate::benchmark::inputs::suite::{Case, Loaded};
+use crate::benchmark::inputs::suite::{filled, Case, Loaded};
 use crate::benchmark::{RESULT_SCHEMA, TASK_SCHEMA};
 use crate::failure::{ended, Code, Failure};
 
@@ -120,13 +121,14 @@ fn tail(bytes: &[u8]) -> String {
 pub(crate) fn attempt(
     contender: &Contender,
     loaded: &Loaded,
+    values: &BTreeMap<String, String>,
     case: &Case,
     repetition: usize,
 ) -> Result<Attempt, Failure> {
     let task = json!({
         "schema": TASK_SCHEMA,
         "suite": {"id": loaded.suite.id, "version": loaded.suite.version, "hash": loaded.hash},
-        "case": {"id": case.id, "instruction": case.instruction, "input": case.input},
+        "case": {"id": case.id, "instruction": case.instruction, "input": filled(&case.input, values)},
         "repetition": repetition,
     });
     let mut command = Command::new(&contender.program);

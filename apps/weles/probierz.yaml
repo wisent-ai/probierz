@@ -103,7 +103,7 @@ benchmark:
     weles:
       ours: true
       program: ~/Documents/CodingProjects/Wisent/weles/benchmark/contenders/weles.mjs
-      env: [PATH, HOME, WELES_BENCHMARK_FIXTURE_ORIGIN, WELES_API_BASE, WELES_TOKEN]
+      env: [PATH, HOME, WELES_API_BASE, WELES_TOKEN]
     stagehand:
       program: ~/Documents/CodingProjects/Wisent/weles/benchmark/contenders/stagehand.mjs
-      env: [PATH, HOME, WELES_BENCHMARK_FIXTURE_ORIGIN, STAGEHAND_MODULES, BRAMA_BASE_URL, BRAMA_API_KEY, BRAMA_MODEL, BROWSER_EXECUTABLE_PATH]
+      env: [PATH, HOME, STAGEHAND_MODULES, BRAMA_BASE_URL, BRAMA_API_KEY, BRAMA_MODEL, BROWSER_EXECUTABLE_PATH]
