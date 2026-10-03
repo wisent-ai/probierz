@@ -15,6 +15,10 @@ path = "src/main.rs"
 name = "benchmark_scout"
 path = "../tests/benchmark/scout.rs"
 
+[[test]]
+name = "benchmark_cycle"
+path = "../tests/benchmark/cycle.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }

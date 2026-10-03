@@ -1,0 +1,18 @@
+# The standing decision `probierz benchmark cycle` acts under, written once
+# instead of given for each product. A product the loop creates records this
+# file's SHA-256 as its authority in test-results/.autonomy/adoptions.jsonl.
+schemaVersion: 1
+# New products' private repositories are created under this GitHub owner.
+owner: wisent-ai
+# How many products the loop may create in seven days.
+productsPerWeek: 1
+# How many of a topic's newest observations the scout reads.
+observations: 40
+# Drafts allowed per model question.
+rounds: 3
+# Cases in a new product's first suite.
+cases: 5
+# The most one pursuit of a lost benchmark case may spend, in US dollars.
+pursuitBudgetUsd: "5"
+# How many lost cases of one suite a cycle hands to pursuits.
+pursuitsPerProduct: 1
