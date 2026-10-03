@@ -31,7 +31,7 @@ pub(crate) fn product_id(manifest: &Manifest) -> String {
 }
 
 /// Run one Stado command and answer its stdout, or say what it refused.
-fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
+pub(crate) fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
     let described = format!("{command:?}");
     let output = command.output().map_err(|error| {
         Failure::new(
@@ -54,26 +54,30 @@ fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
     Ok(output.stdout)
 }
 
-/// One product's record in the catalog Stado serves.
-pub(crate) fn record(product: &str) -> Result<Json, Failure> {
+/// Every product record in the catalog Stado serves.
+pub(crate) fn products() -> Result<Vec<Json>, Failure> {
     let mut read = Command::new(STADO_BIN);
     read.arg("product").arg("catalog").arg("--json");
-    let catalog: Json = serde_json::from_slice(&stado(&mut read)?).map_err(|error| {
+    let mut catalog: Json = serde_json::from_slice(&stado(&mut read)?).map_err(|error| {
         Failure::config(
             "benchmark.catalog",
             format!("stado product catalog --json is not JSON: {error}"),
         )
     })?;
-    let products = catalog["products"].as_array().ok_or_else(|| {
-        Failure::config(
+    match catalog["products"].take() {
+        Json::Array(products) => Ok(products),
+        _ => Err(Failure::config(
             "benchmark.catalog",
             "stado product catalog --json carries no products list",
-        )
-    })?;
-    products
-        .iter()
+        )),
+    }
+}
+
+/// One product's record in the catalog Stado serves.
+pub(crate) fn record(product: &str) -> Result<Json, Failure> {
+    products()?
+        .into_iter()
         .find(|entry| entry["id"] == product)
-        .cloned()
         .ok_or_else(|| {
             Failure::config(
                 "benchmark.catalog",

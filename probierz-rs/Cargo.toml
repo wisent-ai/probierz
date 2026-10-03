@@ -11,6 +11,10 @@ autotests = false
 name = "probierz"
 path = "src/main.rs"
 
+[[test]]
+name = "benchmark_scout"
+path = "../tests/benchmark/scout.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }

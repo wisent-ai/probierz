@@ -17,7 +17,7 @@
 //! it.
 
 mod brief;
-mod place;
+pub(super) mod place;
 
 use std::path::Path;
 
@@ -30,7 +30,9 @@ use crate::failure::{print_json, Answer, Code, Failure};
 use crate::manifest;
 use brief::{Previous, Subject};
 
-fn drafted(
+/// One structured draft through the Stado model router, and which model
+/// answered at what usage.
+pub(crate) fn drafted(
     harness: &Path,
     app_id: &str,
     brief: &str,
@@ -208,6 +210,17 @@ pub(crate) fn suite(
     cases: usize,
     rounds: u32,
 ) -> Answer {
+    print_json(&suite_of(harness, app_id, suite_id, cases, rounds)?)
+}
+
+/// Draft, judge, write and declare one suite, and answer what was written.
+pub(crate) fn suite_of(
+    harness: &Path,
+    app_id: &str,
+    suite_id: &str,
+    cases: usize,
+    rounds: u32,
+) -> Result<Json, Failure> {
     if rounds == 0 || cases == 0 {
         return Err(Failure::invalid(
             "benchmark.author",
@@ -235,7 +248,7 @@ pub(crate) fn suite(
             Ok(loaded) => {
                 place::declare_suite(&manifest, suite_id, &target)?;
                 history.push(json!({"round": round, "model": model}));
-                return print_json(&json!({
+                return Ok(json!({
                     "appId": app_id,
                     "suite": suite_id,
                     "file": target.to_string_lossy(),
@@ -256,10 +269,12 @@ pub(crate) fn suite(
             }
         }
     }
-    print_json(&json!({"appId": app_id, "suite": suite_id, "accepted": false, "rounds": history}))?;
+    let last = previous
+        .map(|previous| previous.failures.join("; "))
+        .unwrap_or_default();
     Err(Failure::new(
         "benchmark.author",
         Code::Refused,
-        format!("after {rounds} round(s) no draft of suite {suite_id} passed the suite loader"),
+        format!("after {rounds} round(s) no draft of suite {suite_id} passed the suite loader; the last draft failed: {last}"),
     ))
 }

@@ -18,6 +18,7 @@ mod author;
 mod inputs;
 mod measure;
 mod record;
+mod scout;
 
 use std::path::Path;
 
@@ -41,6 +42,8 @@ records who passed, how fast, and at what cost.
   probierz benchmark pursue <app> --suite <id> --case <id> --budget-usd <USD>
   probierz benchmark author-suite <app> --suite <id> [--cases N] [--rounds N]
   probierz benchmark author <app> --contender <id> --suite <id> [--ours] [--rounds N]
+  probierz benchmark scout <topic> --owner <github-owner> [--observations N] [--rounds N]
+  probierz benchmark adopt <brief.json> --allow-create [--cases N] [--rounds N]
 
 The manifest declares `benchmark.suites.<id>: <suite.json>` and
 `benchmark.contenders.<id>: {program, args, env, ours}`. A contender reads one
@@ -69,7 +72,20 @@ request in our contender's checkout. Jeden's verdict does not close it:
 Probierz then records a new run of the suite itself, accepts the case only
 when ours wins or ties it in that run, and brings the roadmap in line with
 that run. A pursuit that reports success while the case is still lost is
-refused.";
+refused.
+
+`scout` starts a product that does not exist yet. It reads the verdict Trends
+measured for a watched topic (refused while the topic lacks its evidence
+floor or is falling) and the observations behind it, asks the model router
+which products those observations show, normalises them with `competitors
+discover`, and asks for the product to build, the candidates it must beat
+and its suite. Every product, rival and gap cites an observation id it was
+given, or the draft is sent back. The brief lands once under
+test-results/.scout/<topic>/ with the Stado creation request. `adopt` is the
+operator's decision on a brief: `stado product create` makes the private
+repository, its checkout and a preview catalog record, the catalog names the
+rivals and the benchmark, and Probierz declares the manifest and drafts the
+suite.";
 
 pub(crate) const SUITE_SCHEMA: &str = "ai.wisent.probierz.benchmark.suite.v1";
 pub(crate) const TASK_SCHEMA: &str = "ai.wisent.probierz.benchmark.task.v1";
@@ -165,6 +181,32 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         budget_usd: String,
     },
+    /// Scout a new product from a Trends topic and the products it shows.
+    Scout {
+        topic: String,
+        /// The GitHub owner the new product's repository is created under.
+        #[arg(long)]
+        owner: String,
+        /// How many of the topic's newest observations the model reads.
+        #[arg(long, default_value_t = 40)]
+        observations: usize,
+        /// Drafts allowed per question before the command refuses.
+        #[arg(long, default_value_t = 3)]
+        rounds: u32,
+    },
+    /// Create the scouted product through Stado and start its benchmark.
+    Adopt {
+        brief: std::path::PathBuf,
+        /// The operator's authority to create the brief's private repositories.
+        #[arg(long)]
+        allow_create: bool,
+        /// How many cases the first suite holds.
+        #[arg(long, default_value_t = 5)]
+        cases: usize,
+        /// Suite drafts allowed before the command refuses.
+        #[arg(long, default_value_t = 3)]
+        rounds: u32,
+    },
 }
 
 pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
@@ -211,5 +253,17 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
             case,
             budget_usd,
         } => pursue::pursue(harness, &app_id, &suite, &case, &budget_usd),
+        BenchmarkCommand::Scout {
+            topic,
+            owner,
+            observations,
+            rounds,
+        } => scout::scout(harness, &topic, &owner, observations, rounds),
+        BenchmarkCommand::Adopt {
+            brief,
+            allow_create,
+            cases,
+            rounds,
+        } => scout::adopt(harness, &brief, allow_create, cases, rounds),
     }
 }
