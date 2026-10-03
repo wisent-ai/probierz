@@ -71,6 +71,13 @@ pub enum ReportingCommand {
         #[command(subcommand)]
         command: incidents::IncidentCommand,
     },
+    /// Our product and its rivals on the same versioned cases: run, read,
+    /// compare, and the standing of the newest run.
+    #[command(after_help = crate::benchmark::HELP)]
+    Benchmark {
+        #[command(subcommand)]
+        command: crate::benchmark::BenchmarkCommand,
+    },
     // PortGate: merge and release gates
     /// Gate configuration and activation status for an application.
     GateStatus { app_id: String },

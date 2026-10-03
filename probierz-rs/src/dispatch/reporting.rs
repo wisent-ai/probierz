@@ -14,12 +14,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             app_id,
             target,
             limit,
-        } => status::history(
-            harness,
-            &app_id,
-            target.as_deref(),
-            limit,
-        ),
+        } => status::history(harness, &app_id, target.as_deref(), limit),
         ReportingCommand::Dashboard { app_id, limit } => {
             status::dashboard(harness, &app_id, dashboard_limit(limit.as_deref()))
         }
@@ -45,6 +40,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             json,
         } => status::failures(service.as_deref(), limit, json),
         ReportingCommand::Incident { command } => incidents::dispatch(harness, command),
+        ReportingCommand::Benchmark { command } => crate::benchmark::dispatch(harness, command),
         // PortGate: merge and release gates
         ReportingCommand::GateStatus { app_id } => gate::status(harness, &app_id),
         ReportingCommand::GatePrepush { args } => gate::prepush(harness, &args),

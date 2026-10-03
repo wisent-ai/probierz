@@ -27,6 +27,8 @@ mod specs;
 mod status;
 // PortIncidents: the register of attempts that did not hold
 mod incidents;
+// Our product against its rivals on the same versioned cases
+mod benchmark;
 // PortGate: merge and release gates
 mod gate;
 // PortRuns: execution, analysis, and matrix
