@@ -112,6 +112,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-backend-mlx-local-fork | ports, inference defaults, model ids, waits, zero fallbacks | Oko defect cdc747b5 |
 | wisent-ios | `maxDiagnosticLength = 300` | a051d854 |
 | wisent-ios, turbot-ios, oko-ios | analytics `maxQueuedPayloads = 200` (defect d6df8d4d recorded and repaired for oko-ios) | wisent-ios 92f8a524; turbot-ios 8acebec0; oko-ios c883f44e |
+| wisent-ios | speech log excerpts `text.prefix(50)` (six lines now log the character count) | 80e7ec52 |
 | wisent-ios | tokenizer ids, bounds, waits, progress steps, speech and diffusion settings | Oko defect 031b301b |
 | wisent-android | quotas, page sizes, waits, field bounds | Oko defect 446e06e4 |
 | wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
