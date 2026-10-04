@@ -113,7 +113,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
 | wisent-evaluators | thresholds, weights, waits, zero confidence fallbacks | Oko defect 219e8f3f |
 | wisent-integrations | provider bounds, spend ceilings, revenue zero defaults, JWT and RSA policy | Oko defect 84eeca16 |
-| wisent-components | Figma page sizes | Oko defect 9387e5ef |
+| wisent-components | Figma `DESCRIBED_PER_PAGE = 30`, `LISTED_PER_PAGE = 120`, `STYLES_PER_PAGE = 40`, `COMPONENTS_PER_PAGE = 8` (pages measured by what the tool's answer carries); docs search 12 hits and 180 characters, error excerpts 300/400/1,500, three failures, eight shadows; defect 9387e5ef repaired | cee94bc2; 170625b4 |
 | wisent-enterprise | `JsonDetails max = 800` (and 1,500/2,000/5,000 at call sites), `sanitizeText max = 220`/300, array `slice(0, 4)`, capture `fileLimit = 50` | 80d5c5a9 |
 | wisent-enterprise | verdict windows, import caps, polling, page size | Oko defect 11bd16d4 |
 | wisent-experiments | zero-average fallbacks, fixed BOS id | Oko defect 5c8192dd |
