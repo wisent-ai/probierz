@@ -1,0 +1,45 @@
+assigned_lines	class	note
+34932	COUNTER	GIF frame index
+34933-34934	TUNING	GIF playback default and minimum delay
+34935	PROTOCOL	Time conversion
+34936	COUNTER	Frame reset
+34937-34938	TUNING	Desktop generation rounds and excerpt bound
+34939-34945	COUNTER	Gallery index and argument iteration
+34946	TUNING	Page title bound
+34947-34948	COUNTER	Ordinal and argument iteration
+34949	LAYOUT	CLI column width
+34950-34964	PROTOCOL	Exit statuses
+34965-34972	COUNTER	Mesh/channel counts, iteration and request ID
+34973	PROTOCOL	Failure exit status
+34974-34979	GEOMETRY	Identity transforms and normalized primitive radius in embedded Blender code
+34980-34984	COUNTER	Depth, failure/round counts and iteration
+34985	TUNING	Preview frame rate
+34986-34987	NOT	Embedded image script strings; palette count is tuning, loop/disposal are image format semantics
+34988-34989	TUNING	Preview frame count and rate
+34990-34992	NOT	Embedded scene script strings containing artwork geometry and colours
+34993-34994	TUNING	Mesh tessellation and texture resolution
+34995-34996	TUNING	Fixed procedural texture sample counts
+34997	TUNING	Blob surface resolution and isolation
+34998	GEOMETRY	Head placement and scale
+34999-35000	COUNTER	Artwork iteration
+35001-35003	GEOMETRY	Torso, belt and scabbard shapes and placements
+35004	COUNTER	Artwork iteration
+35005-35007	GEOMETRY	Arm, brim and plume transforms
+35008	COUNTER	Artwork iteration
+35009-35010	GEOMETRY	Segment and hood transforms
+35011	GAME	Default equipment tiers; role classification is not a waiver of source review
+35012	GEOMETRY	Neck position
+35013-35014	COUNTER	Artwork count and iteration
+35015	GEOMETRY	Haft extents
+35016	TUNING	Haft tessellation
+35017-35019	COUNTER	Mesh iteration
+35020	GEOMETRY	Shape thickness
+35021-35024	COUNTER	Mesh iteration
+35025	GEOMETRY	Repeated artwork element positions and colour
+35026	COUNTER	Artwork iteration
+35027	TUNING	Sculpt tessellation
+35028-35033	COUNTER	Mesh iteration
+35034	GEOMETRY	Sculpt base coordinates
+35035-35039	COUNTER	Artwork iteration
+35040	GEOMETRY	Sculpt coordinate
+35041-35043	COUNTER	Mesh iteration; fixed sampling counts also control tessellation

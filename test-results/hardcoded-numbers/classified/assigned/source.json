@@ -3,8 +3,15 @@
   "sha256": "bf860ed716ff3609954b794fb4cf2e77b6285d6c66134b749f68165268ab9d65",
   "source_lines": 68646,
   "range_semantics": "inclusive original source-list line numbers",
-  "reviewed_ranges": [[1, 785], [32688, 34353]],
+  "reviewed_ranges": [[1, 785], [32688, 35059], [35117, 35283]],
   "excluded_ranges": [{"start": 786, "end": 32687, "reason": "archive excluded by assignment"}],
   "complete": false,
+  "partial_reads": [
+    {"line": 35060, "reason": "Bundled extension line is 106.8KB; raw reader returned only 50KB."},
+    {"line": 35061, "reason": "Bundled extension line is 60.7KB; raw reader returned only 50KB."}
+  ],
+  "deferred_ranges": [
+    {"start": 35060, "end": 35116, "reason": "Extension bundles are not fully read; clipped previews do not establish coverage."}
+  ],
   "vendor_policy": "Read and classify downloaded third-party code; do not patch externally owned packages."
 }

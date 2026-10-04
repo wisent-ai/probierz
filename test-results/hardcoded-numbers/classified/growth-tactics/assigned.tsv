@@ -1,0 +1,61 @@
+assigned_lines	class	note
+35117	TUNING	Extension polling iteration ceiling; review only
+35118	COUNTER	Callback traversal depth
+35119-35121	TUNING	Inference defaults and action history result limit
+35122	NOT	Browser argument string containing viewport dimensions
+35123-35125	TUNING	Generated credential/name lengths and interaction timing; review only
+35126-35127	COUNTER	Embedded array iteration
+35128-35129	TUNING	Download rate and request wait
+35130	COUNTER	Downloaded bytes
+35131	TUNING	Streaming read chunk size
+35132	COUNTER	Post index
+35133-35145	TUNING	Media process waits, frame sampling, resolution, skip fraction and image quality
+35146	COUNTER	Start timestamp
+35147-35167	TUNING	Media encoding, image generation, comparison dimensions and edge smoothing defaults
+35168-35169	PROTOCOL	Colour channel reduction axes; sample-count threshold in same expression is separate tuning
+35170-35171	COUNTER	Category index
+35172-35174	TUNING	Gallery dimensions/count and adapter strength
+35175	COUNTER	Applied adapter count
+35176	PROTOCOL	Tensor concatenation dimension
+35177	TUNING	Adapter strength
+35178	COUNTER	Applied adapter count
+35179-35182	TUNING	Video dimensions, frame count and rate
+35183	LAYOUT	JSON indentation
+35184	COUNTER	Prompt numbering
+35185-35193	TUNING	Video defaults, request wait, OAuth listener ports and Drive result limits
+35194	NOT	Tax form comment
+35195	COUNTER	Button count
+35196	LAYOUT	Form marker size; source context needed before changing
+35197-35198	PRICE	Assumed zero cost for provider operations
+35199	TUNING	DM history limit
+35200	TUNING	Missing cost defaulted to zero; must distinguish unknown cost from free operation
+35201-35202	COUNTER	Initial duration and accumulated cost
+35203-35205	TUNING	Provider waits and image scale
+35206-35207	PRICE	Embedded image operation prices
+35208-35212	TUNING	Music duration and provider waits
+35213-35218	TUNING	Video duration presets, provider wait and edit strength
+35219	PRICE	Embedded Heygen price
+35220-35224	TUNING	Heygen operation waits
+35225	PRICE	Embedded Infinitetalk price
+35226-35228	TUNING	Provider wait and voice stability/similarity defaults
+35229	PRICE	Embedded voice price
+35230-35242	TUNING	Voice waits/settings, inference defaults and deduplication thresholds
+35243	LAYOUT	JSON indentation
+35244-35247	TUNING	Scenario inference and deduplication defaults
+35248-35249	COUNTER	Character and attempt counts
+35250	LAYOUT	JSON indentation
+35251-35252	TUNING	Scenario count and dataset per-position cap
+35253-35254	LAYOUT	JSON indentation
+35255	TUNING	Prediction top-k
+35256	PROTOCOL	Classification tensor axis
+35257-35259	COUNTER	Evaluation counts
+35260	LAYOUT	JSON indentation
+35261-35267	TUNING	Training batch, epochs, learning rate, workers, sample minimum, splits and seeds
+35268-35274	COUNTER	Training and validation accumulators
+35275	TUNING	Top-k evaluation width; tensor axis is structural
+35276	TUNING	Minimum samples
+35277	LAYOUT	JSON indentation
+35278-35280	TUNING	Augmentation, label smoothing and weight decay
+35281	COUNTER	Best validation accuracy initializer
+35282	LAYOUT	JSON indentation
+35283	TUNING	Minimum dataset samples per position

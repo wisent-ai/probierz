@@ -1,0 +1,139 @@
+assigned_lines	class	note
+34584-34587	COUNTER	Lead counts
+34588-34589	PROTOCOL	HTTP unauthorized
+34590-34591	COUNTER	Enrichment counts
+34592	TUNING	Account scan cap
+34593	COUNTER	Generated count
+34594-34595	TUNING	Route duration declarations
+34596	PROTOCOL	FNV hash offset basis
+34597-34599	COUNTER	Iteration; FNV prime in loop body is protocol math
+34600	TUNING	Route duration
+34601-34603	COUNTER	Publication counts and iteration
+34604	PROTOCOL	FNV hash offset basis
+34605-34608	COUNTER	Iteration and planned count
+34609	TUNING	Route duration
+34610	COUNTER	Skipped count
+34611-34612	PROTOCOL	HTTP unauthorized
+34613-34615	COUNTER	Simulation and scraping counts
+34616	TUNING	Balance warning threshold
+34617-34620	PROTOCOL	HTTP statuses
+34621	COUNTER	Performance totals
+34622	TUNING	Lookback
+34623	COUNTER	Performance totals
+34624-34626	PROTOCOL	HTTP statuses
+34627-34629	COUNTER	Attribution counts
+34630-34632	PROTOCOL	HTTP statuses and currency units
+34633-34635	COUNTER	Sync counts
+34636	PROTOCOL	HTTP server error
+34637	TUNING	Provider page size; needs provider contract verification
+34638-34639	COUNTER	Sync count and confidence initializer
+34640	TUNING	Diagnostic lookback
+34641	PROTOCOL	Time conversion
+34642	NOT	Cache policy string; embedded durations remain a separate policy finding
+34643-34644	PROTOCOL	HTTP statuses
+34645	COUNTER	Linked count
+34646	PROTOCOL	HTTP status
+34647-34649	COUNTER	Coverage counts
+34650	PROTOCOL	Failure exit status
+34651-34652	LAYOUT	Number display precision
+34653-34658	COUNTER	Iteration and image/persona counts
+34659	TUNING	Cloud generation batch
+34660-34661	COUNTER	Offsets and iteration
+34662-34663	TUNING	Image resolution classification thresholds
+34664-34666	COUNTER	Loaded count and iteration
+34667-34670	TUNING	Caption duration, frame rate and render dimensions
+34671	COUNTER	Iteration
+34672	SCHEMA	Wizard schema
+34673-34674	COUNTER	Playback reset and iteration
+34675	LAYOUT	Icon dot radius
+34676-34679	COUNTER	Line indices and classification counts
+34680-34683	TUNING	Render defaults and transparency threshold
+34684	COUNTER	Pixel iteration
+34685	PROTOCOL	Transparent alpha
+34686-34687	TUNING	Cache age and conversation qualification threshold
+34688-34697	COUNTER	Conversation, signal and revenue totals and iteration
+34698	LAYOUT	Decimal precision
+34699-34700	TUNING	Top result limit and query page size
+34701-34704	COUNTER	Pagination and attribution totals
+34705-34709	PROTOCOL	HTTP statuses and time conversion
+34710-34712	COUNTER	Iteration and selection counts
+34713	TUNING	Neutral mood policy value
+34714-34717	COUNTER	Word offset and iteration
+34718-34719	TUNING	Scene count and attempts
+34720	NOT	Prompt examples
+34721	COUNTER	Attempt index
+34722-34723	TUNING	Scene count and attempts
+34724	NOT	Prompt examples
+34725-34728	COUNTER	Attempt/index/count initializers
+34729-34731	TUNING	Exploration probability, scene count and attempts
+34732	COUNTER	Attempt index
+34733	PROTOCOL	FNV hash offset basis
+34734	COUNTER	Iteration
+34735	NOT	Comment
+34736	TUNING	Reference score threshold
+34737	COUNTER	Iteration
+34738	TUNING	Training stop default; consumer meaning requires config contract
+34739	COUNTER	Iteration
+34740	PROTOCOL	Time conversion
+34741	COUNTER	Iteration
+34742-34743	NOT	Model sampling comments
+34744-34747	TUNING	Video dimensions, frames and motion amplitude
+34748	NOT	Workflow comment
+34749	SCHEMA	First dynamically assigned node ID after fixed workflow nodes
+34750	NOT	Encoding comment
+34751	TUNING	LoRA weight
+34752-34755	PROTOCOL	JPEG marker and HTTP statuses
+34756-34758	TUNING	Frame sampling, image quality and end offset
+34759	PROTOCOL	Standard error descriptor
+34760-34766	TUNING	Scene detection thresholds, cadence, frame rate, quality and scale
+34767-34772	COUNTER	Depth, iteration, time and difference initializers
+34773-34774	LAYOUT	Number padding and precision
+34775-34781	COUNTER	Iteration and depth
+34782	TUNING	Scene collapse window
+34783-34788	COUNTER	Iteration and depth
+34789-34792	TUNING	Generation dimensions, steps and guidance
+34793-34794	COUNTER	Attempt count and iteration
+34795-34798	PROTOCOL	Time conversions
+34799-34803	COUNTER	Queue counts, cursor and iteration
+34804	PROTOCOL	HTTP gateway status
+34805-34806	COUNTER	Applied and stale counts
+34807	TUNING	Uniform initial allocation weights
+34808-34811	PROTOCOL	HTTP status range and statuses
+34812	COUNTER	Condition depth
+34813	SCHEMA	Journey version
+34814-34818	TUNING	Journey screen, transition, action, text and depth bounds
+34819-34821	COUNTER	Gap/offset initializers and iteration
+34822	TUNING	Daily promotion ceiling
+34823	NOT	Policy comment
+34824	TUNING	Ecosystem budget base
+34825	PROTOCOL	Time conversion
+34826	TUNING	Consecutive failure ceiling
+34827	COUNTER	Queue counts
+34828	TUNING	Assumed platform count rather than observed count
+34829	TUNING	Commit abbreviation width
+34830-34832	PROTOCOL	HTTP statuses
+34833-34844	COUNTER	Scrape totals and page iteration
+34845-34846	TUNING	Pagination traversal ceilings embedded in loops
+34847	NOT	Accept header string
+34848-34849	COUNTER	Upsert counts
+34850	TUNING	Minimum views threshold
+34851-34853	COUNTER	Classification counts
+34854	TUNING	Top reference count
+34855	COUNTER	Score accumulator
+34856-34861	TUNING	Paper chunk and input size bounds
+34862	COUNTER	Slash count
+34863	TUNING	Fixed six-pass LaTeX traversal
+34864	COUNTER	Publication count
+34865	PROTOCOL	HTTP status
+34866-34867	TUNING	Signed URL validity bounds
+34868	COUNTER	Frame cursor
+34869	TUNING	Caption word grouping count
+34870	COUNTER	Transcript iteration
+34871-34873	LAYOUT	Caption font sizes
+34874	TUNING	Words per subtitle line
+34875	COUNTER	Transcript iteration
+34876	TUNING	Caption character ceiling
+34877-34878	COUNTER	Character count
+34879-34880	LAYOUT	Caption font sizes
+34881-34884	TUNING	Zoom and speed-ramp effect defaults
+34885-34888	COUNTER	Scratch discovery depth and line iteration; excerpt stride is separate display tuning

@@ -110,3 +110,140 @@ assigned_lines	class	note
 34343-34344	TUNING	Analytics queue and event-name bounds
 34345-34346	PROTOCOL	Radix and fractional number prefix offset
 34347-34353	PROTOCOL	HTTP statuses
+34354-34356	PROTOCOL	HTTP statuses
+34357	COUNTER	Zero
+34358	TUNING	Error detail bound
+34359-34360	COUNTER	One/zero
+34361-34362	TUNING	Outage retention and sweep cadence
+34363	COUNTER	Zero
+34364	SCHEMA	Declared onboarding screen count
+34365	PROTOCOL	Hexadecimal radix
+34366-34367	LAYOUT	Skeleton pill dimensions
+34368	TUNING	Verification code length requires authentication contract
+34369-34371	COUNTER	Iteration and one/zero
+34372	PROTOCOL	Currency minor units
+34373-34374	LAYOUT	Textarea rows
+34375	TUNING	Recent submission count
+34376-34381	PROTOCOL	HTTP statuses and Postgres integer boundary
+34382-34383	COUNTER	Error and screenshot counts
+34384	LAYOUT	Rate precision
+34385-34386	PROTOCOL	Decimal base and currency units
+34387	TUNING	Top result count
+34388	LAYOUT	Decimal precision
+34389-34392	PROTOCOL	Box-Muller and Marsaglia-Tsang algorithm coefficients
+34393	COUNTER	Sampling initializer
+34394	NOT	Comment
+34395-34396	COUNTER	Sampling initializer and iteration
+34397	TUNING	Thompson sample count, exploration floor and allocation scale
+34398-34400	COUNTER	Weight and allocation accumulators
+34401-34406	TUNING	Experiment graduation, traffic, sampling and duration defaults
+34407	COUNTER	Initial best-probability sentinel
+34408	TUNING	Client text bound
+34409-34411	COUNTER	Hash, iteration and cumulative sum
+34412	PROTOCOL	Exit status
+34413	LAYOUT	Rate precision
+34414-34417	TUNING	Discovery result, keyword, score and candidate bounds
+34418-34419	COUNTER	CLI iteration
+34420-34421	PROTOCOL	Exit status
+34422	COUNTER	CLI iteration
+34423-34424	PROTOCOL	Date representation and radix
+34425-34438	TUNING	Extracted text and collection bounds, provider page sizes; provider ceilings need authoritative verification
+34439	COUNTER	Page index
+34440-34441	PROTOCOL	Date representation and radix
+34442-34446	TUNING	Keyword, text and onboarding screen bounds
+34447-34449	PROTOCOL	HTTP statuses
+34450	TUNING	Server text bound
+34451	COUNTER	Cumulative sum
+34452	PROTOCOL	Test failure exit status
+34453	COUNTER	Generation
+34454	TUNING	Echo Desktop directory entry cap
+34455-34456	COUNTER	Entry totals
+34457-34460	TUNING	Ancestor walk, response byte bound and request wait
+34461-34462	COUNTER	Latency sample counts
+34463-34468	TUNING	Query lookback, error excerpt and result limits
+34469	PROTOCOL	Seconds per day
+34470-34474	COUNTER	Totals and CLI iteration
+34475-34479	COUNTER	Hook flags and embedded parser iteration; operator-owned policy
+34480-34481	NOT	Hook regex strings
+34482	SCHEMA	Onboarding schema version
+34483	TUNING	Onboarding screen bound
+34484-34485	LAYOUT	Thumbnail dimensions
+34486	COUNTER	Page offset
+34487-34488	LAYOUT	Textarea rows
+34489	PROTOCOL	HTMLMediaElement readiness enum
+34490-34491	COUNTER	Playback reset and frame request identifier
+34492	TUNING	Route caching policy
+34493-34494	TUNING	Diagnostic success thresholds
+34495-34498	PROTOCOL	Time and percent units
+34499	TUNING	Diagnostic lookback
+34500-34504	PROTOCOL	HTTP statuses
+34505	TUNING	Route duration declaration
+34506	COUNTER	Total
+34507	TUNING	Route duration declaration
+34508	COUNTER	Activity totals
+34509	TUNING	Fixed summary lookback encoded in loop start
+34510-34513	COUNTER	Activity totals
+34514	TUNING	Fixed summary lookback encoded in loop start
+34515-34518	COUNTER	Totals, depth and missing-index sentinel
+34519	PROTOCOL	HTTP status
+34520-34522	TUNING	Zoom, route duration and LoRA strength
+34523-34524	COUNTER	Completion count and iteration
+34525-34527	TUNING	Result bound and route duration declarations
+34528	COUNTER	Classified count
+34529-34531	PROTOCOL	HTTP statuses
+34532	COUNTER	Depth
+34533	PROTOCOL	HTTP status
+34534	COUNTER	Count
+34535	LAYOUT	Scene number padding
+34536	COUNTER	Created count
+34537-34538	PROTOCOL	HTTP statuses
+34539	TUNING	Trending result bound
+34540-34541	PROTOCOL	HTTP statuses
+34542-34545	TUNING	Route duration declarations
+34546-34547	COUNTER	Script iteration
+34548-34549	TUNING	Route duration and generation count
+34550	COUNTER	Iteration
+34551	TUNING	Scene count
+34552-34553	COUNTER	Trigger length and completed count
+34554	TUNING	Generation concurrency
+34555-34556	COUNTER	Completion count and batch iteration
+34557-34558	TUNING	Route duration and generation count
+34559-34566	COUNTER	Iteration and seed counts; fixed batch strides are separate tuning
+34567-34568	TUNING	Route duration and pagination batch size
+34569-34571	COUNTER	Offsets and iteration
+34572	TUNING	Route duration declaration
+34573-34575	COUNTER	Completion and scenario counts, iteration
+34576	TUNING	Route duration declaration
+34577-34579	COUNTER	Campaign counters
+34580	TUNING	Route duration declaration
+34581	COUNTER	Created count
+34582	TUNING	Charge matching tolerance
+34583	COUNTER	Processed count
+34889	COUNTER	CLI key/value iteration
+34890-34892	PROTOCOL	CLI argument offset and exit statuses
+34893-34895	COUNTER	Indices and zero
+34896-34899	TUNING	Echo result limits and lookback
+34900	PROTOCOL	Time conversion
+34901	TUNING	Chat event cap
+34902-34903	PROTOCOL	Named percentile fractions
+34904-34905	TUNING	Lookback bounds
+34906-34908	PROTOCOL	RPC error codes; server error label differs from standard internal-error code
+34909-34912	TUNING	Onboarding complexity bounds
+34913	PROTOCOL	SHA256 representation length
+34914-34916	COUNTER	Cursor and argument iteration
+34917	PROTOCOL	Usage exit status
+34918-34919	COUNTER	Argument iteration
+34920	PROTOCOL	Failure exit status
+34921-34924	COUNTER	Cursor, link counts and argument iteration
+34925	PROTOCOL	Provider success code
+34926	TUNING	HD tier threshold needs provider capability contract
+34927	PROTOCOL	Provider-generated seed sentinel
+34928-34931	TUNING	Film generation frame count, rate and dimensions
+35044	COUNTER	CLI argument iteration
+35045	TUNING	Typed attachment confirmation prefix length
+35046-35050	TUNING	Training data batch, request wait and inference defaults
+35051	COUNTER	Template identifier default
+35052-35055	TUNING	Batch and inference defaults
+35056	LAYOUT	JSON indentation
+35057-35058	TUNING	Training data batch defaults
+35059	COUNTER	Persona identifier counter
