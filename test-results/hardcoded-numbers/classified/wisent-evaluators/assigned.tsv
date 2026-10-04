@@ -1,0 +1,65 @@
+assigned_lines	class	note
+64810-64813	TUNING	Generation repetition/margin/confidence policies
+64814	TUNING	Generation zero-confidence fallback requires explicit failed/unavailable distinction
+64815-64816	TUNING	Zero-initialized maximum similarity requires negative cosine-domain review
+64817-64818	COUNTER	NLI probability accumulators; missing inference must not become measured zero
+64819	TUNING	Generation zero-confidence fallback requires status review
+64820	PROTOCOL	NLI label probability axis
+64821	TUNING	Code evaluator zero-confidence fallback requires status review
+64822-64823	SCHEMA	Exact-match Boolean confidence endpoints; rejection is not an unavailable result
+64824-64826	COUNTER	Nonnegative F1 maximum accumulators
+64827-64833	TUNING	Substring/NLI/embedding match thresholds and assigned confidence bases/caps
+64834	TUNING	Generation scoring weight
+64835	SCHEMA	Explicit unknown evaluation confidence endpoint
+64836-64837	SCHEMA	Definite code execution verdict confidence endpoints
+64838	SCHEMA	Explicit Docker failure confidence endpoint; consumers must preserve failure state
+64839	EXPERIMENT	Default pass-at-k operating point
+64840	PROTOCOL	Positive k mathematical domain
+64841-64842	COUNTER	Pass-at-k aggregation totals
+64843-64844	TUNING	Pass-at-k zero cases require denominator/data-availability review
+64845-64846	PROTOCOL	Single class/entry-point rewrite
+64847	COUNTER	Generated Java argument traversal
+64848-64850	PROTOCOL	Single wrapper insertion and triple quote delimiter width
+64851-64861	NOT	Docker sandbox resource/result examples; examples do not establish production policy
+64862	TUNING	Execution elapsed zero fallback requires unavailable-state distinction
+64863-64864	PROTOCOL	Process elapsed-limit and command-not-found exit codes
+64865-64866	COUNTER	Solution generation outcome counts
+64867	NOT	Perplexity coherence threshold explanation
+64868	TUNING	Perplexity coherence threshold
+64869	PROTOCOL	Vocabulary log-probability axis
+64870	COUNTER	Sequence log-probability accumulator
+64871-64872	PROTOCOL	Vocabulary log-probability axes
+64873	COUNTER	Sequence log-probability accumulator
+64874	TUNING	Perplexity zero-confidence fallback requires status review
+64875-64876	PROTOCOL	Perplexity vocabulary probability/gather axes
+64877	TUNING	Math evaluation execution wait
+64878-64879	SCHEMA	Explicit empty-response/judge-error confidence endpoints; preserve status
+64880	COUNTER	Math correct count
+64881-64882	NOT	Math evaluation metric definitions
+64883-64884	COUNTER	Math metric accumulators
+64885	TUNING	Math zero-confidence fallback requires status review
+64886	TUNING	Polymath execution wait
+64887-64888	TUNING	Polymath confidence and adapted math equality zero fallbacks require consumer semantics
+64889-64891	COUNTER	Math delimiter nesting and position sentinel
+64892-64895	PROTOCOL	Percent conversion, escaped brace width, ASCII boundary and days/week
+64896	COUNTER	Math delimiter nesting state
+64897	TUNING	Math worker recycling default; zero meaning requires worker API contract
+64898-64899	COUNTER	Math traversal and brace nesting state
+64900	TUNING	Steering evaluation task split
+64901-64902	COUNTER	Steering refusal/correct counts
+64903-64905	TUNING	Steering prompt cap and neutral/zero score fallbacks; not observed performance
+64906-64907	SCHEMA	Synthetic judge score representation bounds
+64908-64921	TUNING	Neutral score and gibberish sentence/token/spacing/word-ratio policies
+64922	COUNTER	Valid word count
+64923-64925	TUNING	Incoherence helpfulness/duplication and trigram eligibility policies
+64926	SCHEMA	Trigram definition width
+64927-64935	TUNING	Incoherence repetition/uniqueness/content/neutral-score/short-response policies
+64936	COUNTER	Nonsense word count
+64937	COUNTER	Unit-initialized multiplicative quality score; not a result until evaluated
+64938-64939	PROTOCOL	Masked embedding pooling axes
+64940-64943	TUNING	Detector minimum input/neutral-score/document/sentence weighting
+64944-64945	SCHEMA	Normalized detector score domain
+64946-64947	TUNING	Detector neutral probability and coherence example threshold
+64948-64949	PROTOCOL	NLP label probability axes
+64950-64951	SCHEMA	Interactive categorical judgment confidence endpoints
+64952-64965	TUNING	NLP oracle confidence/entailment/embedding/margin thresholds and zero fallbacks; preserve unknown/error status

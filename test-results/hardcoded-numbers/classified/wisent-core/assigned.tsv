@@ -16,3 +16,9 @@ assigned_lines	class	note
 64579-64580	LAYOUT	Demo/ID result JSON indentation
 64581	TUNING	Fixed activation dimension fallback; derive actual model representation rather than invent dimensions
 64582-64583	LAYOUT	Activation chart geometry/opacity
+64584-64585	LAYOUT	Activation chart styling
+64586	EXPERIMENT	Single-pair classifier seed
+64587	LAYOUT	Code pair JSON indentation
+64588	EXPERIMENT	Dataset train fraction and seed
+64589-64590	LAYOUT	Split dataset JSON indentation
+64591-64608	EXPERIMENT	Synthetic intervention test thresholds/epsilon/dimensions/weights/probabilities/step bounds; fixtures are not proof of real model behavior

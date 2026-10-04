@@ -1,0 +1,161 @@
+assigned_lines	class	note
+64966	SCHEMA	BiPO judge categorical digit domain
+64967-64976	EXPERIMENT	BiPO token/sampling and activation ranking defaults; audit only, no behavioral optimization
+64977	PROTOCOL	Activation vocabulary probability axis
+64978	LAYOUT	BiPO result JSON indentation
+64979-64980	EXPERIMENT	BiPO generation token cap and training seed
+64981-64982	COUNTER	Trainable/all parameter totals
+64983	EXPERIMENT	BiPO steering multiplier initial value
+64984-64998	EXPERIMENT	BiPO DPO/optimizer/batch/sequence/epoch/logging/layer/process/seed settings; experiment classification is not justification
+64999-65004	VENDOR	Embedded TRL generation defaults; HuggingFace provenance in trl/core.py:1 and trainer/bipo_trainer.py:2, do not patch upstream-owned code
+65005	VENDOR	TRL logging padding sentinel
+65006-65009	VENDOR	TRL filtering defaults and fixed tokenizer padding ID
+65010-65013	VENDOR	TRL probability/entropy/averaging axes
+65014	VENDOR	TRL response length and sampling defaults
+65015-65019	VENDOR	TRL token sampling, sequence concatenation and latent batch shape/axes
+65020	VENDOR	TRL environment reward accumulator
+65021-65022	VENDOR	TRL environment turn/tool-response caps
+65023	VENDOR	TRL environment turn counter
+65024-65027	VENDOR	TRL environment/sampler batch/candidate/image-size defaults
+65028	VENDOR	TRL embedding normalization axis
+65029-65035	VENDOR	TRL diffusion sampling/step/guidance/output/callback defaults
+65036	VENDOR	TRL single-prompt batch cardinality
+65037-65044	VENDOR	TRL differentiable diffusion generation/backprop defaults
+65045	VENDOR	TRL single-prompt batch cardinality
+65046-65049	VENDOR	TRL LoRA and value-head initialization defaults
+65050-65067	VENDOR	TRL AlignProp training/checkpoint/diffusion/optimizer/backprop defaults
+65068	VENDOR	TRL progress display position
+65069-65070	VENDOR	TRL epoch/global-step counters
+65071-65077	VENDOR	HF-derived BiPO trainer loss/label/layer and length defaults; local integration choices require owning-caller review, fork does not transfer upstream ownership
+65078	VENDOR	BiPO vector-save epoch counter
+65079-65081	VENDOR	BiPO tokenization writer batches
+65082	VENDOR	BiPO DeepSpeed optimization stage selection
+65083	VENDOR	BiPO ignored-label token ID
+65084-65089	VENDOR	BiPO padding identities and batch concatenation axes
+65090	VENDOR	BiPO label smoothing fallback
+65091-65099	VENDOR	BiPO rank/ignored-label/probability/aggregation axes and sentinels
+65100-65102	VENDOR	TRL callback primary rank and progress counters
+65103-65107	VENDOR	TRL callback batch and CPO loss defaults
+65108	VENDOR	CPO ignored-label sentinel
+65109-65111	VENDOR	CPO sequence/prompt/target length fallbacks
+65112-65122	VENDOR	CPO padding, labels and tensor concatenation/gather/aggregation axes
+65123-65146	VENDOR	DDPO seed/training/checkpoint/diffusion/optimizer/clipping/statistics/worker defaults
+65147-65151	VENDOR	DDPO progress/epoch/step counters and trajectory tensor axes
+65152-65160	VENDOR	DPO divergence/loss/label/reference synchronization defaults
+65161	VENDOR	DPO ignored-label sentinel
+65162-65167	VENDOR	DPO sequence limits, tokenizer writer batches and DeepSpeed stage
+65168-65174	VENDOR	DPO padding/label identities and concatenation axes
+65175	VENDOR	DPO label smoothing fallback
+65176-65184	VENDOR	DPO sorting/padding/label/probability/aggregation axes
+65185-65186	VENDOR	Iterative SFT padding alignment and ignored-label sentinel
+65187-65194	VENDOR	TRL judge attempt/worker/output defaults and retry counter
+65195-65204	VENDOR	KTO loss/label/sample/density and sequence-length defaults
+65205-65209	VENDOR	KTO dataset/embedding/label concatenation and validity axes
+65210	VENDOR	KTO prompt embedding sample size
+65211-65220	VENDOR	KTO padding/DeepSpeed stage/label/probability/nonnegative KL and loss aggregation
+65221-65223	VENDOR	TRL model configuration numeric defaults; field roles need surrounding configuration if consumed
+65224-65229	VENDOR	ORPO loss/ignored-label/sequence-length and DeepSpeed stage defaults
+65230-65240	VENDOR	ORPO padding/label/concatenation/probability/aggregation axes
+65241-65258	VENDOR	PPO seed/step/rate/KL/discount/clipping/batch/epoch/comparison defaults
+65259-65260	VENDOR	PPO step counters
+65261	VENDOR	PPO generation batch default
+65262-65263	VENDOR	PPO singleton input batch axis
+65264	VENDOR	PPO generation batch default
+65265-65272	VENDOR	PPO sequence padding/response mask axes and identities
+65273-65276	VENDOR	PPO advantage accumulator and metric reduction axes
+65277	VENDOR	PPO DeepSpeed stage selection
+65278-65290	VENDOR	PPOv2 batch/rollout/output/sampling/reward/epoch/value/clipping/discount/KL defaults
+65291	VENDOR	PPOv2 invalid log-probability sentinel
+65292-65293	VENDOR	PPOv2 sampling defaults
+65294	VENDOR	PPOv2 global step
+65295-65299	VENDOR	PPOv2 probability/EOS/advantage axes and accumulator
+65300-65301	VENDOR	PPOv2 minibatch/gradient accumulation indices
+65302-65304	VENDOR	PPOv2 probability/entropy axes
+65305-65306	VENDOR	PPOv2 sampling defaults
+65307-65308	VENDOR	Reward trainer sequence length fallbacks
+65309	VENDOR	Reward trainer probability/aggregation axes
+65310-65326	VENDOR	RLOO invalid-score sentinel and training/rollout/generation/reward/KL/leave-one-out defaults
+65327-65328	VENDOR	RLOO sampling defaults
+65329	VENDOR	RLOO global step
+65330-65332	VENDOR	RLOO probability/EOS axes
+65333	VENDOR	RLOO minibatch index
+65334	VENDOR	RLOO gradient accumulation index
+65335-65337	VENDOR	RLOO probability/entropy axes
+65338-65345	VENDOR	RLOO sampling and SFT dataset/sequence/token-size defaults
+65346-65352	VENDOR	TRL ignored-label/token padding identities
+65353-65356	VENDOR	TRL constant-length dataset sequence/count/token-size/EOS defaults
+65357	VENDOR	TRL dataset size accumulator
+65358-65361	VENDOR	TRL running mean/variance/count initializers
+65362-65363	VENDOR	TRL prediction and padding axes
+65364	VENDOR	TRL explicit dropout disablement
+65365	VENDOR	TRL NEFTune noise strength
+65366-65367	VENDOR	TRL exponential precision/cap defaults
+65368-65369	VENDOR	TRL first-index reduction and sequence concatenation axes
+65370	PROTOCOL	CAA vector similarity axis; research provenance must be resolved before any source change
+65371-65373	LAYOUT	CAA similarity chart geometry/type
+65374	PROTOCOL	CAA base/chat vector similarity axis
+65375-65378	LAYOUT	CAA chart styling and dataset JSON indentation
+65379	EXPERIMENT	CAA training process count
+65380-65381	COUNTER	CAA evaluation outcome counts
+65382	PROTOCOL	CAA vocabulary argmax axis
+65383-65388	EXPERIMENT	CAA evaluation token/sampling and training epoch/rate/batch settings
+65389-65392	COUNTER	CAA training loss/batch accumulators
+65393	PROTOCOL	CAA contrastive mean axis
+65394-65399	EXPERIMENT	CAA generation and decoded activation ranking defaults
+65400-65402	LAYOUT	CAA decoded activation chart geometry/type/format
+65403	EXPERIMENT	CAA decoded activation ranking count
+65404	PROTOCOL	CAA vocabulary probability axis
+65405	LAYOUT	CAA activation chart size
+65406	PROTOCOL	CAA activation batch concatenation
+65407	EXPERIMENT	CAA two-component visualization projection
+65408-65415	LAYOUT	CAA scatter opacity and legend marker sizes
+65416-65418	COUNTER	CAA score/probability accumulators
+65419-65428	LAYOUT	CAA result chart geometry/style
+65429-65431	TUNING	CAA result zero-average fallback requires missing-observation review
+65432-65445	LAYOUT	CAA result chart geometry/style
+65446-65447	EXPERIMENT	CAA test/generation dataset count limits
+65448-65450	LAYOUT	CAA processed dataset JSON indentation
+65451	EXPERIMENT	CAA steered generation token cap
+65452	LAYOUT	CAA generation result JSON indentation
+65453-65454	EXPERIMENT	CAA judge token/sampling settings
+65455	COUNTER	CAA judge score accumulator
+65456	LAYOUT	CAA scored dataset JSON indentation
+65457-65458	COUNTER	CAA aggregate score/count
+65459	PROTOCOL	CAA vocabulary probability axis
+65460-65462	EXPERIMENT	Hallucination classifier representation-token and batch choices
+65463-65464	PROTOCOL	Hallucination class centroid axes
+65465-65468	EXPERIMENT	Hallucination inference batch, test/train counts and difference order
+65469	COUNTER	Hallucination correct count
+65470-65472	EXPERIMENT	Large hallucination classifier representation-token and batch choices
+65473-65474	PROTOCOL	Large hallucination class centroid axes
+65475-65479	EXPERIMENT	Large hallucination inference batch, test/train counts, seed and difference order
+65480	COUNTER	Large hallucination correct count
+65481-65484	EXPERIMENT	TruthfulQA output length/count/sampling and representation difference order
+65485-65486	LAYOUT	TruthfulQA evaluation chart dimensions
+65487-65491	EXPERIMENT	Representation token/difference/train-count/seed/batch settings
+65492	LAYOUT	Representation chart dimensions
+65493	TUNING	Fixed BOS token ID must derive from selected tokenizer
+65494-65496	EXPERIMENT	Representation token/difference/batch settings
+65497-65500	VENDOR	RepE fairness/honesty dataset sizes and seeds; upstream andyzoujm/representation-engineering in README:17
+65501-65508	VENDOR	RepE honesty display palette/geometry/layout state
+65509	VENDOR	RepE unreachable absolute-score negative mask assignment
+65510	VENDOR	RepE disabled offset comment
+65511-65514	VENDOR	RepE token annotation styling
+65515-65517	VENDOR	RepE score display bound/threshold and masked identity
+65518-65526	VENDOR	RepE heatmap geometry/style and layer tick assumptions
+65527-65530	VENDOR	RepE memorization/emotion dataset size/seed defaults
+65531-65538	VENDOR	RepE LoRRA/LoRA strengths/dimensions/dropout/length defaults
+65539	VENDOR	RepE Euclidean hidden-state loss axis
+65540-65542	VENDOR	RepE training example and sequence caps
+65543-65548	VENDOR	RepE sequence concatenation, prompt/padding label masks and probability axis
+65549	VENDOR	RepE example index
+65550-65559	VENDOR	RepE decoding/sequence/EOS/padding/cache/tensor axes and neutral intervention mask
+65560	VENDOR	RepE tokenizer truncation length
+65561	VENDOR	RepE feature centering axis
+65562	VENDOR	RepE difference-order documentation
+65563-65564	VENDOR	RepE sign tie-break and component-count default
+65565	VENDOR	RepE training centroid axis
+65566-65567	VENDOR	RepE sign tie-break and component count
+65568-65569	VENDOR	RepE class centroid axes
+65570	VENDOR	RepE component count
+65571-65583	VENDOR	RepE token/layer/component/difference/batch/evaluation-length defaults

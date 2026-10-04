@@ -1,0 +1,40 @@
+assigned_lines	class	note
+64665-64670	COUNTER	Activation traversal and creation/missing totals
+64671-64672	NOT	Activation API example identifiers
+64673-64676	TUNING	Research generation sampling and loop iteration cap; audit only
+64677	TUNING	Initial detection score is unmeasured state, not an observed score
+64678	COUNTER	Research critique iteration count
+64679	TUNING	Contrastive pair generation count default
+64680-64683	NOT	Diagnostic API example identifiers
+64684-64691	TUNING	Job route maximum runtimes and cache lifetimes
+64692-64693	COUNTER	Raw activation outcome counts
+64694	PROTOCOL	Float32 payload byte width
+64695-64699	TUNING	Weles API no-cache revalidation policy
+64700-64707	TUNING	Weles verdict/orphan bounds, verdict cache and job dashboard polling periods
+64708-64711	COUNTER	Pair/benchmark coverage totals
+64712	TUNING	Weles JSON detail text cap
+64713-64715	TUNING	Weles detail/diff/session no-cache policy
+64716-64719	COUNTER	Session cost/outcome totals
+64720-64722	TUNING	Weles list no-cache policy and page size
+64723-64726	COUNTER	Weles total/action/platform/type counts
+64727-64728	TUNING	Provider/routine detail no-cache policy
+64729-64733	COUNTER	Routine outcome/cost totals
+64734-64735	TUNING	Routine/statistics no-cache policy
+64736-64737	COUNTER	Weles overall/weekly outcome/cost totals
+64738	TUNING	Testing detail no-cache policy
+64739	COUNTER	Testing outcome counts
+64740	TUNING	Testing list no-cache policy
+64741	COUNTER	Testing status tally
+64742	PROTOCOL	CLI failure exit
+64743	COUNTER	CLI argument index
+64744-64745	PROTOCOL	CLI usage/operation failure exits
+64746-64759	COUNTER	Verification input indices and activation traversal/aggregation/max-norm state
+64760-64762	TUNING	Capacity stale age and aggregation bucket/window defaults
+64763-64770	COUNTER	Workspace import outcome totals
+64771-64772	TUNING	Workspace import text/pair caps
+64773	COUNTER	Capture traversal index
+64774-64775	TUNING	Capture file summary cap and query batch size
+64776-64777	COUNTER	Capture batch offset and diff item count
+64778-64780	TUNING	Diff text cap and verdict run/minimum-concluded bounds
+64781	COUNTER	Verdict count
+64782-64783	PROTOCOL	Host health journey failure exits

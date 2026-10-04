@@ -1,0 +1,41 @@
+assigned_lines	class	note
+64609-64611	PROTOCOL	wisent-cost-tracker CLI exit statuses
+64612-64614	EXPERIMENT	wisent-cost-tracker onboarding budget/usage/cost examples; not actual charges
+64615	SCHEMA	wisent-cost-tracker state schema version
+64616-64617	PROTOCOL	wisent-cost-tracker priced token block and seconds/hour conversion
+64618-64619	PRICE	wisent-cost-tracker CAPTCHA/SMS fallback prices require authoritative pricing; missing is not a known charge
+64620	PROTOCOL	wisent-cost-tracker percent conversion
+64621	TUNING	wisent-cost-tracker spend sink request wait
+64622	PROTOCOL	wisent-cost-tracker HTTP error boundary
+64623	LAYOUT	wisent-cost-tracker sink JSON indentation
+64624	TUNING	wisent-cost-tracker monetary rounding precision; stored amounts need billing contract, not display-only assumption
+64625-64626	SCHEMA	wisent-cost-tracker per-operation usage unit
+64627-64628	COUNTER	wisent-cost-tracker omitted token usage zero defaults; callers must distinguish missing usage from measured zero
+64629	SCHEMA	wisent-cost-tracker default single-email usage
+64630-64631	PROTOCOL	wisent-cost-tracker TypeScript token/time conversions
+64632-64633	PRICE	wisent-cost-tracker TypeScript CAPTCHA/SMS fallback prices
+64634	SCHEMA	wisent-cost-tracker TypeScript default single-email usage
+64635	TUNING	wisent-customer-support diagnostic detail cap
+64636-64637	COUNTER	wisent-customer-support CLI index and ticket sequence
+64638	TUNING	wisent-customer-support low-confidence threshold
+64639-64643	PROTOCOL	wisent-desktop-auth keychain operation discriminants and binary status widths
+64644	TUNING	wisent-desktop-auth identity request wait
+64645-64647	PROTOCOL	wisent-desktop-auth HTTP statuses
+64648	TUNING	wisent-desktop-auth diagnostic text cap
+64649	COUNTER	wisent-desktop-auth resend countdown reset
+64650	SCHEMA	wisent-desktop-auth verification code width; must match configured identity service contract
+64651	COUNTER	wisent-desktop-auth initial resend countdown
+64652	TUNING	wisent-desktop-auth resend cooldown
+64653-64659	LAYOUT	wisent-desktop-auth banner/auth screen geometry
+64660	SCHEMA	wisent-desktop-auth verify CLI argument cardinality
+64661-64663	PROTOCOL	wisent-desktop-auth helper operation discriminants
+64664	PROTOCOL	wisent-desktop-update feed test failure exit
+64784-64785	TUNING	wisent-errors implementation scanner threshold and displayed pin width
+64786	COUNTER	wisent-errors example command status accumulator
+64787	PROTOCOL	wisent-errors retry exit contract
+64788-64791	TUNING	wisent-errors JavaScript/Python diagnostic text limits and word-edge slack
+64792-64802	PROTOCOL	wisent-errors HTTP status mappings/server-error range and retry exit contract
+64803	TUNING	wisent-errors Rust detail text cap
+64804	COUNTER	wisent-errors Rust segment count
+64805	PROTOCOL	wisent-errors Swift retry exit contract
+64806-64809	TUNING	wisent-errors Swift detail cap/slack and report request/resource waits
