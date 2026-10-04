@@ -71,6 +71,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
+| lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
 | lem | model budgets, harvest bounds, generation defaults, backend port | Oko defect 68645422 |
 | glina | Glina Desktop `tail(maxCharacters: 400)` | glina-desktop a5795125 |
 | glina | preview, render, tessellation and generation values | Oko defect 0df1bf55 |
@@ -94,6 +95,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
 | wisent-app | web analytics `MAX_QUEUE_SIZE = 100` | 09bbc1b5 |
+| wisent-app | IBKR and Tavily failure bodies cut to 300 and 400 | 3316156e |
 | wisent-app | generation defaults, silent clamps, waits, thresholds, server port | Oko defect 2f95d07c |
 | OpenEnv | benchmark rounds, thresholds, fallbacks, training settings, server port | Oko defect dcbdb704 |
 | backends | scratch and research scripts outside any product | Oko defect 51273293 |
@@ -174,6 +176,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | codespy | `SHOWN_LINE_CHARS = 80` | a39e9439 |
 | codespy | removed the file-size ceiling and built-in scoring weights/grades/size leniency; optional explicit `--scoring-policy`, nullable score without policy, full policy in every report and Action; CLI regression journeys added but not run | 9cc178a (source version 3.0.0); Oko fa8f1c10 records pushed repair, open until real qualification and release |
 | people-rotator | `sanitizeId(value, maxLength = 48)` and idempotency keys cut to 128 | bddce0e9 |
+| people-rotator | integration failure body cut to 300 | 24ce2cb4 |
 | echo | `DEFAULT_LIMIT = 200`, `MAX_LOGS = 5000`, `MAX_ERRORS = 10`, `MAX_CHAT_EVENTS = 5000` (every read now pages to the exact count) | fbabc0b0; docs echo-landing f9741bed |
 | echo-desktop | `maximumEntries = 10_000`, `defaultLimit = 200`, `maxLogs`, `maxErrorsPerKey`, `maxChatEvents`, `errorBodyPrefix = 500` | aa77397f |
 | echo, echo-web, echo-desktop | windows, onboarding caps, durations, tolerance, volumes | Oko defect dc2e1d6e |
