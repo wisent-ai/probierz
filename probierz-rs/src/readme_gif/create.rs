@@ -15,18 +15,12 @@ pub fn create(options: Options) -> Answer {
     }
 
     let start_seconds = non_negative(options.start_seconds, "startSeconds")?;
-    let duration_seconds = bounded(
-        options.duration_seconds,
-        "durationSeconds",
-        MAX_DURATION_SECONDS,
-    )?;
-    let frames_per_second = bounded(
-        options.frames_per_second,
-        "framesPerSecond",
-        MAX_FRAMES_PER_SECOND,
-    )?;
-    let width = bounded(options.width, "width", MAX_WIDTH)?;
-    if frames_per_second.fract() != 0.0 || width.fract() != 0.0 {
+    let duration_seconds = positive(options.duration_seconds, "durationSeconds")?;
+    let frames_per_second = positive(options.frames_per_second, "framesPerSecond")?;
+    let width = positive(options.width, "width")?;
+    if frames_per_second.is_some_and(|value| value.fract() != 0.0)
+        || width.is_some_and(|value| value.fract() != 0.0)
+    {
         return Err(invalid("framesPerSecond and width must be integers"));
     }
     let source_sha256 = sha256(&input)?;
@@ -53,11 +47,14 @@ pub fn create(options: Options) -> Answer {
         .ok()
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| "ffmpeg".to_string());
-    let result = Command::new(ffmpeg.trim())
+    let mut command = Command::new(ffmpeg.trim());
+    command
         .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-ss"])
-        .arg(start_seconds.to_string())
-        .arg("-t")
-        .arg(duration_seconds.to_string())
+        .arg(start_seconds.to_string());
+    if let Some(duration_seconds) = duration_seconds {
+        command.arg("-t").arg(duration_seconds.to_string());
+    }
+    let result = command
         .arg("-i")
         .arg(&input)
         .arg("-filter_complex")
@@ -96,9 +93,9 @@ pub fn create(options: Options) -> Answer {
     let gif_sha256 = sha256(&output)?;
     let render = Render {
         start_seconds: json_number(start_seconds),
-        duration_seconds: json_number(duration_seconds),
-        frames_per_second: json_number(frames_per_second),
-        width: json_number(width),
+        duration_seconds: duration_seconds.map_or(Value::Null, json_number),
+        frames_per_second: frames_per_second.map_or(Value::Null, json_number),
+        width: width.map_or(Value::Null, json_number),
         silent: true,
         r#loop: true,
     };

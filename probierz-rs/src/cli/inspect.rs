@@ -155,19 +155,22 @@ pub enum InspectCommand {
         router_token_stdin: bool,
     },
     // ReadmeGif
-    /// Render a bounded, silent journey video as a looping README GIF.
+    /// Render a silent journey video as a looping README GIF.
     ReadmeGif {
         input: PathBuf,
         #[arg(long = "out")]
         output: PathBuf,
         #[arg(long, default_value_t = 0.0)]
         start: f64,
-        #[arg(long, default_value_t = 12.0)]
-        duration: f64,
-        #[arg(long, default_value_t = 12.0)]
-        fps: f64,
-        #[arg(long, default_value_t = 960.0)]
-        width: f64,
+        /// Seconds of video to keep; the rest of the clip from --start when omitted.
+        #[arg(long)]
+        duration: Option<f64>,
+        /// GIF frame rate; the source's own when omitted.
+        #[arg(long)]
+        fps: Option<f64>,
+        /// GIF width in pixels; the source's own when omitted.
+        #[arg(long)]
+        width: Option<f64>,
         #[arg(long)]
         force: bool,
     },

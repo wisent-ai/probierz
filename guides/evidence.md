@@ -90,8 +90,10 @@ probierz readme-gif test-results/APP_ID/RUN_ID/path/to/video.webm \
 
 The command writes the silent, looping GIF and a sibling
 `demo.gif.probierz.json` provenance file containing source/output SHA-256 and
-the exact render settings. Duration, frame rate, and width are bounded to keep
-repository media reviewable. The sidecar deliberately marks the GIF as
+the exact render settings. Duration, frame rate and width are yours: an
+omitted `--duration` keeps the rest of the clip from `--start`, and an omitted
+`--fps` or `--width` keeps the source's own (recorded as `null` in the
+sidecar); a stated value must be positive, and fps and width whole. The sidecar deliberately marks the GIF as
 `reviewRequired`: conversion does not prove that the clip is free of
 credentials, personal data, production identifiers, or sensitive URLs.
 `PROBIERZ_FFMPEG_BIN` may select an explicit `ffmpeg` executable. Probierz does

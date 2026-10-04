@@ -3,11 +3,15 @@ pub(crate) fn invalid(detail: impl Into<String>) -> Failure {
     Failure::invalid("readme-gif", detail)
 }
 
-pub(crate) fn bounded(value: f64, name: &str, maximum: f64) -> Result<f64, Failure> {
-    if !value.is_finite() || value < 1.0 || value > maximum {
-        return Err(invalid(format!("{name} must be between 1 and {maximum}")));
+/// A stated value must be a positive, finite number; an unstated one stays
+/// unstated.
+pub(crate) fn positive(value: Option<f64>, name: &str) -> Result<Option<f64>, Failure> {
+    match value {
+        Some(value) if !value.is_finite() || value <= 0.0 => {
+            Err(invalid(format!("{name} must be a positive number")))
+        }
+        other => Ok(other),
     }
-    Ok(value)
 }
 
 pub(crate) fn non_negative(value: f64, name: &str) -> Result<f64, Failure> {
@@ -82,9 +86,19 @@ pub(crate) fn json_number(value: f64) -> Value {
     }
 }
 
-pub(crate) fn filter_graph(frames_per_second: f64, width: f64) -> String {
+/// The ffmpeg graph: the stated frame rate and width, when stated, then a
+/// palette made from the clip itself.
+pub(crate) fn filter_graph(frames_per_second: Option<f64>, width: Option<f64>) -> String {
+    let mut steps = Vec::new();
+    if let Some(frames_per_second) = frames_per_second {
+        steps.push(format!("fps={frames_per_second}"));
+    }
+    if let Some(width) = width {
+        steps.push(format!("scale={width}:-2:flags=lanczos"));
+    }
+    steps.push("split[v0][v1]".to_string());
     format!(
-        "[0:v]fps={frames_per_second},scale={width}:-2:flags=lanczos,split[v0][v1];[v0]palettegen=stats_mode=diff[p];[v1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle[v]"
+        "[0:v]{};[v0]palettegen=stats_mode=diff[p];[v1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle[v]",
+        steps.join(",")
     )
 }
-

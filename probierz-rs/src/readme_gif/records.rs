@@ -1,16 +1,16 @@
 use crate::readme_gif::*;
-pub(crate) const MAX_DURATION_SECONDS: f64 = 30.0;
-pub(crate) const MAX_FRAMES_PER_SECOND: f64 = 20.0;
-pub(crate) const MAX_WIDTH: f64 = 1200.0;
 
 #[derive(Debug, Clone)]
 pub struct Options {
     pub input: PathBuf,
     pub output: PathBuf,
     pub start_seconds: f64,
-    pub duration_seconds: f64,
-    pub frames_per_second: f64,
-    pub width: f64,
+    /// Seconds kept from `start_seconds`; the rest of the clip when `None`.
+    pub duration_seconds: Option<f64>,
+    /// Frame rate; the source's own when `None`.
+    pub frames_per_second: Option<f64>,
+    /// Width in pixels; the source's own when `None`.
+    pub width: Option<f64>,
     pub force: bool,
 }
 
@@ -57,4 +57,3 @@ pub(crate) struct ResultAnswer<'a> {
     pub(crate) render: &'a Render,
     pub(crate) review_required: bool,
 }
-
