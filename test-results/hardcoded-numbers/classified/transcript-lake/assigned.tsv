@@ -1,0 +1,37 @@
+assigned_lines	class	note
+58117	LAYOUT	Copied-label duration
+58118-58121	COUNTER	Landing/documentation counts and iteration
+58122	TUNING	Claude adapter text cap
+58123	COUNTER	Adapter units
+58124	TUNING	Codex adapter text cap
+58125	COUNTER	Adapter units
+58126-58127	TUNING	Droid adapter text/pending caps
+58128	COUNTER	Adapter units
+58129	TUNING	Kimi adapter text cap
+58130	COUNTER	Adapter units
+58131-58132	TUNING	OMP adapter text/pending caps
+58133	COUNTER	Adapter units
+58134-58138	TUNING	CLI result/day defaults and limits
+58139	PROTOCOL	Initial success exit status
+58140	TUNING	Hardcoded model artifact size; artifact manifest must establish applicability
+58141-58143	TUNING	Goal word/character bounds
+58144-58145	PROTOCOL	POSIX interruption/termination signals
+58146-58149	COUNTER	Hook and lake totals
+58150	SCHEMA	Source registry version
+58151	PROTOCOL	Usage status
+58152	COUNTER	Argument index
+58153	TUNING	Export read chunk size
+58154	SCHEMA	Export fingerprint width
+58155	PROTOCOL	Double integer exactness boundary; inclusion versus safe-integer semantics requires consumer review
+58156-58159	PROTOCOL	Time unit conversions
+58160	TUNING	Freshness cursor traversal depth
+58161	LAYOUT	Freshness display padding
+58162-58168	COUNTER	Export outcome totals
+58169	TUNING	Session export buffer bound
+58170-58172	COUNTER	Buffer size/reset and prune total
+58173	SCHEMA	Redaction fingerprint width
+58174-58176	TUNING	Redaction recognition thresholds
+58177-58179	TUNING	Stream text, batch and traversal settings
+58180	SCHEMA	Stream part digest width
+58181	COUNTER	Stream unit total
+58182-58184	PROTOCOL	Date representation widths/offsets

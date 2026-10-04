@@ -4,3 +4,260 @@ assigned_lines	class	note
 57078-57081	COUNTER	Balance, revenue/cost and request total initializers
 57082	LAYOUT	JSON indentation
 57083	COUNTER	Initial cycle cost/revenue
+57084	LAYOUT	JSON indentation
+57085-57090	PROTOCOL	HTTP unavailable/bad-request statuses
+57091-57095	TUNING	Social refresh, starting balance, cycle cadence/steps and executor concurrency
+57096-57104	COUNTER	Agent cycle/token/cost and log amount initializers
+57105-57106	TUNING	Cognition turn/token caps
+57107	LAYOUT	JSON indentation
+57108	TUNING	Memory excerpt cap; indentation is formatting
+57109	COUNTER	Cycle initializer
+57110-57112	PRICE	Fixed API/email operation charges
+57113-57114	TUNING	Trade slippage defaults
+57115-57116	COUNTER	Execution result amount/duration initializers
+57117-57118	PRICE	Fixed web operation charges
+57119-57124	EXPERIMENT	Financial usage examples; confirm enclosing documentation context before treating as runtime
+57125-57126	TUNING	Card polling and maximum wait
+57127	COUNTER	Elapsed time
+57128	TUNING	Minimum card balance
+57129-57140	COUNTER	Budget/allocation, savings and trade-result initial values; missing measurements must not masquerade as observed zero
+57141	TUNING	Swap slippage default
+57142	PRICE	Explicit zero quote fee; consumer must distinguish unmeasured fees
+57143	TUNING	Swap slippage default
+57144	EXPERIMENT	Manager usage example
+57145	COUNTER	Initial manager balance
+57146	PRICE	Default platform fee percentage
+57147	COUNTER	Default direct cost
+57148	TUNING	Default purchase quantity
+57149-57152	TUNING	Financial summary and forecast windows
+57153-57167	COUNTER	Financial aggregate initial values
+57168-57170	PRICE	Explicit zero on-chain fees; consumer must distinguish unmeasured fees
+57171-57175	COUNTER	On-chain amount/fee totals and result initializers
+57176	EXPERIMENT	Purchase usage example
+57177-57179	COUNTER	Purchase result initializers
+57180-57184	TUNING	Purchase term, spend ceilings and listing default
+57185-57186	COUNTER	Projection component initializers
+57187-57188	TUNING	Forecast and historical windows
+57189-57191	PROTOCOL	Single hour/day/week intervals
+57192-57193	TUNING	Fixed monthly approximation and forecast decay
+57194-57196	PROTOCOL	Single hour/day/week intervals
+57197	TUNING	Fixed monthly approximation
+57198-57206	COUNTER	Forecast and revenue-source initial values; zero confidence bounds require consumer review
+57207	PRICE	Default platform fee percentage
+57208-57216	COUNTER	Cost/fee/net/revenue initializers and totals
+57217	TUNING	Revenue history window
+57218-57220	PROTOCOL	Single hour/day/week intervals
+57221-57224	TUNING	Fixed monthly approximation and customer/product/summary windows
+57225	LAYOUT	JSON indentation
+57226-57232	COUNTER	Token holdings and market-value initializers; explicit zero acquisition cost requires consumer review
+57233-57234	TUNING	Token history and chart windows
+57235-57238	PRICE	Token base price, bonding curve and buy/sell fees
+57239-57242	COUNTER	Fee, treasury balance/cost and reserve initializers
+57243-57245	TUNING	Treasury reserve, minimum balance and cash-flow window
+57246	PROTOCOL	Single hour/day/week intervals
+57247	TUNING	Fixed monthly/default interval
+57248	LAYOUT	JSON indentation
+57249	TUNING	Memory action retention cap
+57250-57253	COUNTER	Memory lifetime and operation amount initializers
+57254	PROTOCOL	One observed successful action has unit success fraction
+57255	COUNTER	First strategy use
+57256-57258	TUNING	Memory result filters/counts
+57259-57261	COUNTER	First contact interaction and default amounts
+57262	TUNING	Contact result count
+57263	COUNTER	Default asset cost
+57264-57265	TUNING	Asset result count and insight confidence prior
+57266	COUNTER	First evidence item
+57267-57270	TUNING	Insight threshold and prompt memory selection counts
+57271-57275	COUNTER	Contact revenue/cost/interaction initializers
+57276	TUNING	Contact trust prior
+57277-57282	COUNTER	Asset/strategy statistic initializers
+57283	TUNING	Insight confidence prior
+57284	COUNTER	Evidence count
+57285-57293	EXPERIMENT	Mock coordinator balances, activity limits, deposit default and exchange ratio; not real-provider evidence
+57294-57309	TUNING	Opportunity severity/economic/success estimates and perception cache policy
+57310	EXPERIMENT	Pricing usage example
+57311-57313	COUNTER	Usage amount/cost initializers and single-operation counts
+57314-57315	LAYOUT	JSON indentation
+57316	COUNTER	Per-service amount initializer
+57317	LAYOUT	JSON indentation
+57318-57324	COUNTER	Runner financial and timestamp initializers
+57325	TUNING	Runner moving-average coefficient
+57326	COUNTER	Default activity revenue/cost
+57327	LAYOUT	JSON indentation
+57328	TUNING	Initial action weight
+57329-57330	TUNING	Shared chat and repository activity windows
+57331	COUNTER	Cleaned count
+57332-57333	PROTOCOL	HTTP unavailable statuses
+57334-57337	PROTOCOL	HTTP unavailable/bad-request statuses
+57338	TUNING	Agent server bind port default
+57339-57350	TUNING	Browser skill installation/cost and success estimates
+57351	NOT	Browser viewport flag string
+57352	TUNING	Memory context result count
+57353-57375	TUNING	Coordinator/chat installation, cost, duration and success estimates
+57376	TUNING	Chat read count
+57377-57391	TUNING	Inbound email estimates and email/SMS wait bounds
+57392	COUNTER	Elapsed wait
+57393-57400	TUNING	SMS polling cadence and operation cost/duration/success estimates
+57401-57409	TUNING	Domain spend ceiling, purchase estimates and registration term default
+57410-57422	TUNING	Proxy/operator installation and operation cost/duration/success estimates
+57423-57424	LAYOUT	JSON formatting
+57425-57457	TUNING	Shell, development and social skill fixed cost/success estimates
+57458	TUNING	Feed result count
+57459	COUNTER	Comment formatting depth
+57460-57461	TUNING	Post/search result counts
+57462-57526	TUNING	Analysis, classifier, evaluation, optimization and pair skill cost/duration/success estimates
+57527	TUNING	Steered generation token default
+57528	LAYOUT	Metadata JSON indentation
+57529-57568	TUNING	Steering and weight-operation fixed cost/duration/success estimates
+57569-57571	COUNTER	Marketplace count and revenue/cost initializers
+57572-57578	TUNING	Survival balance/runway/inactivity/reputation policy and death-history limit
+57579	LAYOUT	JSON indentation
+57580	EXPERIMENT	Payment usage example spending limit
+57581	TUNING	Payment card monthly spending limit default
+57582-57583	TUNING	Card operation page-size defaults; page index is a counter
+57584-57590	TUNING	Card spending limits and listing defaults
+57591-57592	EXPERIMENT	Simulation GPU and token-throughput defaults
+57593	COUNTER	Simulated GPU cost initializer
+57594	LAYOUT	JSON indentation
+57595-57632	EXPERIMENT	Simulated fees, runway policy, model prices/context and GPU capacity/prices; not current provider truth
+57633-57639	EXPERIMENT	Simulated listing price, generation and performance defaults
+57640-57641	COUNTER	Simulated call/revenue totals
+57642	EXPERIMENT	Initial simulated rating
+57643	COUNTER	Rating count
+57644-57645	EXPERIMENT	Simulation smoothing and quantity defaults
+57646-57649	COUNTER	Simulated balance and economic totals
+57650-57657	EXPERIMENT	Simulation reputation, balance and search/leaderboard policy
+57658-57659	LAYOUT	JSON indentation
+57660-57662	EXPERIMENT	Simulated pricing cache, price and quantity defaults
+57663	COUNTER	Simulated cost initializer
+57664-57666	EXPERIMENT	Price freshness, curve reserve and midpoint settings
+57667-57668	COUNTER	Curve integral accumulators
+57669	EXPERIMENT	Curve search bracket including chosen upper multiplier
+57670-57673	EXPERIMENT	Token curve, fee and creator-allocation defaults
+57674	PROTOCOL	Free allocation has zero cost basis
+57675	EXPERIMENT	Top-token count
+57676	LAYOUT	JSON indentation
+57677-57678	EXPERIMENT	Example token curve settings
+57679-57680	COUNTER	Token supply and reserve totals
+57681-57683	EXPERIMENT	Token fee percentages
+57684-57685	COUNTER	Token trading totals
+57686	EXPERIMENT	Default creator allocation
+57687-57692	COUNTER	Wallet fee, balance and transfer initializers
+57693	EXPERIMENT	Burn history retention
+57694-57697	COUNTER	Wallet transaction/fee/balance totals
+57698-57702	EXPERIMENT	Simulated transfer fees, history limit and survival thresholds
+57703	COUNTER	Default transfer fee
+57704-57705	LAYOUT	JSON indentation
+57706	COUNTER	Financial history running total
+57707-57710	LAYOUT	Chart dimensions
+57711-57712	COUNTER	Achievement progress initializer and completed count
+57713	PROTOCOL	USDC decimal scale; token identity must match deployed mint
+57714	COUNTER	Burned amount
+57715	TUNING	Sell reconciliation tolerance
+57716	COUNTER	Platform balance initializer
+57717-57720	PROTOCOL	Quartile ordinals
+57721-57723	COUNTER	Diversity score and balance initializers
+57724	NOT	Missing-account balance comment
+57725	SCHEMA	Token decimal scale; deployed mint is authoritative
+57726	COUNTER	Token balance initializer
+57727	NOT	Missing-account balance comment
+57728-57730	COUNTER	Weekly activity totals
+57731	TUNING	Fixed weekly activity window; loop variable is a counter
+57732	TUNING	Dashboard initial score
+57733-57734	COUNTER	Request status totals
+57735	TUNING	Proxy message length cap
+57736	COUNTER	Efficiency score initializer
+57737	NOT	Reputation threshold comment
+57738	TUNING	Perfect efficiency score assignment
+57739	NOT	Survival scoring comment
+57740-57741	COUNTER	Survival/token score initializers
+57742	NOT	Market-cap scoring comment
+57743	COUNTER	Consistency score initializer
+57744	NOT	Activity scoring comment
+57745	COUNTER	Holder trust initializer
+57746	NOT	Holder scoring comment
+57747	COUNTER	Productivity initializer
+57748	NOT	Skill scoring comment
+57749	TUNING	Default agent balance
+57750-57752	COUNTER	Collaboration score, iteration and top count
+57753	PROTOCOL	Maximum Herfindahl index for percent shares
+57754-57765	COUNTER	Cron outcome and diversity accumulators/iteration
+57766	TUNING	Per-agent feed cap
+57767-57768	PRICE	Fund purchase fee and initial token price
+57769	NOT	Fund purchase URL example
+57770	PRICE	Initial fund quote token price
+57771	NOT	Fund sale URL example
+57772-57773	PRICE	Fund management/performance fees
+57774-57775	TUNING	Fund minimum investment and initial allocation
+57776	PRICE	Governance proposal charge
+57777-57779	COUNTER	Forecast regression and running totals
+57780	TUNING	Population forecast horizon; embedded date and numeric formatting are representation
+57781	COUNTER	Daily revenue accumulator
+57782	TUNING	Revenue forecast horizon; rounding is presentation
+57783	COUNTER	Market-cap running total
+57784-57787	TUNING	Operational health lookback, freshness and report bounds
+57788-57791	COUNTER	Knowledge graph iteration and score initializers
+57792	TUNING	Niche score prior
+57793-57806	COUNTER	Portfolio, revenue and concentration totals/iteration
+57807	TUNING	Revenue history window
+57808	PRICE	Revenue buyback share
+57809-57810	PRICE	Default skill transfer charge
+57811-57814	COUNTER	Heatmap/calendar iteration and profitability score initializer
+57815-57817	TUNING	Profitability scoring thresholds and unobserved prior
+57818	COUNTER	Sustainability initializer
+57819-57826	TUNING	Sustainability/consistency score policy and payment buyback share
+57827	COUNTER	Burned token total
+57828	PRICE	Payment revenue buyback share
+57829-57831	COUNTER	Risk and dispute settlement amount initializers
+57832	PRICE	Deposit burn percentage
+57833	NOT	Deposit URL example
+57834-57835	TUNING	Token history/rates cache durations
+57836	PROTOCOL	USDC decimal scale
+57837-57839	COUNTER	Burn and balance initializers
+57840	LAYOUT	Numeric display precision
+57841	COUNTER	Comment depth
+57842	TUNING	Comment display depth cap
+57843-57846	LAYOUT	Animation timing and score ring dimensions
+57847-57850	NOT	Documentation text and examples
+57851-57853	LAYOUT	Economic chart dimensions
+57854	COUNTER	Fund comparison values
+57855	LAYOUT	Forecast chart dimensions and zero-range guard
+57856	COUNTER	Graph iteration reset
+57857	TUNING	Graph layout iteration ceiling
+57858-57859	COUNTER	Graph velocity resets and node iteration
+57860	LAYOUT	Graph node size scaling
+57861	COUNTER	Leaderboard comparison values
+57862-57863	TUNING	Log/trade result page sizes
+57864	COUNTER	Initial trade page
+57865-57866	LAYOUT	Ring geometry and numeric display precision
+57867	TUNING	Achievement leaderboard result count
+57868	COUNTER	Delivered total
+57869	PRICE	Fixed gas estimate
+57870-57871	TUNING	Reputation leaderboard/history counts
+57872	COUNTER	Processed total
+57873	TUNING	Default trading execution hour
+57874	PROTOCOL	Days per biweekly period
+57875-57879	TUNING	Media payload bounds and polling policy
+57880	COUNTER	Media poll attempt index
+57881-57884	TUNING	Media, reward and proposal result counts
+57885	TUNING	Default token decimal assumption; token metadata should establish scale
+57886-57889	TUNING	Swap slippage and launch/trader result counts
+57890-57892	COUNTER	Trade execution, liquidation and processing totals
+57893	TUNING	Initial prediction-market liquidity
+57894	PROTOCOL	Milliseconds per second
+57895	TUNING	Unavailable retry delay
+57896	PRICE	Platform payment fee
+57897-57898	PROTOCOL	Encryption IV/tag representation widths; IV choice requires exact cipher contract
+57899-57902	TUNING	Object delivery lifetimes, realtime polling and chat count
+57903	PRICE	Minimum spawn charge
+57904	TUNING	Activity result count
+57905-57906	PRICE	Fixed token curve base and factor
+57907-57908	COUNTER	Token buy curve sum and iteration
+57909-57910	PRICE	Fixed token curve base and factor
+57911-57916	COUNTER	Token sale/buy integrals and iteration
+57917	PRICE	Duplicated minimum spawn charge
+57918-57919	COUNTER	Skill cost/revenue defaults
+57920-57923	TUNING	Marketplace history/list/rating/task page defaults; offsets are indices
+57924-57927	COUNTER	Fund strategy scores and spend totals
+57928	PRICE	Agent token fee
+57929-57933	COUNTER	On-chain account index sentinels, iteration and balance initializer

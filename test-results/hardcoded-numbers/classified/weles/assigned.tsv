@@ -1,0 +1,46 @@
+assigned_lines	class	note
+58481	COUNTER	Benchmark task parser depth
+58482	PROTOCOL	Qualification failure status
+58483	COUNTER	CLI value iteration
+58484	PROTOCOL	HTTP internal-error status
+58485	COUNTER	Fixture body size
+58486	LAYOUT	Comparison rounding scale
+58487	PROTOCOL	Median quantile
+58488	LAYOUT	Metric rounding scale
+58489	COUNTER	Runner work index
+58490	LAYOUT	Elapsed time rounding
+58491	TUNING	Runner detail excerpt
+58492-58493	PROTOCOL	Example HTTP unauthorized/not-found statuses
+58494-58495	COUNTER	Client input byte totals
+58496-58501	TUNING	Numeric-named credential constants conceal meaning; consumer review required to separate bounds from encoding or counters
+58502-58503	PROTOCOL	Credential test failure statuses
+58504-58509	LAYOUT	Approval columns, row geometry and short ID display
+58510-58513	TUNING	Desktop diagnostic, file enumeration and contract payload/value caps
+58514	LAYOUT	Short run ID display
+58515-58516	PROTOCOL	FNV hash constants
+58517	SCHEMA	Local identifier bit width
+58518	PROTOCOL	DNS hostname presentation bound
+58519	TUNING	Attention-run display count
+58520	NOT	Disabled claims explanation string
+58521-58522	TUNING	Checkout ancestor traversal depths
+58523	COUNTER	Refresh generation
+58524-58525	SCHEMA	Release automatic-restart and hardened-runtime flags
+58526-58530	TUNING	Landing title, sitemap priorities and documentation file limit; operator file policy must remain intact
+58531	TUNING	JSON disclosure excerpt
+58532	SCHEMA	Dynamic rendering cache-disabled setting
+58533	TUNING	Home result page size
+58534-58554	SCHEMA	Dynamic API cache-disabled settings
+58555-58556	TUNING	Verdict result count and cache duration
+58557-58558	SCHEMA	Dynamic rendering cache-disabled settings
+58559-58560	COUNTER	Keeper outcome and cost totals
+58561-58562	SCHEMA	Dynamic rendering cache-disabled settings
+58563-58566	COUNTER	Home aggregate counters
+58567-58568	SCHEMA	Dynamic rendering cache-disabled settings
+58569-58570	COUNTER	Routine outcome/action totals
+58571	SCHEMA	Dynamic rendering cache-disabled setting
+58572-58573	COUNTER	Routine platform/action totals
+58574-58575	SCHEMA	Dynamic rendering cache-disabled settings
+58576-58579	COUNTER	Stats and testing totals
+58580	SCHEMA	Dynamic rendering cache-disabled setting
+58581	COUNTER	Receipt transition iteration
+58582-58583	TUNING	Organization slug bounds

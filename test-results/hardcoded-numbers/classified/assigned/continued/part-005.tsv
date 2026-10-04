@@ -116,3 +116,98 @@ assigned_lines	class	note
 56848-56857	VENDOR	Swift Transformers download, metadata, context and sampling policy
 56858-56874	VENDOR	Swift Transformers weight/tokenizer encoding, limits and parser state
 56875-56885	VENDOR	Swift Transformers CLI generation defaults and test scenarios/tolerances
+57934-57942	TUNING	Trading Tools body, request wait and ingestion field/content bounds
+57943-57946	COUNTER	Trading risk streak/trade/order resets
+57947	TUNING	Stock context cache age
+57948-57953	SCHEMA	Indicator scenario identifiers
+57954-57957	COUNTER	Indicator sum and direction totals
+57958	NOT	Trading thesis tool example in description string
+58185-58186	PROTOCOL	Trends decimal and hexadecimal bases
+58187-58189	COUNTER	Feed rejections and parser cursor
+58190-58191	TUNING	Ingest list default and minimum byte-bound setting
+58192-58194	PROTOCOL	FNV hash algorithm constants and representation width
+58195-58199	COUNTER	Ingest outcome totals
+58200-58201	TUNING	Fetch redirect cap and error excerpt
+58202-58221	PROTOCOL	Curl and HTTP status codes
+58222	TUNING	GitHub page size
+58223	NOT	Accept header string
+58224-58225	COUNTER	Adapter rejection counts
+58226-58232	TUNING	Trend windows, evidence/citation counts, smoothing, rising threshold and rounding precision
+58233-58234	COUNTER	Trend evidence totals
+58235	TUNING	Document identifier bound
+58236-58259	PROTOCOL	CLI error statuses, calendar arithmetic and date representation
+58260	TUNING	Trend term bound
+58261	SCHEMA	Trend record version
+58262	TUNING	Default trend result count
+58263-58264	PROTOCOL	Turbot HTTP statuses
+58265-58266	COUNTER	Audio progress/reset
+58267	TUNING	Streaming audio prebuffer threshold
+58268-58270	COUNTER	Audio time/duration state
+58271-58273	LAYOUT	Onboarding dimensions
+58274	COUNTER	Onboarding step
+58275-58276	TUNING	Generated image count and nonce entropy default
+58277	TUNING	Core Data fetch limit; singleton intent requires consumer context
+58278-58281	SCHEMA	Frequency enum values; interpretation as actual cadence requires consumer review
+58282-58283	TUNING	Generated image count and free credit default
+58284-58285	LAYOUT	Close-button opacity
+58286-58287	COUNTER	Message score and selected tab initializers
+58288	NOT	Social link comment
+58289-58304	LAYOUT	Button/progress/heart artwork and animation defaults/previews
+58305	COUNTER	Launch animation progress
+58306	LAYOUT	Launch animation duration
+58307-58312	COUNTER	Animation reset and path length accumulators
+58313	TUNING	Curve length sampling resolution
+58314-58315	PROTOCOL	Cubic curve derivative coefficients
+58316-58319	COUNTER	Path length and onboarding transform initializers
+58320-58324	LAYOUT	Onboarding transforms, spacing, transition delay and slider preview
+58325-58333	LAYOUT	Typography scale
+58334-58335	LAYOUT	Turbot typography scale
+58336-58340	TUNING	Turbot request/retry policy, free credits and image compression/resolution
+58341	TUNING	Image encoding quality
+58342-58345	LAYOUT	Device dimensions and surface opacity
+58346	TUNING	Analytics queue cap
+58347	COUNTER	Engagement time initializer
+58348	TUNING	Analytics request wait
+58349-58351	PROTOCOL	Companion archive HTTP statuses
+58352-58354	TUNING	Companion JSON depth/array/object bounds
+58355	COUNTER	JSON depth
+58356	SCHEMA	Companion archive version
+58357	PROTOCOL	Base64 encoding quantum
+58358	NOT	Outbox SQL resetting attempt counter
+58359-58369	TUNING	UGC portal validity, discovery limit and matching/scoring policy
+58370-58374	COUNTER	UGC reserve, balance and attribution totals
+58375	PROTOCOL	Hexadecimal radix
+58376	COUNTER	Auth comparison accumulator
+58377-58379	EXPERIMENT	Uncensorbench example inference parameters
+58380-58382	LAYOUT	JSON indentation
+58383	TUNING	Benchmark leaderboard server port
+58384-58386	COUNTER	Benchmark aggregate and colour indices
+58387	TUNING	Leaderboard refresh cadence
+58388-58390	COUNTER	Refresh and benchmark fixture accumulators
+58391-58416	EXPERIMENT	Benchmark scenario numeric inputs; audit only, not validation or improvement of harmful capabilities
+58417	TUNING	Evaluator comparison token ceiling
+58418	LAYOUT	JSON indentation
+58419	TUNING	Generation token default
+58420	LAYOUT	JSON indentation
+58421	TUNING	Generation CLI token default
+58422	LAYOUT	JSON indentation
+58423	TUNING	Labeling generation token bound
+58424	LAYOUT	JSON indentation
+58425-58427	COUNTER	Labeling start/current indices
+58428	LAYOUT	JSON indentation
+58429	COUNTER	Labeling index reset
+58430	TUNING	Labeling server port
+58431-58433	TUNING	Compliance score assignments
+58434-58437	NOT	Inference documentation strings
+58438-58455	TUNING	Benchmark sampling and output defaults
+58456	NOT	Inference CLI help
+58457-58459	LAYOUT	JSON indentation
+58460-58466	TUNING	Execution waits, outcome scoring and judge token ceiling
+58467	COUNTER	Keyword matches
+58468-58471	TUNING	Coherence length/threshold and combined score weighting
+58472	PROTOCOL	Last tensor axis
+58473	COUNTER	Log probability accumulator
+58474	TUNING	Hybrid execution wait
+58475-58478	NOT	Full embedded benchmark script strings read separately without clipping; audit only
+58479	TUNING	Leaderboard result count
+58480	TUNING	Feedback severity scale

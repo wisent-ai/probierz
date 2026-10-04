@@ -1,0 +1,64 @@
+assigned_lines	class	note
+57959-57960	COUNTER	Autolabel failure/no-text totals
+57961	TUNING	Brama answer token bound
+57962-57965	COUNTER	CLI parsing and wrapping positions
+57966	NOT	JSON formatting comment
+57967-57968	LAYOUT	CLI help dimensions
+57969	COUNTER	Argument index
+57970-57971	TUNING	Humanizer preparation/audit concurrency
+57972-57973	SCHEMA	Corpus bundle and registry versions
+57974-57980	TUNING	Discovery sample/chunk/text/output/aspect/evidence limits
+57981-57983	COUNTER	Discovery outcome totals
+57984	TUNING	Goal word/character bounds
+57985-57986	COUNTER	Held-out sample totals
+57987-57989	TUNING	Goal generation/audit concurrency and text bounds
+57990	NOT	SQL first-ranked record selection
+57991	COUNTER	GUI parser index
+57992	NOT	Stratified split seed compatibility comment
+57993-57994	COUNTER	Evaluation correct/seen totals
+57995-58000	TUNING	Class minimum, inference batch, seed, clipping, decay and normalization defaults
+58001-58002	COUNTER	Training step totals
+58003-58004	TUNING	Per-session sampling and overfetch multiplier
+58005	SCHEMA	Humanizer report version
+58006-58009	TUNING	Rewrite text/line bounds, length-ratio gates and TLD recognition heuristic
+58010	COUNTER	Anchor parser index
+58011-58018	TUNING	Audit reporting cadence, judge token bound and qualification metrics
+58019	PROTOCOL	Normalized metric range
+58020-58030	TUNING	Call attempts/excerpts, teacher/reviewer output, split/evaluation policy and corpus text cap
+58031	SCHEMA	Dataset bundle version
+58032-58036	COUNTER	Lifecycle audit/review totals
+58037	TUNING	Lifecycle inference concurrency
+58038	NOT	Optimizer compatibility comment
+58039-58045	TUNING	Regularization, convergence, L-BFGS memory and line-search parameters
+58046-58047	COUNTER	Optimization iteration/best index
+58048-58049	TUNING	Training and cross-validation sample requirements
+58050-58051	COUNTER	Skipped sample totals
+58052-58053	NOT	Vectorizer compatibility comments
+58054-58056	TUNING	Ngram and document-frequency settings
+58057-58058	COUNTER	Token length/reset
+58059	NOT	Cross-validation seed compatibility comment
+58060	TUNING	Cross-validation seed
+58061	COUNTER	Fold count initializer
+58062-58063	TUNING	Onboarding walkthrough and step caps
+58064	COUNTER	Release byte total
+58065-58067	PROTOCOL	Publication test outcome exit statuses
+58068	LAYOUT	Manifest JSON indentation
+58069-58074	TUNING	Goal training seed, batches, accumulation, warmup and logging settings
+58075	COUNTER	Exact match count
+58076	TUNING	Goal evaluation token ceiling
+58077-58078	LAYOUT	Metrics/manifest JSON indentation
+58079-58083	TUNING	Humanizer seed, ngram metric and adapter hyperparameters
+58084-58089	TUNING	Humanizer training batches, accumulation, warmup, logging and checkpoint retention
+58090	LAYOUT	Metrics JSON indentation
+58091-58092	TUNING	Curriculum evaluation minimum and wrong-rate gate
+58093-58095	LAYOUT	Curriculum report JSON indentation
+58096	TUNING	Audit batch default
+58097	COUNTER	Curriculum cursor
+58098-58100	TUNING	Curriculum family sampling, seed and augmentation cap
+58101	COUNTER	Augmented goal total
+58102-58105	TUNING	Host evaluator health/request/process waits
+58106	LAYOUT	Metrics JSON indentation
+58107	TUNING	Lifecycle training seed
+58108	LAYOUT	Manifest JSON indentation
+58109-58115	TUNING	Lifecycle batches, accumulation, warmup, logging, checkpoints and evaluation generation ceiling
+58116	LAYOUT	Metrics JSON indentation
