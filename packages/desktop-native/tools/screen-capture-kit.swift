@@ -62,6 +62,9 @@ private final class WindowRecorder: NSObject, SCStreamOutput, @unchecked Sendabl
     private var stopping = false
     private(set) var frameCount = 0
 
+    /// The window's own size; frame rate, queue depth, bit rate and key-frame
+    /// spacing are left to ScreenCaptureKit and AVFoundation, which know the
+    /// display and the encoder, instead of numbers chosen here.
     init(output: URL, width: Int, height: Int) throws {
         try? FileManager.default.removeItem(at: output)
         writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
@@ -71,11 +74,6 @@ private final class WindowRecorder: NSObject, SCStreamOutput, @unchecked Sendabl
                 AVVideoCodecKey: AVVideoCodecType.h264,
                 AVVideoWidthKey: width,
                 AVVideoHeightKey: height,
-                AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: max(2_000_000, width * height * 4),
-                    AVVideoExpectedSourceFrameRateKey: 30,
-                    AVVideoMaxKeyFrameIntervalKey: 60,
-                ],
             ]
         )
         input.expectsMediaDataInRealTime = true
@@ -89,8 +87,6 @@ private final class WindowRecorder: NSObject, SCStreamOutput, @unchecked Sendabl
         let configuration = SCStreamConfiguration()
         configuration.width = width.isMultiple(of: 2) ? width : width + 1
         configuration.height = height.isMultiple(of: 2) ? height : height + 1
-        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 30)
-        configuration.queueDepth = 6
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.showsCursor = false
         configuration.capturesAudio = false
