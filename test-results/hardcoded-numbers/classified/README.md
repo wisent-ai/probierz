@@ -93,6 +93,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
 | growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
+| wisent-app | web analytics `MAX_QUEUE_SIZE = 100` | 09bbc1b5 |
 | wisent-app | generation defaults, silent clamps, waits, thresholds, server port | Oko defect 2f95d07c |
 | OpenEnv | benchmark rounds, thresholds, fallbacks, training settings, server port | Oko defect dcbdb704 |
 | backends | scratch and research scripts outside any product | Oko defect 51273293 |
@@ -108,6 +109,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-backend | inference, notification, relationship and messaging policy, waits, previews, zero fallbacks | Oko defect 47a53330 |
 | wisent-backend-mlx-local-fork | ports, inference defaults, model ids, waits, zero fallbacks | Oko defect cdc747b5 |
 | wisent-ios | `maxDiagnosticLength = 300` | a051d854 |
+| wisent-ios, turbot-ios, oko-ios | analytics `maxQueuedPayloads = 200` (defect d6df8d4d recorded and repaired for oko-ios) | wisent-ios 92f8a524; turbot-ios 8acebec0; oko-ios c883f44e |
 | wisent-ios | tokenizer ids, bounds, waits, progress steps, speech and diffusion settings | Oko defect 031b301b |
 | wisent-android | quotas, page sizes, waits, field bounds | Oko defect 446e06e4 |
 | wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
