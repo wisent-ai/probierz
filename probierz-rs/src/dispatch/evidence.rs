@@ -57,28 +57,18 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             app_id.as_deref(),
             run_id.as_deref(),
             action.as_deref(),
-            &limit,
+            limit.as_deref(),
         ),
         EvidenceCommand::Compare {
             left_run_id,
             right_run_id,
             app_id,
-        } => evidence::compare(
-            harness,
-            Some(&left_run_id),
-            Some(&right_run_id),
-            &app_id,
-        ),
+        } => evidence::compare(harness, Some(&left_run_id), Some(&right_run_id), &app_id),
         EvidenceCommand::LastGreen {
             app_id,
             target,
             journey,
-        } => evidence::last_green(
-            harness,
-            &app_id,
-            target.as_deref(),
-            journey.as_deref(),
-        ),
+        } => evidence::last_green(harness, &app_id, target.as_deref(), journey.as_deref()),
         EvidenceCommand::Receipt {
             app_id,
             release,

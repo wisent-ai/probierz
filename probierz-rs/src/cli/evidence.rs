@@ -66,9 +66,9 @@ pub enum EvidenceCommand {
         /// Only records of this action, for example `artifact.protect`.
         #[arg(long)]
         action: Option<String>,
-        /// Most records to print; a positive number.
-        #[arg(long, default_value = "200")]
-        limit: String,
+        /// Newest records to print, a positive number; every record when omitted.
+        #[arg(long)]
+        limit: Option<String>,
     },
     /// Compare two recorded runs.
     Compare {

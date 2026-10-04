@@ -14,7 +14,12 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             app_id,
             target,
             limit,
-        } => status::history(harness, &app_id, target.as_deref(), limit),
+        } => status::history(
+            harness,
+            &app_id,
+            target.as_deref(),
+            limit.unwrap_or(usize::MAX),
+        ),
         ReportingCommand::Dashboard { app_id, limit } => {
             status::dashboard(harness, &app_id, dashboard_limit(limit.as_deref()))
         }
@@ -38,7 +43,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             service,
             limit,
             json,
-        } => status::failures(service.as_deref(), limit, json),
+        } => status::failures(service.as_deref(), limit.unwrap_or(usize::MAX), json),
         ReportingCommand::Incident { command } => incidents::dispatch(harness, command),
         ReportingCommand::Benchmark { command } => crate::benchmark::dispatch(harness, command),
         // PortGate: merge and release gates

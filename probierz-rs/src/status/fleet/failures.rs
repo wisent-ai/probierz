@@ -154,11 +154,6 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     })
 }
 
-pub(crate) fn trim_detail(text: &str, limit: usize) -> String {
-    let value = text.trim();
-    value.chars().take(limit).collect()
-}
-
 pub(crate) fn render_failures(report: &Value) -> String {
     let mut lines = vec![
         format!(
@@ -199,7 +194,7 @@ pub(crate) fn render_failures(report: &Value) -> String {
     }
     for envelope in newest {
         let detail = string(envelope.get("detail"))
-            .map(|detail| format!("  {}", trim_detail(detail, 160)))
+            .map(|detail| format!("  {}", detail.trim()))
             .unwrap_or_default();
         lines.push(format!(
             "  {}  {}  {}  {}{}",

@@ -51,14 +51,12 @@ pub(crate) fn repair_brief(
                 .filter_map(YamlValue::as_str)
         })
         .collect::<Vec<_>>();
-    let spec = recorded_spec_path(harness, run)
-        .and_then(|path| fs::read_to_string(path).ok())
-        .map(|value| value.chars().take(12_000).collect::<String>());
+    let spec = recorded_spec_path(harness, run).and_then(|path| fs::read_to_string(path).ok());
     let green = crate::status::run_history_value(
         harness,
         app_id,
         run.get("target").and_then(JsonValue::as_str),
-        100,
+        usize::MAX,
     )
     .ok()
     .and_then(|history| {
@@ -134,4 +132,3 @@ pub(crate) fn repair_brief(
     ]);
     sections.join("\n\n")
 }
-

@@ -80,8 +80,9 @@ pub enum IncidentCommand {
         /// Which incidents to print: open, resolved or all.
         #[arg(long)]
         state: String,
-        #[arg(long, default_value_t = 20, value_parser = crate::cli::reporting::positive_history_limit)]
-        limit: usize,
+        /// Newest incidents to print; every incident when omitted.
+        #[arg(long, value_parser = crate::cli::reporting::positive_history_limit)]
+        limit: Option<usize>,
         #[arg(long)]
         json: bool,
     },
@@ -136,7 +137,7 @@ pub fn dispatch(harness: &Path, command: IncidentCommand) -> Answer {
             json,
         ),
         IncidentCommand::List { state, limit, json } => {
-            commands::list(harness, &state, limit, json)
+            commands::list(harness, &state, limit.unwrap_or(usize::MAX), json)
         }
         IncidentCommand::Show { id, json } => commands::show(harness, &id, json),
         IncidentCommand::Resolve {

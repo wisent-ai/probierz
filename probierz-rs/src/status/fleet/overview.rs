@@ -42,7 +42,7 @@ pub(crate) fn violations_for(root: &str) -> Value {
 
 pub(crate) fn fleet_failure(point: &str, code: &str, detail: &str, message: &str) -> Value {
     let (severity, retryable, outage) = code_meaning(code);
-    let detail = trim_detail(detail, 300);
+    let detail = detail.trim();
     eprintln!(
         "probierz-failure {}",
         json!({

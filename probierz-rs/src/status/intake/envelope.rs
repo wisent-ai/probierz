@@ -89,7 +89,7 @@ pub(crate) fn failure_envelope(code: &str, detail: &str) -> Value {
         "severity": severity,
         "retryable": retryable,
         "outage": outage,
-        "detail": trim_detail(detail, 2000),
+        "detail": detail.trim(),
     })
 }
 

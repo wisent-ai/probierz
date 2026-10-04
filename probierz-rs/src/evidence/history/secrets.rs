@@ -1,21 +1,27 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn audit(
     harness: &Path,
     app_id: Option<&str>,
     run_id: Option<&str>,
     action: Option<&str>,
-    limit: &str,
+    limit: Option<&str>,
 ) -> Answer {
-    let parsed = limit
-        .parse::<f64>()
-        .map_err(|_| Failure::invalid("evidence.audit", "--limit needs a positive number"))?;
-    if !parsed.is_finite() || parsed <= 0.0 {
-        return Err(Failure::invalid(
-            "evidence.audit",
-            "--limit needs a positive number",
-        ));
-    }
+    let parsed = match limit {
+        Some(limit) => {
+            let parsed = limit.parse::<f64>().map_err(|_| {
+                Failure::invalid("evidence.audit", "--limit needs a positive number")
+            })?;
+            if !parsed.is_finite() || parsed <= 0.0 {
+                return Err(Failure::invalid(
+                    "evidence.audit",
+                    "--limit needs a positive number",
+                ));
+            }
+            Some((parsed as usize).max(1))
+        }
+        None => None,
+    };
     let mut records = Vec::new();
     for file in audit_files(&harness.join("test-results").join(".audit"))? {
         match json_file(&file) {
@@ -55,7 +61,9 @@ pub fn audit(
             .cmp(left.get("at").and_then(Value::as_str).unwrap_or_default())
     });
     let total = records.len();
-    records.truncate((parsed as usize).max(1));
+    if let Some(parsed) = parsed {
+        records.truncate(parsed);
+    }
     let valid = records
         .iter()
         .filter(|record| record.get("valid").and_then(Value::as_bool) == Some(true))
@@ -241,4 +249,3 @@ pub(crate) fn assert_no_secrets(root: &Path) -> Result<Value, Failure> {
     }
     Ok(result)
 }
-

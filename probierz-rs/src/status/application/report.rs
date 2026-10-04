@@ -14,7 +14,7 @@ pub(crate) fn app_status_value(
 ) -> Result<Value, Failure> {
     let base_ref = base_ref.unwrap_or(TRACKED_UPSTREAM);
     let (loaded, document) = manifest_object(harness, app_id)?;
-    let history = run_history_value(harness, app_id, None, 1000)?;
+    let history = run_history_value(harness, app_id, None, usize::MAX)?;
     let gates = gate_status(&loaded, app_id)?;
     let mut repositories = Vec::new();
     let mut diff_files = Vec::new();
@@ -35,7 +35,8 @@ pub(crate) fn app_status_value(
                     .map(|file| Path::new(root).join(file)),
             );
         }
-        repositories.push(json!({ "root": root, "headSha": head, "baseRef": base_ref, "baseSha": base }));
+        repositories
+            .push(json!({ "root": root, "headSha": head, "baseRef": base_ref, "baseSha": base }));
     }
     let affected = affected_journeys(harness, &diff_files)?;
     let runs = history
@@ -248,7 +249,12 @@ pub(crate) fn render_app_status(status: &Value) -> String {
     lines.join("\n")
 }
 
-pub fn status(harness: &Path, app_id: &str, base_ref: Option<&str>, text: bool) -> Result<bool, Failure> {
+pub fn status(
+    harness: &Path,
+    app_id: &str,
+    base_ref: Option<&str>,
+    text: bool,
+) -> Result<bool, Failure> {
     let report = app_status_value(harness, app_id, base_ref)?;
     let eligible = report
         .pointer("/mergeEligibility/eligible")

@@ -19,8 +19,9 @@ pub enum ReportingCommand {
         /// Only runs on this target.
         #[arg(long)]
         target: Option<String>,
-        #[arg(long, default_value_t = 50, value_parser = positive_history_limit)]
-        limit: usize,
+        /// Newest runs to read; every run when omitted.
+        #[arg(long, value_parser = positive_history_limit)]
+        limit: Option<usize>,
     },
     /// Product/version/journey evidence projection.
     Dashboard {
@@ -60,8 +61,9 @@ pub enum ReportingCommand {
     Failures {
         #[arg(long)]
         service: Option<String>,
-        #[arg(long, default_value_t = 10)]
-        limit: usize,
+        /// Newest envelopes to print; every envelope when omitted.
+        #[arg(long)]
+        limit: Option<usize>,
         #[arg(long)]
         json: bool,
     },
@@ -184,10 +186,11 @@ pub fn positive_history_limit(value: &str) -> Result<usize, String> {
     Ok((parsed.floor() as usize).max(1))
 }
 
+/// The dashboard's run limit: every run unless a positive limit is given.
 pub fn dashboard_limit(value: Option<&str>) -> usize {
     value
         .and_then(|value| value.parse::<f64>().ok())
         .filter(|value| value.is_finite() && *value != 0.0)
         .map(|value| value.max(1.0).floor() as usize)
-        .unwrap_or(500)
+        .unwrap_or(usize::MAX)
 }
