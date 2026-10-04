@@ -127,6 +127,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-ios | speech log excerpts `text.prefix(50)` (six lines now log the character count) | 80e7ec52 |
 | wisent-ios | chats stream log `prefix(5)` with 30 characters of message text, control vector preview `prefix(500)`, speech test logs `prefix(50)`, NeuTTS phonemes `prefix(100)`, room message id `prefix(8)` | 13d58dbd; a48b44a4 |
 | wisent-ios | tokenizer ids, bounds, waits, progress steps, speech and diffusion settings | Oko defect 031b301b |
+| wisent-android | companion suggestions `take(3)`, chat list preview `take(100)`, send log `text.take(20)`; defect f0a6e552 recorded and repaired | d4c8f8ea |
 | wisent-android | quotas, page sizes, waits, field bounds | Oko defect 446e06e4 |
 | wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
 | wisent-evaluators | thresholds, weights, waits, zero confidence fallbacks | Oko defect 219e8f3f |
