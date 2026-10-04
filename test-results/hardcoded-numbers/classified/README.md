@@ -174,6 +174,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | echo-desktop | `maximumEntries = 10_000`, `defaultLimit = 200`, `maxLogs`, `maxErrorsPerKey`, `maxChatEvents`, `errorBodyPrefix = 500` | aa77397f |
 | echo, echo-web, echo-desktop | windows, onboarding caps, durations, tolerance, volumes | Oko defect dc2e1d6e |
 | byk-desktop | `oneLine(limit: 90)` | c68c43aa |
+| byk-ios, byk-desktop | analytics `maxQueuedPayloads = 200`, error bodies cut to 200 and 160 | byk-ios b5e6e508; byk-desktop 5ea7c602 |
 | byk-desktop, byk-ios | waits, queue, revision bound, code length | Oko defect b0d3f955 |
 | deep-analytics | `clean(value, maxLength)` cuts of 24-1,000 characters at 71 call sites, `MAX_DECODED_HTML_CHARS`, `MAX_KEYWORD_CHARS = 180`, `MAX_REGION_CHARS = 24`, error excerpts 300/500 | a082f568 |
 | deep-analytics, competitor-research | bandit and graduation policy, text cuts, page sizes | Oko defect 3f41319f |
