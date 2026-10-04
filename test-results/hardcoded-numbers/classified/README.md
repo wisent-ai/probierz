@@ -32,6 +32,15 @@ These are partial review records, not proof that the entire assignment list has 
 | weles | Oxylabs `GB_PRICE = 9` | 3adc46c6 |
 | weles | Pangram `walkJson` stopped at 20 000 result files | ada966c5 |
 | jeden | search walk stopped at `MAX_SEARCH_FILES = 20_000` | 305bef4 |
+| brama | `LOG_TAIL = 60` lines of the unit log; diagnosis reads the boot attempt from the launcher's first line | e14e614b |
+| brama | `LARGE_MODEL_VRAM_GB = 24`, `SMALL_MODEL_VRAM_GB = 8` and the model recommendation they chose | e14e614b |
+| brama | `MAX_KEY_BYTES = 4096`; the bound is the longest valid key | e14e614b |
+| brama | `ERROR_PREVIEW_CHARS = 512`, `EVIDENCE_CHARACTERS = 200`, `RESPONSE_EXCERPT_CHARS = 300`, task-quality output cut at 1500 | e14e614b |
+| brama | `MAX_QUALITY_MODELS = 25`; the operator's `--max-models` is the count | e14e614b |
+| brama | `MAX_MODEL_ID_BYTES = 512`, `MAX_PROVIDER_ID_BYTES = 128` (two copies), `MAX_PATH_SEGMENT_BYTES = 128` | e14e614b |
+| brama | `DEFAULT_TTL_SECONDS = 900`; `BRAMA_MODEL_CATALOG_TTL_SECONDS` or the process lifetime | e14e614b |
+| brama | `DEFAULT_WORKLOAD_UID/GID = 10001`; the caller's account | e14e614b |
+| brama | refresh margin, plan-usage jitter, HMAC window, grant lifetime/uses/rate: need the operator's value | Oko defect 39fa606b |
 
 ## The 10 000-file cleanup cap
 
