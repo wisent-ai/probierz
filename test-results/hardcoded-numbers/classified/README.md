@@ -144,6 +144,39 @@ These are partial review records, not proof that the entire assignment list has 
 | wisent-supabase-wisent-app | sync batch bound | Oko defect 9a3f7ffd |
 | wisent-node | inference scale default | Oko defect d2f793af |
 | wisent-ground-truth-api | extractive source count | Oko defect d0f380ac |
+| singularity | `MAX_ERROR_EXCERPT_CHARS = 800` (Brama and Most), `MAX_AGENT_ID_BYTES = 128` | 5d67aee9 |
+| singularity-desktop | `shownActivityLimit = 250`, `retainedActivityLines = 2_000` | c3e083ea |
+| singularity | bounds, lifetimes, retention, page size, import cap; Desktop recent rows | Oko defect 002f391e |
+| trends | `observations` `DEFAULT_LIST_LIMIT = 50` (optional `--limit`), `SNIPPET_CHARS = 200` | 56fd7342 |
+| trends | ingest per-source cap, fetch bounds, detection settings | Oko defect 890d3f0b |
+| quality-control | `SOURCE_EXCERPT_LIMIT = 160`, `DETAIL_EXCERPT_LIMIT = 32` | f75b8422 |
+| quality-control | gate windows, duplicated file limit | Oko defect 4cf2b319 |
+| pursuit, product-guidelines | preference limit, rounds, attempts, sentence minimum | Oko defect 777698aa |
+| rachuba | tax rules in code | Oko defect 627c1ef9 |
+| research | quality targets, delays, inference settings | Oko defect a4d638c8 |
+| trading-tools | body limit, waits, cache age | Oko defect 85948b57 |
+| turbot-ios, turbot-web | waits, credits, counts, queue, archive bounds | Oko defect 135d0fa7 |
+| ugc-cli | portal validity, discovery, matching | Oko defect 0c7ff063 |
+| uncensorbench | ports, scoring, sampling | Oko defect 53a5a13b |
+| wisent-1b, wisent-agent | model settings, zero metrics | Oko defect 74c127fb |
+| wisent-backend-images | detail cut (Python, edit refused), waits, generation bounds, port | Oko defect 8010b87f |
+| wisent-backend-test-day | bounds, lifetimes, cadence, token length | Oko defect e13e5b66 |
+| competitor-research | `ERROR_EXCERPT_LENGTH = 300` | 6479ddf6 |
+| people-rotator | `ERROR_DETAIL_LIMIT = 300` | 7acfd5ae |
+| people-rotator, patent-cli | id length, patent guidelines and deadlines | Oko defect d212ee6a |
+| compute.wisent.com | failure `MAX_DETAIL_CHARS = 300` | 67ec8906 |
+| compute.wisent.com | prices, hardware, ports, security parameters, cadences | Oko defect 5a051a49 |
+| codespy | `SHOWN_LINE_CHARS = 80` | a39e9439 |
+| codespy | scoring weights, file-size ceiling | Oko defect fa8f1c10 |
+| echo | `DEFAULT_LIMIT = 200`, `MAX_LOGS = 5000`, `MAX_ERRORS = 10`, `MAX_CHAT_EVENTS = 5000` (every read now pages to the exact count) | fbabc0b0; docs echo-landing f9741bed |
+| echo-desktop | `maximumEntries = 10_000`, `defaultLimit = 200`, `maxLogs`, `maxErrorsPerKey`, `maxChatEvents`, `errorBodyPrefix = 500` | aa77397f |
+| echo, echo-web, echo-desktop | windows, onboarding caps, durations, tolerance, volumes | Oko defect dc2e1d6e |
+| byk-desktop | `oneLine(limit: 90)` | c68c43aa |
+| byk-desktop, byk-ios | waits, queue, revision bound, code length | Oko defect b0d3f955 |
+| deep-analytics, competitor-research | bandit and graduation policy, text cuts, page sizes | Oko defect 3f41319f |
+| handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
+| creator-portal | recent submissions, code length | Oko defect 18fb6ae7 |
+| film, grant-cli, cntrlai, iskra | provider tiers, frames, training and evaluation settings | Oko defect eec9b5b4 |
 
 ## The 10 000-file cleanup cap
 
