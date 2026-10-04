@@ -44,3 +44,228 @@ assigned_lines	class	note
 58580	SCHEMA	Dynamic rendering cache-disabled setting
 58581	COUNTER	Receipt transition iteration
 58582-58583	TUNING	Organization slug bounds
+58584	COUNTER	Zero initializer alias; consumer determines exact role
+58585	TUNING	Failure detail excerpt
+58586	COUNTER	No-results count
+58587-58588	TUNING	Public task field and diff text bounds
+58589	COUNTER	Vector count
+58590-58591	TUNING	Verdict run cap and concluded-run minimum
+58592-58596	COUNTER	Verdict/import totals and capture index
+58597-58598	TUNING	Capture file summary cap and query batch size
+58599	COUNTER	Capture query iteration
+58600	PROTOCOL	Security test failure status
+58601-58602	COUNTER	Benchmark depth and fixture body size
+58603-58604	PROTOCOL	Release failure statuses
+58605-58615	COUNTER	Release admission flags and command outcome state
+58616	TUNING	Checkout interaction attempt cap
+58617	COUNTER	Checkout save iteration
+58618-58620	TUNING	Checkout and account interaction caps
+58621	COUNTER	Interactive descriptor iteration
+58622-58625	TUNING	Withheld evidence text/count/line bounds and discovery depth
+58626-58628	COUNTER	Discovery/agent step indices
+58629	NOT	Response recording comment
+58630-58631	NOT	Full browser instrumentation script strings read separately; embedded diagnostic excerpts remain policy, not counters
+58632-58633	NOT	Browser placement string and navigator compatibility comment
+58634-58648	COUNTER	Settling/overlap/attempt, storage/CDP/input/parser/frame/cookie and argument initializers
+58649	PROTOCOL	Diagnostic failure status
+58650	TUNING	Diagnostic traversal depth
+58651-58653	PROTOCOL	Operator/security failure/refusal statuses
+58654-58657	TUNING	Apple identity approval lifetime and certificate password entropy
+58658	PROTOCOL	Identity failure status
+58659-58660	TUNING	Apple login approval lifetime bounds
+58661-58663	PROTOCOL	Login/worker/workflow failure statuses
+58664-58667	COUNTER	Challenge check, fingerprint score and finding iteration
+58668-58671	EXPERIMENT	Fingerprint probe dimensions, audio parameters and sample counts; audit only
+58672-58676	COUNTER	Fingerprint hash/data/channel iteration and accumulators; embedded hash multiplier is algorithmic
+58677	TUNING	Fingerprint audio sample cap
+58678-58679	COUNTER	Window flag iteration and input movement timestamp
+58680	TUNING	Pointer recording sampling interval
+58681-58682	COUNTER	Version diagnostic totals
+58683-58684	PROTOCOL	Colour channel maximum and hex width
+58685-58686	LAYOUT	Figma alpha/length precision
+58687	COUNTER	No-items count
+58688	LAYOUT	Rounding precision default
+58689	LAYOUT	Pill corner radius representation
+58690	COUNTER	JSON parser position
+58691	LAYOUT	JSON indentation default
+58692	SCHEMA	Figma document version
+58693	LAYOUT	Vocabulary JSON indentation
+58694	SCHEMA	Required path cardinality
+58695	LAYOUT	Asset scale default
+58696	TUNING	Asset export batch size
+58697	NOT	Browser platform geometry comment
+58698	TUNING	Pointer jitter default; audit only
+58699	NOT	Browser placement comment
+58700-58701	TUNING	Scroll distance and burst defaults
+58702-58704	COUNTER	Pointer motion iteration
+58705	TUNING	Embedded selection ancestor traversal cap; other coordinates are geometric
+58706-58708	COUNTER	Embedded select/DOM iteration and not-found sentinel
+58709	TUNING	Selection interaction attempt cap
+58710	PROTOCOL	Keeper failure status
+58711-58713	COUNTER	Page event collection resets
+58714	TUNING	MCP event retention cap
+58715-58716	COUNTER	Browser/page ID sequences
+58717	TUNING	Operator request detail excerpt
+58718	PROTOCOL	Milliseconds per second
+58719	TUNING	Operator request result count
+58720-58726	COUNTER	Page instrumentation collection iteration and indices; audit only
+58727-58728	NOT	Navigator geometry/network comments
+58729	COUNTER	Navigator value initializer; consumer meaning requires review
+58730	TUNING	Platform probe vantage count; audit only
+58731	COUNTER	Probe iteration
+58732-58733	TUNING	Proxy state cache durations
+58734-58735	COUNTER	Proxy index and quality totals
+58736-58739	NOT	Proxy header strings and preflight comment
+58740	COUNTER	Proxy attempt index
+58741	SCHEMA	Version baseline component iteration
+58742-58745	COUNTER	Release command/tool/route totals and argument iteration
+58746	PROTOCOL	Seconds per minute
+58747	TUNING	Acquisition queue priority default
+58748-58749	COUNTER	Email scan/match totals
+58750	TUNING	Follow-up delay default; attempt initializer is a counter
+58751-58754	COUNTER	Secret return byte totals and session step iteration
+58755	NOT	Standalone placement message
+58756-58757	COUNTER	Target and capture overflow counts
+58758	NOT	Response-body recording comment
+58759	TUNING	Session stdout ring cap
+58760-58762	COUNTER	Fingerprint score, credential iteration and finalize count
+58763	NOT	Full embedded selection script read separately; includes description excerpt policy
+58764-58766	COUNTER	Network iteration, session step and proxy byte totals
+58767-58768	PROTOCOL	DJB2 seed and hash update
+58769-58770	NOT	Embedded page interaction scripts; full clipped frame script read separately; excerpt policy inside strings
+58771	COUNTER	Skipped secret records
+58772	PROTOCOL	Trajectory failure status
+58773-58775	TUNING	Analytics interaction counts and render-content minimum
+58776-58777	PROTOCOL	DJB2 seed and hash update
+58778	COUNTER	Observed scroll iteration
+58779-58780	PROTOCOL	Trajectory failure/unknown statuses
+58781	COUNTER	Checkpoint split initializer
+58782	TUNING	Checkpoint iteration count; provider form cardinality requires contract
+58783-58784	COUNTER	Frame/option iteration
+58785-58786	TUNING	Proxy provider weighting; audit only
+58787-58789	COUNTER	Proxy attempts and storage iteration
+58790	PROTOCOL	OAuth failure status
+58791	COUNTER	Quiet-frame count
+58792	TUNING	Capture video frame rate
+58793-58795	COUNTER	Written frames and scroll iteration
+58796-58799	TUNING	Provider TOTP period assumption, freshness margin and text excerpts
+58800	PROTOCOL	Base32 decoded byte iteration
+58801	COUNTER	Effective proxy count reset
+58802-58811	PROTOCOL	Trajectory exit statuses
+58812	TUNING	Apple report page excerpt
+58813	NOT	Apple mutation consent comment
+58814-58815	COUNTER	Argument iteration and submission polls
+58816	NOT	Staged-not-submitted status message
+58817	PROTOCOL	Submission failure status
+58818	NOT	App rename usage comment
+58819-58820	PROTOCOL	Input validation and certificate failure statuses; refusal string also includes flag value
+58821	TUNING	Review interaction count
+58822-58823	PROTOCOL	Login success/failure statuses
+58824	TUNING	Registration attempt cap
+58825	COUNTER	Registration attempt index
+58826-58827	PROTOCOL	Provider verification-code field cardinality
+58828	TUNING	Store review interaction count
+58829	PROTOCOL	Provider verification-code field cardinality
+58830	PROTOCOL	Provider balance failure status
+58831	TUNING	Provider zone setup attempt cap
+58832-58833	PROTOCOL	Provider balance failure statuses
+58834	COUNTER	Authorization redrive count
+58835	PROTOCOL	Base32 decoding representation
+58836	TUNING	TOTP digit/period defaults; embedded counter/HMAC arithmetic is algorithmic
+58837	COUNTER	Failure page iteration
+58838-58842	TUNING	SSO visibility/excerpt thresholds and attempt/step caps
+58843	PROTOCOL	Base32 byte iteration
+58844	TUNING	TOTP digit/period defaults
+58845	PROTOCOL	TOTP counter byte encoding
+58846	NOT	Purchase consent comment
+58847	TUNING	Provider signup step cap
+58848-58850	PROTOCOL	Trajectory failure statuses
+58851	COUNTER	Friend-request iteration; referenced acceptance bound is policy
+58852-58870	PROTOCOL	Discord and grant-portal trajectory outcome statuses
+58871-58872	COUNTER	Selector intersection and score initializers
+58873-58883	PROTOCOL	Trajectory failure statuses
+58884-58885	COUNTER	Audio play index and byte-writing iteration
+58886-58887	PROTOCOL	WAV header offset and PCM16 encoding
+58888	TUNING	Audio serialization chunk size
+58889	COUNTER	Challenge round index
+58890	TUNING	Challenge ancestor traversal cap
+58891-58896	COUNTER	Challenge round/navigation/score/submit state; full clipped row read separately, refusal exit is protocol
+58897	TUNING	Swipe sampling steps; audit only
+58898	COUNTER	Swipe step iteration
+58899-58906	PROTOCOL	GitHub operation and input refusal statuses
+58907-58909	NOT	Proxy mode status strings
+58910-58911	TUNING	GitHub login attempt/render caps
+58912-58914	PROTOCOL	Login failure statuses
+58915-58916	TUNING	Login step and OTP polling caps
+58917	COUNTER	Verification-code iteration
+58918-58920	PROTOCOL	Login failure statuses
+58921	TUNING	Password reset polling cap
+58922	PROTOCOL	Reset failure status
+58923-58925	TUNING	Registration attempt/step and OTP polling caps
+58926	COUNTER	Verification-code iteration
+58927-58929	PROTOCOL	Registration/star failure statuses
+58930-58932	COUNTER	Mail iteration and filled campaign fields
+58933	NOT	Staged campaign status string
+58934-58935	PROTOCOL	Ads access statuses
+58936	NOT	Planner authentication comment
+58937	COUNTER	Request body size
+58938-58941	TUNING	Keyword planner interaction caps
+58942	PROTOCOL	Default result success status
+58943	COUNTER	Planner score
+58944	COUNTER	Unshifted code time offset
+58945	TUNING	Authenticator activation login cap
+58946	PROTOCOL	Default result success status
+58947-58950	TUNING	Authenticator setup cap, sign-in rounds and diagnostic excerpts
+58951	COUNTER	Sign-in round index
+58952-58959	PROTOCOL	Authenticator enrollment/status outcomes
+58960	TUNING	Document creation interaction cap
+58961	COUNTER	History iteration
+58962	NOT	Staged Play release status string
+58963	TUNING	Registration phone acquisition cap
+58964	TUNING	Registration fixed iteration count; provider form semantics require review
+58965-58978	PROTOCOL	Registration and Instagram operation failure statuses
+58979	TUNING	Story-view idle iteration count
+58980	PROTOCOL	Story-view failure status
+58981	TUNING	Post interaction count
+58982-58984	PROTOCOL	Post/login failure statuses
+58985-58986	COUNTER	Phone/signup attempt indices
+58987-58988	TUNING	Signup polling/step caps
+58989-58991	PROTOCOL	Signup/provider failure statuses
+58992	COUNTER	Provider page number
+58993-58994	PROTOCOL	Provider failure statuses
+58995	COUNTER	Harvest attempt count
+58996-58998	TUNING	Harvest attempts/pages and signup wait caps
+58999	NOT	Secret-output permission comment
+59000-59001	PROTOCOL	API-key acquisition statuses
+59002	TUNING	Connection authentication attempts
+59003-59004	PROTOCOL	Connection/profile failure statuses
+59005	TUNING	Endorsement authentication attempts
+59006	PROTOCOL	Endorsement failure status
+59007-59008	TUNING	Message/like authentication attempts
+59009-59015	PROTOCOL	LinkedIn operation/login statuses
+59016	COUNTER	Proxy sample iteration
+59017	PROTOCOL	Proxy discovery refusal status
+59018	COUNTER	Proxy sample iteration
+59019	PROTOCOL	Proxy probe refusal status
+59020-59021	COUNTER	Browser storage iteration
+59022-59023	PROTOCOL	Signup outcomes
+59024-59025	TUNING	Signup diagnostic excerpts
+59026-59032	PROTOCOL	Meta account contact operation statuses
+59033-59035	NOT	Meta campaign staging and consent strings
+59036-59038	COUNTER	Filled campaign fields and argument iteration
+59039-59042	PROTOCOL	Ads access outcomes
+59043-59044	COUNTER	Campaign argument iteration and business score
+59045-59050	PROTOCOL	Meta business operation statuses
+59051	COUNTER	Business settings iteration
+59052-59056	PROTOCOL	Business settings/asset outcomes
+59057	COUNTER	App candidate score
+59058-59059	PROTOCOL	App creation probe outcomes
+59060	COUNTER	Business candidate score
+59061-59072	PROTOCOL	Business/developer/account outcomes
+59073-59074	TUNING	Threads registration interaction caps
+59075-59078	PROTOCOL	Registration and password operation failure statuses
+59079	TUNING	Password lifecycle resume-token entropy
+59080	PROTOCOL	Secret byte zeroing
+59081	TUNING	Authorized session attempt cap
+59082	COUNTER	Identity store iteration
+59083	TUNING	Generated password length

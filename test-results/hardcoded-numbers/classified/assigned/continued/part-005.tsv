@@ -211,3 +211,40 @@ assigned_lines	class	note
 58475-58478	NOT	Full embedded benchmark script strings read separately without clipping; audit only
 58479	TUNING	Leaderboard result count
 58480	TUNING	Feedback severity scale
+59438-59439	NOT	Wisent 1B control syntax documentation
+59440-59441	TUNING	Generation CLI token and sampling defaults
+59442	LAYOUT	Control JSON indentation
+59443-59461	TUNING	Training/logging defaults and model architecture/numerical parameters
+59462	LAYOUT	Config JSON indentation
+59463-59506	TUNING	Model preset dimensions, dropout, subspace and loss-weight settings
+59507	PROTOCOL	Cross-entropy ignored-label sentinel
+59508-59511	TUNING	Control perturbation, fitting rate and generation defaults
+59512-59515	PROTOCOL	Last tensor axis and single next-token selection
+59516	TUNING	Generation temperature default
+59517-59520	PROTOCOL	Last tensor axis and single next-token selection
+59521-59522	TUNING	Feed-forward expansion and dropout
+59523-59524	PROTOCOL	Causal mask diagonal and attention axis
+59525	TUNING	Feed-forward dropout
+59526-59528	PROTOCOL	Feature concatenation axis, KL coefficient and direction tensor rank
+59529	TUNING	Concept dropout
+59530-59534	PROTOCOL	Concept/token aggregation axes
+59535	TUNING	Concept dropout
+59536	PROTOCOL	Concept pooling axis
+59537	TUNING	Concept log-standard-deviation initialization scale
+59538-59539	COUNTER	Loss accumulators
+59540-59543	PROTOCOL	Character encoding boundaries
+59544-59546	SCHEMA	Tokenizer special-token identifiers
+59547	PROTOCOL	Ignored-label sentinel
+59548	TUNING	Training logging cadence
+59549	SCHEMA	Default tokenizer padding ID; consumer must use matching tokenizer contract
+59550-59554	TUNING	Training carry and perturbation defaults
+59555-59556	PROTOCOL	Cross-language pooling axes
+59557-59563	EXPERIMENT	Wisent Agent sample/pair counts and baseline inference settings
+59564	PROTOCOL	Percent scale
+59565	EXPERIMENT	Benchmark sample limit
+59566-59567	TUNING	Unimplemented benchmark metrics assigned zero; not measured accuracy and require explicit unavailable state
+59568	LAYOUT	Benchmark JSON indentation
+59569-59576	EXPERIMENT	Steering classifier training, strength/quality/pair/token/deduplication settings
+59577-59578	TUNING	Android refresh event buffer capacities
+59579-59582	SCHEMA	Android default model/record IDs; missing-ID semantics require consumer review
+59583	TUNING	Android initial steering strength

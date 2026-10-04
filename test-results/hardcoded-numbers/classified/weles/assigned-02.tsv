@@ -1,0 +1,150 @@
+assigned_lines	class	note
+59084	TUNING	Password verification code file bound
+59085	SCHEMA	Second password field index
+59086	PROTOCOL	Grant form failure status
+59087	TUNING	Collection audit attempt cap
+59088	COUNTER	Collection row index
+59089-59090	PROTOCOL	Audit failure statuses
+59091	TUNING	Readback login attempt cap
+59092	COUNTER	Section iteration
+59093-59097	TUNING	Grant portal traversal/excerpt/step bounds and action/read waits
+59098-59100	COUNTER	Route count and text-section index/search
+59101-59102	TUNING	Section mapping iteration/depth caps
+59103-59110	COUNTER	Section indices, missing-row sentinels and row totals
+59111	TUNING	Parameter ancestor depth cap
+59112-59114	COUNTER	Indicator/declaration row iteration
+59115	TUNING	Audit ancestor depth cap
+59116-59119	COUNTER	Audit/legal-act row iteration
+59120	TUNING	Contact repair login attempt cap
+59121-59123	COUNTER	Button index and contact row iteration
+59124	TUNING	Factor synchronization iteration cap
+59125	COUNTER	Feature row iteration
+59126	TUNING	Parameter-name cleanup pass and length limits
+59127	COUNTER	Parameter index
+59128-59133	TUNING	Competition/parameter synchronization attempt/iteration caps
+59134-59139	COUNTER	Member/milestone/indicator indices and iteration
+59140	PROTOCOL	Default repair success status
+59141-59143	TUNING	Budget login attempts and attachment count/byte bounds
+59144-59145	COUNTER	Attachment/criterion iteration
+59146-59147	TUNING	Criterion login and text ancestor traversal caps
+59148-59149	COUNTER	Opened count and row iteration; referenced row maximum is policy
+59150	TUNING	Truncated-field ancestor depth cap
+59151	PROTOCOL	Provider failure status
+59152-59161	COUNTER	Overleaf screenshot, byte, state, version and list counters/sentinels
+59162	TUNING	Project row ancestor depth cap
+59163-59172	COUNTER	Overleaf screenshots/history/query iteration and proxy balance parser index
+59173	PROTOCOL	Provider failure status
+59174-59175	TUNING	Proxy purchase iteration/step caps
+59176	COUNTER	Provider navigation iteration
+59177	TUNING	Proxy checkout step cap
+59178	REMOVED	Fixed proxy GB price superseded by previously published provider-derived pricing
+59179-59181	COUNTER	Proxy checkout field/delta iteration
+59182	NOT	Tier-change consent comment
+59183	PROTOCOL	Provider failure status
+59184-59188	COUNTER	Account batch/attempt and form iteration, cookie total
+59189-59190	TUNING	Analysis form candidate caps
+59191	COUNTER	Hidden form count
+59192	TUNING	Analysis role candidate cap
+59193	COUNTER	Analysis button iteration
+59194-59197	TUNING	Classification label-to-percent conversion; categorical labels do not establish calibrated probabilities
+59198-59200	COUNTER	Audit checks, account cursor and attempts
+59201	REMOVED	JSON walk cap superseded by previously published uncapped traversal
+59202	NOT	Explicit account requirement refusal string
+59203-59207	COUNTER	Audit scheduling/credit reset and registration iteration
+59208	PROTOCOL	Registration failure status
+59209-59210	TUNING	Generated identity length and proxy attempt cap
+59211	PROTOCOL	Provider failure status
+59212	TUNING	Product registration iteration cap
+59213	COUNTER	Callback count
+59214	NOT	Navigation comment
+59215-59218	PROTOCOL	Comment operation failure statuses
+59219-59220	TUNING	Post popularity threshold and listing selection window; audit only
+59221	COUNTER	Unobserved request status initializer
+59222-59223	PROTOCOL	Follow/join failure statuses
+59224	COUNTER	Observed scroll iteration
+59225-59226	PROTOCOL	Browse/promotion failure statuses
+59227-59228	TUNING	Vote target/diagnostic ancestor traversal caps; audit only
+59229	PROTOCOL	Vote failure status
+59230	COUNTER	Profile save candidate iteration
+59231-59233	PROTOCOL	Health/login outcomes
+59234	TUNING	Login wait iteration cap
+59235-59241	PROTOCOL	Login/registration/probe/provider refusal and failure statuses
+59242-59243	TUNING	Generated credential length and login wait cap
+59244-59247	COUNTER	Posted total and browser storage iteration
+59248-59250	PROTOCOL	Messaging/login/registration failure statuses
+59251-59252	TUNING	Grant page/probe iteration caps
+59253-59258	NOT	Text-counter probe comments and report strings
+59259-59267	COUNTER	Payment save and subscription argument/text iteration
+59268	TUNING	Subscription SSO interaction cap
+59269	COUNTER	Verification input iteration
+59270-59276	PROTOCOL	Login and social operation failure statuses
+59277	TUNING	Login challenge attempt cap
+59278	PROTOCOL	Login failure status
+59279	TUNING	Pointer sampling steps; audit only
+59280-59281	COUNTER	Pointer/registration iteration
+59282-59285	TUNING	Registration challenge/phone/poll iteration caps; audit only
+59286	PROTOCOL	Registration failure status
+59287-59292	COUNTER	Submission candidate, CLI/storage iteration and message totals
+59293	TUNING	Market page polling cap
+59294-59314	PROTOCOL	Twitter operation/login failure statuses
+59315-59316	TUNING	Twitter registration polling/interaction caps
+59317	PROTOCOL	Registration failure status
+59318	NOT	Code-input cardinality comment
+59319-59320	TUNING	Generated credential length and secret entropy minimum
+59321	COUNTER	Market probe argument iteration
+59322-59323	TUNING	Market probe/login iteration caps
+59324	COUNTER	Response length initializer
+59325	TUNING	Market probe iteration cap
+59326	COUNTER	Processed count
+59327-59329	TUNING	Market probe/login iteration caps
+59330	COUNTER	Market chart argument iteration
+59331-59333	TUNING	Market chart/login iteration caps
+59334-59335	TUNING	Chart ancestor depth caps
+59336	COUNTER	Market scrape argument iteration
+59337	TUNING	Market scrape polling cap
+59338	COUNTER	Response length
+59339-59340	TUNING	Compute listing/login polling caps
+59341	COUNTER	Market probe argument iteration
+59342-59343	TUNING	Market probe polling caps
+59344	COUNTER	Response length
+59345	TUNING	Market probe polling cap
+59346	COUNTER	Response length
+59347	TUNING	Market probe polling cap
+59348	COUNTER	Market scrape argument iteration
+59349-59351	TUNING	Market scrape and signup polling caps
+59352	PROTOCOL	Comment failure status
+59353	NOT	SMS provider service comment
+59354	PROTOCOL	Registration failure status
+59355	TUNING	Capability control output bound
+59356	COUNTER	Control byte total
+59357-59361	TUNING	Email domain signup cap, registration term, discovery batches and credential length
+59362	SCHEMA	Required single login account
+59363	COUNTER	Bezier sample iteration
+59364-59365	TUNING	Vision generation token and image width bounds
+59366	PROTOCOL	Identity coordinate scaling
+59367	COUNTER	Vision score initializer
+59368-59369	TUNING	Vision crop fractions
+59370	PROTOCOL	HMAC hex width
+59371	TUNING	Artifact delivery secret entropy minimum
+59372-59373	PROTOCOL	Time unit conversion and HMAC hex width
+59374	TUNING	Delivery secret entropy minimum
+59375-59376	PROTOCOL	Nonzero TCP port range
+59377-59379	TUNING	Public task text/object/array bounds
+59380	COUNTER	JSON traversal depth
+59381	TUNING	Identity binding text bound
+59382	COUNTER	Retention attempt reset
+59383	TUNING	Forced retention attempt value; terminal-state semantics need consumer review
+59384	REMOVED	Evidence file cap superseded by previously published uncapped inventory
+59385	TUNING	Withheld evidence edge cap
+59386-59390	COUNTER	Evidence byte totals, queue resets and JSON iteration
+59391	TUNING	Run-submit response excerpt
+59392	COUNTER	Text start offset
+59393	PROTOCOL	HTTP not-found status
+59394-59400	COUNTER	Upload/request byte totals and capture offsets/counts
+59401-59414	TUNING	Browser API viewport/input/evidence/download/result and concurrency bounds
+59415-59419	PROTOCOL	Browser API HTTP statuses
+59420	COUNTER	Open page count
+59421-59425	TUNING	Account record field/settings bounds
+59426-59429	PROTOCOL	Account API HTTP statuses
+59430	TUNING	Run output inspection depth
+59431-59437	PROTOCOL	Credential/mail/security test failure statuses
