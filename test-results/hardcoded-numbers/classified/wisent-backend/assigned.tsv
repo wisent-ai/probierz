@@ -108,3 +108,123 @@ assigned_lines	class	note
 62579-62580	PROTOCOL	Vector application HTTP failure statuses
 62581	TUNING	Vector normalization epsilon
 62582-62583	PROTOCOL	Vector feature norm axes
+62584-62590	TUNING	Vector normalization/decay and chat generation/steering defaults
+62591	COUNTER	Chat token total
+62592-62594	PROTOCOL	Chat diagnostic/vector HTTP statuses
+62595-62597	TUNING	Chat/speech context bounds and speech sample-rate default; audio model compatibility requires verification
+62598	COUNTER	Speech frame total
+62599	TUNING	Pose recipe cache lifetime
+62600-62601	COUNTER	Recipe cache load timestamp/reset
+62602-62612	TUNING	Pose prompt bounds, inference settings, image dimensions and adapter/control strengths; audit only
+62613-62629	TUNING	Media byte/diagnostic/network bounds, image dimensions, conversation history/page sizes, state extraction cadence/settings, account-transfer message cap and room reply token bound
+62630-62631	SCHEMA	Room response character ID sentinel
+62632	COUNTER	Initial narration turn
+62633	TUNING	Companion image adapter strength
+62634-62635	COUNTER	Companion initial turn and stream chunk total
+62636-62637	TUNING	Persona inference temperature and fact deduplication threshold
+62638	COUNTER	Persisted fact count
+62639-62643	TUNING	Speaker/memory inference settings and companion trial message quota
+62644	COUNTER	Suggestion parser index
+62645-62650	TUNING	Suggestion count, active session result bound, job/stream lifetimes, stream retention and read wait
+62651	COUNTER	Segment parser index
+62652-62653	TUNING	Pre-generated opening chunk size and pacing
+62654-62657	COUNTER	Persisted count and opening turn/image markers
+62658-62659	TUNING	Intent relationship threshold and memory retrieval count
+62660	NOT	Accept-Language parsing example
+62661	TUNING	Intent suggestion count default
+62662	COUNTER	Prompt parser index
+62663	PROTOCOL	Entertainment authorization status
+62664	TUNING	Intent suggestion count
+62665	PROTOCOL	Intent input refusal status
+62666	TUNING	Single intent suggestion selection
+62667-62673	PROTOCOL	Entertainment session/character HTTP statuses
+62674-62717	TUNING	Scene/companion inference settings, speaker/history/memory counts, text/diagnostic bounds and character blueprint cardinality/strength policies
+62718-62721	SCHEMA	Relationship affection and normalized score representation domains
+62722-62744	TUNING	Relationship progression thresholds and positive/negative interaction gains/losses
+62745-62775	TUNING	Agency inference, scene cadence/settings, memory/persona extraction and bounds, discovery limits, familiar context and intent cache/history defaults
+62776	SCHEMA	Default intent sentinel
+62777-62784	COUNTER	Intent parser/cache reset, cosine accumulators and below-domain best-match sentinels
+62785	TUNING	Persona normalization default
+62786-62793	PROTOCOL	Persona HTTP statuses
+62794-62796	COUNTER	Activity recording/hourly/daily totals
+62797-62800	TUNING	Activity cache cleanup/retention/deduplication and notification backoff defaults
+62801	COUNTER	First notification in daily count
+62802-62808	TUNING	Notification cooldowns, daily/ignored caps and backoff policy
+62809-62811	PROTOCOL	Next-minute schedule alignment
+62812-62813	TUNING	Inactivity command wait and digest prefix width
+62814	SCHEMA	Inactivity command prefix cardinality; actual command contract requires review
+62815-62825	TUNING	Webhook secret entropy and relationship warmth weights/thresholds/history windows
+62826	TUNING	Missing message-length fallback; missing observations must remain distinguishable
+62827	COUNTER	Initial session count
+62828	TUNING	Activity session gap threshold
+62829	COUNTER	Current session count
+62830	TUNING	Activity session gap threshold
+62831	COUNTER	Session count reset
+62832-62833	TUNING	Warm relationship filter and cohort primary-window weight
+62834-62837	TUNING	Cohort scoring weights, peak count and confidence threshold
+62838-62841	COUNTER	Cohort score accumulators
+62842-62868	TUNING	Cohort confidence fallbacks, save/cache/assignment policy, bandit settings, trigger inference/history/age bounds, phrase sampling and timezone defaults
+62869	COUNTER	Timing intersection score
+62870-62882	TUNING	Timezone defaults, alert/network waits, notification generation/bandit settings, save cadence and feedback window
+62883-62884	PROTOCOL	Minute-aligned notification time
+62885-62887	TUNING	Daily notification recurrence, timezone default and prior-send window
+62888-62889	COUNTER	Notification delivery outcome totals
+62890-62894	TUNING	Notification response window, inactivity tiers, per-pair quota and query limit
+62895	COUNTER	Inactivity tier counts
+62896-62899	TUNING	Notification timezone/page defaults and deduplication windows
+62900-62901	COUNTER	Notification outcome totals
+62902-62911	TUNING	Notification response window, external model/network waits, message history and iMessage text bound
+62912	SCHEMA	Command/argument single-split representation
+62913-62915	TUNING	iMessage conversation/link lifetimes and SMS text bound
+62916	SCHEMA	SMS command/argument split
+62917-62919	TUNING	SMS conversation/link lifetimes and Telegram text bound; provider contract must justify fixed transport bound
+62920	SCHEMA	Telegram command/argument split
+62921-62926	TUNING	Telegram lifetimes, trading message/history/network bounds and WhatsApp text bound
+62927	SCHEMA	WhatsApp command/argument split
+62928-62931	TUNING	WhatsApp lifetimes and push network waits
+62932-62934	COUNTER	Push outcome counts and unset token expiry
+62935-62946	TUNING	Push/Discord network waits and SMS text/preview bounds
+62947-62948	COUNTER	Markdown parser endpoint sentinels
+62949-62964	TUNING	Telegram/bridge network waits and WhatsApp preview bound
+62965	TUNING	Classifier dropout default
+62966-62973	COUNTER	Classifier epoch/accuracy/loss/sample accumulators
+62974	TUNING	Classifier feature context bound
+62975	PROTOCOL	Sequence feature pooling and batch-axis removal
+62976-62978	TUNING	Assumed embedding dimension, visual extraction inference settings and profile match threshold
+62979	COUNTER	Profile cache load timestamp
+62980	TUNING	Profile cache lifetime
+62981-62983	COUNTER	Profile match score/weight accumulators
+62984-62990	EXPERIMENT	Judge inference settings and benchmark split/seed
+62991	LAYOUT	Benchmark stimulus JSON indentation
+62992-62993	EXPERIMENT	Benchmark split/seed
+62994	LAYOUT	Benchmark stimulus JSON indentation
+62995-62996	EXPERIMENT	Benchmark split/seed
+62997	LAYOUT	Benchmark stimulus JSON indentation
+62998-62999	EXPERIMENT	Benchmark loader split/seed
+63000	PROTOCOL	Whole-dataset permutation fraction
+63001	TUNING	Truthfulness zero assignment; missing/error versus measured-score semantics require review
+63002-63012	EXPERIMENT	Evaluation steering, inference/context bounds and judge settings
+63013	TUNING	Evaluation zero score fallback; unavailable metrics must remain distinguishable
+63014-63016	TUNING	Evaluation model defaults and disabled steering invocation
+63017	PROTOCOL	Empty stop-prefix length identity
+63018	COUNTER	Zero fallback in stream prefix computation; surrounding expression requires review
+63019-63025	TUNING	Inference connection/read/write/pool waits, diagnostic cause bound, health wait and merge scale
+63026	COUNTER	Active inference request count
+63027-63030	TUNING	Model load backoff, selected quantization precision and hardcoded tokenizer end-token fallback
+63031-63032	PROTOCOL	Model request HTTP failure statuses
+63033-63035	COUNTER	Request reset and stream output/missing-token wait counts
+63036	TUNING	Missing-token wait iteration cap
+63037	COUNTER	Successful token resets wait count
+63038	PROTOCOL	Stream failure status
+63039-63044	TUNING	Stream retries/thread wait/chunk/stopping defaults and style n-gram feature bounds
+63045	COUNTER	Added style feature count
+63046-63050	TUNING	Style optimizer candidates/rounds/sampling/reward/detection defaults; audit only
+63051	LAYOUT	Style profile JSON indentation
+63052	TUNING	Style detector reward weight; audit only
+63053-63055	COUNTER	Style score/penalty and conversation length accumulators
+63056-63075	TUNING	Optimizer result/search bounds, layer counts/stride/neighborhood, iteration/config counts and assumed model depth
+63076	LAYOUT	Optimizer result JSON indentation
+63077-63078	COUNTER	Best optimization score initializers
+63079	EXPERIMENT	Optimizer training/test split
+63080	LAYOUT	Optimizer report JSON indentation
+63081-63083	EXPERIMENT	Optimizer dataset/question counts
