@@ -1,0 +1,91 @@
+assigned_lines	class	note
+1-4	LAYOUT	EasySkeleton corner radii and color lightening factors
+5-8	PROTOCOL	Integer luma coefficient representation
+9	TUNING	Lightness classification threshold
+10	PROTOCOL	RGB channel count
+11	COUNTER	Color component initializers
+12-13	PROTOCOL	Full and zero opacity states
+14-16	TUNING	Server bind/port, action cap and token budget
+17-18	COUNTER	Tournament score accumulators
+19-23	TUNING	VRAM, cost, network waits and error text bound
+24-27	PROTOCOL	HTTP status boundaries
+28	TUNING	Transfer chunk bytes
+29-30	PROTOCOL	Exit codes
+31-57	TUNING	Arena roster, rounds, messages, voting thresholds and reputation policy weights
+58-75	GAME	Declared auction, commons, volunteer and attendance game parameters; not protocol constants
+76-79	EXPERIMENT	Generated payoff matrix size, range and seed
+80-144	GAME	Declared payoff matrices and game endowments
+145-157	GAME	Coordination and dilemma payoff matrices
+158-173	GAME	Conflict and bargaining game parameters
+174-195	GAME	Cooperative, coalition and voting game parameters
+196-209	GAME	Dynamic game rewards, thresholds and costs
+210	PROTOCOL	Equal split between two players
+211-233	GAME	Effort, screening and market game parameters
+234-267	GAME	Market and signaling payoff declarations
+268	TUNING	Default round count
+269-270	PROTOCOL	Single-shot round and two-player arity
+271-306	GAME	Payoffs, endowments and reference opponent strategies
+307-308	TUNING	Server port and environment concurrency
+309-313	TUNING	Number-only aliases; consumer meaning not established, not exempted as protocol
+314	TUNING	Evaluation episode count
+315	TUNING	Number-only alias; consumer meaning not established
+316	LAYOUT	Indentation
+317-321	PROTOCOL	Normalized score endpoints, half and negative-one representation
+322-327	TUNING	Episode defaults and number-only aliases requiring consumer review
+328-364	GAME	Coalition, cartel, alliance and commons experiment declarations
+365-367	TUNING	Action bounds and default rounds
+368-385	GAME	Governance game policy declarations
+386-388	TUNING	Player bounds and default rounds
+389-411	GAME	Public goods, volunteer, attendance and sequential game declarations
+412-482	LAYOUT	Slide colors, typography, positions and dimensions
+483-486	GAME	Payoff values repeated in slide definitions
+487	PROTOCOL	OOXML EMU units per inch
+488	TUNING	Revision restoration offset
+489-513	TUNING	Training and sampling settings, prompt bound and DPO hyperparameters
+514-533	TUNING	GRPO settings, checkpoint cadence and input length bounds
+534-536	PROTOCOL	Last/first index and unit step
+537-539	PROTOCOL	Year prefix and suffix representation
+540-564	TUNING	Text filtering, retries, chunking, generation and dataset split settings
+565-593	GAME	Payoffs and costs for game variants
+594	TUNING	Message character bound
+595-601	EXPERIMENT	Generated game seeds, dimensions and payoff bounds
+602-631	GAME	Repeated and adaptive game parameters
+632	TUNING	Meta-rule split bound; consumer meaning requires review
+633-640	GAME	Rule bonuses, penalties and guarantees
+641	PROTOCOL	Equal two-way split
+642-661	TUNING	Gossip split, reputation policy and self-play training settings
+662-687	GAME	Dilemma and zero-sum variant payoff/noise parameters
+688	PROTOCOL	Rock-paper-scissors action arity
+689-690	TUNING	Bibliography similarity threshold and scoring bonus
+691	PROTOCOL	Percent scale
+692-696	COUNTER	Overlap, payoff and round initializers
+697	TUNING	Default episode rounds
+698	PROTOCOL	N-player unused opponent-payoff field
+699-701	TUNING	Environment concurrency and server bind defaults
+702	NOT	Documentation string
+703-707	TUNING	Token budget, sampling, rollout ceiling and missing-data reward fallback
+708	NOT	Comment
+709	TUNING	Missing-data adaptability fallback
+710-712	PROTOCOL	Last tensor axis
+713-723	TUNING	Training CLI defaults and baseline initialization
+724-727	COUNTER	Step, epoch and KL accumulators
+728	PROTOCOL	Last tensor axis
+729-747	TUNING	Training, generation and rollout limits
+748-749	LAYOUT	JSON indentation
+750-752	TUNING	Shingle length, overlap warning threshold and result bound
+753	COUNTER	Violation count
+754-755	PROTOCOL	Header row and first data row in worksheet
+756	LAYOUT	Spreadsheet row height
+757-759	TUNING	Shingle length, overlap warning threshold and result bound
+760	COUNTER	Violation count
+761	TUNING	SEO title length
+762-763	COUNTER	CLI argument iteration
+764-765	TUNING	SEO title length and route duration declaration
+766	PROTOCOL	Percent scale
+767-771	TUNING	Analysis response bounds
+772	PROTOCOL	Base64 group width
+773-776	TUNING	Input lengths and text classification thresholds
+777-778	COUNTER	CLI argument iteration
+779-781	TUNING	SEO title, route duration and output length
+782	PROTOCOL	Base64 group width
+783-785	TUNING	Input length and output paragraph policy

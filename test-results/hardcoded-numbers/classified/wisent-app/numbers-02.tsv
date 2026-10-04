@@ -1,0 +1,147 @@
+path	lines	class	note
+src/lib/failure/store.js	16,17	TUNING	Outage retention and sweep interval
+src/lib/failure/store.js	18	COUNTER	Zero
+src/lib/gpuPool/index.js	234,235	COUNTER	Job counters
+src/lib/health/parsers.js	55,59,69	COUNTER	CSV iteration
+src/lib/indicators/elliott.js	47,98	TUNING	Initial scoring weight
+src/lib/indicators/elliott.js	124,142	COUNTER	Pivot iteration
+src/lib/indicators/saty.js	6,7,8,9,10,13,134	TUNING	Indicator periods
+src/lib/indicators/saty.js	36,56,60,61,121,141	COUNTER	Iteration and sum
+src/lib/llm/router.js	60,117	COUNTER	Iteration
+src/lib/llm/router.js	98,102	TUNING	Token and iteration budgets
+src/lib/market-data/bars.js	6	PROTOCOL	Milliseconds per day
+src/lib/market-data/bars.js	108	TUNING	Minimum bar count and exchange default
+src/lib/market-data/bars.js	111,112,189	COUNTER	Counts and aggregation iteration
+src/lib/market-data/calendar.js	2	PROTOCOL	Milliseconds per day
+src/lib/market-data/calendar.js	102,139	COUNTER	Iteration initializers; loop ceilings require separate tuning review
+src/lib/market-data/calendar.js	147	TUNING	Session lookback
+src/lib/market-data/calendar.js	152	COUNTER	Inspected count
+src/lib/media/imageStadoConfig.js	24	PROTOCOL	HTTP unavailable
+src/lib/moderation/characterModeration.js	4,5,6,7,8,9,10	TUNING	Moderation thresholds
+src/lib/moderation/characterModeration.js	156	PROTOCOL	HTTP not found
+src/lib/pentest/image.js	264,265	COUNTER	Result count and iteration
+src/lib/pentest/persist.js	6,119,168,169	COUNTER	Counters and iteration; batch stride is separate tuning
+src/lib/pentest/active/crawl.js	4,5,6	TUNING	Crawl coverage bounds
+src/lib/pentest/active/crawl.js	39,53,104,121	COUNTER	Regex cursor resets and count
+src/lib/pentest/active/index.js	7	TUNING	Coverage bound
+src/lib/pentest/active/index.js	25	COUNTER	Count
+src/lib/pentest/active/injection.js	10	TUNING	Probe observation duration
+src/lib/pentest/active/injection.js	112,113	PROTOCOL	Arithmetic operands used to recognize a response
+src/lib/pentest/active/sqli.js	7	TUNING	Probe observation duration
+src/lib/pentest/constants/payloads.js	109	NOT	HTTP header string, not numeric assignment
+src/lib/pentest/cve/index.js	86	COUNTER	Iteration
+src/lib/pentest/discovery/index.js	33,48	COUNTER	Regex cursor reset
+src/lib/pentest/web/headers.js	13	NOT	Remediation prose, not numeric assignment
+src/lib/pentest/web/util.js	87,100	COUNTER	Byte count and offset
+src/lib/push/server.js	8,10,19,250	TUNING	Token, string and batch bounds
+src/lib/push/server.js	120,251	COUNTER	Count and offset
+src/lib/push/transport.js	2	TUNING	Response byte bound
+src/lib/reactivation/delivery.js	16,129	TUNING	Dispatch limits
+src/lib/reactivation/model.js	5,6,61	TUNING	Audience limit, inactivity days and text bound
+src/lib/reactivation/server.js	163	NOT	SQL comparison, not assignment
+src/lib/services/dualVideoService.js	92,249	TUNING	Video duration and recent-job limit
+src/lib/stado/index.js	8,9	PROTOCOL	Zero and one
+src/lib/stado/index.js	12,14	TUNING	Signature clock allowance and validity duration
+src/lib/strategies/backtest.js	10	TUNING	Minimum input bars
+src/lib/strategies/backtest.js	18	TUNING	Invalid-number fallback policy
+src/lib/strategies/backtest.js	60,62,63,64,65,107	COUNTER	Trading accumulators
+src/lib/strategies/engine.js	19	COUNTER	Sum
+src/lib/strategies/promotions.js	10	TUNING	Invalid-number fallback policy
+src/lib/strategies/context/wedge-context.js	43	TUNING	Weekly trend period
+src/lib/strategies/signal-pipeline/candidates.js	112,113	TUNING	Return and confidence thresholds
+src/lib/strategies/signal-pipeline/runs.js	18	COUNTER	Initial run counts
+src/lib/subscription/tieredPaywallService.js	109	COUNTER	Usage reset
+src/lib/tax/pl.js	6,7,8,9,11,12,14,15,16	TUNING	Tax policy values require declared tax year and authoritative source
+src/lib/tax/pl.js	53	COUNTER	Tax accumulator
+src/lib/tickers/cross_signal.js	29,30,31,36	TUNING	Directional thresholds, lookback and row cap
+src/lib/tickers/cross_signal.js	54,90,105	COUNTER	Sign initializer, iteration and totals
+src/lib/tickers/cross_signal.js	56	PROTOCOL	Negative direction encoding
+src/lib/tickers/related.js	25,26,46	TUNING	Cache age, overlap and result size
+src/lib/trading/brokers/paper-broker.js	10	TUNING	Invalid-number fallback policy
+src/lib/trading/paper.js	18	COUNTER	Initial share change
+src/lib/trading/performance.js	63,97	TUNING	Starting equity
+src/lib/trading/performance.js	88	COUNTER	Drawdown accumulator
+src/lib/trading/portfolio.js	3,4,5	TUNING	Account size, risk and heat defaults
+src/lib/trading/risk.js	25	TUNING	Invalid-number fallback
+src/lib/trading/risk.js	62,63,64,65,66	COUNTER	Exposure accumulators
+src/lib/trading/stock_pdf.js	6,26	TUNING	Decimal precision and table excerpt bounds
+src/lib/trading/execution/entry.js	19	TUNING	Slippage bound
+src/lib/trading/execution/exit.js	16	TUNING	Slippage bound
+src/lib/trading/execution/lifecycle.js	43	TUNING	Invalid-number fallback
+src/lib/user-context/preferenceBandit.js	6,7,8,17,27	TUNING	Sampling bounds, fallback and batch size
+src/lib/user-context/preferenceBandit.js	29	COUNTER	Iteration
+src/lib/user-context/bandit/model.js	1,2,3,4	TUNING	Prior strength, exploration and arm count
+src/lib/user-context/bandit/model.js	98,102	TUNING	Beta prior base parameters
+src/lib/uw/signal.js	36,72,94	COUNTER	Signal accumulators
+src/lib/vl/signal.js	57	TUNING	Conviction threshold
+src/lib/vl/signal.js	73,97,130,131	COUNTER	Sums, counts and iteration
+src/lib/wedges/confluence.ts	24,25,26	TUNING	Signal thresholds
+src/lib/wedges/detector.ts	7	TUNING	ATR period
+src/lib/wedges/detector.ts	12,21,22,48,101	COUNTER	Sums and iteration
+src/lib/wedges/signals.ts	21,22,23,24,25	TUNING	Lookbacks, lag, scan bound, tolerance and average period
+src/lib/wedges/signals.ts	55,63	COUNTER	Missing-index sentinel and sum
+src/lib/wedges/underlyings.ts	206	TUNING	Heat cap default
+src/remotion/captions/OutlineText.tsx	42,120,121,132,195	LAYOUT	Outline sampling, widths and glow
+src/remotion/captions/OutlineText.tsx	43,50,133	COUNTER	Iteration
+src/remotion/captions/animations/BounceText.tsx	51,52	PROTOCOL	Identity scale and opacity
+src/remotion/captions/animations/BounceText.tsx	135	LAYOUT	Letter animation spacing
+src/remotion/captions/animations/FadeText.tsx	34	PROTOCOL	Full opacity initializer
+src/remotion/carousel/render.ts	64,65,131	TUNING	Render quality and scale defaults
+src/remotion/carousel/render.ts	80	COUNTER	Slide iteration
+src/remotion/compositions/CaptionedImage.tsx	86	LAYOUT	Transition duration
+src/remotion/compositions/CaptionedImage.tsx	91,92,94	COUNTER	Frame/index counters
+src/remotion/compositions/CaptionedMediaRoot.tsx	57	PROTOCOL	Full opacity initializer
+src/remotion/compositions/CaptionedSlideshow.tsx	40	COUNTER	Frame counter
+src/remotion/compositions/CaptionedSlideshow.tsx	86,103	PROTOCOL	Full opacity
+src/remotion/compositions/CaptionedSlideshow.tsx	104,172,175	LAYOUT	Slide distance and durations
+src/remotion/compositions/CaptionedVideo.tsx	18,19	TUNING	Volume and playback-rate defaults
+src/remotion/compositions/CaptionedVideo.tsx	132	LAYOUT	Grid gap
+src/remotion/hooks/useTextAnimation.ts	28,29,30,31,92,204,205,206,207	PROTOCOL	Identity transform initializers
+src/remotion/hooks/useTextAnimation.ts	53,122,175,199	LAYOUT	Animation distance, delay and speed
+src/remotion/hooks/useWordTiming.ts	85,101,125	COUNTER	Frame offset and iteration
+src/remotion/presets/index.ts	48,99,100,101,132,134,149,151,177	TUNING	Media dimensions, duration and frame rate
+src/remotion/presets/index.ts	49,71	COUNTER	Start frame
+src/remotion/utils/colorUtils.ts	4	PROTOCOL	Opaque alpha
+src/remotion/utils/easings.ts	20,21,45	LAYOUT	Bounce/back curve coefficients
+src/remotion/utils/position.ts	107,108,113,121	PROTOCOL	Coordinate origin
+src/utils/api.js	79,103,157	TUNING	Steering, sampling, token budget and document chunk size
+tests/carousel/images.mjs	12,36	LAYOUT	Test render dimensions
+tests/carousel/images.mjs	73,82	COUNTER	Slide iteration
+tests/controlnet/run.mjs	122	COUNTER	Case iteration
+tests/controlnet/run.mjs	126,138	PROTOCOL	Exit codes
+tests/controlnet/support.mjs	108	PROTOCOL	Expected HTTP success
+tests/e2e/chat/chat-page.spec.ts	212	COUNTER	Array reset
+tests/e2e/chat/helpers.ts	71	TUNING	Test wait duration
+tests/e2e/chat/helpers.ts	90,91	COUNTER	Count and iteration
+tests/e2e/fixtures/auth.ts	87,176	TUNING	Test retry and cookie chunk bounds
+tests/e2e/fixtures/auth.ts	90,194	COUNTER	Iteration
+tests/image-generation/blonde/test_blonde_lora.py	31,32,33,34,35,88	EXPERIMENT	Generation test parameters
+tests/image-generation/blonde/test_blonde_nsfw.py	38,39,40,41,95	EXPERIMENT	Generation test parameters
+tests/image-generation/blonde/test_blonde_nsfw.py	60	NOT	Log string
+tests/image-generation/blonde/test_blonde_on_pornmaster.py	31,32,33,34,84	EXPERIMENT	Generation test parameters
+tests/image-generation/blonde/test_blonde_on_pornmaster.py	56	NOT	Log string
+tests/image-generation/blonde/test_blonde_with_pornmaster.py	31,32,33,34,93	EXPERIMENT	Generation test parameters
+tests/image-generation/blonde/test_blonde_with_pornmaster.py	57,66	NOT	Log strings
+tests/image-generation/blonde/test_blonde_working.py	27,64,72	EXPERIMENT	Generation test parameters
+tests/image-generation/blonde/test_blonde_working.py	44	NOT	Log string
+tests/image-generation/lara/test_lara_lora.py	36,37,38,39,93	EXPERIMENT	Generation test parameters
+tests/image-generation/lara/test_lara_lora.py	58	NOT	Log string
+tests/image-generation/lara/test_lara_pornmaster.py	66,87,91,92,98	EXPERIMENT	Generation test parameters
+tests/image-generation/lara/test_lara_v2.py	36,37,38,39,89	EXPERIMENT	Generation test parameters
+tests/image-generation/lara/test_lara_v2.py	57	NOT	Log string
+tests/image-generation/poses/test_cowgirl.py	14,53	EXPERIMENT	Generation test parameters
+tests/image-generation/poses/test_pose_direct.py	21,59	EXPERIMENT	Generation test parameters
+tests/image-generation/poses/test_two_people.py	21,62	EXPERIMENT	Generation test parameters
+tests/image-generation/settings/test_optimal_settings.py	35	EXPERIMENT	Seed
+tests/image-generation/settings/test_optimal_settings.py	64,136	TUNING	Test wait and image quality
+tests/image-generation/settings/test_optimal_settings.py	86,87	LAYOUT	Comparison grid
+tests/image-generation/settings/test_optimal_settings.py	175	COUNTER	Case counter
+tests/image-generation/settings/test_optimal_settings.py	221	LAYOUT	JSON indentation; not mandated by JSON
+tests/image-generation/settings/test_pornmaster.py	21,63	EXPERIMENT	Generation test parameters
+video_generator/verify_face_consistency.py	17,36,59,168,169	TUNING	Device, detection dimensions, sample count and similarity threshold
+video_generator/pipeline/config.py	10,43,44,45,46,47,48,49,68,73,74	TUNING	Generation, encoding and tiling defaults exposed through pipeline configuration
+video_generator/pipeline/config.py	28,33,38	NOT	Commented examples
+video_generator/pipeline/config.py	130	LAYOUT	JSON indentation
+video_generator/pipeline/render.py	151	PROTOCOL	Wan22 latent channel count
+video_generator/pipeline/render.py	169	PROTOCOL	Mask zero
+video_generator/pipeline/render.py	228	TUNING	Denoising strength
