@@ -1,0 +1,110 @@
+assigned_lines	class	note
+61942	PROTOCOL	Case-insensitive SQL token parsing and one-based awk field iteration; operator hook audit only
+61943-61950	TUNING	Character extraction/name/description/greeting inference settings
+61951-61956	PROTOCOL	Character generation HTTP statuses
+61957-61962	TUNING	Character image dimensions and streaming inference defaults
+61963-61965	PROTOCOL	Streaming character generation HTTP statuses
+61966-61975	TUNING	Community cache lifetimes and section result counts
+61976-61979	COUNTER	Community count/score defaults; absent scores must not imply observed rankings
+61980-61985	TUNING	Community section page sizes
+61986-61987	PROTOCOL	Greeting retrieval HTTP statuses
+61988-61990	TUNING	Greeting/character stream inference defaults
+61991-62007	PROTOCOL	Contrastive pair HTTP statuses
+62008-62009	TUNING	Image prompt/style length bounds
+62010-62024	PROTOCOL	Persona and asynchronous generation HTTP statuses
+62025	TUNING	Asynchronous generation request wait
+62026-62031	PROTOCOL	Pose request validation/authorization/dependency statuses
+62032-62033	SCHEMA	Required nonempty adapter filename/trigger fields
+62034-62037	TUNING	Pose context/caption bounds and adapter strength policy; audit only
+62038-62040	PROTOCOL	Pose validation/generation HTTP statuses
+62041-62042	SCHEMA	Required nonempty job/callback fields
+62043	TUNING	Search generation rate limit
+62044	PROTOCOL	Chat failure status
+62045	TUNING	Conversation history tokenization bound
+62046-62050	PROTOCOL	Chat history/preprocessing/model HTTP statuses
+62051-62053	COUNTER	Generation timing markers and token total
+62054-62055	SCHEMA	Single tool-call replacement cardinality
+62056-62069	PROTOCOL	Character/model/classifier HTTP statuses
+62070-62073	TUNING	Classifier chat inference/context defaults and fixed diagnostic layer
+62074	PROTOCOL	Chat prompt failure status
+62075	COUNTER	Reply stream token count
+62076-62083	PROTOCOL	Chat/room authorization and validation HTTP statuses
+62084-62085	PROTOCOL	Room conversation failure statuses
+62086	SCHEMA	Room response character ID sentinel; consumer contract must justify reserved zero
+62087-62091	PROTOCOL	Room history HTTP statuses
+62092-62093	TUNING	Completion token/temperature defaults
+62094-62097	PROTOCOL	Completion/familiar HTTP statuses
+62098	TUNING	Familiar context result limit
+62099-62188	PROTOCOL	Familiar and room/character/persona/profile/trait image HTTP statuses, including delivery and retired-route statuses
+62189	TUNING	Speech input text bound
+62190-62193	PROTOCOL	Speech and moderation HTTP statuses
+62194-62198	TUNING	Category tag batch/minimum/overlap and model generation settings
+62199	PROTOCOL	Category upstream failure status
+62200-62202	COUNTER	Extracted tag/category/assignment totals
+62203	TUNING	Assumed category embedding dimension; derive from selected model contract
+62204-62205	COUNTER	Keyword import outcome totals
+62206-62208	TUNING	Assumed semantic embedding dimension, generation batch and database page size
+62209-62211	COUNTER	Embedding page offset and outcome counts
+62212-62219	PROTOCOL	Assistance operation HTTP statuses
+62220	TUNING	Conversation page size default/bound
+62221	COUNTER	Conversation nonnegative offset
+62222-62230	PROTOCOL	Conversation HTTP statuses
+62231	TUNING	Conversation results page size default/bound
+62232	COUNTER	Conversation results nonnegative offset
+62233-62239	PROTOCOL	Conversation/account transfer HTTP statuses
+62240	COUNTER	Diagnostic page offset
+62241-62242	TUNING	Diagnostic batch size and threshold
+62243	COUNTER	Diagnostic page offset
+62244	TUNING	Diagnostic batch size
+62245-62255	PROTOCOL	Job/cache/management HTTP statuses
+62256	COUNTER	Messaging sent chunk count
+62257	TUNING	Voice response text cap
+62258-62262	PROTOCOL	iMessage webhook HTTP statuses
+62263-62264	TUNING	iMessage replay window and voice blob lifetime
+62265-62296	PROTOCOL	Voice blob/memory/channel HTTP statuses
+62297	TUNING	Channel connection request wait
+62298-62315	PROTOCOL	Channel connection HTTP statuses
+62316	TUNING	Channel linking token lifetime
+62317-62333	PROTOCOL	Messaging and Discord HTTP statuses
+62334-62354	PROTOCOL	Discord and iMessage diagnostic operation HTTP statuses
+62355	TUNING	iMessage diagnostic request wait
+62356-62375	PROTOCOL	Messaging tests/webhooks and notification HTTP statuses
+62376	TUNING	Missing notification timezone fallback to UTC
+62377-62387	PROTOCOL	Notification HTTP statuses
+62388	TUNING	Notification history result bound
+62389-62405	PROTOCOL	Notification cohort/orchestration HTTP statuses
+62406	TUNING	Relationship warmth threshold default; bounds define normalized score domain
+62407-62414	PROTOCOL	Relationship HTTP statuses
+62415	TUNING	Relationship maximum age default/bounds
+62416-62443	PROTOCOL	Relationship/timing/webhook/activation/contrastive pair HTTP statuses
+62444-62445	SCHEMA	Normalized contrastive score filter domain
+62446	TUNING	Contrastive pair page size default/bound
+62447	COUNTER	Contrastive pair nonnegative offset
+62448-62464	PROTOCOL	Contrastive pair/set HTTP statuses
+62465	TUNING	Contrastive set page size default/bound
+62466	COUNTER	Contrastive set nonnegative offset
+62467-62481	PROTOCOL	Contrastive set HTTP statuses
+62482-62484	TUNING	Model helper context/generation length and sampling defaults
+62485-62490	PROTOCOL	Classifier HTTP statuses
+62491	COUNTER	One-based classifier page index
+62492	TUNING	Classifier page size default
+62493-62502	PROTOCOL	Classifier/queue/control-vector HTTP statuses
+62503	TUNING	Fixed character model ID
+62504-62529	PROTOCOL	Control-vector/character/job HTTP statuses
+62530	TUNING	Assumed embedding dimension; derive from selected model contract
+62531	PROTOCOL	Evaluation failure status
+62532-62536	TUNING	Style profile language/sample/identifier bounds
+62537	SCHEMA	Nonempty rewrite text requirement
+62538-62545	TUNING	Style rewrite candidate/round/token/sampling/reward/detection and language/profile bounds; audit only
+62546-62547	SCHEMA	Nonempty style evaluation source/candidate fields
+62548-62561	PROTOCOL	Style profile/rewrite HTTP statuses
+62562-62567	TUNING	Autogeneration attempts/dimensions/poll cadence and character normalization/relative-strength defaults
+62568	PROTOCOL	Character failure status
+62569	TUNING	Character normalization default
+62570	COUNTER	Character timing score accumulator
+62571-62572	TUNING	Character timing inference settings
+62573	SCHEMA	Normalized timing confidence domain
+62574-62578	TUNING	Timing explanation/history bounds, system prompt token bounds and steering strength
+62579-62580	PROTOCOL	Vector application HTTP failure statuses
+62581	TUNING	Vector normalization epsilon
+62582-62583	PROTOCOL	Vector feature norm axes

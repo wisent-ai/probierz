@@ -139,3 +139,110 @@ assigned_lines	class	note
 61580	TUNING	Dataset name suffix attempt cap
 61581-61582	COUNTER	Dataset example/entry counts
 61583	TUNING	Pair generation CLI count and model default
+61584	TUNING	Pair similarity threshold
+61585	LAYOUT	Pair JSON indentation
+61586-61588	TUNING	CLI model/layer, entropy/beta and pair defaults
+61589-61590	LAYOUT	Pair/metadata JSON indentation
+61591-61597	EXPERIMENT	Hallucination/model test CLI and generation settings
+61598	LAYOUT	Baseline result JSON indentation
+61599-61600	EXPERIMENT	Baseline inference defaults
+61601	PROTOCOL	Diagnostic failure status
+61602-61604	TUNING	Diagnostic listener port/bind address and behavior thresholds
+61605	COUNTER	Behavior count
+61606	TUNING	Text diagnostic threshold
+61607-61609	COUNTER	Diagnostic token/flag/behavior totals
+61610-61611	PROTOCOL	Attention and embedding reduction axes
+61612	TUNING	Diagnostic embedding top-k dimensions
+61613-61615	LAYOUT	Diagnostic JSON indentation and plot dimensions
+61616	TUNING	Diagnostic wrapper threshold
+61617-61618	COUNTER	Diagnostic position and maximum score
+61619	TUNING	Attention diagnostic top-k
+61620	PROTOCOL	Attention head averaging axis
+61621-61622	TUNING	Token diagnostic top-k defaults
+61623	PROTOCOL	Token probability axis
+61624-61628	LAYOUT	Diagnostic plot dimensions, font sizes and tick rotation
+61629	PROTOCOL	Activation averaging axis
+61630	LAYOUT	Token analysis JSON indentation
+61631-61632	TUNING	Heatmap default layer and token bound
+61633	LAYOUT	Heatmap dimensions
+61634	PROTOCOL	Heatmap attention averaging axis
+61635	TUNING	Vector plot token bound
+61636	LAYOUT	Vector plot dimensions
+61637-61639	EXPERIMENT	Evaluation sample/token counts and sampling temperature
+61640	TUNING	Overall score zero fallback; missing evaluation must be distinguishable from measured score
+61641-61645	EXPERIMENT	Evaluation sample/inference defaults and benchmark split/seed
+61646	PROTOCOL	Whole-dataset permutation fraction
+61647-61648	EXPERIMENT	Benchmark split and seed
+61649	LAYOUT	Stimulus JSON indentation
+61650-61651	EXPERIMENT	Benchmark split and seed
+61652	LAYOUT	Stimulus JSON indentation
+61653-61654	EXPERIMENT	Benchmark split and seed
+61655	LAYOUT	Stimulus JSON indentation
+61656-61663	EXPERIMENT	Benchmark train split and vector training rate/epochs/batch settings
+61664	TUNING	Truthfulness zero assignment; absence/error versus measured-score semantics require review
+61665-61676	EXPERIMENT	Evaluation steering/inference/context and judge generation settings
+61677-61679	TUNING	Model service inference defaults and disabled-control invocation
+61680-61686	TUNING	Notification bandit exploration/temperature/concurrency and default timezone
+61687-61688	COUNTER	Notification outcome totals
+61689-61692	TUNING	Notification attribution/staleness windows, model save cadence and timezone default
+61693-61694	PROTOCOL	Minute-aligned scheduled time components
+61695	TUNING	Next daily notification recurrence; one-day arithmetic is a unit but daily recurrence is policy
+61696-61699	TUNING	Memory warning/cleanup thresholds, check cadence and history cap
+61700-61703	COUNTER	Memory measurement accumulators
+61704	TUNING	Metrics buffer size; comment asserts provider limit but needs current provider contract verification
+61705-61709	TUNING	Metrics flush/device defaults, model merge scale and loading retry/backoff
+61710	COUNTER	Active request count
+61711	TUNING	Quantization outlier threshold
+61712-61713	PROTOCOL	Model service availability/failure statuses
+61714-61727	TUNING	Steering layer/chunk size and optimizer result/layer/search defaults, including assumed model depth
+61728-61729	COUNTER	Best optimization score initializers
+61730-61735	TUNING	Optimizer search configuration counts, iteration/neighborhood bounds and assumed model depth
+61736	LAYOUT	Optimization results JSON indentation
+61737-61746	EXPERIMENT	Optimizer evaluation question/dataset/config counts and train/test split
+61747	LAYOUT	Optimization report JSON indentation
+61748-61749	EXPERIMENT	Optimizer CLI/visualization configuration count
+61750-61760	LAYOUT	Multi-model optimization plot geometry, markers, strokes and opacity
+61761	EXPERIMENT	Model visualization configuration count
+61762-61782	LAYOUT	Optimization plot geometry, correlation bounds, markers, strokes and opacity
+61783	EXPERIMENT	Optimization runner CLI default; argument semantics require surrounding declaration review
+61784	TUNING	Persona normalization default
+61785	PROTOCOL	Persona failure status
+61786-61787	TUNING	Push token lifetime and network wait
+61788-61789	COUNTER	Push outcome totals
+61790-61792	PROTOCOL	Queue/retraining HTTP statuses
+61793	TUNING	Retraining completion wait
+61794-61796	PROTOCOL	Retraining HTTP failure statuses
+61797-61799	LAYOUT	Stored JSON indentation
+61800-61813	PROTOCOL	Image/conversation storage HTTP statuses
+61814	TUNING	Conversation page size; offset is a counter
+61815-61830	PROTOCOL	Conversation/vector/token storage HTTP statuses
+61831-61832	TUNING	System prompt tokenization and generation bounds
+61833	PROTOCOL	Unique persona input refusal status
+61834-61839	PROTOCOL	Unique persona HTTP statuses
+61840-61842	TUNING	Stream cleanup wait/chunk size and minimum generation length
+61843-61844	COUNTER	Stream output and missing-token wait counts
+61845	TUNING	Missing-token wait iteration cap
+61846	COUNTER	Successful token resets wait count
+61847	TUNING	Generation thread join wait
+61848	PROTOCOL	Stream failure status
+61849-61853	TUNING	Stream retries and simple-server inference/layer/strength defaults
+61854	PROTOCOL	Simple-server failure status
+61855-61865	TUNING	Simple-server port, worker prefetch/recycling/concurrency/resource/execution policy, daily schedule, retries and notification page size
+61866-61867	COUNTER	Notification page offset and record total
+61868	TUNING	Missing notification timezone offset fallback
+61869	COUNTER	Scheduled notification total
+61870	TUNING	Notification due-query lookback
+61871-61872	COUNTER	Sent notification total and one-based task attempt
+61873-61874	LAYOUT	Vector computation progress stage fractions; not measured completion
+61875-61876	PROTOCOL	Sequence activation averaging axes
+61877	LAYOUT	Vector computation progress stage fraction
+61878-61879	PROTOCOL	Vector averaging axis and unit-interval completion endpoint
+61880	COUNTER	Task attempt index
+61881	LAYOUT	Vector computation progress stage fraction
+61882	COUNTER	Task attempt index
+61883-61886	LAYOUT	Vector computation progress stage fractions
+61887-61888	COUNTER	CUDA job/reset totals
+61889	LAYOUT	Dataset JSON indentation
+61890-61893	TUNING	Generation stopping bounds and Redis migration port/database defaults
+61894-61898	COUNTER	Migration totals and load-test bytes/messages
+61899	EXPERIMENT	Redis snapshot retention fixture
