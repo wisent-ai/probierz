@@ -75,11 +75,12 @@ Reading coverage is separate from repair, publication and real-product verificat
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
 | lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
-| lem | agent answer `prefix(12000)` (Codex, run, streaming), Weles queue and poll failures `prefix(500)` | 9a6fa882 |
+| lem | agent answer `prefix(12000)` (Codex, run, streaming), Weles queue and poll failures `prefix(500)` (Overleaf scan and `LemWelesQueue`) | 9a6fa882; fb734e23 |
 | lem | model budgets, harvest bounds, generation defaults, backend port | Oko defect 68645422 |
 | glina | Glina Desktop `tail(maxCharacters: 400)` | glina-desktop a5795125 |
 | glina | preview, render, tessellation and generation values | Oko defect 0df1bf55 |
 | skarbiec | Skarbiec Desktop `previewLimit = 128_000`, `detailExcerptLength = 320` | skarbiec-desktop 8ed9664b |
+| skarbiec | Skarbiec Desktop journal facets `operations.prefix(8)`, `consumers.prefix(6)` | skarbiec-desktop e8cc10e0 |
 | skarbiec | lifetimes, input bounds, concurrency, import cap, Desktop waits and windows, Hub bounds | Oko defect cd6f092c |
 | skrzynka | `message list`/`outbound` `--limit` default 100 and the silent clamp to 1-500 (CLI and API) | a5981f8b |
 | skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
@@ -93,6 +94,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skryba | generation, training and quality defaults | Oko defect 629666b4 |
 | preferences | ranking thresholds, priors, vote weights, import caps | Oko defect 7dc96443 |
 | probierz | figure `ERROR_EXCERPT = 500`, `RENDER_FAILURE_EXCERPT = 4_000`, `benchmark list --limit` default 20 | 060be337 |
+| probierz | Probierz Desktop Posture `alertLimit = 3`, verdicts `prefix(6)`, journeys `prefix(6)` twice, failure reasons `prefix(4)` | probierz-desktop be551aab |
 | probierz | grading budgets, router wait, source bounds, benchmark and Desktop values | Oko defect 344dc59b |
 | brama | Brama Desktop `maximumErrorExcerptBytes = 4096`, `listedModels = 8`, `maximumIdentifierCharacters = 128` | brama-desktop f3fc3f6e |
 | brama | Brama Desktop service discovery reason `prefix(200)` | brama-desktop b0f0a33a |
