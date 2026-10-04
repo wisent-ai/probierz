@@ -192,6 +192,8 @@ Reading coverage is separate from repair, publication and real-product verificat
 | byk-desktop, byk-ios | waits, queue, revision bound, code length | Oko defect b0d3f955 |
 | deep-analytics | `clean(value, maxLength)` cuts of 24-1,000 characters at 71 call sites, `MAX_DECODED_HTML_CHARS`, `MAX_KEYWORD_CHARS = 180`, `MAX_REGION_CHARS = 24`, error excerpts 300/500 | a082f568 |
 | deep-analytics, competitor-research | bandit and graduation policy, text cuts, page sizes | Oko defect 3f41319f |
+| deep-analytics | complete client experiment/variant/assignment/source identifiers; long-identity and URL round-trip regressions added, not run | e0a70fe; canonical docs echo-landing bb2a4c3 |
+| deep-analytics | explicit stored adaptive policy, CLI show/set/clear, no sampling/graduation/allocation defaults, exact policy in snapshots, reusable real database journey added but not run | 0178295; schema wisent-supabase-echo f9700da; canonical docs echo-landing ca69b1e; source-only, other parts of 3f41319f remain open |
 | handtohuman | refused payment error cut to 400 characters | 6ffa39aa |
 | handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
 | creator-portal | `RECENT_SUBMISSIONS_LIMIT = 5` | 544fd90c |
