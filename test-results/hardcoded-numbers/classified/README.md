@@ -51,6 +51,14 @@ These are partial review records, not proof that the entire assignment list has 
 | weles | `RUN_OUTPUT_DEPTH = 3`, `RUN_OUTPUT_MAX_BYTES` | fcbffbec |
 | weles | `CONTROL_LIMIT = 4096` is Skarbiec's broker control-line bound (PROTOCOL, as in brama) | — |
 | weles | admission, page-route, records-route, signup, Apple-expiry, vision-geometry, proxy-rate and trajectory poll values | Oko defect 30817d3d |
+| stado | janitor `MAX_DEPTH = 64`, `MAX_WORKDIR_DEPTH = 256`, scratch `MAX_DEPTH = 256` | 3bfd3e1b |
+| stado | janitor `MAX_ERRORS = 16` and the 128-character error filter | 3bfd3e1b |
+| stado | `SERVICE_LOG_MAX_BYTES`, `SERVICE_LOG_KEEP_BYTES`, `SERVICE_LOG_SCAN_LIMIT = 512`; logs are emptied only at the disk-full threshold | 3bfd3e1b |
+| stado | billing watch `MESSAGES_READ = 500`; every message in the window is read | b4552ef6 |
+| stado | `build list --limit` default 20, `SUPERSEDED_SCAN = 20`, `SCAN_WINDOW = 120` | b4552ef6 |
+| stado | `machine logs --limit` default 65536 and the watch's page constant | b4552ef6 |
+| stado | `EXCERPT_CHARS = 40`, `BODY_EXCERPT_BYTES = 200`, `ERROR_PREVIEW_MAX = 1024`, `FAILURE_FIX_PROMPT_ERROR_BYTES = 4000` and the fixer's 600/500/300/160 cuts | 1d2dce91 |
+| stado | `UNCOVERED_ROWS = 12`, release-cause `EVIDENCE_CHARS = 240` | 1d2dce91 |
 
 ## The 10 000-file cleanup cap
 
