@@ -72,6 +72,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
 | jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
+| jeden | edit diff `take(250)` per side with "[diff truncated at 500 lines]", SSH hosts `take(64)` | 5f99a4b2 |
 | jeden-desktop | invalid RPC frame shown by `line.prefix(500)` | c36c04bd |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
@@ -173,6 +174,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | singularity-desktop | `shownActivityLimit = 250`, `retainedActivityLines = 2_000` | c3e083ea |
 | singularity | executor refusal stderr `take(512)` | 8e3825a8 |
 | spis | Stado and Weles refusals `take(200)`/`take(300)` in capture-widths and the reference audit | 9ce3aa3f |
+| spis | upstream drift report `take(20)` for missing media, hash mismatches and changed READMEs | 913275f9 |
 | singularity | bounds, lifetimes, retention, page size, import cap; Desktop recent rows | Oko defect 002f391e |
 | trends | `observations` `DEFAULT_LIST_LIMIT = 50` (optional `--limit`), `SNIPPET_CHARS = 200` | 56fd7342 |
 | trends | ingest per-source cap, fetch bounds, detection settings | Oko defect 890d3f0b |
