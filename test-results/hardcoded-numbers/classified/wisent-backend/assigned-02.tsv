@@ -185,3 +185,14 @@ assigned_lines	class	note
 63580-63581	TUNING	Rust trading history and reply text bounds
 63582	NOT	Unsteered baseline description
 63583	COUNTER	Rust seed character creation count
+63584	TUNING	Rust seed cleanup page size
+63585-63586	COUNTER	Rust cleanup outcome totals
+63587	TUNING	Seed CLI fixed selection range; branch purpose requires surrounding implementation review
+63588-63589	COUNTER	Unjudged/failed seed evaluation counts
+63590	LAYOUT	Detection training CLI JSON indentation
+63591-63602	EXPERIMENT	Detection training reward/threshold, steps/batch/rate, token/sampling/gradient/checkpoint/seed settings; audit only
+63603	TUNING	Detection service request wait
+63604-63605	EXPERIMENT	Detection reward weight/threshold; audit only
+63606	COUNTER	One-based dataset line number
+63607-63611	PROTOCOL	Token log-probability axes, generated-token mask and nonzero token denominator
+63612	COUNTER	Detection training step index

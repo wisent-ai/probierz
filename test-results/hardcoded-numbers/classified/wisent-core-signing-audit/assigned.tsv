@@ -1,0 +1,105 @@
+assigned_lines	class	note
+64205-64208	LAYOUT	Classifier probability chart geometry/opacity and class labels
+64209	EXPERIMENT	Hallucination histogram bin count; opacity is display styling
+64210	NOT	Hallucination class label text
+64211	EXPERIMENT	Non-hallucination histogram bin count; opacity is display styling
+64212	NOT	Non-hallucination class label text
+64213	LAYOUT	Probability chart grid opacity
+64214	COUNTER	Best accuracy accumulator
+64215-64229	EXPERIMENT	TruthfulQA evaluation token/sample/pair/layer/threshold defaults and sampling/split seeds; zero limits require consumer semantics
+64230	SCHEMA	Human evaluation failure sentinel; must not enter valid score aggregates
+64231-64232	EXPERIMENT	Guarded evaluation token/sample defaults and sampling seed
+64233	SCHEMA	Human evaluation failure sentinel
+64234	LAYOUT	Evaluation metrics JSON indentation
+64235-64236	EXPERIMENT	String evaluation token cap and layer ranking count
+64237-64248	LAYOUT	Layer sweep chart geometry/style
+64249	TUNING	Fixed model layer count fallback must derive from actual selected model
+64250	LAYOUT	Layer sweep JSON indentation
+64251-64252	EXPERIMENT	Layer sweep threshold and ranking count defaults
+64253-64254	LAYOUT	Layer sweep configuration/result JSON indentation
+64255-64256	EXPERIMENT	Layer sweep evaluation threshold defaults
+64257	COUNTER	Best F1 sentinel
+64258	EXPERIMENT	Strategy comparison holdout fraction and seed
+64259-64270	LAYOUT	Strategy comparison chart geometry/style and random baseline
+64271-64272	LAYOUT	Classifier extraction result JSON indentation
+64273	EXPERIMENT	Classifier holdout fraction and seed
+64274-64275	LAYOUT	Classifier optimization result/configuration JSON indentation
+64276-64285	EXPERIMENT	Classifier seeds/iteration limits, cross-validation folds and threshold search resolution
+64286	LAYOUT	Threshold optimization JSON indentation
+64287-64311	LAYOUT	Threshold optimization chart geometry/style and reference baselines
+64312-64321	EXPERIMENT	Threshold search bounds/resolution and LiveCodeBench layer/threshold/sample/batch/token defaults
+64322	COUNTER	Skipped example count
+64323	EXPERIMENT	Token-limited evaluation cap
+64324	COUNTER	Skipped statement count
+64325	LAYOUT	Example result JSON indentation
+64326	EXPERIMENT	Nominal unused threshold requires caller verification, not an automatic waiver
+64327-64333	EXPERIMENT	Code/bias/hallucination detection layer and classifier threshold defaults
+64334-64344	EXPERIMENT	Detection examples layer/threshold/token/sampling defaults; audit only, preserve safety policy
+64345	COUNTER	Harmless detection count
+64346	EXPERIMENT	Harmless example output token cap
+64347	COUNTER	Harmful detection count
+64348-64359	EXPERIMENT	Detection/training token/layer/threshold/split/seed settings; nominal unused thresholds still require caller verification
+64360-64363	COUNTER	Classifier confusion matrix counts
+64364	EXPERIMENT	Classifier evaluation batch size
+64365-64367	TUNING	Fixed evaluated model-name selection, not numeric assignments; broad hardcoding audit applies
+64368-64392	COUNTER	JSON parsing byte/chunk/nesting/item counters
+64393	TUNING	Extracted code text bound
+64394-64395	COUNTER	Maximum observed question count and JSON nesting state
+64396	LAYOUT	Extracted result JSON indentation
+64397-64400	COUNTER	Sample parser nesting/position state
+64401-64409	EXPERIMENT	Intervention evaluation layer/strength/token/example/sampling defaults
+64410	LAYOUT	Intervention evaluation JSON indentation
+64411-64412	EXPERIMENT	Intervention wrapper layer/strength/token/sampling defaults
+64413	COUNTER	Question total
+64414-64416	TUNING	Fixed evaluated model-name selection
+64417	COUNTER	Model question count
+64418	TUNING	Model-name substring determines single-response shape; should follow source schema
+64419	COUNTER	Model question count
+64420	TUNING	Model-name substring determines single-response shape
+64421-64422	COUNTER	Missing model question totals; zero-versus-unavailable semantics require consumer review
+64423-64425	TUNING	Model-name shape inference and fixed expected question count
+64426	LAYOUT	Question example JSON indentation
+64427-64429	TUNING	Model output fixed name selection
+64430	NOT	Single-response shape comment
+64431	TUNING	Model-name shape inference
+64432-64434	COUNTER	Question/success/failure totals
+64435	LAYOUT	Split model output JSON indentation
+64436	COUNTER	JSON bracket nesting state
+64437	NOT	Single-response shape comment
+64438	TUNING	Model-name shape inference
+64439-64441	COUNTER	Question/success/failure totals
+64442	LAYOUT	Split model output JSON indentation
+64443-64445	TUNING	Viewer fixed model names and bind address/port
+64446	TUNING	Classifier hidden dimension default
+64447-64448	COUNTER	AUC integration accumulators
+64449-64454	TUNING	Classifier holdout/seed/batch/epoch/rate/early-stop defaults
+64455-64456	PROTOCOL	Training example/label concatenation axes
+64457-64461	COUNTER	Best accuracy, early-stop and loss accumulators
+64462	TUNING	AUC zero fallback; consumer must distinguish unavailable metric from measured zero
+64463-64465	TUNING	Classifier thresholds and response analysis token cap
+64466	TUNING	Zero-initialized maximum similarity excludes negative cosine values; verify intended domain
+64467	LAYOUT	Response analysis JSON indentation
+64468-64469	SCHEMA	Single-token multiple-choice response contract; verify tokenizer covers allowed answers
+64470	PROTOCOL	Generated sequence concatenation axis
+64471-64472	SCHEMA	Single-token activation collection operation
+64473-64475	TUNING	Safe response token cap and guard thresholds; preserve safety semantics
+64476-64477	TUNING	Zero-initialized maximum similarities require negative-score domain review
+64478-64479	TUNING	Inference output length defaults
+64480	COUNTER	Generated token count
+64481-64482	PROTOCOL	Vocabulary argmax and token concatenation axes
+64483	COUNTER	Default token position
+64484-64486	TUNING	Default/max similarity zeros require missing-score and negative-domain review
+64487	TUNING	Activation monitor similarity threshold
+64488	PROTOCOL	Feature similarity axis
+64489-64493	COUNTER	Token/pair/layer/load counts and cosine-domain maximum sentinel
+64494-64495	PROTOCOL	Contrastive vector averaging axes
+64496	LAYOUT	Vector metadata JSON indentation
+64497-64499	COUNTER	Saved vector and registered hook counts
+64500	PROTOCOL	Cosine feature axis
+64501	TUNING	Vector normalization epsilon
+64502-64504	PROTOCOL	Euclidean norm order and vector mean axis
+64505-64516	TUNING	Intervention model layer/strength/classifier/generation/step settings; safety policy changes require product evidence
+64517	NOT	Disabled intervention scale assignment
+64518-64523	TUNING	Decoder intervention thresholds/step sizes/strengths
+64524	NOT	Disabled wrapper scale assignment
+64525-64528	TUNING	Wrapper/helper intervention thresholds and step bounds

@@ -281,3 +281,8 @@ assigned_lines	class	note
 61928-61929	PROTOCOL	Hexadecimal radix and percent-escape width
 61930-61940	TUNING	Outbound device/user/token/notification bounds and document chunk defaults; asserted fixed APNS token length requires provider contract verification
 61941	PROTOCOL	First printable character code point
+64103	EXPERIMENT	wisent-boost paper strong-result threshold
+64104	LAYOUT	wisent-coding-paper baseline JSON indentation
+64105	EXPERIMENT	wisent-coding-paper steering strength
+64106	LAYOUT	wisent-coding-paper result JSON indentation
+64107	EXPERIMENT	wisent-coding-paper synthetic sample count

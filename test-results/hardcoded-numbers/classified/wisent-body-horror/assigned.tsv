@@ -1,0 +1,188 @@
+assigned_lines	class	note
+63613	COUNTER	Vector signal accumulator
+63614-63615	PROTOCOL	Keypoint mean and feature concatenation axes
+63616	COUNTER	Confound outcome totals
+63617	LAYOUT	Confound report JSON indentation
+63618-63621	PROTOCOL	Finite-feature, distance and silhouette reduction axes
+63622	EXPERIMENT	Silhouette histogram bin count
+63623	PROTOCOL	Keypoint centering axis
+63624-63625	TUNING	Degenerate/missing pose scale fallback; distinguish unavailable scale from valid unit scale
+63626-63627	PROTOCOL	Torso centering and neighbor averaging axes
+63628-63636	SCHEMA	Pose keypoint identifiers
+63637	TUNING	Keypoint confidence floor
+63638	SCHEMA	Segmentation class cardinality; model representation must match
+63639-63641	EXPERIMENT	Cohort reference count thresholds and spatial downsample stride
+63642	COUNTER	Score iteration index
+63643	EXPERIMENT	Assumed failure prevalence
+63644	TUNING	Recall zero fallback; missing evaluable observations require explicit unavailable state
+63645-63646	PROTOCOL	Feature validity and distance axes
+63647	LAYOUT	Cohort signal JSON indentation
+63648-63654	PROTOCOL	Reference count/mean/distance and valid-weight reduction axes
+63655-63656	EXPERIMENT	Reference distance percentile envelope
+63657-63658	COUNTER	Outlier/evaluated counts
+63659-63660	PROTOCOL	Pose direction averaging axes
+63661-63663	COUNTER	Crossing/bow/violation accumulators
+63664	EXPERIMENT	Spatial feature sampling stride
+63665	COUNTER	Processed count
+63666-63671	PROTOCOL	Reference count/mean/distance and valid-weight reduction axes
+63672	COUNTER	Failure/detection totals
+63673-63681	SCHEMA	Pose keypoint identifiers
+63682	TUNING	Keypoint confidence floor
+63683	TUNING	Degenerate pose unit-scale fallback; reduction axis itself is algorithmic
+63684	PROTOCOL	Pose centroid axis
+63685	COUNTER	Score iteration index
+63686-63687	EXPERIMENT	Recall operating points and assumed failure prevalence
+63688-63689	LAYOUT	Domain-bias report JSON indentation
+63690	PROTOCOL	JPEG quality-to-quantization scale mapping
+63691	COUNTER	Encoding error accumulator
+63692-63693	LAYOUT	Encoding report JSON indentation
+63694-63696	EXPERIMENT	Domain matching image resolution, JPEG quality and download batch
+63697	COUNTER	Download failure count
+63698	LAYOUT	Reencoding manifest JSON indentation
+63699-63702	EXPERIMENT	Domain sample resolution/count/seed and download batch
+63703	LAYOUT	Reencoding manifest JSON indentation
+63704-63706	EXPERIMENT	Fine-tuning epochs/batch/rate defaults
+63707-63708	LAYOUT	Fine-tuning leak/results report JSON indentation
+63709-63713	EXPERIMENT	Specificity target, folds, class prevalence, seed and augmentation ranges
+63714	SCHEMA	Binary classifier class cardinality
+63715-63717	EXPERIMENT	Data loading worker counts and optimizer weight decay
+63718-63720	COUNTER	Training/prediction/correlation accumulators
+63721-63725	EXPERIMENT	Encoder benchmark specificity/folds/prevalence/baseline AUC/seed; prior recorded metrics require their source, not fresh measurement claims
+63726	PROTOCOL	Feature normalization axis
+63727-63731	EXPERIMENT	Encoder head PCA/training/regularization settings
+63732-63733	PROTOCOL	Ensemble averaging axes
+63734-63736	LAYOUT	Encoder evaluation report JSON indentation
+63737-63740	EXPERIMENT	Hand-crop specificity/prevalence/folds and classifier iteration bound
+63741-63743	LAYOUT	Hand-crop report JSON indentation
+63744	NOT	Feature documentation expected-person count example
+63745	SCHEMA	Single-person feature schema probe
+63746-63748	COUNTER	Coverage marker and sample count
+63749	EXPERIMENT	Training dataset assumed single-person population
+63750	PROTOCOL	Missing-feature fraction axis
+63751	TUNING	Prediction assumes one expected person; must follow input contract
+63752-63755	EXPERIMENT	Clean retest PCA/specificity/folds/prevalence
+63756	COUNTER	Missing sample count
+63757	PROTOCOL	Normalization default feature axis
+63758-63759	EXPERIMENT	Retest PCA/classifier seeds
+63760	LAYOUT	Retest result JSON indentation
+63761	TUNING	Normalization epsilon; feature axis is algorithmic
+63762-63766	EXPERIMENT	Ensemble classifier/PCA hyperparameters and seeds
+63767	PROTOCOL	Ensemble averaging axis
+63768	EXPERIMENT	Ensemble quantile search range/resolution; best-score state is counter
+63769	TUNING	Normalization epsilon; feature axis is algorithmic
+63770-63775	EXPERIMENT	Full-feature threshold grid/classifier settings and grid PCA dimension
+63776	PROTOCOL	Normalization default feature axis
+63777-63778	EXPERIMENT	Grid retest PCA/classifier seeds
+63779-63780	LAYOUT	Grid report JSON indentation
+63781-63782	EXPERIMENT	Second-round PCA dimension and specificity target
+63783	PROTOCOL	Normalization default feature axis
+63784-63787	EXPERIMENT	Second-round PCA/classifier seeds and validation split/count
+63788-63789	LAYOUT	Retest/evaluation report JSON indentation
+63790	EXPERIMENT	Stratified fold count/seed
+63791	LAYOUT	Evaluation report JSON indentation
+63792-63810	EXPERIMENT	Assumed prevalence, specificity/baseline metrics, classifier settings, validation/fold/permutation/calibration policy; recorded baseline metrics need source evidence
+63811	EXPERIMENT	Normal-map analysis dimensions
+63812	LAYOUT	Normal-map report JSON indentation
+63813-63815	EXPERIMENT	Cohort sample minimum, spatial stride and region pixel minimum
+63816-63817	PROTOCOL	Normal vector norm/mean axes
+63818-63819	NOT	Axial clustering formula comments
+63820-63821	PROTOCOL	Normal prediction axes and cosine domain clipping
+63822-63823	EXPERIMENT	Numerical variance epsilon and spherical clustering iteration/seed defaults
+63824-63825	NOT	Spherical clustering ratio/formula documentation
+63826	TUNING	Normal vector normalization epsilon; averaging axis is algorithmic
+63827	COUNTER	Score iteration index
+63828	EXPERIMENT	Recall operating point default
+63829	LAYOUT	Phase result JSON indentation
+63830-63832	COUNTER	Coverage outcome totals
+63833	LAYOUT	Coverage report JSON indentation
+63834-63835	COUNTER	Region exceedance/evaluation totals
+63836-63838	EXPERIMENT	Reference quantile, assumed prevalence and jointly valid keypoint minimum
+63839-63842	SCHEMA	Hand keypoint ranges and joint identifiers
+63843-63846	TUNING	Unavailable region scale zero fallback; two-point minimum follows spread calculation
+63847	PROTOCOL	Valid face keypoint averaging axis
+63848-63850	EXPERIMENT	Specificity/recall operating points and assumed prevalence
+63851	COUNTER	Confusion matrix totals
+63852	LAYOUT	Impact result JSON indentation
+63853	EXPERIMENT	Rule weighting sweep defaults
+63854	NOT	Baseline weighting comment; not proof of current calibration
+63855-63857	EXPERIMENT	Residual prevalence, pose specificity floor and cohort quorum/false-positive defaults
+63858	EXPERIMENT	Cohort quorum offset assignment
+63859	EXPERIMENT	Cohort base quorum
+63860	LAYOUT	Residual summary JSON indentation
+63861	NOT	Outvoted category documentation
+63862-63863	COUNTER	Quorum/strong-tier outcome counts
+63864	NOT	Cloud GPU quota comment; not current entitlement evidence
+63865	TUNING	Infrastructure transfer implementation selection
+63866	TUNING	Infrastructure rewrite fixes GPU/job allocation; reusable capability must derive host resources
+63867-63880	TUNING	Artifact threshold/video sample times, cohort quantiles/stride/confidence and reference/keypoint/pair minima
+63881	TUNING	Degenerate pose unit-scale fallback
+63882-63883	PROTOCOL	Pose centroid and pair distance axes
+63884-63886	TUNING	Cohort percentile envelope and segmentation downsample stride
+63887	SCHEMA	Goliath segmentation label cardinality
+63888-63889	TUNING	Matte profile bins and minimum silhouette area
+63890	NOT	Prior cohort calibration comment; requires its recorded evidence
+63891-63892	TUNING	Good reference minimum and adjacency stride
+63893-63895	PROTOCOL	Reference count/distance/weight axes
+63896	TUNING	Weighted distance denominator epsilon; reduction axis is algorithmic
+63897-63899	COUNTER	Outlier/evaluated/adjacency counts
+63900-63902	PROTOCOL	Silhouette and reference distance reduction axes
+63903-63905	TUNING	Confidence operating points, degenerate scale fallback and bone confidence minimum
+63906-63907	PROTOCOL	Keypoint centroid/spread axes
+63908-63910	TUNING	Missing feature/evaluation zero fallbacks; unavailable is not measured zero
+63911	TUNING	Default expected-person count
+63912	COUNTER	Matched evaluation sample count
+63913-63916	TUNING	Report specificity/prevalence/cohort floor and CLI expected-person default
+63917	LAYOUT	Evaluation result JSON indentation
+63918-63919	NOT	Hand joint schema documentation
+63920-63924	TUNING	Goliath metadata cache capacities; singleton justification depends on function inputs
+63925-63933	SCHEMA	Goliath pose keypoint identifiers
+63934-63936	TUNING	Goliath segmentation metadata cache capacities
+63937-63956	SCHEMA	Goliath segmentation cardinality and semantic label IDs
+63957-63958	TUNING	Point-map depth validity and silhouette thresholds
+63959	NOT	Segmentation storage shape documentation
+63960	TUNING	Matte component area/fraction minimums
+63961	PROTOCOL	Exclude background component count
+63962	TUNING	Matte hole area minimum
+63963	PROTOCOL	Unique point row axis
+63964	TUNING	Matte boundary sample cap
+63965-63966	PROTOCOL	Polygon edge shift and point distance axes
+63967-63968	TUNING	Matte interval bounds and bone depth sample count
+63969	PROTOCOL	Point centroid axis
+63970-63973	COUNTER	Connected-component labeling state
+63974-63975	TUNING	Segmentation component fraction/area minima
+63976	PROTOCOL	Neighborhood distance axis
+63977	NOT	Threshold configuration example
+63978-63979	TUNING	Good-rule veto thresholds; preserve calibrated policy until evidence-backed replacement
+63980	NOT	Prior quorum calibration comment
+63981-63982	TUNING	Strong rejection confidence and weak-rule quorum
+63983-63986	NOT	Rule exclusion/calibration and weighted combination comments
+63987-63992	TUNING	Rejection weight, rule-tier weights and body/keypoint confidence gates
+63993	NOT	Prior partial-batch calibration comment
+63994-64006	TUNING	Per-rule person/anatomy/pose confidence weights
+64007-64009	TUNING	Duplicate-person overlap and body-confidence gates
+64010-64014	TUNING	Forearm/finger/crop visibility and hand search/area gates
+64015-64018	TUNING	Face/shoulder confidence, orientation and relative head-position gates
+64019-64026	TUNING	Limb distance/asymmetry/proportion tolerances and minimum joint angle
+64027-64033	TUNING	Bimodality, duplicate-cluster and keypoint extent gates
+64034	NOT	Prior full-data recalibration comment
+64035-64046	TUNING	Segmentation/normal/hand/face/finger/depth confidence weights
+64047-64048	TUNING	Torso depth and evaluable area gates
+64049-64057	TUNING	Depth discontinuity, silhouette and outside-matte confidence/geometry gates
+64058-64065	TUNING	Hand blob/finger irregularity and facial coverage/asymmetry gates
+64066-64067	TUNING	Segmentation component size gates
+64068-64070	TUNING	Expected anatomy counts; fixed single-person assumption must follow the evaluated scene contract
+64071	TUNING	Second-head area fraction gate
+64072	NOT	Prior head fraction calibration comment
+64073-64077	TUNING	Fragmentation and pose/segmentation consistency gates
+64078	NOT	Prior normal smoothness calibration sample count
+64079-64082	TUNING	Normal sharpness/smoothness/area and cohort pose confidence gates
+64083	NOT	Prior quorum/quantile calibration comment
+64084-64087	TUNING	Cohort envelope/adjacency/segmentation/matte confidence weights
+64088	NOT	Prior union-rule evaluation comment
+64089-64090	TUNING	Cohort union and arm-chain confidence weights
+64091-64092	COUNTER	Segmentation evaluation counts
+64093	PROTOCOL	Normal dot-product axis and cosine domain clipping
+64094-64096	NOT	Previously reported rule calibration metrics; not current measurements
+64097	PROTOCOL	Finger chain difference/distance axes
+64098-64099	NOT	Previously reported rule calibration metrics
+64100-64102	COUNTER	Depth worst-value accumulator and matte outcome counts

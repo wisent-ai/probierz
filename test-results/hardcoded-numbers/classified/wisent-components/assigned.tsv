@@ -1,0 +1,21 @@
+assigned_lines	class	note
+64108-64142	LAYOUT	Shared Swift shell dimensions, spacing, radii, typography and grid pitch
+64143	COUNTER	Metric card numeric accumulator
+64144-64154	LAYOUT	Skeleton geometry/animation and monospaced typography
+64155	COUNTER	Design lint file count
+64156-64157	PROTOCOL	CSS shorthand color widths
+64158-64161	COUNTER	Figma variable page offsets
+64162-64164	PROTOCOL	Figma HTTP statuses
+64165-64170	COUNTER	Figma request/parser/page/name-match counters
+64171-64174	TUNING	Figma description/list/style/component page sizes
+64175-64176	COUNTER	Icon reference and pin drift counts
+64177	PROTOCOL	Eight-bit color channel maximum
+64178-64180	COUNTER	Token vocabulary item counts
+64181	LAYOUT	Figma snapshot unit scale default
+64182-64184	PROTOCOL	Eight-bit color range, rectangle corner cardinality and opaque alpha identity
+64185-64187	COUNTER	Text run positions and landing form ordinal
+64188	LAYOUT	Key/value column default
+64189-64191	COUNTER	Facet/page state defaults; not evidence of fetched page count
+64192-64194	LAYOUT	Loading row/textarea geometry and deep-heading style boundary
+64195	COUNTER	Documentation text offset
+64196-64204	LAYOUT	Web shell widths and skeleton dimensions

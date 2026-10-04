@@ -1,0 +1,18 @@
+assigned_lines	class	note
+64529-64530	COUNTER	Question update/missing totals
+64531	LAYOUT	Dataset JSON indentation
+64532-64534	TUNING	Sample viewer fixed model selection and bind address/port
+64535	LAYOUT	Combined result JSON indentation
+64536-64539	EXPERIMENT	Intervention comparison layer/strength/token/sampling defaults
+64540	LAYOUT	Comparison result JSON indentation
+64541-64546	EXPERIMENT	Intervention demo layer/strength/token/sampling defaults
+64547-64549	COUNTER	Demo token/intervention outcome counts
+64550-64553	PROTOCOL	Vocabulary probability axis, single-token sampling and sequence concatenation axes
+64554-64555	EXPERIMENT	Demo CLI layer/strength defaults
+64556	COUNTER	Demo prompt selection index
+64557	LAYOUT	Enhanced question JSON indentation
+64558-64577	TUNING	Intervention target/step/layer/strength/classification/generation defaults; audit only, preserve safety semantics
+64578	EXPERIMENT	Demo fixed base score; not a measured classifier score
+64579-64580	LAYOUT	Demo/ID result JSON indentation
+64581	TUNING	Fixed activation dimension fallback; derive actual model representation rather than invent dimensions
+64582-64583	LAYOUT	Activation chart geometry/opacity
