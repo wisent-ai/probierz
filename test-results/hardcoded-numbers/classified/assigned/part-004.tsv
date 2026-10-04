@@ -247,3 +247,27 @@ assigned_lines	class	note
 35056	LAYOUT	JSON indentation
 35057-35058	TUNING	Training data batch defaults
 35059	COUNTER	Persona identifier counter
+35609-35611	COUNTER	CLI iteration and linked count
+35612-35614	TUNING	Proxy token and request header bounds
+35615-35622	PROTOCOL	HTTP ports, hostname length and HTTP statuses
+35623	TUNING	Egress byte allowance
+35624-35625	TUNING	Extension length and verification tolerance
+35626	PROTOCOL	Basis points in a whole
+35627-35638	TUNING	Minimum edit proportion, brief bounds, CLI policy defaults, platform fee and marketplace bounds
+35639	PROTOCOL	ISO currency code width
+35640-35641	TUNING	Payment amount and order item bounds
+35642	PROTOCOL	ISO currency code width
+35643	TUNING	Billing word unit
+35644-35645	PRICE	Humanization and UGC unit prices
+35646-35649	TUNING	Minimum charge, word count and turnaround policy
+35650	COUNTER	Verified identity count
+35651-35654	TUNING	ReFT model length, rank and inference defaults
+35655-35656	LAYOUT	JSON indentation
+35657-35667	TUNING	ReFT training and evaluation hyperparameters
+36346	COUNTER	Meta Ads CLI argument iteration
+36347-36503	VENDOR	MLX Swift and bundled fmt/Metal support; upstream-owned implementation, including algorithm constants, tensor axes, counters, API defaults and examples. A Wisent fork does not authorize patching upstream product code.
+36504-36738	VENDOR	MLX tensor API defaults, numerical tolerances, memory policy, layer parameters and optimizer settings; upstream ownership prevents local product patches
+36739-36753	VENDOR	MLX upstream numeric test fixtures
+36754-36862	VENDOR	MLX upstream test fixtures, example strings and generation/build-tool constants
+36863	COUNTER	Monetizer line parser index
+36864	PROTOCOL	Monetizer usage exit status

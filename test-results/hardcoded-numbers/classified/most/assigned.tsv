@@ -1,0 +1,67 @@
+assigned_lines	class	note
+36865	COUNTER	Elapsed initializer
+36866-36868	PROTOCOL	HTTP statuses and time conversion
+36869-36871	TUNING	Name/response bounds and request wait
+36872-36874	SCHEMA	Onboarding step identities
+36875-36876	TUNING	Recipient and message length bounds
+36877-36878	COUNTER	Refresh generations
+36879-36888	LAYOUT	Messaging and operation table geometry
+36889	COUNTER	Documentation argument iteration
+36890-36891	NOT	Example map URLs
+36892-36893	PROTOCOL	Apple reaction discriminant bases
+36894	SCHEMA	Worker frame version
+36895-36896	TUNING	Worker heartbeat and call wait defaults
+36897-36901	PROTOCOL	WebSocket application close codes and policy violation code
+36902-36903	TUNING	Request/resource wait policy disabled via zero; API semantics require consumer verification
+36904	PROTOCOL	Permanent-failure exit code
+36905-36906	TUNING	Heartbeat floor and reconnect multiplier
+36907	PROTOCOL	Time conversion
+36908-36909	COUNTER	Reconnect attempt reset
+36910-36911	TUNING	Event queue bound and flush polling cadence
+36912-36913	COUNTER	Health failure flag
+36914	PROTOCOL	Apple sharing audience enum
+36915-36916	TUNING	Diagnostic class count bounds
+36917	COUNTER	Class count
+36918-36921	TUNING	Helper warmup/probe waits, cadence and listener port
+36922	SCHEMA	First message part index
+36923	TUNING	Diagnostic class default
+36924-36926	NOT	Apple message format comments
+36927-36928	PROTOCOL	Message part and style flag
+36929	TUNING	Message history lookup wait
+36930	PROTOCOL	Missing part sentinel
+36931-36933	TUNING	Helper reconnect timing
+36934	TUNING	Webhook probe failure count; explicit test scenario input
+36935	COUNTER	API status initializer
+36936-36938	PROTOCOL	RPC error codes; internal error label differs from standard JSON-RPC internal error code
+36939	TUNING	Agent HTTP wait
+36940-36942	PROTOCOL	CLI exit statuses
+36943-36947	TUNING	Capability input bounds, heartbeat cadence and staleness factor
+36948	NOT	SQL singleton row selection
+36949	COUNTER	Bootstrap parser index
+36950	SCHEMA	Identity bootstrap record version
+36951-36952	NOT	JSON/format comments; second row emits the protocol root reference
+36953	COUNTER	Wire accumulator
+36954-36956	PROTOCOL	Reaction bases and APNS port
+36957-36958	TUNING	APNS reconnect timing
+36959-36961	PROTOCOL	APNS frame kinds
+36962-36963	COUNTER	Wire parser indices
+36964-36968	PROTOCOL	Encryption block padding and pair-protocol widths
+36969-36972	NOT	Protobuf field documentation
+36973-36974	PROTOCOL	MMCS key/signature widths
+36975	COUNTER	Crypto offset
+36976	NOT	Accept header string
+36977	COUNTER	Search offset
+36978	NOT	SRP generator comment
+36979-36980	PROTOCOL	SRP group generator and modulus width
+36981	TUNING	Account import read batch
+36982-36984	COUNTER	Import cursor and rejection counts
+36985	TUNING	AppleScript dispatch wait
+36986	NOT	Serialization comment
+36987	PROTOCOL	Apple epoch conversion
+36988	NOT	Database field documentation
+36989-36990	COUNTER	Contact parser indices
+36991-36992	TUNING	Relay port and request wait
+36993-36994	PROTOCOL	Location message enum and geographic coordinate bounds
+36995-36999	TUNING	Relay debounce, polling cadence, batch and outbound recheck window/row defaults
+37000	NOT	Binary plist comment
+37001-37003	PROTOCOL	Typedstream integer and floating point tags

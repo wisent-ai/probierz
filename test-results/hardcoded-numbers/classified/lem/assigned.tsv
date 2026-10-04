@@ -1,0 +1,69 @@
+assigned_lines	class	note
+36159-36162	LAYOUT	Logo and navigation styling
+36163	COUNTER	Log cursor
+36164	PROTOCOL	Time conversion
+36165	TUNING	Retained log bound
+36166	COUNTER	Log cursor reset
+36167-36169	SCHEMA	Onboarding step identities
+36170-36172	LAYOUT	Panel opacity
+36173-36176	TUNING	Phrase/line minimums, transcript polling and citation display count
+36177	COUNTER	Word count
+36178-36179	TUNING	Majority share heuristic
+36180-36182	COUNTER	Refresh identity, release flag and CLI iteration
+36183	TUNING	Provenance scan round cap
+36184-36185	COUNTER	Argument and generated-name indices
+36186-36194	PROTOCOL	HTTP statuses
+36195	TUNING	Compute snapshot byte cap
+36196	COUNTER	Total bytes
+36197-36200	TUNING	Rewrite candidates, chunk size, temperature and random seed
+36201-36202	PROTOCOL	CLI exit statuses
+36203	TUNING	Context result count
+36204-36205	COUNTER	Zero/one
+36206-36211	TUNING	Output/history/context bounds, figure token allowance and citation delay
+36212	NOT	Accept header string
+36213-36216	TUNING	Discovery limit, provider page sizes and query bound
+36217-36218	PROTOCOL	HTTP status class boundaries
+36219	TUNING	Assumed longest entity name
+36220-36221	TUNING	Reading and note-generation allowances
+36222-36223	PROTOCOL	Hash algorithm initial state and multiplier; not proof the algorithm matches standard FNV offset
+36224	TUNING	Citation harvest batch
+36225-36226	COUNTER	Zero/one
+36227-36228	TUNING	Partial text floor and citation context window
+36229-36230	COUNTER	Backslash counts
+36231	TUNING	Log page size; zero cursor is initial position
+36232	TUNING	Backend listener port
+36233-36237	COUNTER	Parser slash counts and depths
+36238-36239	TUNING	Figure generation attempt defaults and ceiling
+36240-36244	COUNTER	Output suffix, attempts and line indices
+36245-36249	TUNING	Figure candidates and rewrite generation defaults
+36250-36253	SCHEMA	Empty-record sentinel, capture group, split and pair arity
+36254	TUNING	Partial text floor
+36255	PROTOCOL	WWW prefix width
+36256	TUNING	DOI registrant minimum heuristic requires identifier contract
+36257	NOT	Accept header string
+36258	TUNING	Version history scan round cap
+36259-36260	COUNTER	Status and parser depth
+36261	TUNING	Paper context result count
+36262-36269	COUNTER	Paper content count initializers
+36270	TUNING	Default word target; zero meaning must follow plan contract
+36271-36272	COUNTER	Parser depth and read count
+36273	TUNING	Cached context result cap
+36274	TUNING	Section suggestion threshold
+36275	COUNTER	Parser depth
+36276	TUNING	Recent venue result count
+36277	COUNTER	Kept count
+36278-36280	TUNING	Citation count, section frequency and venue award thresholds
+36281-36283	COUNTER	Parser depth and initial distance
+36284	LAYOUT	Highlight padding
+36285-36292	COUNTER	Indices, counts and distance accumulators
+36293	TUNING	Transcript match context radius
+36294	SCHEMA	Provenance cache version
+36295-36322	COUNTER	File metadata, parser state, provenance and roadmap counts
+36323-36324	PROTOCOL	PKCS8 Ed25519 encoding and seed widths
+36325	TUNING	Nonce entropy policy
+36326-36327	PROTOCOL	HTTP statuses
+36328	COUNTER	Zero
+36329	TUNING	Transcript search chunk
+36330-36335	COUNTER	Byte counts and word-match indices
+36336	TUNING	Transcript file batch
+36337-36345	COUNTER	Parser indices, output status and refresh counts

@@ -1,0 +1,50 @@
+assigned_lines	class	note
+36037-36040	COUNTER	Kronika link counts, CLI iteration and positional count
+36041	PROTOCOL	Failure exit status
+36042	TUNING	String minimum length default
+36043-36044	TUNING	Source excerpt and terminology page threshold
+36045-36047	PROTOCOL	Exit statuses
+36048	COUNTER	CLI argument iteration
+36049-36052	TUNING	Input, file, token and diff budgets
+36053	PROTOCOL	Port number upper boundary
+36054-36060	TUNING	Evidence-source ranking policy
+36061	COUNTER	Total bytes
+36062-36065	TUNING	Document minimum and GUI input bounds
+36066-36073	PROTOCOL	HTTP statuses
+36074	COUNTER	Request size
+36075-36077	TUNING	Request/header waits and per-socket request ceiling
+36078	COUNTER	Onboarding screen iteration
+36079-36081	TUNING	Onboarding screen cap, claim minimum and field length rule
+36082	COUNTER	Form ordinal
+36083-36085	TUNING	Text minimum, retry count and authoring inference defaults
+36086	COUNTER	Attempt index
+36087-36090	TUNING	Error excerpt, revision/digest abbreviations and attempt ceiling
+36091	COUNTER	CLI argument iteration
+36092-36093	PROTOCOL	HTTP statuses
+36094-36098	TUNING	Title/excerpt/walk bounds, review rounds and score tolerance
+36099	COUNTER	Review round index
+36100	TUNING	Landing title bound
+36101-36102	COUNTER	CLI iteration and form ordinal
+36103	REMOVED	Las directory entry cap removed in published source; original snapshot retains it
+36104-36106	COUNTER	Entry counts and generation
+36107-36108	LAYOUT	Native window minimum dimensions
+36109	SCHEMA	Catalog version
+36110-36111	LAYOUT	JSON indentation and CLI width
+36112-36117	PROTOCOL	Exit statuses
+36118	PROTOCOL	OS-selected listener port sentinel
+36119-36120	PROTOCOL	Exit statuses
+36121-36122	COUNTER	CLI argument iteration
+36123-36130	PROTOCOL	Exit statuses
+36131	COUNTER	Checked dependencies
+36132-36135	TUNING	GUI source, upload name, stored name and path bounds
+36136	LAYOUT	Upload index padding
+36137	TUNING	Session token entropy policy
+36138-36147	PROTOCOL	Port upper boundary and HTTP statuses
+36148	COUNTER	Request byte count
+36149	LAYOUT	Catalog table columns
+36150	TUNING	Onboarding screen cap
+36151	LAYOUT	JSON indentation
+36152	COUNTER	Screen iteration
+36153-36155	TUNING	Credential validity, use and delegation policy
+36156-36157	PROTOCOL	Ed25519 signature width and JSON escape width
+36158	COUNTER	JSON offset

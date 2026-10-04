@@ -1,0 +1,150 @@
+assigned_lines	class	note
+35668-35669	TUNING	Conservative integer bound and timestamp unit heuristic
+35670-35673	PROTOCOL	Time conversions
+35674-35676	COUNTER	Hidden message count
+35677	PROTOCOL	Markdown fence minimum
+35678	TUNING	Fixed model artifact size; should follow selected artifact metadata
+35679	PROTOCOL	HTTP success
+35680-35683	TUNING	Goal excerpt, model part assumption and event preview bounds
+35684	PROTOCOL	Days per week
+35685	TUNING	Recency month approximation
+35686-35692	COUNTER	Usage ledger totals
+35693	TUNING	Stado output tail bound
+35694	COUNTER	Recovery attempt index
+35695-35701	TUNING	Advisor result count, history/context limits and timestamp matching tolerance
+35702-35704	COUNTER	Turn indices
+35705-35706	TUNING	Directory batch size and ledger header read bound
+35707-35711	COUNTER	Transcript byte, line and parse-error counts
+35712-35714	TUNING	File batch and title extraction bounds
+35715	COUNTER	Parse-error count
+35716-35717	TUNING	Recovery backoff ceiling and doubling count
+35718-35719	PROTOCOL	Invalid socket sentinel
+35720-35722	COUNTER	Decode count, revision and generation
+35723	TUNING	Goal refresh cadence
+35724-35726	COUNTER	Revision and generation
+35727-35728	SCHEMA	Contract version and expected requirement count
+35729-35733	COUNTER	Session acceptance counts and recovery reset
+35734	LAYOUT	Conversation rail opacity
+35735-35736	PROTOCOL	Time conversions
+35737	PROTOCOL	Disabled install/restart flags in release build contract
+35738	SCHEMA	Archive root layout stripping
+35739-35741	PROTOCOL	Time conversions
+35742-35745	TUNING	iOS title, connection idle, reconnect validity and replay bounds
+35746	PROTOCOL	Binary64 exact-integer boundary
+35747	SCHEMA	Event cursor digit width
+35748-35752	TUNING	iOS query limits and connection wait
+35753-35754	LAYOUT	Loading placeholder rows and lines
+35755-35761	COUNTER	Parser iteration, request IDs, generation and reconnect counts
+35762	SCHEMA	ACP protocol version
+35763-35764	COUNTER	Transcript reset and iteration count
+35765	TUNING	Local command output line cap
+35766-35767	COUNTER	Protected and saved token counts
+35768-35769	TUNING	Answer repair and stream recovery ceilings
+35770	SCHEMA	Task contract version
+35771-35773	TUNING	Route count, route setting bound and loop iteration ceiling
+35774	SCHEMA	Autonomy request schema
+35775-35776	COUNTER	Stage index and pending count
+35777	TUNING	Request identifier bound
+35778-35783	PROTOCOL	Linux Landlock syscall numbers, rule kind, version flag and execute bit
+35784	SCHEMA	Capability registry version
+35785-35788	TUNING	Capability count, identifiers, operation and dependency bounds
+35789	PROTOCOL	SHA256 digest width
+35790-35792	COUNTER	Hidden line resets
+35793	SCHEMA	Config version
+35794-35795	TUNING	Billing policy magnitude and item bounds
+35796	COUNTER	Parser index
+35797	TUNING	Stats listener port
+35798-35800	PROTOCOL	Time conversion, C calendar epoch and automatic DST sentinel
+35801-35802	COUNTER	Selection/coverage counts
+35803	PROTOCOL	Polish pluralization rule
+35804	LAYOUT	Gallery width
+35805-35809	COUNTER	Workspace outcome counts
+35810	TUNING	Collaboration event cap
+35811	SCHEMA	Completion schema
+35812	COUNTER	Initial revision
+35813	PROTOCOL	HTTP error boundary
+35814-35816	TUNING	Evidence preview, inspection token allowance and refusal excerpt
+35817	PROTOCOL	Seconds per minute
+35818-35819	TUNING	Timing excerpt and evidence extension bounds
+35820-35822	SCHEMA	Conformance report/check versions
+35823-35824	TUNING	Advisor result and character defaults
+35825	COUNTER	Advisor round
+35826-35838	TUNING	Advisor settings bounds, corpus file/byte/chunk limits, chunking, binary probe and snippets
+35839	COUNTER	Zero-match score
+35840-35855	TUNING	Advisor ranking weights, evidence excerpts and tokenization heuristics
+35856-35857	COUNTER	Precedence indices
+35858-35859	TUNING	Billing item and text bounds
+35860-35861	SCHEMA	Supported contract versions
+35862-35868	TUNING	Service collection bounds, dataset size requirement and extension capture/definition bounds
+35869	PROTOCOL	Failure exit status
+35870	TUNING	Declarative extension loading budget
+35871	SCHEMA	Extension ABI
+35872	TUNING	Extension file cap
+35873	COUNTER	Hook event count
+35874-35877	PROTOCOL	Hook and CLI exit statuses
+35878	TUNING	MCP queued message cap
+35879-35880	COUNTER	Scanned byte count
+35881-35883	TUNING	MCP notification/session bounds and failure circuit threshold
+35884	COUNTER	Failure count reset
+35885	TUNING	MCP stderr capture cap
+35886	COUNTER	Failure count reset
+35887-35893	TUNING	Memory/context limits, lease duration, attempts, routes and tool-call limits
+35894	PROTOCOL	Calendar day coarse boundary; month-specific validation is a separate concern
+35895-35896	PROTOCOL	Invalid file-descriptor sentinel
+35897	PROTOCOL	Unix window-change signal number; target-specific applicability must be preserved
+35898	COUNTER	Windows ACL output initializers
+35899-35904	PROTOCOL	Win32 constants
+35905-35910	COUNTER	I/O counts, exit code initializer and option index
+35911	SCHEMA	Roadmap version
+35912-35915	SCHEMA	Daemon lifecycle discriminants
+35916	SCHEMA	CLI positional arity
+35917	TUNING	Parking state polling cadence
+35918-35919	COUNTER	Blocked and skipped counts
+35920-35929	PROTOCOL	OS open flags and resource-limit selectors
+35930	TUNING	Minimum PTY columns
+35931	TUNING	Maximum PTY columns
+35932-35933	TUNING	PTY row bounds
+35934-35935	LAYOUT	Default terminal dimensions
+35936	NOT	Embedded kernel bootstrap string; numeric policy includes output chunk and inspection depth
+35937-35938	TUNING	Event buffer capacities
+35939	SCHEMA	Session event version
+35940-35941	TUNING	Delivery lease and attempt cap
+35942-35944	COUNTER	Delivery/import counts
+35945	TUNING	Memory processing limit bounds
+35946	COUNTER	Processed count
+35947	LAYOUT	Quota bar cells
+35948-35949	PROTOCOL	Calendar month/day coarse bounds
+35950-35951	TUNING	Session preview count and excerpt
+35952-35954	SCHEMA	Fleet store and worker protocol versions
+35955	TUNING	Local definition cap
+35956	SCHEMA	Task store version
+35957	TUNING	Pipe read chunk
+35958-35959	PROTOCOL	Windows wait constants
+35960	COUNTER	Flushed count
+35961	SCHEMA	Telemetry version
+35962-35964	COUNTER	Edit parser and search counts
+35965	REMOVED	Search file cap removed in published source; original snapshot retains the finding
+35966-35967	TUNING	AST match and LSP server caps
+35968-35971	COUNTER	Archive/document/file offsets and indices
+35972	TUNING	Read byte cap
+35973-35975	COUNTER	Span end, browser sequence and format offset
+35976-35977	TUNING	Speech input and attachment caps
+35978-35981	COUNTER	Attachment bytes, image offset and cursor widths
+35982-35983	TUNING	Undo/history retention
+35984-35992	COUNTER	Cursor and text-width state
+35993	TUNING	TUI message queue cap
+35994-35996	COUNTER	Cursor state
+35997-35998	LAYOUT	Welcome layout breakpoint and column width
+35999-36000	COUNTER	Usage totals
+36001-36002	TUNING	Tool input/result preview bounds
+36003	COUNTER	Frame index
+36004-36016	COUNTER	Selection and cursor resets
+36017	LAYOUT	Terminal indicator width
+36018-36019	PROTOCOL	Calendar bounds
+36020-36022	PROTOCOL	Test/CLI exit statuses
+36023	COUNTER	Document parser index
+36024	SCHEMA	Provenance version
+36025	TUNING	Stable manifest validity
+36026-36027	SCHEMA	Promotion record and manifest versions
+36028	PROTOCOL	Seconds per day
+36029-36036	COUNTER	Source parser depths and documentation indices

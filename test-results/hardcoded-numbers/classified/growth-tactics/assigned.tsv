@@ -59,3 +59,95 @@ assigned_lines	class	note
 35281	COUNTER	Best validation accuracy initializer
 35282	LAYOUT	JSON indentation
 35283	TUNING	Minimum dataset samples per position
+35284-35286	TUNING	Dataset splits, random seeds and prediction top-k
+35287	PROTOCOL	Classification tensor axis
+35288-35289	COUNTER	Evaluation counts
+35290	LAYOUT	JSON indentation
+35291-35294	TUNING	Training batch, epochs, learning rate and workers
+35295-35300	COUNTER	Loss and accuracy accumulators
+35301	LAYOUT	JSON indentation
+35302-35304	TUNING	Augmentation, weight decay and learning-rate schedule
+35305	COUNTER	Best accuracy initializer
+35306-35307	LAYOUT	JSON indentation
+35308-35315	COUNTER	Account metrics and activity counts
+35316-35330	TUNING	Promotion cadence, thresholds and limits; audit only, not authorization to improve coordinated promotion
+35331	LAYOUT	JSON indentation
+35332-35334	TUNING	Post discovery result counts
+35335-35337	COUNTER	Daily count resets and cycle index
+35338-35348	TUNING	Runtime duration and browser/interaction presets; audit only
+35349-35356	COUNTER	Activity, risk and engagement accumulators
+35357	TUNING	Rate-limit observation window
+35358	COUNTER	Initial engagement
+35359-35365	TUNING	Request wait, text variation and campaign cadence; audit only
+35366	LAYOUT	JSON indentation
+35367-35368	COUNTER	Post engagement counters
+35369-35387	TUNING	Result/count defaults, inference settings, generated credential lengths and promotion policy; audit only
+35388-35389	COUNTER	Account metric initializers
+35390-35397	TUNING	Outreach limits, filters and request waits; audit only
+35398-35399	COUNTER	Account and attempt indices
+35400-35405	TUNING	Outreach and coordinated-voting timing, limits and age window; audit only
+35406	COUNTER	Vote count
+35407-35409	TUNING	Text variation settings; audit only
+35410-35424	TUNING	Rule assumptions, inference defaults, result counts and request waits; audit only
+35425-35426	TUNING	Testimonial posting cadence; audit only
+35427-35429	TUNING	Domain lookup waits and candidate limit
+35430	LAYOUT	JSON indentation
+35431	COUNTER	Line iteration
+35432	TUNING	Fixed humanizer iteration ceiling
+35433-35436	COUNTER	Relevance accumulators and iteration
+35437-35438	NOT	Browser viewport and Accept header strings
+35439	TUNING	Interaction timing
+35440-35441	LAYOUT	Browser viewport
+35442	TUNING	Fixed interaction count
+35443-35444	TUNING	Research classification thresholds
+35445-35448	COUNTER	Research outcome counts
+35449-35453	TUNING	Research thresholds and download request defaults
+35454	COUNTER	Downloaded count
+35455-35456	TUNING	Post limits
+35457	LAYOUT	JSON indentation
+35458-35461	TUNING	Download result counts and polling ceiling
+35462	COUNTER	Page index
+35463	NOT	Accept header string
+35464-35465	TUNING	Request waits
+35466	COUNTER	Page index
+35467-35468	TUNING	Request and process waits
+35469	COUNTER	Page index
+35470-35471	TUNING	Request waits
+35472-35476	COUNTER	Engagement and saved counts
+35477-35483	TUNING	Pending-query limits and download wait
+35484	COUNTER	Total count
+35485-35497	TUNING	Download/query limits, media suitability thresholds, sampling and process waits
+35498	COUNTER	Maximum observed persons initializer
+35499	NOT	Browser viewport string
+35500-35501	TUNING	Interaction timing and scroll count
+35502	COUNTER	View count
+35503-35516	TUNING	Traversal/result limits, process wait, caption sampling and inference defaults
+35517	LAYOUT	JSON indentation
+35518	TUNING	Frame sample count
+35519	LAYOUT	JSON indentation
+35520-35523	TUNING	Media process waits, sample count and resolution
+35524-35525	TUNING	Frame count and resolution
+35526	COUNTER	Total frames
+35527-35528	TUNING	Media process waits
+35529-35530	COUNTER	Video/frame totals
+35531	LAYOUT	JSON indentation
+35532-35534	TUNING	Image processing thresholds and margin; audit only
+35535-35538	GEOMETRY	Crop coordinates derived from configured margin
+35539-35542	TUNING	Image quality, processing limit, workers and confidence; audit only
+35543	COUNTER	Completed count
+35544	LAYOUT	JSON indentation
+35545-35547	TUNING	Request wait and JPEG quality
+35548-35549	LAYOUT	JSON indentation
+35550-35561	TUNING	TikTok traversal/query defaults, trend minimum, hook duration and process wait
+35562	LAYOUT	JSON indentation
+35563-35564	TUNING	Hook sampling and trend minimum
+35565-35566	LAYOUT	JSON indentation
+35567	COUNTER	Current image index
+35568	TUNING	Labeling service listener port
+35569-35582	TUNING	Adapter strength, video generation, encoding and tiling defaults
+35583	LAYOUT	JSON indentation
+35584	TUNING	Model-specific latent channel assumption must follow selected model metadata
+35585	PROTOCOL	Zero noise mask
+35586-35592	TUNING	Denoising strength, download chunk, request wait and video settings
+35593	SCHEMA	First node ID following fixed workflow nodes
+35594-35608	TUNING	Provider waits, video settings, device selection, face detector size and evaluation sampling/thresholds
