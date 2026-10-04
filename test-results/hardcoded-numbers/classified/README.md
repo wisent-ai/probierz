@@ -95,6 +95,8 @@ These are partial review records, not proof that the entire assignment list has 
 | wisent-app | generation defaults, silent clamps, waits, thresholds, server port | Oko defect 2f95d07c |
 | OpenEnv | benchmark rounds, thresholds, fallbacks, training settings, server port | Oko defect dcbdb704 |
 | backends | scratch and research scripts outside any product | Oko defect 51273293 |
+| brama | Brama Desktop readiness `maximumEntries = 256`, `maximumSentenceCharacters = 512`, `stadoCallTimeoutSeconds = 120`, `bundleAncestors = 14`, `ancestorWalk = 10` | brama-desktop d74fa5bc |
+| stado | `release status` `RUN_WINDOW = 10`, web deploy `RUN_WINDOW = 32` | 8ff2b125 |
 
 ## The 10 000-file cleanup cap
 
