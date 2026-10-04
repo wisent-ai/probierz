@@ -68,6 +68,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | oko | transcript listing `FIRST_LINE = 140`; the terminal's width, whole when not a terminal | 508292c8 |
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
+| jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
@@ -85,6 +86,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | landings | `TITLE_LENGTH_LIMIT = 65` in landing-cli's template and 14 generated landings | landing-cli d77ee59b |
 | echo-web | windows, list caps, generation defaults, money tolerances, alert floors | Oko defect 9c257cee |
 | las | budgets, ranking, waits, credential policy, display bounds | Oko defect 0baf3362 |
+| skryba | Brama `bounded` 800, detector `bounded` 500 | 39a9791b |
 | skryba | generation, training and quality defaults | Oko defect 629666b4 |
 | preferences | ranking thresholds, priors, vote weights, import caps | Oko defect 7dc96443 |
 | probierz | figure `ERROR_EXCERPT = 500`, `RENDER_FAILURE_EXCERPT = 4_000`, `benchmark list --limit` default 20 | 060be337 |
@@ -155,6 +157,8 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-ground-truth-api | extractive source count | Oko defect d0f380ac |
 | singularity | `MAX_ERROR_EXCERPT_CHARS = 800` (Brama and Most), `MAX_AGENT_ID_BYTES = 128` | 5d67aee9 |
 | singularity-desktop | `shownActivityLimit = 250`, `retainedActivityLines = 2_000` | c3e083ea |
+| singularity | executor refusal stderr `take(512)` | 8e3825a8 |
+| spis | Stado and Weles refusals `take(200)`/`take(300)` in capture-widths and the reference audit | 9ce3aa3f |
 | singularity | bounds, lifetimes, retention, page size, import cap; Desktop recent rows | Oko defect 002f391e |
 | trends | `observations` `DEFAULT_LIST_LIMIT = 50` (optional `--limit`), `SNIPPET_CHARS = 200` | 56fd7342 |
 | trends | ingest per-source cap, fetch bounds, detection settings | Oko defect 890d3f0b |
