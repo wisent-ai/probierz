@@ -180,6 +180,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | byk-desktop, byk-ios | waits, queue, revision bound, code length | Oko defect b0d3f955 |
 | deep-analytics | `clean(value, maxLength)` cuts of 24-1,000 characters at 71 call sites, `MAX_DECODED_HTML_CHARS`, `MAX_KEYWORD_CHARS = 180`, `MAX_REGION_CHARS = 24`, error excerpts 300/500 | a082f568 |
 | deep-analytics, competitor-research | bandit and graduation policy, text cuts, page sizes | Oko defect 3f41319f |
+| handtohuman | refused payment error cut to 400 characters | 6ffa39aa |
 | handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
 | creator-portal | `RECENT_SUBMISSIONS_LIMIT = 5` | 544fd90c |
 | creator-portal | recent submissions, code length | Oko defect 18fb6ae7 |
