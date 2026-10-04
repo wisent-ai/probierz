@@ -52,6 +52,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | weles | `RUN_OUTPUT_DEPTH = 3`, `RUN_OUTPUT_MAX_BYTES` | fcbffbec |
 | weles | `CONTROL_LIMIT = 4096` is Skarbiec's broker control-line bound (PROTOCOL, as in brama) | — |
 | weles | Weles Desktop keeper table `keepers.prefix(40)` | weles-desktop f95f580b |
+| weles | Weles Web verdict discriminators `slice(0, 3)` (card and bucket), recommendations `slice(0, 8)`, routine actions `slice(0, 4)` with overflow; defect 07fe0e19 recorded and repaired | weles-web 53f90a00 |
 | weles | admission, page-route, records-route, signup, Apple-expiry, vision-geometry, proxy-rate and trajectory poll values | Oko defect 30817d3d |
 | stado | janitor `MAX_DEPTH = 64`, `MAX_WORKDIR_DEPTH = 256`, scratch `MAX_DEPTH = 256` | 3bfd3e1b |
 | stado | janitor `MAX_ERRORS = 16` and the 128-character error filter | 3bfd3e1b |
@@ -131,6 +132,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-integrations | provider bounds, spend ceilings, revenue zero defaults, JWT and RSA policy | Oko defect 84eeca16 |
 | wisent-components | Figma `DESCRIBED_PER_PAGE = 30`, `LISTED_PER_PAGE = 120`, `STYLES_PER_PAGE = 40`, `COMPONENTS_PER_PAGE = 8` (pages measured by what the tool's answer carries); docs search 12 hits and 180 characters, error excerpts 300/400/1,500, three failures, eight shadows; defect 9387e5ef repaired | cee94bc2; 170625b4 |
 | wisent-enterprise | `JsonDetails max = 800` (and 1,500/2,000/5,000 at call sites), `sanitizeText max = 220`/300, array `slice(0, 4)`, capture `fileLimit = 50` | 80d5c5a9 |
+| wisent-enterprise | Weles failure buckets `slice(0, 12)`, discriminators `slice(0, 3)` (bucket and card), recommendations `slice(0, 8)`, routine actions `slice(0, 4)`; defect b1a81d65 recorded and repaired | 27d76a47 |
 | wisent-enterprise | verdict windows, import caps, polling, page size | Oko defect 11bd16d4 |
 | wisent-experiments | zero-average fallbacks, fixed BOS id | Oko defect 5c8192dd |
 | wisent-body-horror | rule gates and weights, zero fallbacks, person count | Oko defect 5f1f4de4 |
