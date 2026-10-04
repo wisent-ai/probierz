@@ -1,0 +1,61 @@
+assigned_lines	class	note
+59584	TUNING	Default control strength
+59585-59587	COUNTER	Paywall message and failure counters
+59588-59597	TUNING	Tier quotas, ad cadence/grace and creation/visibility limits
+59598-59601	COUNTER	Import outcome totals
+59602-59613	TUNING	Age signal attempts/pacing, character/chat page sizes and network waits; page offsets are counters
+59614	COUNTER	First-use screen reset
+59615	TUNING	Connectivity event buffer capacity
+59616	SCHEMA	Permission request identifier
+59617-59622	TUNING	JPEG compression policy and subscription quotas
+59623	COUNTER	Daily usage reset
+59624-59629	TUNING	Search history retention, companion behavior defaults and network waits
+59630-59642	COUNTER	Ad tracking state/reset and import byte total
+59643	LAYOUT	Silent video background
+59644-59645	TUNING	Image crop network waits
+59646-59649	LAYOUT	Crop offset reset and image sheet animation durations
+59650-59652	TUNING	Image generation network waits and prompt bound
+59653-59654	COUNTER	Markdown parser indices
+59655-59656	LAYOUT	Room image sheet animation durations
+59657-59659	TUNING	Room image network waits and prompt bound
+59660-59665	LAYOUT	Card and row text line counts
+59666	NOT	Content padding comment
+59667-59668	LAYOUT	Room card text line counts
+59669-59672	SCHEMA	Synthetic community category IDs
+59673-59677	LAYOUT	Conversation starter text line counts
+59678	SCHEMA	Missing navigation argument sentinel
+59679-59680	LAYOUT	Sign-in animation and character summary text lines
+59681	COUNTER	No-focus target sentinel
+59682	TUNING	Default character intensity
+59683-59690	LAYOUT	Chat capsule geometry and text line counts
+59691	TUNING	Conversation page size
+59692-59693	COUNTER	Initial conversation page offsets
+59694	TUNING	Community page size
+59695-59696	COUNTER	Community page/offset initializers
+59697	TUNING	Offscreen page preloading count
+59698-59700	COUNTER	Community page reset/offsets
+59701-59712	LAYOUT	Companion text lines, animations and placeholder geometry
+59713-59723	COUNTER	Companion memory/streaming paragraph totals and cursor reset
+59724	LAYOUT	Character summary text lines
+59725	TUNING	Default character creation intensity
+59726	COUNTER	Creation step index
+59727-59730	TUNING	Avatar network waits and character field bounds
+59731	COUNTER	No-focus target sentinel
+59732	TUNING	Avatar prompt bound
+59733	COUNTER	Refresh key initializer
+59734	NOT	Cross-platform shadow styling comment
+59735-59736	LAYOUT	Onboarding animation durations
+59737	SCHEMA	Persisted onboarding completion marker
+59738-59739	TUNING	Persona field bounds
+59740-59741	LAYOUT	Persona card text lines
+59742	SCHEMA	Room creation step cardinality
+59743-59744	LAYOUT	Room character picker text lines
+59745	TUNING	Room image prompt bound
+59746	COUNTER	Room creation step index
+59747-59748	TUNING	Room name/description bounds
+59749	COUNTER	No-focus target sentinel
+59750-59751	TUNING	Room participant bounds
+59752-59754	LAYOUT	Room settings text line counts
+59755	COUNTER	No-focus target sentinel
+59756-59757	TUNING	Room settings participant bounds
+59758	LAYOUT	Search column count

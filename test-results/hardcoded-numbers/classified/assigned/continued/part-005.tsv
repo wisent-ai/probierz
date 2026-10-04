@@ -248,3 +248,6 @@ assigned_lines	class	note
 59577-59578	TUNING	Android refresh event buffer capacities
 59579-59582	SCHEMA	Android default model/record IDs; missing-ID semantics require consumer review
 59583	TUNING	Android initial steering strength
+59759-59760	LAYOUT	Landing carousel advancement and progress animation cadence
+59761	PROTOCOL	Percent progress scale
+59762-59764	COUNTER	Carousel progress resets

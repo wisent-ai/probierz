@@ -1,0 +1,227 @@
+assigned_lines	class	note
+59765	PROTOCOL	Case-insensitive SQL command token parsing and one-based awk field iteration; operator hook audit only
+59766-59767	LAYOUT	Character analysis JSON indentation
+59768-59771	TUNING	Character description inference token/sampling settings
+59772-59774	LAYOUT	Character schema/result JSON indentation
+59775-59776	TUNING	Fallback character age
+59777	LAYOUT	Expanded character JSON indentation
+59778	TUNING	Fallback generated character age
+59779	LAYOUT	Generated character JSON indentation
+59780-59781	TUNING	Content generation count and upscale resolution defaults
+59782	LAYOUT	Content JSON indentation
+59783-59814	TUNING	Image/video dimensions, seeds, steps, guidance, adapter strength, denoising and frame counts
+59815	COUNTER	Conversation image index
+59816	LAYOUT	Conversation JSON indentation
+59817-59833	TUNING	Conversation/gallery inference dimensions, steps, guidance, count and video defaults; format divisibility does not mandate the chosen dimensions
+59834-59838	TUNING	Gallery inference adapter/denoising/video defaults
+59839-59840	COUNTER	Gallery category indices
+59841-59865	TUNING	ComfyUI and image-server inference defaults and invocation settings
+59866	SCHEMA	Random-seed sentinel; actual selection policy requires consumer review
+59867-59885	TUNING	Denoising, upscale/seed and adapter inference defaults; zero-bound semantics require consumer review
+59886-59887	COUNTER	Applied/skipped adapter totals
+59888	TUNING	Linear adapter scale default
+59889	COUNTER	Applied adapter count
+59890	TUNING	ZImage adapter scale default
+59891	COUNTER	Applied adapter count
+59892	TUNING	Missing adapter alpha fallback; checkpoint contract must justify it
+59893	PROTOCOL	Weight concatenation axis
+59894-59912	TUNING	Image adapter/control strengths, dimensions, sampling and service probe wait; audit only
+59913	LAYOUT	Generation manifest JSON indentation
+59914-59979	TUNING	Workflow/portrait/pose strengths, dimensions, steps, guidance, counts and seeds; audit only
+59980	NOT	Generation settings status string
+59981-59983	TUNING	Reference-generation settings and queue wait; audit only
+59984	NOT	Generation settings status string
+59985-60024	TUNING	Reference/variant settings, download waits, scene/video counts, seeds, dimensions and inference defaults; audit only
+60025	SCHEMA	Image server random-seed sentinel
+60026	PROTOCOL	Generation HTTP failure status
+60027-60030	TUNING	Image request inference defaults
+60031	SCHEMA	Image request random-seed sentinel
+60032	TUNING	Image request default count
+60033	PROTOCOL	Generation HTTP failure status
+60034	TUNING	Fixed image-server listener port and bind host
+60035-60047	TUNING	Video CLI and generation dimensions, frame counts and sampling/adapter settings
+60048	SCHEMA	Video latent channel cardinality; model compatibility must supply this value
+60049	PROTOCOL	Conditioned-frame zero-noise mask
+60050-60052	TUNING	Video denoising, VAE tiling/overlap, frame rate and encoder quality
+60053	LAYOUT	Analytics number precision
+60054	TUNING	Analytics refresh cadence
+60055	LAYOUT	Analytics visual bubble cap
+60056-60057	COUNTER	Bubble IDs and iteration
+60058-60059	TUNING	Admin image generation polling caps
+60060	COUNTER	Image polling iteration
+60061-60062	TUNING	Moderation page size and video polling cap
+60063	COUNTER	Video polling iteration
+60064-60073	LAYOUT	Diagram opacity, animation timing and grid geometry
+60074	NOT	Experiment assignment API example
+60075-60076	TUNING	Analytics seven-day window
+60077	COUNTER	Zero recent messages inactivity predicate; referenced 30-day window remains policy
+60078-60080	PROTOCOL	Generation API HTTP statuses
+60081	TUNING	Automatic scene count default
+60082	PROTOCOL	Compute dependency unavailable status
+60083	PROTOCOL	Binary byte unit base
+60084-60085	TUNING	Moderation scatter page size and fixed total ceiling; existing recorded defect remains open
+60086	COUNTER	Image processing index
+60087-60095	TUNING	Reactivation input/page bounds, market bar/ATR defaults and API execution limits
+60096	COUNTER	Watcher outcome totals
+60097-60102	TUNING	Watcher/chart/coding/exit API execution limits
+60103	COUNTER	Queued notification count
+60104-60108	TUNING	Trading execution limits, signal deduplication window and confidence threshold
+60109-60113	COUNTER	Signal/candidate/symbol totals
+60114	TUNING	Position management execution limit
+60115	COUNTER	Applied change total
+60116-60121	TUNING	Trading execution limits and notification batch/retry policy
+60122-60124	COUNTER	Notification outcome totals
+60125-60130	TUNING	DevOps/health execution limits, repository cache lifetime and health import chunk size
+60131-60132	COUNTER	Health correlation accumulators and iteration
+60133	TUNING	Automatic verification execution limit
+60134	COUNTER	Added finding total
+60135-60143	TUNING	Security/market execution limits and minimum security schedule cadence
+60144	COUNTER	Market event iteration
+60145-60150	TUNING	Market/security execution limits, bar bounds and findings insertion chunks
+60151	COUNTER	Fix proposal text iteration
+60152-60153	TUNING	Stock context execution limit and historical lookback
+60154	COUNTER	Skipped context total
+60155-60158	TUNING	Stock/report/backtest execution limits and validation fold count
+60159	COUNTER	Validation fold iteration
+60160-60165	TUNING	Search/tax/thesis/chat execution limits
+60166	COUNTER	Regex capture iteration
+60167	PROTOCOL	Default character API HTTP status
+60168	NOT	Character feed pagination example
+60169-60174	TUNING	Chat control strength, companion execution limits and message fetch retry policy
+60175	COUNTER	Message retry index
+60176	REMOVED	Fixed payment amount belonged to previously removed unused Stripe sample endpoint
+60177-60181	TUNING	Analytics/moderation execution limits, moderation batch/concurrency
+60182	COUNTER	Moderation claim iteration
+60183-60197	TUNING	Security/messaging execution limits, batch/history/text bounds and registration/tracking input limits
+60198-60199	COUNTER	Preview bundle timestamp and first frame
+60200	LAYOUT	Preview native scale
+60201-60202	TUNING	Search retry policy
+60203-60205	COUNTER	Retry index and signature comparison accumulator/iteration
+60206	TUNING	Webhook text bound
+60207-60209	COUNTER	Revenue/conversion/checkout accumulators
+60210	TUNING	Security verification default cadence
+60211	LAYOUT	Place map display extent
+60212-60214	LAYOUT	Trading numeric precision
+60215	COUNTER	Trade running total
+60216	TUNING	Trading chat turn cap
+60217-60218	LAYOUT	Stock numeric precision
+60219	TUNING	Provider table row bound
+60220-60226	LAYOUT	Chart numeric precision, stroke widths and dash styling
+60227	COUNTER	On-demand scrape poll count
+60228-60230	TUNING	Character/category page cache lifetime
+60231-60232	LAYOUT	Community card dimensions
+60233	COUNTER	Video playback reset
+60234-60236	LAYOUT	Community grid geometry
+60237	TUNING	Community image preload count
+60238-60239	LAYOUT	Companion sidebar dimensions
+60240	TUNING	Companion recovery attempt cap
+60241-60246	COUNTER	Streaming finalized paragraph counters and iteration
+60247	LAYOUT	Table placeholder rows/cells
+60248-60250	COUNTER	Diagnostic strength/count/layer initializers; unobserved defaults must not be presented as measurements
+60251	COUNTER	Demo word iteration
+60252	TUNING	Fixed diagnostic layer/token dimensions; distinguish synthetic display from measured model data
+60253-60257	COUNTER	Diagnostic/demo/text iteration
+60258-60261	LAYOUT	Activation plot range and dimensions
+60262-60263	COUNTER	Plot token/layer iteration
+60264-60266	LAYOUT	Word plot dimensions and visible word count
+60267	TUNING	Fixed neural display dimensions; distinguish synthetic display from measured model data
+60268-60269	COUNTER	Neural display layer iteration
+60270	SCHEMA	Room wizard step cardinality
+60271	TUNING	Room participant cap
+60272-60275	LAYOUT	Character picker icon sizes
+60276-60278	TUNING	Character page size, search debounce and participant cap
+60279-60282	LAYOUT	Character picker icon sizes
+60283-60287	TUNING	Room text/prompt bounds, character page size and search debounce
+60288-60291	LAYOUT	Character picker icon sizes
+60292	COUNTER	Predeployment question iteration
+60293	SCHEMA	Character wizard step cardinality
+60294-60297	TUNING	Control strength defaults, bounds and adjustment increment
+60298-60299	SCHEMA	Manual/quick wizard step cardinalities
+60300-60304	TUNING	Character description/name/appearance bounds
+60305	LAYOUT	Trait slider geometry
+60306-60307	TUNING	Trait strength default and high-value threshold
+60308	NOT	External fallback avatar URL; host is part of the broader hardcoding audit
+60309	LAYOUT	Logo flex shrink setting
+60310-60311	COUNTER	Home character score and preview playback reset
+60312	SCHEMA	Onboarding step cardinality
+60313-60314	PROTOCOL	Browser storage iteration and reference tensor axis
+60315-60317	LAYOUT	CAA reference plot dimensions/font size; prior audit identifies copied research code, provenance review precedes any edit
+60318	PROTOCOL	Reference cosine similarity axis
+60319-60322	LAYOUT	Reference plot stroke/font and dataset JSON indentation
+60323	EXPERIMENT	Reference training process count
+60324-60325	COUNTER	Reference evaluation totals
+60326	PROTOCOL	Reference prediction class axis
+60327-60332	EXPERIMENT	Reference evaluation generation bound/top-k and training epochs/rate/batch sizes
+60333	COUNTER	Reference training loss accumulator
+60334-60336	COUNTER	Reference loss/batch accumulators
+60337	PROTOCOL	Reference vector averaging axis
+60338-60343	EXPERIMENT	Reference generation and decoded activation top-k defaults
+60344-60346	LAYOUT	Reference plot geometry/fonts and scientific tick format
+60347	EXPERIMENT	Reference activation retrieval top-k
+60348	PROTOCOL	Reference softmax axis
+60349	LAYOUT	Reference plot dimensions
+60350	PROTOCOL	Reference activation concatenation axis
+60351	EXPERIMENT	Reference PCA projection dimensionality
+60352-60359	LAYOUT	Reference plot opacity and marker sizes
+60360-60362	COUNTER	Reference score totals
+60363-60372	LAYOUT	Reference result plot geometry, marker/stroke/font and tick rotation
+60373-60375	COUNTER	Reference score accumulators
+60376-60389	LAYOUT	Reference result plot dimensions, marker/stroke sizes
+60390-60391	EXPERIMENT	Reference dataset split/generation counts
+60392-60394	LAYOUT	Reference dataset JSON indentation
+60395	EXPERIMENT	Reference steering generation token bound
+60396	LAYOUT	Reference result JSON indentation
+60397	PROTOCOL	Reference token probability axis
+60398-60401	EXPERIMENT	Representation reference dataset sample counts and seeds; reference ownership must be resolved before changes
+60402-60407	LAYOUT	Reference color map resolution and plot geometry
+60408-60409	COUNTER	Reference word width and plot iteration
+60410	EXPERIMENT	Reference score clipping threshold; abs(value) below zero cannot select finite values
+60411	NOT	Commented plot offset
+60412-60416	LAYOUT	Reference text/background styling and plot score range
+60417-60418	EXPERIMENT	Reference standard-score clipping threshold and replacement
+60419-60427	LAYOUT	Reference heatmap geometry, precision, ticks and axis labels; commented font arguments are not active
+60428-60438	EXPERIMENT	Reference memorization/emotion sample seeds and LoRRA training parameters
+60439	EXPERIMENT	Reference loss response length default
+60440	PROTOCOL	Euclidean loss norm and feature axis
+60441-60443	EXPERIMENT	Reference training dataset and sequence bounds
+60444-60449	PROTOCOL	Reference sequence concatenation, label masks and log-probability axis
+60450	COUNTER	Reference sample index
+60451-60453	PROTOCOL	Reference generation tensor axes and token tiling
+60454-60455	COUNTER	Reference padding and cache length initializers
+60456-60460	PROTOCOL	Reference head/norm axes and identity intervention mask
+60461	EXPERIMENT	Reference tokenizer sequence bound
+60462	PROTOCOL	Reference centering axis
+60463	NOT	Reference difference representation documentation
+60464	PROTOCOL	Reference positive tie orientation convention
+60465	EXPERIMENT	Reference PCA component count
+60466-60467	PROTOCOL	Reference centering axis and positive tie orientation
+60468	EXPERIMENT	Reference component count; algorithm-specific cardinality requires surrounding implementation review
+60469-60470	PROTOCOL	Reference class-mean axes
+60471	EXPERIMENT	Reference component count; algorithm-specific cardinality requires surrounding implementation review
+60472-60481	EXPERIMENT	Reference token/layer/component/difference and batch defaults
+60482-60487	EXPERIMENT	Reference evaluation representation, sequence, difference, batch and seed defaults
+60488	SCHEMA	Reference tokenizer beginning-of-sequence ID; tokenizer compatibility must justify it
+60489-60495	EXPERIMENT	Reference evaluation difference/sample counts and seeds
+60496	TUNING	Room edit participant bound, search debounce and page size
+60497-60500	LAYOUT	Room edit icon sizes
+60501-60502	TUNING	Rooms page size and creation participant cap; differs from other room limits
+60503	COUNTER	Scrolling video playback reset
+60504-60505	LAYOUT	Bar chart geometry
+60506	TUNING	Sitemap cache lifetime
+60507	COUNTER	Story recovery attempt count
+60508	TUNING	Story recovery attempt cap
+60509-60510	LAYOUT	Swipe distance/velocity thresholds
+60511	COUNTER	Account transfer argument iteration
+60512-60514	PROTOCOL	Account transfer refusal/failure statuses
+60515-60517	LAYOUT	Conversation lane placeholder geometry
+60518	COUNTER	Character preview playback reset
+60519-60520	SCHEMA	Failure banner zero/one named literals; names alone do not establish consumer semantics
+60521-60530	LAYOUT	Character/conversation lane scroll distance and card/grid geometry
+60531-60532	TUNING	Search history bound and debounce
+60533-60575	LAYOUT	Shared navigation/action icon sizes
+60576	LAYOUT	Visible toast count
+60577	TUNING	Toast removal delay
+60578	COUNTER	Toast identifier
+60579-60580	TUNING	Streaming execution bound and banner message threshold
+60581-60582	LAYOUT	Sidebar widths
+60583	TUNING	Anonymous message quota
