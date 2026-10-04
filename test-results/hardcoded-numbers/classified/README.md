@@ -87,6 +87,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skarbiec | lifetimes, input bounds, concurrency, import cap, Desktop waits and windows, Hub bounds | Oko defect cd6f092c |
 | skrzynka | `message list`/`outbound` `--limit` default 100 and the silent clamp to 1-500 (CLI and API) | a5981f8b |
 | skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
+| skrzynka | Skrzynka Desktop `replyBatchSize = 6` (now `URLSessionConfiguration.ephemeral.httpMaximumConnectionsPerHost`) | skrzynka-desktop 42dc9b5f |
 | skrzynka | poll, OAuth, sync, send bounds, token margin, Desktop wait | Oko defect 9d9bef81 |
 | ster | Brama refusal `BODY_EXCERPT = 240` | b8cedf58 |
 | ster | training, synthesis, calibration and quality defaults | Oko defect 20f71342 |
