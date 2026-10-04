@@ -59,6 +59,15 @@ These are partial review records, not proof that the entire assignment list has 
 | stado | `machine logs --limit` default 65536 and the watch's page constant | b4552ef6 |
 | stado | `EXCERPT_CHARS = 40`, `BODY_EXCERPT_BYTES = 200`, `ERROR_PREVIEW_MAX = 1024`, `FAILURE_FIX_PROMPT_ERROR_BYTES = 4000` and the fixer's 600/500/300/160 cuts | 1d2dce91 |
 | stado | `UNCOVERED_ROWS = 12`, release-cause `EVIDENCE_CHARS = 240` | 1d2dce91 |
+| stado | `NEWEST_SILENCES = 5`; every silence is listed, and repair reads the one that can be open | 66a01415 |
+| stado | scan windows, per-tick caps, intervals, TTLs, ports, grant lifetimes, display windows, the 80 % threshold | Oko defect fab304dc |
+| tama | `FOLDER_FILE_LIMIT = 5`, `FILE_LINE_LIMIT = 300` restated in code; read from `numeric-provenance.json` | 4879e2c9 |
+| tama | `GH_LIST_LIMIT = 1000`; every repository through paginated GraphQL | 4879e2c9 |
+| tama | hook and command thresholds not in `numeric-provenance.json` | Oko defect ee36eefc |
+| oko | transcript listing `FIRST_LINE = 140`; the terminal's width, whole when not a terminal | 508292c8 |
+| oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
+| jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
+| jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 
 ## The 10 000-file cleanup cap
 
