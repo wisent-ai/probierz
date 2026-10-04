@@ -102,6 +102,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | brama | Brama Desktop service discovery reason `prefix(200)` | brama-desktop b0f0a33a |
 | brama | Brama Desktop thresholds, history, Stado wait, readiness bounds | Oko defect d8cafe10 |
 | needher-ai-web | non-JSON answers cut to 300 characters (CLI, generate route, pose worker) | 735cf60e |
+| needher-ai-web | run sheet queued prompts `slice(0, 3)` | 5bfb5e02 |
 | needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
 | growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
@@ -146,6 +147,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-gradio | onboarding bounds, copied chunk size, waits, workers, split | Oko defect 7f4d7b3a |
 | wisent-trade | failure `MAX_DETAIL_CHARS = 300` | 5d6a1e75 |
 | wisent-trade | analytics `MAX_QUEUE_SIZE = 100`, `getRecentTrades` default limit 50 | 5289d702 |
+| wisent-trade | token holders `slice(0, 10)` with ids `slice(0, 8)` | 40ba6996 |
 | wisent-trade | analytics bounds, queue size, recent trades, polling, price | Oko defect 30384295 |
 | wisent-landing | failure `MAX_DETAIL_CHARS = 300`, unused `visibleItemsCount = 3` | local 206166f, not pushed: repository archived on GitHub |
 | wisent-landing-new | blog page size; archived wisent-landing waits, zones, HSTS | Oko defect 326fb734 |
