@@ -95,6 +95,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | las | budgets, ranking, waits, credential policy, display bounds | Oko defect 0baf3362 |
 | skryba | Brama `bounded` 800, detector `bounded` 500 | 39a9791b |
 | skryba | generation, training and quality defaults | Oko defect 629666b4 |
+| preferences | CLI `MAX_REFUSAL_BODY_CHARS = 400` (a longer refusal was replaced by the bare status) | d9512d22 |
 | preferences | ranking thresholds, priors, vote weights, import caps | Oko defect 7dc96443 |
 | probierz | figure `ERROR_EXCERPT = 500`, `RENDER_FAILURE_EXCERPT = 4_000`, `benchmark list --limit` default 20 | 060be337 |
 | probierz | Probierz Desktop Posture `alertLimit = 3`, verdicts `prefix(6)`, journeys `prefix(6)` twice, failure reasons `prefix(4)` | probierz-desktop be551aab |
