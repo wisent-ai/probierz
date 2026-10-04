@@ -1,0 +1,45 @@
+assigned_lines	class	note
+56591	SCHEMA	SimHash representation width
+56592	PROTOCOL	Majority boundary
+56593-56597	LAYOUT	Pair editor dimensions
+56598-56600	TUNING	Pair imbalance, acceptable accuracy and landing title bound
+56601-56604	COUNTER	Documentation indices
+56605	SCHEMA	Artifact version
+56606-56608	TUNING	Inference token/excerpt bounds and temperature range
+56609-56614	PROTOCOL	Gregorian calendar conversion constants
+56615	COUNTER	Played turns
+56616-56636	TUNING	Decision, onboarding, pair import and synthesis CLI defaults
+56637-56647	EXPERIMENT	Toy model architecture, seed and numerical parameters; role does not exempt chosen policy
+56648-56705	TUNING	Artifact, decision, DPO, GRPO, reward, SFT and vector CLI defaults
+56706	PROTOCOL	Certain probability
+56707	COUNTER	No generated tokens
+56708-56710	TUNING	Calibration search range and iterations
+56711	PROTOCOL	Unscaled calibration temperature identity
+56712	TUNING	Calibration error bin count
+56713	COUNTER	Correct count
+56714	PROTOCOL	Milliseconds per second
+56715	COUNTER	Input token total
+56716	TUNING	Pipeline fetch page size
+56717-56719	COUNTER	Fetched/imported and skipped counts
+56720-56721	TUNING	Synthetic decision sampling and token settings
+56722-56727	COUNTER	Synthesis attempt/request/rejection totals
+56728	TUNING	Decision option cap; alphabet encoding may explain current bound but not product requirement
+56729	COUNTER	Labelled count
+56730	SCHEMA	LoRA artifact version
+56731-56732	PROTOCOL	Enabled attention mask entries
+56733	TUNING	Pair imbalance threshold
+56734-56736	COUNTER	Pair finding totals
+56737-56738	SCHEMA	SimHash and digest representation widths
+56739	NOT	Hash compatibility comment
+56740	SCHEMA	SimHash representation width
+56741	TUNING	Diversity sample cap
+56742	COUNTER	Diversity total
+56743-56744	TUNING	Refusal classifier threshold and trait name bound
+56745-56750	COUNTER	Pair synthesis and representation totals
+56751	PROTOCOL	Unit basis vector component
+56752-56753	PROTOCOL	Failure/refusal exit statuses
+56754-56756	COUNTER	Evaluation and merge totals
+56757	TUNING	Learning-rate decay floor
+56758-56769	COUNTER	Training objective counts, steps and epoch totals
+56770	NOT	Floating-point stability comment
+56771-56772	TUNING	Optimization minimum pair count and workspace name bound

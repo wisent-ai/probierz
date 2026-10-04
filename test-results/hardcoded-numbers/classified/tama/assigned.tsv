@@ -1,0 +1,102 @@
+assigned_lines	class	note
+56886	PROTOCOL	Binary kilo conversion
+56887	LAYOUT	Justification recorder height
+56888-56890	TUNING	Session heartbeat and agent ID bounds
+56891	PROTOCOL	Control-key hex width
+56892	TUNING	Decision display limit
+56893-56894	LAYOUT	Onboarding width and short ID display
+56895-56898	TUNING	Command output excerpts and copied-label duration
+56899-56904	COUNTER	Documentation argument index and diagnostic/transcript totals
+56905	PROTOCOL	Calendar month/day outer bounds
+56906	COUNTER	Evidence parser index
+56907-56908	TUNING	Repair diagnostic sample count/length
+56909	COUNTER	Nothing-checked count
+56910	PROTOCOL	Usage status
+56911	COUNTER	Command parser index
+56912-56914	TUNING	Telemetry payload and build-intent reason/duration bounds
+56915-56916	PROTOCOL	Seconds per minute and SHA1 revision width
+56917-56920	TUNING	Operator build/restart ration policy; audit does not authorize changing operator controls
+56921	COUNTER	Changed-line total
+56922	NOT	Approval requirement in help text
+56923	COUNTER	CLI argument index
+56924-56925	PROTOCOL	Usage statuses
+56926	COUNTER	CLI argument index
+56927	PROTOCOL	Binary kilo conversion
+56928-56932	PROTOCOL	Usage/refusal/failure statuses
+56933	TUNING	Minimum supported Node version; requires runtime compatibility contract
+56934-56936	PROTOCOL	Drift/refusal statuses
+56937	SCHEMA	Hook marker version
+56938-56941	PROTOCOL	Commit/digest widths and tar header read framing
+56942-56944	PROTOCOL	Refusal/failure statuses
+56945	COUNTER	Removed justification count
+56946	PROTOCOL	Usage status
+56947	COUNTER	Argument index
+56948	NOT	Exit status comment
+56949-56952	PROTOCOL	Usage statuses and POSIX signal handling constants
+56953	LAYOUT	Short commit display
+56954	TUNING	Onboarding screen count bounds
+56955	NOT	Disabled-clean refusal string
+56956-56957	COUNTER	Argument index and worktree count
+56958	PROTOCOL	Usage status
+56959-56963	COUNTER	Argument index, empty totals and absent mode sentinel
+56964-56965	TUNING	Completion diagnostic excerpt/count
+56966	PROTOCOL	Usage status
+56967	LAYOUT	Short defect ID display
+56968-56969	TUNING	Assignment context/ruling excerpts
+56970	NOT	Tracing comment
+56971	TUNING	Credential route bound
+56972	SCHEMA	Capability version
+56973-56975	TUNING	Internal-name diagnostic and detection heuristics
+56976	PROTOCOL	Usage status
+56977-56978	TUNING	Reusable-module/script admission scan count/depth
+56979	PROTOCOL	Git non-ancestor status
+56980	TUNING	Blocker-check freshness
+56981-56982	PROTOCOL	Timestamp text width and seconds per day
+56983	LAYOUT	Short blocker ID display
+56984	PROTOCOL	Usage status
+56985	COUNTER	Dependency chain depth
+56986	TUNING	Runnable refusal excerpt
+56987-56990	PROTOCOL	Approval/audit exit statuses
+56991-56992	COUNTER	Excluded repository count and command index
+56993-56995	TUNING	Repeated polling threshold/window and retained observations
+56996-56998	NOT	Command parsing and formatting comments
+56999	TUNING	Profile display count
+57000-57003	COUNTER	Parser state and received bytes
+57004-57005	PROTOCOL	Registry refusal/difference statuses
+57006	COUNTER	Date parser position
+57007-57008	PROTOCOL	Month/day outer bounds
+57009-57014	COUNTER	JSON and numeric parser state
+57015	NOT	Expanded-year format comment
+57016	PROTOCOL	Unexpanded year representation range
+57017-57020	COUNTER	Datetime parser state
+57021	PROTOCOL	Calendar date validation range
+57022	COUNTER	Timezone offset initializer
+57023	SCHEMA	Capability version
+57024	TUNING	Session heartbeat lifetime default
+57025-57026	PROTOCOL	JSON-RPC error codes
+57027	COUNTER	CLI argument index
+57028-57029	TUNING	Violation scan payload and binary sniff bounds
+57030-57031	TUNING	Operator file/folder policy; not authorization to alter controls
+57032	COUNTER	Argument index
+57033-57034	PROTOCOL	Missing-exit sentinel and usage status
+57035	COUNTER	Common count
+57036	TUNING	GitHub repository listing cap
+57037-57039	COUNTER	Argument index and scan totals
+57040	PROTOCOL	Usage status
+57041-57044	COUNTER	Scope matching flags
+57045	NOT	Gate enabling comment
+57046	PROTOCOL	Catalog mismatch status
+57047-57049	PROTOCOL	Zero/one and decimal radix
+57050	TUNING	Minimum supported Node major version
+57051-57052	COUNTER	Reload and hook counts
+57053	SCHEMA	Single-use capability cardinality
+57054-57059	COUNTER	Shell syntax/inspection detection flags
+57060-57061	NOT	Authorization and assignment-pattern comments
+57062-57063	COUNTER	Hook parser depth and provider flag
+57064	NOT	Embedded guard matching expression; audit only, no guard change
+57065	TUNING	Hook registration diagnostic bound
+57066-57068	PROTOCOL	Hook failure/refusal statuses
+57069	SCHEMA	Capability version
+57070	SCHEMA	Single-use capability cardinality
+57071	TUNING	Session heartbeat lifetime default
+57072-57075	EXPERIMENT	Completion refusal test excerpt/shape values; coupling to presentation requires test-contract review

@@ -1,0 +1,121 @@
+assigned_lines	class	note
+56334-56338	COUNTER	Streaming changed flags and browser output separator state
+56339-56340	TUNING	Capture steps and release integrity history caps
+56341-56342	COUNTER	Integrity totals
+56343-56344	NOT	Formatting comments
+56345	SCHEMA	Fleet expansion version
+56346-56349	TUNING	Expansion option, horizon and window bounds/defaults
+56350	PROTOCOL	Cents per dollar
+56351-56357	TUNING	Money bounds/precision and expansion field/lead-time policy
+56358	COUNTER	Economic time accumulator
+56359	SCHEMA	Unmet-needs version
+56360-56368	COUNTER	Fleet observation totals
+56369	TUNING	Restart-loop detection threshold
+56370	COUNTER	Compared artifacts
+56371	TUNING	Accessibility capture depth
+56372-56374	COUNTER	Capture depth and recovery attempts
+56375	TUNING	Software inspection concurrency
+56376-56378	COUNTER	Script totals
+56379	SCHEMA	Machine contract version
+56380-56381	COUNTER	Artifact size totals
+56382	TUNING	Machine source archive cap
+56383-56385	PROTOCOL	RPC error codes; internal-error naming versus server-error code requires protocol review
+56386-56388	NOT	Formatting comments
+56389-56390	TUNING	Host silence and refusal-retention policy
+56391	COUNTER	Deleted count
+56392-56394	TUNING	Reaper boot/idle grace and heartbeat age policy
+56395-56396	COUNTER	Retirement totals
+56397	PROTOCOL	Seconds per minute
+56398-56405	TUNING	Memory safety margins, training age, job priorities and capacity age
+56406	SCHEMA	Reservation version
+56407-56411	TUNING	Reservation cadence, retention, processing cap and resource reserve
+56412	SCHEMA	Needs version
+56413-56425	TUNING	Needs thresholds/windows, flush/yield/probe cadence, cleanup lease and capacity sampling/cache policy
+56426	COUNTER	Instance age initializer
+56427	NOT	Provider command duration contract comment
+56428	TUNING	Provider command duration bounds; compare current provider contract
+56429	TUNING	Provider JSON bound
+56430	PROTOCOL	HTTP not-found status
+56431	COUNTER	Instance age initializer
+56432-56434	TUNING	Stockout and quota cache durations
+56435	PROTOCOL	MiB per GiB
+56436	COUNTER	Yield count
+56437	NOT	Historical eligibility diagnostic comment
+56438-56442	TUNING	Claim/yield candidate windows, scan ceiling and grant lifecycle policy
+56443-56447	COUNTER	Unavailable VRAM resets
+56448	TUNING	Power reconciliation cadence
+56449-56450	TUNING	Build-cache scan depth and tag read size; representation may justify tag size after consumer review
+56451	SCHEMA	Janitor state version
+56452-56455	TUNING	Cleanup diagnostic/scan/depth caps and release retention; snapshot values require reconciliation with published retirement
+56456	NOT	Historical eligibility diagnostic comment
+56457-56458	COUNTER	Memory totals
+56459	PROTOCOL	Percent in a whole
+56460	SCHEMA	Host memory state version
+56461-56472	TUNING	Memory reclaim pass/cadence/resource/repair policy; snapshot predates published retirement
+56473	SCHEMA	Memory policy declaration version
+56474	TUNING	Policy summary word minimum
+56475	SCHEMA	Memory vocabulary version
+56476	COUNTER	No-result count
+56477	PROTOCOL	Nothing-to-recover status
+56478	TUNING	Scratch directory traversal depth
+56479	SCHEMA	Scratch report version
+56480	TUNING	Yield count default
+56481	NOT	Historical provider listing comment
+56482	COUNTER	Running count
+56483	PROTOCOL	HTTPS registered port; provider endpoint policy requires contract
+56484-56487	TUNING	Public path cap, provider listing page size and capacity retention/processing policy
+56488	SCHEMA	Unbounded listing sentinel
+56489-56490	COUNTER	Object byte resets
+56491-56492	TUNING	Lease payload and marker page bounds
+56493	COUNTER	Scanned count
+56494	NOT	Priority encoding comment
+56495-56497	TUNING	Migration batch/prune/concurrency defaults
+56498	COUNTER	Removed count
+56499	TUNING	Checkpoint freshness
+56500	COUNTER	Missing count
+56501	SCHEMA	Run-name suffix cardinality; choice of allowed forms needs consumer contract
+56502	PROTOCOL	Shared IPv4 range
+56503	COUNTER	Settled count
+56504	SCHEMA	Priority encoding range
+56505	SCHEMA	Job ID hex width
+56506	COUNTER	Auth comparison accumulator
+56507-56509	TUNING	Registry attempts, retirement cooldown and repeated-cause limit
+56510-56512	SCHEMA	Release serving/state/status versions
+56513	TUNING	Release-cause evidence excerpt
+56514	COUNTER	Installed count
+56515-56516	TUNING	Release/archive source entry caps
+56517	SCHEMA	Release pipeline version
+56518	COUNTER	Runtime platform count
+56519	SCHEMA	Revisit ledger version
+56520-56522	TUNING	Token refresh margin, daily build cap and wall-time cost baseline
+56523	COUNTER	Created instance count
+56524-56529	TUNING	Dispatch wait, log/artifact bounds and event pagination caps
+56530-56532	COUNTER	Response size and scheduling/reconciliation totals
+56533-56540	TUNING	Dispatch owner/scan/recovery/control and agent heartbeat policies
+56541	NOT	Historical worker-count comment
+56542-56543	COUNTER	Repaired/unassigned totals
+56544-56547	TUNING	Scheduling history/sample, memory reserve and backoff policy
+56548	COUNTER	Skipped count
+56549	NOT	Cron weekday representation comment
+56550	COUNTER	Fired schedule count
+56551-56553	NOT	Formatting and weekday representation comments
+56554-56556	COUNTER	Restart and sizing correction totals
+56557	TUNING	Sizing capability cache duration
+56558	NOT	Historical worker-count comment
+56559	TUNING	Streaming refresh default
+56560-56561	PROTOCOL	Sunshine default ports; configured endpoint handling still requires consumer review
+56562-56565	TUNING	Streaming refresh/resolution bounds
+56566	PROTOCOL	SHA256 hex width
+56567	SCHEMA	Fleet connection declaration version
+56568	TUNING	Registry cache duration
+56569	SCHEMA	Registry version
+56570	TUNING	Historical scan cap validator; reconcile with published cleanup cutover
+56571	PROTOCOL	Usage exit status
+56572	COUNTER	Argument index
+56573	TUNING	Watchdog output excerpt
+56574-56578	PROTOCOL	Test failure statuses
+56579-56580	COUNTER	Unset pseudo-terminal descriptor sentinels
+56581-56583	PROTOCOL	Test failure statuses
+56584-56585	PROTOCOL	Test failure statuses
+56586-56588	NOT	Test SQL fixture identifiers
+56589-56590	PROTOCOL	Test failure statuses

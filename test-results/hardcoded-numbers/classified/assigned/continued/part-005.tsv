@@ -105,3 +105,14 @@ assigned_lines	class	note
 55350	TUNING	Commit message bound
 55351	COUNTER	Repository parser position
 55352-55353	PROTOCOL	OS lock operations
+56773-56781	VENDOR	Swift Jinja filter defaults and encoding constants; upstream Hugging Face ownership retained
+56782-56792	VENDOR	Swift Jinja formatting/iteration state
+56793	VENDOR	Swift Jinja date format mapping/comment
+56794-56801	VENDOR	Swift Jinja interpreter/parser state
+56802-56819	VENDOR	Swift Jinja test fixtures, benchmark sampling and accumulators
+56820-56827	VENDOR	Swift Transformers generation defaults; README identifies Hugging Face upstream despite Wisent origin
+56828-56833	VENDOR	Swift Transformers debugging layout, array dimension and stride defaults
+56834-56847	VENDOR	Swift Transformers numerical, stride and parser initializers
+56848-56857	VENDOR	Swift Transformers download, metadata, context and sampling policy
+56858-56874	VENDOR	Swift Transformers weight/tokenizer encoding, limits and parser state
+56875-56885	VENDOR	Swift Transformers CLI generation defaults and test scenarios/tolerances

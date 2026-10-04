@@ -10,3 +10,199 @@ assigned_lines	class	note
 55820-55821	TUNING	Documentation search result count and cache cadence
 55822-55830	PROTOCOL	HTTP and DNS status codes
 55831-55833	COUNTER	DNS size and join parser iteration
+55834-55846	COUNTER	Recovery/release flags, attempts and shell parser state
+55847	NOT	Embedded AWS healthcheck policy string; needs policy review
+55848	PROTOCOL	Launchd missing-service status
+55849-55850	LAYOUT	Capability editor dimensions
+55851	COUNTER	Refresh generation
+55852	LAYOUT	Catalog operation height
+55853-55854	TUNING	Cleanup client waits
+55855-55857	COUNTER	Refresh and connection counts
+55858	TUNING	Deployment request wait
+55859	COUNTER	Refresh generation
+55860-55861	PRICE	Rental GPU and disk price defaults
+55862-55864	TUNING	Rental idle window, duration bound and input step
+55865	LAYOUT	Price field width
+55866	PROTOCOL	Immediate idle window has zero elapsed delay
+55867-55869	COUNTER	Refresh generations
+55870	SCHEMA	Fleet expansion schema
+55871-55873	LAYOUT	Fleet expansion and database forms
+55874	COUNTER	Refresh generation
+55875	PROTOCOL	Percent in a whole
+55876-55882	LAYOUT	Memory view dimensions
+55883-55884	TUNING	Operation client waits
+55885-55904	COUNTER	Desktop refresh/request generations
+55905-55906	TUNING	Fleet needs window and release log excerpt count
+55907	COUNTER	Refresh generation
+55908	PROTOCOL	Maximum UTF8 trailing continuation-byte count
+55909-55911	LAYOUT	Attachment editor dimensions
+55912	COUNTER	Refresh generation
+55913	SCHEMA	Python unbuffered-mode flag
+55914	TUNING	Numba thread count
+55915	SCHEMA	Python unbuffered-mode flag
+55916-55917	TUNING	Numba threads and download wait
+55918	SCHEMA	Telemetry-disabled flag
+55919	TUNING	Metadata request wait
+55920	SCHEMA	Python unbuffered-mode flag
+55921-55922	TUNING	Numba threads and download wait
+55923	SCHEMA	Telemetry-disabled flag
+55924	TUNING	Metadata request wait
+55925-55927	PROTOCOL	Build success/failure statuses
+55928	TUNING	Changelog line limit; operator-owned file limit requires preserving policy
+55929	SCHEMA	Optional argument cardinality
+55930-55931	TUNING	Build and command-record retention counts
+55932	SCHEMA	Product creation protocol version
+55933	TUNING	Repository page size
+55934-55935	COUNTER	Page and scanned count
+55936	TUNING	Documentation redirect cap
+55937	COUNTER	Install argument index
+55938-55940	PROTOCOL	Native build success/failure statuses
+55941-55946	PROTOCOL	Build-server schema, source kind, logging and RPC codes
+55947	COUNTER	Initial inode sentinel
+55948-55965	PROTOCOL	CRX3, protobuf and ZIP format constants
+55966	COUNTER	ZIP entry count
+55967	PROTOCOL	SHA1 revision representation width
+55968	TUNING	Chosen reproducible archive epoch; determinism needs a stable documented value, not arbitrary runtime configuration
+55969	SCHEMA	Release record version
+55970-55971	PROTOCOL	Archive zero timestamp and owner normalization
+55972	PROTOCOL	Revision encoding width bounds; accepting intermediate widths needs validation review
+55973	COUNTER	Primary artifact count
+55974	SCHEMA	Reconciliation schema
+55975	PROTOCOL	SHA1 commit representation width
+55976-55978	NOT	JSON formatting comments
+55979-55980	TUNING	Billing message age and count limits
+55981-55983	COUNTER	Coverage and inventory totals
+55984-55986	TUNING	Build result and historical scan windows
+55987-55988	COUNTER	DNS removal and existing-zone counts
+55989	PROTOCOL	PostgreSQL registered initial port; does not justify fixed allocation
+55990-55992	COUNTER	Drift, failure and removal totals
+55993	PROTOCOL	Provider automatic-TTL sentinel
+55994-56003	TUNING	Job and plane/fleet CLI defaults; zero defaults require field context
+56004	COUNTER	Embedded routing parser iteration
+56005-56006	TUNING	Invite ID and secret entropy selections
+56007	COUNTER	Constant-time comparison accumulator
+56008-56012	TUNING	Health excerpt/history, recovery candidate count and readiness wait
+56013-56015	COUNTER	Repair and provenance totals
+56016	TUNING	Vault token length bound
+56017-56020	COUNTER	Vault synchronization outcomes
+56021	TUNING	Apple identity lifetime bounds require provider contract
+56022	SCHEMA	Unbounded result sentinel
+56023-56024	NOT	Formatting and historical listing comments
+56025-56026	COUNTER	Watch cursors
+56027	SCHEMA	Placement policy version
+56028	COUNTER	Embedded transfer attempt index
+56029	NOT	Formatting comment
+56030-56033	COUNTER	Quota success totals
+56034	NOT	Drain status output string
+56035-56036	COUNTER	Capability inventory counts
+56037	NOT	Formatting comment
+56038	PROTOCOL	Registry conflict exit status
+56039	TUNING	Registry commit attempt cap
+56040	PROTOCOL	Xcode version component cardinality
+56041	TUNING	Publisher bearer entropy selection
+56042-56043	COUNTER	Withdrawal total and release offset
+56044-56045	TUNING	Release publication defaults
+56046	COUNTER	Rollout failure total
+56047	TUNING	Rollout history window
+56048	SCHEMA	Version component cardinality
+56049	PROTOCOL	Escaped character width
+56050-56055	COUNTER	Language parser index and depth
+56056-56063	PROTOCOL	Parser byte step/start and required single result
+56064	TUNING	Parser diagnostic excerpt
+56065-56067	COUNTER	Parser positions and conformance totals
+56068-56069	PROTOCOL	Version reset and increment
+56070-56072	TUNING	Release log/history windows and in-flight age bound
+56073-56083	COUNTER	Evidence upload failure flags
+56084	PROTOCOL	Embedded failure exit status
+56085-56086	TUNING	Delivery attempt and recent-run processing caps
+56087	COUNTER	Resolver attempt reset
+56088-56089	TUNING	Secret lifetime default and seed item bound
+56090-56091	COUNTER	Seed freshness evidence totals
+56092-56094	TUNING	Service credential lifetimes and failure log excerpt
+56095	COUNTER	Observed service count
+56096	SCHEMA	Required argument cardinality
+56097-56098	TUNING	Coverage display count and space CLI default
+56099-56100	SCHEMA	Required argument cardinality
+56101-56105	COUNTER	Storage failure counts/resets and write offset
+56106-56109	TUNING	Transfer archive cap and submit defaults
+56110	PROTOCOL	HTTP not-found status
+56111-56114	TUNING	Web deployment grant lifetime and readiness policy
+56115	COUNTER	Readiness attempt index
+56116-56118	TUNING	Release history window, edge disk allocation and response excerpt
+56119-56120	COUNTER	Work cancellation outcome totals
+56121	NOT	Formatting comment
+56122-56123	SCHEMA	Workload and detached-run record versions
+56124	COUNTER	Inventory comparison iteration
+56125	TUNING	Activity running window
+56126-56127	COUNTER	Byte and touched-record totals
+56128	PROTOCOL	Nonprivileged port range; refusing privileged ports is placement policy
+56129-56143	TUNING	Boot disk, fleet scheduling, cost/priority, repair/coverage processing and model cache policy
+56144	COUNTER	Coordinator total
+56145	NOT	Formatting comment
+56146	TUNING	Coverage error excerpt
+56147-56148	COUNTER	Matched/submitted totals
+56149	NOT	Formatting comment
+56150	COUNTER	Present count
+56151-56152	TUNING	Fleet join body/field bounds
+56153-56155	COUNTER	Auth comparison accumulator and query indices
+56156	TUNING	HTTP header bound
+56157-56158	COUNTER	Object size totals
+56159	SCHEMA	Every-path selector
+56160-56161	TUNING	Operator command argument bounds
+56162-56166	PROTOCOL	HTTP statuses
+56167	TUNING	Streaming chunk size
+56168-56169	SCHEMA	Standard output/error stream identifiers
+56170-56171	COUNTER	Bootstrap parser iteration and found flag
+56172	PROTOCOL	Registered SSH port; endpoint selection must preserve configured ports
+56173-56174	TUNING	SSH connection/forward liveness counts
+56175-56178	COUNTER	Prune count, attempts and cache failure flags
+56179	NOT	Capability route bound comment
+56180-56184	COUNTER	Allowlist counters and parser positions
+56185-56187	TUNING	Host gate queue/scan windows and stall intervals
+56188-56197	NOT	TCC SQL strings with OS client and authorization codes
+56198-56200	TUNING	Inventory field, vault-file and binary-entry caps
+56201-56202	COUNTER	Cargo entry totals
+56203-56205	TUNING	Duplicated shell inventory caps
+56206-56213	COUNTER	Inventory counts, unavailable-size/PID sentinels and listener parsing
+56214	NOT	Shell digit string used as sanitizer input
+56215-56216	PROTOCOL	Version command success/failure statuses
+56217-56220	TUNING	Host link change cap and observation window defaults/bounds
+56221-56229	COUNTER	Object relocation outcomes and GitHub page index
+56230-56231	TUNING	Initial user/group allocation IDs
+56232-56235	COUNTER	Runner registration and repair flags
+56236	SCHEMA	Release secret cardinality; coupling to actual published set requires review
+56237	PROTOCOL	Capability digest hex width
+56238	PROTOCOL	Successful diagnostic command status
+56239-56240	SCHEMA	Fleet report and reclaim declaration versions
+56241-56242	COUNTER	Recovery identity flags
+56243	PROTOCOL	Successful recovery command status
+56244	NOT	Formatting comment
+56245	COUNTER	Release member count
+56246	TUNING	Release metadata field bound
+56247	COUNTER	Sanitizer count
+56248	NOT	Sanitizer digit string
+56249	TUNING	Release transfer chunk size
+56250-56252	COUNTER	Received/member/size totals
+56253-56254	PROTOCOL	Zero immutable flag masks; platform conditional context required before interpreting effectiveness
+56255-56256	PROTOCOL	SHA256 hex width
+56257	TUNING	User credential length bounds
+56258-56265	COUNTER	Volume mount and fstab outcome flags
+56266	SCHEMA	Product deployment schema version
+56267-56270	COUNTER	Reconciliation outcome totals
+56271	PROTOCOL	Minutes per hour
+56272	SCHEMA	Scratch lease name suffix width
+56273	SCHEMA	Home field selector
+56274	COUNTER	Argument size initializer
+56275	TUNING	Service image settling interval
+56276-56305	COUNTER	Service observation/deployment parser state, attempts and outcome flags
+56306-56307	TUNING	Service environment value and entry bounds
+56308-56310	COUNTER	Unavailable file-size/PID sentinels and listener parsing
+56311	TUNING	Service file fetch byte cap
+56312-56317	COUNTER	File-size sentinel and launchd parser state
+56318-56319	TUNING	Service owner depth and port-count bounds
+56320-56321	COUNTER	Service parser state and owner depth
+56322-56324	TUNING	Service spawn watch duration and sampling interval bounds
+56325-56329	COUNTER	Watch sequence, sample/depth totals and changed-file flags
+56330	TUNING	Streaming installation minimum disk space
+56331	SCHEMA	Automatic restart suspension flag
+56332-56333	COUNTER	Streaming update flag

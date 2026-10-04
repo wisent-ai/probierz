@@ -1,0 +1,6 @@
+assigned_lines	class	note
+57076	COUNTER	Heartbeat timestamp initializer
+57077	TUNING	Heartbeat cadence
+57078-57081	COUNTER	Balance, revenue/cost and request total initializers
+57082	LAYOUT	JSON indentation
+57083	COUNTER	Initial cycle cost/revenue
