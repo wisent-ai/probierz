@@ -66,6 +66,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | tama | `GH_LIST_LIMIT = 1000`; every repository through paginated GraphQL | 4879e2c9 |
 | tama | hook and command thresholds not in `numeric-provenance.json` | Oko defect ee36eefc |
 | oko | transcript listing `FIRST_LINE = 140`; the terminal's width, whole when not a terminal | 508292c8 |
+| oko | auto-completed assignment named by `take(50)` | 06ed0c06 |
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
 | jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
@@ -148,6 +149,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-marketing-asset-generator | Brama refusal `snippet` cut at 157 characters | 3c9f65a3 |
 | wisent-logo-generator, wisent-marketing-asset-generator | handcrafted quality scores, thresholds, input limits | Oko defect 464366bb |
 | wisent-uncensored-model | training reward settings | Oko defect 1686ea15 |
+| wisent-model | answer without JSON quoted by `take(200)` | 404c7c72 |
 | wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
 | wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
 | wisent-visuals | zero in median, cache, encoding, wait | Oko defect ba52a0a1 |
