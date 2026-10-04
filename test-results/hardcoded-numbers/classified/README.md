@@ -69,6 +69,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | tama | hook and command thresholds not in `numeric-provenance.json` | Oko defect ee36eefc |
 | oko | transcript listing `FIRST_LINE = 140`; the terminal's width, whole when not a terminal | 508292c8 |
 | oko | auto-completed assignment named by `take(50)` | 06ed0c06 |
+| oko | Oko iOS `previewDays = 3`, day items `prefix(2)`, orchestrator lists `prefix(12)` four times, next actions `prefix(4)`, `topModelCount = 4`; defect b1ed4e6a recorded and repaired | oko-ios 309e2881 |
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
 | jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
@@ -76,6 +77,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | jeden-desktop | invalid RPC frame shown by `line.prefix(500)` | c36c04bd |
 | jeden-desktop | usage by day `prefix(14)`, decision detail `prefix(12)` lines, read-failure reasons `prefix(3)` | db6d8466 |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
+| most | Most Desktop send confirmation message `prefix(160)` | most-desktop 1b6ff5bf |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
 | lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
