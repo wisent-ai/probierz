@@ -1,0 +1,181 @@
+assigned_lines	class	note
+32688-32694	LAYOUT	Chart range, typography and animation timing examples
+32695	COUNTER	Typed character count
+32696-32699	LAYOUT	Typography and highlight animation examples
+32700-32702	COUNTER	Shell count, modification state and PDF version
+32703-32705	TUNING	Probe waits and cadence
+32706	COUNTER	Index
+32707	TUNING	Remote wait
+32708-32709	COUNTER	Index and shown count
+32710-32711	TUNING	Result count and remote wait
+32712	COUNTER	Count
+32713-32723	TUNING	Remote waits, duration, embedded workload total and fixed timezone offset
+32724-32725	COUNTER	Index and action count
+32726	TUNING	Remote wait
+32727-32731	COUNTER	Indices and completion counters
+32732-32733	TUNING	Remote waits
+32734	LAYOUT	JSON indentation
+32735-32736	TUNING	Remote waits
+32737	COUNTER	Action count
+32738-32739	TUNING	Remote waits
+32740	COUNTER	Index
+32741	TUNING	Remote wait
+32742	COUNTER	Index
+32743-32746	TUNING	Network waits and ETA window list
+32747-32748	COUNTER	Index and best-rate initializer
+32749-32751	TUNING	Watchdog cadence and command waits
+32752-32753	COUNTER	Sample sequence initialization
+32754-32766	TUNING	Remote waits, cycle count, interval and retry bound
+32767	COUNTER	Index
+32768	TUNING	Diagnostic excerpt bound
+32769	COUNTER	Enumeration starts at one
+32770-32771	TUNING	Diagnostic result limit and remote wait
+32772	COUNTER	Index
+32773-32774	TUNING	Remote waits
+32775	COUNTER	Count
+32776-32785	TUNING	Watchdog waits and CLI defaults requiring argument context
+32786-32787	PROTOCOL	Skipped operation success return codes
+32788	TUNING	Remote wait
+32789-32792	PROTOCOL	Unavailable result sentinels
+32793	TUNING	Remote wait
+32794-32795	PROTOCOL	Boolean shell flag
+32796-32798	TUNING	Remote waits
+32799	COUNTER	Requeue count
+32800-32807	TUNING	Remote waits and minimum power policy
+32808	PROTOCOL	Unbuffered Python environment switch in embedded unit
+32809-32811	TUNING	Restart delay and remote waits
+32812-32814	PROTOCOL	Progress and color environment switches
+32815-32826	TUNING	Backfill batch, cadence, sample counts and waits
+32827-32828	COUNTER	Stall count
+32829-32832	TUNING	Completion cadence, sample ceiling and wait
+32833-32838	COUNTER	Coverage counters
+32839-32840	TUNING	Remote waits
+32841-32843	COUNTER	Metadata counters
+32844-32853	TUNING	Remote waits, sample count and stall thresholds
+32854	TUNING	Command wait
+32855	PROTOCOL	Expired-command exit code
+32856-32858	TUNING	Command wait, sample cadence and count
+32859-32865	COUNTER	Stall and metadata accumulators
+32866	TUNING	Remote wait
+32867-32869	COUNTER	Metadata counts
+32870-32886	TUNING	Remote waits and probe duration
+32887	COUNTER	Process count
+32888-32890	TUNING	Remote waits
+32891	COUNTER	Found count
+32892-32904	TUNING	Command waits, monitor cadence and iterations
+32905-32906	COUNTER	Memory sums
+32907-32909	TUNING	Remote waits
+32910	COUNTER	Scanned count
+32911	TUNING	Thread pool size
+32912	COUNTER	Patched count
+32913	TUNING	Thread pool size
+32914	COUNTER	Start offset
+32915-32917	TUNING	Remote waits
+32918-32921	COUNTER	Job counters
+32922-32924	TUNING	Thread pools and replacement count restriction
+32925-32927	TUNING	Remote waits
+32928	PROTOCOL	Success return code
+32929-32932	TUNING	Wait and termination grace periods
+32933	COUNTER	Count
+32934	TUNING	Missing-byte fallback in shell text
+32935-32937	TUNING	Command waits and thread pool size
+32938	COUNTER	Index
+32939-32943	TUNING	Remote waits
+32944	TUNING	Missing-byte fallback in shell text
+32945	TUNING	Remote wait
+32946-32948	COUNTER	Count and first display/source line
+32949-32954	TUNING	Source excerpt bound and remote waits
+32955	COUNTER	First source line
+32956-32958	TUNING	Source excerpt bound and remote waits
+32959	COUNTER	Action count
+32960-32968	TUNING	Remote waits and polling cadence
+32969	COUNTER	Requeue count
+32970-32973	TUNING	Remote waits
+32974	COUNTER	Index
+32975-32985	TUNING	Remote waits, polling cadence and upload worker bound
+32986	PROTOCOL	Unbuffered Python switch
+32987-32992	TUNING	Restart and settling delays and remote waits
+32993-32995	PROTOCOL	Parsed output column indices
+32996-32997	TUNING	Remote waits
+32998-32999	COUNTER	Index and skipped count
+33000-33001	TUNING	CLI limit default and remote wait
+33002	LAYOUT	JSON indentation
+33003-33004	TUNING	CLI limit defaults
+33005-33006	COUNTER	Index and active count
+33007-33010	TUNING	Remote waits and log byte bound
+33011-33013	COUNTER	Found, empty and scanned counts
+33014-33022	TUNING	Remote waits and upload worker bound
+33023	COUNTER	Requeue count
+33024-33030	TUNING	Remote waits and log line bound
+33031	PROTOCOL	Unbuffered Python switch
+33032-33034	TUNING	Restart delay and remote waits
+33035	COUNTER	Activation pair count
+33036	TUNING	Remote wait
+33037	LAYOUT	JSON indentation
+33038-33040	TUNING	Sample count, remote wait and reporting windows
+33041	COUNTER	Count
+33042-33053	VENDOR	Downloaded browser TTS extension: iterator counters, generated control states, polyfills and keepalive interval; not Wisent-owned source
+33054-33123	VENDOR	Downloaded Emscripten TTS bindings: ABI constants, runtime counters, memory settings and generated filesystem implementation; no authority to patch third-party packages
+33124-33216	VENDOR	Downloaded TTS runtime, protobuf serialization, generated ABI and worklet state; all displayed assignments read, including unabridged minified lines
+33217-33218	TUNING	Estimated header bytes and coverage threshold
+33219	PROTOCOL	Assumed four-byte dtype representation; actual tensor dtype must establish applicability
+33220	TUNING	Thread pool size
+33221	LAYOUT	JSON indentation
+33222-33223	TUNING	Retry count and initial delay
+33224	COUNTER	Skipped count
+33225	TUNING	Thread pool size
+33226	LAYOUT	JSON indentation
+33227-33228	TUNING	Estimated header bytes and coverage threshold
+33229	PROTOCOL	Assumed four-byte dtype representation; not proof of actual dtype
+33230	TUNING	Thread pool size
+33231	COUNTER	Done count
+33232	LAYOUT	JSON indentation
+33233-33234	TUNING	Estimated header bytes and coverage threshold
+33235	PROTOCOL	Assumed four-byte dtype representation
+33236-33240	COUNTER	Offsets and iteration
+33241	TUNING	Field offset default
+33242	COUNTER	Offset
+33243-33255	LAYOUT	PDF fonts, spacing and margins
+33256	COUNTER	Offset
+33257	LAYOUT	JSON indentation
+33258-33260	COUNTER	Indices and date count
+33261	LAYOUT	JSON indentation
+33262	COUNTER	Offset
+33263	LAYOUT	JSON indentation
+33264-33265	COUNTER	Offsets
+33266-33269	TUNING	Quarantined browser action waits; do not execute these retired scripts
+33270-33273	COUNTER	Field counts and indices
+33274	TUNING	Field length fallback
+33275-33276	COUNTER	Field counts
+33277-33278	LAYOUT	JSON indentation
+33279-33280	COUNTER	Start offsets
+33281	TUNING	Navigation wait
+33282	LAYOUT	JSON indentation
+33283	TUNING	Navigation wait
+33284	LAYOUT	JSON indentation
+33285	TUNING	Navigation wait
+33286	LAYOUT	JSON indentation
+33287-33289	COUNTER	Embedded JS iteration; ancestor bound is separate tuning
+33290	TUNING	Selector wait
+33291	COUNTER	First matching element index
+33292-33293	TUNING	Action waits
+33294-33297	PROTOCOL	Specific form element indices
+33298	COUNTER	Embedded JS iteration
+33299	LAYOUT	JSON indentation
+33300	TUNING	Navigation wait
+33301-33303	LAYOUT	JSON indentation
+33304-33305	TUNING	Navigation and action waits
+33306-33307	COUNTER	Start offsets
+33308-33313	TUNING	Action and navigation waits in quarantined code
+33314	COUNTER	Start offset
+33315-33319	LAYOUT	JSON indentation
+33320-33328	TUNING	Action and navigation waits in quarantined code
+33329	COUNTER	Index
+33330-33331	TUNING	Fallback field limits
+33332-33344	COUNTER	Counts and iteration indices
+33345	LAYOUT	JSON indentation
+33346	COUNTER	Start offset
+33347	LAYOUT	JSON indentation
+33348	TUNING	Navigation wait
+33349-33350	LAYOUT	JSON indentation
+33351-33353	TUNING	Navigation and action waits

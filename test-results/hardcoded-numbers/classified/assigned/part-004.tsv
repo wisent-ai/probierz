@@ -1,0 +1,112 @@
+assigned_lines	class	note
+34114	LAYOUT	Navigation font size
+34115	TUNING	Token character bound
+34116-34119	PROTOCOL	Time conversion and HTTP statuses
+34120-34121	LAYOUT	Editor heights
+34122-34123	TUNING	Readiness entry and sentence bounds
+34124-34126	PROTOCOL	HTTP statuses
+34127-34128	LAYOUT	Media editor and preview heights
+34129	TUNING	Metric sample retention cap
+34130	PROTOCOL	PEM line width
+34131	TUNING	Stado call wait
+34132	PROTOCOL	HTTP unauthorized
+34133-34137	TUNING	Model display count, ancestor walks and input bounds
+34138-34140	PROTOCOL	SHA256 and cryptographic seed encoding widths
+34141-34142	TUNING	Key file and diagnostic tail bounds
+34143-34144	NOT	Documentation comments
+34145	SCHEMA	Routes schema
+34146	COUNTER	Unserved count
+34147	PROTOCOL	Review exit status
+34148-34149	TUNING	Version policy increments requiring contract review
+34150-34152	COUNTER	Slot reset/step and depth
+34153	LAYOUT	Base64 wrapping width; PEM consumer compatibility requires review
+34154	SCHEMA	Adoption schema
+34155-34156	COUNTER	Total and depth
+34157	SCHEMA	Route schema
+34158	PROTOCOL	Address prefix constant; first octet alone does not establish full network membership
+34159-34161	TUNING	Chat temperature and media speed bounds; adapter capabilities must establish applicability
+34162	COUNTER	Unnamed count
+34163-34169	TUNING	Login bounds, clock allowance, VRAM heuristics, diagnostic excerpt, expiry margin and epoch heuristic
+34170	PROTOCOL	Milliseconds per second
+34171-34172	PROTOCOL	Provider credential format mask and fingerprint width
+34173	NOT	Format documentation
+34174	SCHEMA	Credential envelope field count
+34175	TUNING	Media path segment bound
+34176	COUNTER	Observed single attempt
+34177-34181	PROTOCOL	Percent and time unit conversions
+34182-34183	TUNING	Epoch unit heuristic and numeric tolerance
+34184-34185	PROTOCOL	Time units
+34186-34187	TUNING	Model/provider identifier bounds
+34188-34191	COUNTER	Shell/parser flags
+34192-34195	TUNING	Requirement bound, workload IDs and credential grant duration
+34196	TUNING	Fixed-length year assumption in grant policy; not valid for all calendar years
+34197-34198	TUNING	Grant use cap and requirement bound
+34199-34214	COUNTER	Parser flags, iteration, counts and observed attempts
+34215-34217	TUNING	Model catalogue freshness and identifier bounds
+34218	COUNTER	Read count
+34219	TUNING	Evidence excerpt bound
+34220-34221	COUNTER	Refresh and unreadable counts
+34222	TUNING	Quality model cap
+34223-34225	COUNTER	Refresh counters
+34226-34230	PROTOCOL	HTTP statuses and milliseconds conversion
+34231	TUNING	Random sign-in token size unless required by external protocol
+34232	PROTOCOL	HTTP success
+34233-34234	TUNING	Error excerpt and freshness jitter
+34235-34236	PROTOCOL	Percent and time conversion
+34237	TUNING	Byk Desktop chat excerpt bound
+34238-34239	COUNTER	Position totals
+34240-34241	PROTOCOL	JWT and Base64 group widths
+34242	TUNING	Email code length must match actual authentication provider contract
+34243	TUNING	Trading request wait
+34244-34246	PROTOCOL	Time conversion
+34247	LAYOUT	Decimal display precision
+34248-34249	TUNING	Analytics wait and queue cap
+34250	COUNTER	Initial engagement time
+34251-34254	PROTOCOL	HTTP statuses
+34255	TUNING	Import request wait
+34256	NOT	Cookie assignment string contains embedded retention policy; not a numeric variable assignment
+34257	PROTOCOL	HTTPS port
+34258-34259	TUNING	Revision and result byte bounds
+34260-34262	COUNTER	Hook diagnostic counters
+34263	NOT	Regex string, not numeric assignment; hook policy is operator-owned
+34264-34265	TUNING	Evaluation workers and HTTP wait
+34266	PROTOCOL	HTTP rate-limit status
+34267-34268	TUNING	Logger thread pool and retry policy
+34269	PROTOCOL	Time conversion
+34270	COUNTER	Initial status
+34271-34273	PROTOCOL	CLI exit codes
+34274-34275	LAYOUT	Duration precision and digit grouping
+34276-34279	TUNING	Code scoring scale, size normalization and leniency policy
+34280-34286	LAYOUT	Terminal column widths
+34287-34288	TUNING	Displayed line bound and scanned file-size ceiling
+34289	PROTOCOL	Time conversion
+34290	PROTOCOL	Currency minor units for two-decimal currencies
+34291	TUNING	Top result count
+34292	LAYOUT	Rate precision
+34293	PROTOCOL	Decimal base
+34294	LAYOUT	Decimal precision
+34295-34298	TUNING	Evidence, acronym, phrase and title bounds
+34299	COUNTER	Token iteration
+34300	NOT	Accept header string
+34301-34304	TUNING	Error excerpt, source page sizes and discovery rounds
+34305-34307	COUNTER	Iteration and checked count
+34308	PROTOCOL	Hash algorithm shift
+34309-34312	COUNTER	Hash accumulator, iteration and evidence counts
+34313-34315	TUNING	Page size, bcrypt cost and signature age allowance
+34316	PROTOCOL	HMAC block width
+34317-34318	TUNING	Secret entropy and displayed key prefix policy
+34319-34320	TUNING	Embedded provider hardware profile
+34321	PRICE	Embedded A100 price
+34322-34323	TUNING	Embedded provider hardware profile
+34324	PRICE	Embedded T4 price
+34325-34329	TUNING	Port allocation and billing/provisioning cadence
+34330	COUNTER	Empty key count
+34331	LAYOUT	Key table columns
+34332	COUNTER	Empty transaction count
+34333	LAYOUT	Transaction columns
+34334	COUNTER	Empty machine count
+34335-34339	PROTOCOL	Currency unit and HTTP statuses
+34340-34342	COUNTER	One/zero state constants
+34343-34344	TUNING	Analytics queue and event-name bounds
+34345-34346	PROTOCOL	Radix and fractional number prefix offset
+34347-34353	PROTOCOL	HTTP statuses

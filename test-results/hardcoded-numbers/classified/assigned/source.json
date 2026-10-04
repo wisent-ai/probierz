@@ -1,0 +1,10 @@
+{
+  "source": "../../numeric-literals-assigned.txt",
+  "sha256": "bf860ed716ff3609954b794fb4cf2e77b6285d6c66134b749f68165268ab9d65",
+  "source_lines": 68646,
+  "range_semantics": "inclusive original source-list line numbers",
+  "reviewed_ranges": [[1, 785], [32688, 34353]],
+  "excluded_ranges": [{"start": 786, "end": 32687, "reason": "archive excluded by assignment"}],
+  "complete": false,
+  "vendor_policy": "Read and classify downloaded third-party code; do not patch externally owned packages."
+}

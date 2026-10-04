@@ -1,0 +1,280 @@
+assigned_lines	class	note
+33354-33355	LAYOUT	JSON indentation
+33356-33357	TUNING	Navigation and action waits
+33358	LAYOUT	JSON indentation
+33359-33360	TUNING	Navigation and action waits
+33361	LAYOUT	JSON indentation
+33362	TUNING	Navigation wait
+33363-33365	LAYOUT	JSON indentation
+33366-33372	TUNING	Diagnostic context bound and browser waits
+33373	LAYOUT	JSON indentation
+33374-33375	TUNING	Navigation waits
+33376	LAYOUT	JSON indentation
+33377	COUNTER	Embedded iteration; ancestor ceiling is separate tuning
+33378	LAYOUT	JSON indentation
+33379	TUNING	Action wait
+33380	LAYOUT	JSON indentation
+33381-33387	TUNING	Browser waits
+33388	LAYOUT	JSON indentation
+33389-33393	TUNING	Navigation and login waits
+33394-33398	LAYOUT	JSON indentation
+33399	TUNING	Diagnostic output bound
+33400	LAYOUT	JSON indentation
+33401	TUNING	Diagnostic output bound
+33402-33408	LAYOUT	JSON indentation
+33409-33410	TUNING	Browser and HTTP waits
+33411-33412	LAYOUT	JSON indentation
+33413	TUNING	Navigation wait
+33414	LAYOUT	JSON indentation
+33415	TUNING	Navigation wait
+33416	LAYOUT	JSON indentation
+33417	TUNING	Navigation wait
+33418-33419	LAYOUT	JSON indentation
+33420	TUNING	Navigation wait
+33421	LAYOUT	JSON indentation
+33422	TUNING	Navigation wait
+33423	LAYOUT	JSON indentation
+33424-33425	TUNING	Navigation waits
+33426-33428	LAYOUT	JSON indentation
+33429	TUNING	Navigation wait
+33430-33432	LAYOUT	JSON indentation
+33433	COUNTER	Updated count
+33434	LAYOUT	JSON indentation
+33435-33437	COUNTER	Updated, deleted and created counts
+33438-33441	LAYOUT	JSON indentation; output slice is separate tuning
+33442-33444	TUNING	Context/result bounds and HTTP wait
+33445	COUNTER	Count
+33446	TUNING	HTTP wait
+33447	COUNTER	Found count
+33448	NOT	Comment about text length
+33449-33450	TUNING	Navigation waits
+33451	LAYOUT	JSON indentation
+33452-33463	TUNING	Browser waits and polling cadence
+33464	COUNTER	Attempt count
+33465-33466	LAYOUT	JSON indentation
+33467	COUNTER	Iteration
+33468-33470	TUNING	Browser operation waits
+33471-33476	COUNTER	Iteration initializers; fixed loop ceilings remain separate tuning
+33477-33479	TUNING	Browser operation waits
+33480-33481	COUNTER	Iteration
+33482-33484	TUNING	Browser operation waits
+33485	COUNTER	Iteration
+33486-33487	TUNING	Browser operation waits
+33488	COUNTER	Iteration
+33489-33490	TUNING	Browser operation waits
+33491-33492	COUNTER	Iteration
+33493	TUNING	Browser operation wait
+33494	COUNTER	Attempt initializer
+33495	TUNING	Browser operation wait
+33496-33499	COUNTER	Iteration initializers
+33500-33501	TUNING	Browser operation waits
+33502	PROTOCOL	Tensor axis
+33503-33505	TUNING	Training sample and generation bounds
+33506	COUNTER	Correct count
+33507-33508	PROTOCOL	Tensor axis
+33509	COUNTER	Coherent count
+33510-33512	TUNING	Generation token bounds
+33513	PROTOCOL	Tensor axis
+33514-33516	TUNING	Sample and generation bounds
+33517	PROTOCOL	Tensor axis
+33518-33519	TUNING	Steering strength and generation bound
+33520	LAYOUT	JSON indentation
+33521	PROTOCOL	Disabled steering identity
+33522-33523	TUNING	Generation bound and baked steering strength
+33524	PROTOCOL	Tensor axis
+33525	TUNING	Generation bound
+33526-33527	PROTOCOL	Tensor axes
+33528	TUNING	Steering strength
+33529	NOT	Explanatory text
+33530	PROTOCOL	Tensor axis
+33531-33535	EXPERIMENT	Pair count, zero-shot setting, token truncation and PCA dimension
+33536	LAYOUT	Plot styling
+33537	PROTOCOL	Tensor axis
+33538-33540	LAYOUT	Plot arrows and reference lines
+33541	EXPERIMENT	UMAP parameters
+33542	LAYOUT	Plot styling
+33543	EXPERIMENT	PaCMAP parameters
+33544-33548	LAYOUT	Plot styling and histogram bins
+33549	PROTOCOL	Tensor axis
+33550-33555	LAYOUT	Plot styling, dimensions and resolution
+33556	TUNING	Pair extraction limit
+33557-33566	LAYOUT	PDF margins and font sizes
+33567	PROTOCOL	Tensor axis
+33568-33569	COUNTER	Norm sum and count
+33570	PROTOCOL	Tensor axis
+33571-33572	NOT	Log text
+33573-33574	LAYOUT	JSON indentation
+33575-33577	EXPERIMENT	Cross-validation and classifier parameters
+33578-33580	PROTOCOL	Tensor axes and zero-norm division protection
+33581-33583	EXPERIMENT	Synthetic pair count, dimension and cluster count
+33584	LAYOUT	Plot grid
+33585	EXPERIMENT	PCA dimension
+33586-33588	LAYOUT	Plot styling and reference lines
+33589	PROTOCOL	Tensor axis
+33590-33593	LAYOUT	Plot styling
+33594-33596	PROTOCOL	Tensor axes and zero-norm division protection
+33597-33603	LAYOUT	Histogram and label styling
+33604-33606	LAYOUT	Plot labels and resolution; literal output home path is a separate hardcoding finding
+33607-33612	EXPERIMENT	Classifiers, validation folds and synthetic dataset parameters
+33613-33624	LAYOUT	Plot layout and styling; literal output home path needs separate remediation
+33625	EXPERIMENT	Synthetic point count
+33626-33629	PROTOCOL	Tensor axes
+33630-33631	EXPERIMENT	Cluster count, seed and initializations
+33632	COUNTER	Initial cluster index
+33633-33634	EXPERIMENT	SOM grid and training parameters
+33635-33684	LAYOUT	Plot grids, symbols, arrows, labels and reference lines
+33685	PROTOCOL	Two-class random-chance percentage reference
+33686-33691	LAYOUT	Plot styling and resolution; literal output home path needs separate remediation
+33692	EXPERIMENT	Synthetic point count
+33693	LAYOUT	Plot grid
+33694	PROTOCOL	Tensor axis
+33695-33701	LAYOUT	Plot styling
+33702	EXPERIMENT	Steering strength
+33703-33706	LAYOUT	Arrows and symbols
+33707-33708	PROTOCOL	Tensor axes
+33709-33713	LAYOUT	Plot styling
+33714	PROTOCOL	Tensor axis
+33715-33716	LAYOUT	Arrows and symbols
+33717-33718	PROTOCOL	Tensor axes
+33719-33724	LAYOUT	Plot styling and resolution
+33725	PROTOCOL	Tensor axis
+33726	EXPERIMENT	Steering strength
+33727-33731	PROTOCOL	Tensor axes
+33732	EXPERIMENT	Synthetic point count
+33733-33735	PROTOCOL	Tensor axes
+33736	EXPERIMENT	Steering strength
+33737	PROTOCOL	Tensor axis
+33738-33739	EXPERIMENT	Direction count, strength, cluster seed and initializations
+33740	PROTOCOL	Tensor axis
+33741	EXPERIMENT	Steering strength
+33742-33744	PROTOCOL	Tensor axes
+33745-33746	EXPERIMENT	Direction count, strength, cluster seed and initializations
+33747-33749	PROTOCOL	Tensor axes
+33750-33757	LAYOUT	Plot grid and styling
+33758	EXPERIMENT	Steering strength
+33759-33766	LAYOUT	Plot styling and arrow scaling
+33767	EXPERIMENT	Direction count and strength
+33768-33774	LAYOUT	Plot styling
+33775	EXPERIMENT	Steering strength
+33776-33782	LAYOUT	Plot styling
+33783	EXPERIMENT	Direction count and strength
+33784-33790	LAYOUT	Plot styling and resolution
+33791	PROTOCOL	Tensor axis
+33792-33795	EXPERIMENT	Generation and sample limits in model comparisons
+33796-33798	PROTOCOL	Tensor axes
+33799-33803	EXPERIMENT	Steering baseline, generation/sample bounds and optimization parameters
+33804-33805	EXPERIMENT	Optimization rate and warmup
+33806-33810	PROTOCOL	Tensor axes and Euclidean normalization order
+33811	EXPERIMENT	Unsteered baseline
+33812	PROTOCOL	Tensor axis
+33813	EXPERIMENT	Generation bound
+33814	PROTOCOL	Tensor axis
+33815-33819	EXPERIMENT	Baseline and generation/sample bounds
+33820-33822	PROTOCOL	Tensor axes
+33823-33825	EXPERIMENT	Baseline and generation/sample bounds
+33826-33828	PROTOCOL	Tensor axes
+33829-33832	EXPERIMENT	Baseline and generation bounds
+33833	PROTOCOL	Tensor axis
+33834	EXPERIMENT	Unsteered baseline
+33835	PROTOCOL	Tensor axis
+33836-33837	EXPERIMENT	Generation bound and baseline
+33838-33839	PROTOCOL	Tensor axes
+33840-33841	EXPERIMENT	Generation bounds
+33842	NOT	Log text
+33843	EXPERIMENT	Generation bound
+33844	PROTOCOL	Tensor axis
+33845-33848	EXPERIMENT	Baseline and generation bounds
+33849	PROTOCOL	Tensor axis
+33850-33853	EXPERIMENT	Baseline and generation/sample bounds
+33854	PROTOCOL	Tensor axis
+33855-33856	EXPERIMENT	Generation and tokenization bounds
+33857-33866	COUNTER	Sample counters
+33867-33869	TUNING	Unobserved metric fallback values; not measured accuracy
+33870	NOT	Comment
+33871-33874	EXPERIMENT	Classifier and manifold parameters
+33875-33876	TUNING	Unobserved accuracy fallbacks
+33877-33878	EXPERIMENT	Manifold and classifier parameters
+33879	TUNING	Unobserved accuracy fallback
+33880	EXPERIMENT	Classifier parameters
+33881-33882	TUNING	Signal classification thresholds
+33883	LAYOUT	Figure dimensions
+33884	EXPERIMENT	PCA dimensions
+33885-33888	LAYOUT	Plot styling
+33889	EXPERIMENT	UMAP parameters
+33890-33891	LAYOUT	Plot styling
+33892	TUNING	Signal threshold repeated in plot
+33893-33896	LAYOUT	Labels and color bounds
+33897-33899	EXPERIMENT	Classifier and validation parameters
+33900	TUNING	Signal threshold repeated in plot
+33901-33906	LAYOUT	Reference line, figure dimensions and styling
+33907	TUNING	Signal threshold repeated in plot
+33908-33922	LAYOUT	Plot styling, dimensions and accuracy color scales
+33923	NOT	Recorded experiment parameters in explanatory text
+33924-33925	EXPERIMENT	Validation split, sample count and generation parameters
+33926	LAYOUT	JSON indentation
+33927-33930	EXPERIMENT	Test model dimension, layer and generation bounds
+33931	TUNING	Field audit inclusion threshold
+33932-33935	COUNTER	Enumeration indices
+33936-33937	TUNING	Form field bounds requiring authoritative form source
+33938	COUNTER	Index
+33939	NOT	Explanatory text
+33940-33944	EXPERIMENT	Synthetic data, signal and classifier parameters
+33945	NOT	Log text
+33946	LAYOUT	Figure dimensions
+33947	EXPERIMENT	PCA dimension
+33948-33950	LAYOUT	Plot styling
+33951	EXPERIMENT	t-SNE parameters
+33952-33953	LAYOUT	Plot styling
+33954	NOT	Title text
+33955	LAYOUT	Legend size
+33956	EXPERIMENT	UMAP parameters
+33957-33959	LAYOUT	Plot styling
+33960	EXPERIMENT	PaCMAP parameters
+33961-33963	LAYOUT	Plot styling
+33964	EXPERIMENT	PCA dimension
+33965	LAYOUT	Plot styling
+33966	PROTOCOL	Tensor axis
+33967-33973	LAYOUT	Arrows, reference lines and histogram styling
+33974	PROTOCOL	Tensor axis
+33975-33977	LAYOUT	Histogram styling
+33978	EXPERIMENT	Cluster seed and initializations
+33979-33998	LAYOUT	Plot styling, explanatory reference lines and resolution
+33999-34004	EXPERIMENT	Pair count, zero-shot baseline, tokenization and classifiers
+34005	NOT	Log text
+34006	LAYOUT	Figure dimensions
+34007	EXPERIMENT	PCA dimension
+34008-34010	LAYOUT	Plot styling
+34011	EXPERIMENT	t-SNE parameters
+34012-34013	LAYOUT	Plot styling
+34014	NOT	Title text
+34015	LAYOUT	Legend size
+34016	EXPERIMENT	UMAP parameters
+34017-34019	LAYOUT	Plot styling
+34020	EXPERIMENT	PaCMAP parameters
+34021-34023	LAYOUT	Plot styling
+34024	EXPERIMENT	PCA dimension
+34025	LAYOUT	Plot styling
+34026	PROTOCOL	Tensor axis
+34027-34033	LAYOUT	Plot arrows, reference lines and histogram styling
+34034	PROTOCOL	Tensor axis
+34035-34037	LAYOUT	Histogram styling
+34038	EXPERIMENT	Cluster seed and initializations
+34039-34058	LAYOUT	Plot styling, explanatory reference lines and resolution
+34059-34060	EXPERIMENT	Synthetic pair count, dimension and clusters
+34061	LAYOUT	Figure grid
+34062	EXPERIMENT	PCA dimension
+34063-34065	LAYOUT	Plot styling
+34066	EXPERIMENT	PCA dimension
+34067	LAYOUT	Plot styling
+34068	PROTOCOL	Tensor axis
+34069-34074	LAYOUT	Plot arrows, reference lines and histogram styling
+34075-34076	EXPERIMENT	Classifier and validation parameters
+34077-34078	TUNING	Unobserved accuracy fallbacks
+34079-34090	LAYOUT	Plot styling and reference lines
+34091	NOT	Axis label text
+34092-34099	LAYOUT	Plot styling, histogram bins and resolution
+34100-34102	TUNING	Trading bridge HTTP waits
+34103-34105	PROTOCOL	HTTP refusal status codes
+34106-34109	TUNING	Brama Desktop warning thresholds
+34110-34111	LAYOUT	Number abbreviation and displayed duration precision
+34112-34113	TUNING	Identifier and diagnostic excerpt bounds
