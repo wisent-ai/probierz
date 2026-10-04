@@ -151,3 +151,20 @@ assigned_lines	class	note
 35586-35592	TUNING	Denoising strength, download chunk, request wait and video settings
 35593	SCHEMA	First node ID following fixed workflow nodes
 35594-35608	TUNING	Provider waits, video settings, device selection, face detector size and evaluation sampling/thresholds
+35070	VENDOR	Embedded Capsolver content-script bundle: EventEmitter indices/listener warning bound, UUID byte masks/pool, message size and queue scheduling. Read whole assigned record; no extension execution or modification.
+35071	VENDOR	Embedded Capsolver DOM bundle: shared event/UUID/message transport and callback scan interval. Read whole assigned record, which ends inside a multiline string.
+35072	VENDOR	Embedded Capsolver DOM continuation: parser indices, widget version identifiers and detection intervals. Audit only; no changes to challenge handling.
+35073	VENDOR	Embedded Capsolver recognition bundle: transport/UUID constants, provider configuration, retry and timing policies, coordinate interpolation and traversal. Audit only; no evasion or solver improvements.
+35074	VENDOR	Embedded Capsolver recognition bundle: transport constants, challenge dimensions, image encoding, traversal/counters and retry/wait defaults. Audit only; no extension execution or modification.
+35075	VENDOR	Embedded Capsolver image-to-text bundle: event/UUID/message transport, configuration defaults, DOM keyboard representation, scan/retry intervals and counters. Read whole assigned record; audit only.
+35076	VENDOR	Embedded Capsolver content integration bundle: event/UUID/message constants, provider defaults, UI geometry, expiry/score/scan choices and traversal. Read whole assigned record; no provider or challenge-handling changes.
+35077-35078	VENDOR	Embedded Capsolver recognition and continuation: event/UUID/message constants, provider defaults, challenge shape, counters and timing/interpolation policy. Whole assigned records read; no solver execution or enhancement.
+35079	VENDOR	Capsolver bundled Vue shared utilities: character codes, traversal and splice offsets, Boolean representation and JSON indentation.
+35080	VENDOR	Capsolver bundled Vue reactivity: effect bit masks, linked-list generations, counters, collection offsets and traversal depth semantics.
+35081	VENDOR	Capsolver bundled Vue renderer scheduling, Teleport and transitions: bit masks, queue/child indices, DOM node types and patch flags.
+35082	VENDOR	Capsolver bundled Vue component/renderer/Suspense runtime: property-cache discriminants, lifecycle codes, bit masks, traversal/identity counters, wait sentinels and version 3.5.13.
+35083	VENDOR	Capsolver bundled Vue DOM, EventEmitter/UUID bridge and Quasar 2.18.1: DOM/event codes, CSS duration units, transport bounds, responsive geometry/debounce, locale cardinality and collection traversal.
+35084	VENDOR	Capsolver Vue Router and Quasar controls: route ranking, navigation flags, traversal, keyboard codes, geometry, debounce/animation waits and virtual-scroll sizing. Full record read using wrapped source continuation after the raw reader clipped it; no upstream code changed.
+35085	VENDOR	Intlify message compiler: diagnostic/token/node identifiers, Unicode code points, parser positions, escape widths, traversal and diagnostic display abbreviation.
+35086	VENDOR	Intlify locale runtime and Quasar input/button components: parser transition table, plural indices, missing-result sentinel, identity counters, render flags, input cursor offsets, SVG geometry and animation delays. Omitted raw-reader portions read from wrapped source.
+35087	VENDOR	Capsolver logger/API/settings and Quasar table components: log levels, HTTP status, provider polling defaults, display precision, render flags, page options and traversal. Full record read with wrapped continuation; provider behavior unchanged.
