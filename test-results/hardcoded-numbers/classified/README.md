@@ -74,11 +74,13 @@ Reading coverage is separate from repair, publication and real-product verificat
 | jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
 | jeden | edit diff `take(250)` per side with "[diff truncated at 500 lines]", SSH hosts `take(64)` | 5f99a4b2 |
 | jeden-desktop | invalid RPC frame shown by `line.prefix(500)` | c36c04bd |
+| jeden-desktop | usage by day `prefix(14)`, decision detail `prefix(12)` lines, read-failure reasons `prefix(3)` | db6d8466 |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
 | lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
 | lem | agent answer `prefix(12000)` (Codex, run, streaming), Weles queue and poll failures `prefix(500)` (Overleaf scan and `LemWelesQueue`) | 9a6fa882; fb734e23 |
+| lem | Lem Desktop mass metrics `prefix(10)`, missing provenance units `prefix(3)`, queue paper facets `prefix(8)` | lem-desktop 32b7a87e |
 | lem | model budgets, harvest bounds, generation defaults, backend port | Oko defect 68645422 |
 | glina | Glina Desktop `tail(maxCharacters: 400)` | glina-desktop a5795125 |
 | glina | preview, render, tessellation and generation values | Oko defect 0df1bf55 |
