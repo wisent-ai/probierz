@@ -202,7 +202,6 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "cargoRelease" => "cargo-release",
             "appRepo" => "app-repo",
             "noRepair" => "no-repair",
-            "timeoutMs" => "timeout",
             "startSeconds" => "start",
             "durationSeconds" => "duration",
             "framesPerSecond" => "fps",
@@ -212,4 +211,3 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
     }
     Ok(output)
 }
-
