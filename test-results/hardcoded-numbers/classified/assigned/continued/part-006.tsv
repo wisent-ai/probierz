@@ -39,3 +39,104 @@ assigned_lines	class	note
 64804	COUNTER	wisent-errors Rust segment count
 64805	PROTOCOL	wisent-errors Swift retry exit contract
 64806-64809	TUNING	wisent-errors Swift detail cap/slack and report request/resource waits
+65595	TUNING	wisent-extractors BFCL fixed generated argument requires schema/source justification
+65596-65598	TUNING	wisent-extractors remote dataset request waits
+65599-65600	COUNTER	wisent-extractors APPS passed-test counts
+65601	TUNING	wisent-extractors Aider dataset request wait
+65602	PROTOCOL	wisent-extractors code sample dynamic programming base case
+65603-65606	COUNTER	wisent-extractors code sample result accumulators and loop indices
+65607	TUNING	wisent-extractors scientific code request wait
+65608	EXPERIMENT	wisent-extractors synthetic incorrect solution string; not actual benchmark evidence
+65609	COUNTER	wisent-extractors math brace nesting
+65610-65612	TUNING	wisent-extractors evaluation dataset request waits
+65613-65616	NOT	wisent-extractors HaluEval label semantics documentation
+65617	TUNING	wisent-extractors HaluLens item cap
+65618-65619	SCHEMA	wisent-extractors single-answer mutation scope
+65620-65624	TUNING	wisent-extractors TAG/Okapi request waits and MOCHA negative-score threshold
+65625	NOT	wisent-extractors TruthfulQA label semantics comment
+65626	TUNING	wisent-extractors FLAMES request wait
+65627	TUNING	wisent-extractors toxicity zero fallback; missing toxicity is not safe classification
+65628	COUNTER	wisent-extractors math brace nesting
+65629	NOT	wisent-extractors BigBench label semantics comment
+65630	TUNING	wisent-extractors Pile request wait
+65631	NOT	wisent-extractors TruthfulQA first-answer schema comment
+65632-65633	SCHEMA	wisent-extractors MultiRC binary label mapping
+65634	TUNING	wisent-extractors anagram request wait
+65635-65639	TUNING	wisent-extractors Arabic answer-index zero fallbacks need dataset schema evidence, not guessed correct answers
+65640	NOT	wisent-extractors AraDiCE fallback claim; verify source contract before accepting
+65641-65643	TUNING	wisent-extractors AraDiCE/Japanese/Okapi fixed answer mappings require source schema review
+65644-65645	SCHEMA	wisent-extractors unavailable French answer sentinel
+65646	COUNTER	wisent-extractors Italian polarity counts
+65647-65649	SCHEMA	wisent-extractors Italian positive/negative/neutral label IDs
+65650	TUNING	wisent-extractors paraphrase fixed answer index requires source schema review
+65651	TUNING	wisent-extractors medical dataset request wait
+65652-65653	SCHEMA	wisent-extractors unavailable medical answer sentinels
+65654-65657	EXPERIMENT	wisent-general-theory synthetic evaluation strength/dimensions/samples/seeds and norm epsilon
+65658	PROTOCOL	wisent-general-theory fair-coin probability
+65659-65668	EXPERIMENT	wisent-general-theory synthetic concept/nuisance/noise/initialization/finite-difference/control and fitting settings
+65669-65670	COUNTER	wisent-general-theory bias/gradient initializers
+65671	EXPERIMENT	wisent-general-theory MLP dimension/step/rate defaults
+65672-65673	COUNTER	wisent-general-theory output bias/gradient initializers
+65674-65677	EXPERIMENT	wisent-general-theory validation error/interaction/routing/recovery defaults
+65678	LAYOUT	wisent-general-theory result JSON indentation
+65679-65680	EXPERIMENT	wisent-general-theory pair weighting and float tolerance
+65681	SCHEMA	wisent-general-theory binary pair orientation
+65682-65683	COUNTER	wisent-general-theory agreement/pair totals
+65684	PROTOCOL	wisent-general-theory intervention direction row expansion axis
+65685	LAYOUT	wisent-general-theory stimulus JSON indentation
+65686-65699	EXPERIMENT	wisent-general-theory registered factuality seed/population/hyperparameter/resampling/exclusion/split/category/decision/significance choices; named registration requires recorded preregistration evidence
+65700	PROTOCOL	wisent-general-theory balanced binary chance accuracy
+65701	EXPERIMENT	wisent-general-theory norm epsilon
+65702	COUNTER	wisent-general-theory selection cursor
+65703	EXPERIMENT	wisent-general-theory CLI batch default
+65704	SCHEMA	wisent-general-theory claim schema version; JSON indentation is layout
+65705-65706	LAYOUT	wisent-general-theory manifest/summary JSON indentation
+65707-65708	EXPERIMENT	wisent-general-theory smoke sample counts and Wilson confidence quantile
+65709	COUNTER	wisent-general-theory maximum/violation accumulators
+65710-65712	EXPERIMENT	wisent-general-theory cover ordering, reader regularization and intervention defaults
+65713	COUNTER	wisent-general-theory intervention row offset
+65714-65734	EXPERIMENT	wisent-general-theory registered sample/layer/group/split/decision/significance/recovery/numerical search and small-sample allocation choices
+65735	PROTOCOL	wisent-general-theory adjusted probability identity and running bound
+65736-65741	COUNTER	wisent-general-theory citation/provenance flags, tracked-set membership and absence count
+65742	TUNING	wisent-gradio diagnostic text cap
+65743	SCHEMA	wisent-gradio onboarding schema version
+65744-65748	TUNING	wisent-gradio onboarding condition/screen/action/transition bounds and request wait
+65749	COUNTER	wisent-gradio one-based screen index
+65750-65751	LAYOUT	wisent-gradio command detail panel line geometry
+65752	COUNTER	wisent-gradio pair selection default
+65753-65754	TUNING	wisent-gradio artifact chunk and displayed pair limits
+65755	SCHEMA	wisent-gradio legacy raw path shape
+65756-65757	TUNING	wisent-gradio HF socket wait and pool capacity
+65758-65760	PROTOCOL	wisent-gradio activation norm axes; report precision is display styling
+65761	TUNING	wisent-gradio legacy extraction worker count
+65762	NOT	wisent-gradio contrastive split documentation
+65763-65764	TUNING	wisent-gradio token cap and contrastive split
+65765	PROTOCOL	wisent-gradio contrastive activation norm axis
+65766	TUNING	wisent-ground-truth-api extractive source count
+65767-65770	COUNTER	wisent-ground-truth-api chunk positions and ingest outcome totals
+65771-65773	COUNTER	wisent-integrations release argument consumption state
+65824-65825	PROTOCOL	wisent-ios-repo API HTTP status constants
+65826-65827	COUNTER	wisent-ios-repo premium audio playback position state
+65828	TUNING	wisent-ios-repo streaming playback start buffer threshold
+65829-65831	COUNTER	wisent-ios-repo stream position/duration initial state; initial duration is not yet measured
+65832-65833	LAYOUT	wisent-ios-repo onboarding pager dimensions
+65834	LAYOUT	wisent-ios-repo onboarding button width
+65835	COUNTER	wisent-ios-repo onboarding step index
+65836-65837	TUNING	wisent-ios-repo generated image count and authentication nonce length; preserve cryptographic strength
+65838	SCHEMA	wisent-ios-repo single-record fetch contract
+65839-65842	TUNING	wisent-ios-repo frequency enum values; consumer determines encoding versus cadence policy
+65843-65844	TUNING	wisent-ios-repo image count and free credit default
+65845-65846	LAYOUT	wisent-ios-repo purchase close-button opacity
+65847	TUNING	wisent-ios-repo default message score; missing is not measured zero
+65848	COUNTER	wisent-ios-repo onboarding tab index
+65849	NOT	wisent-ios-repo source URL query parameter
+65850-65869	LAYOUT	wisent-ios-repo button/progress/heartbeat/launch geometry and animation state; not actual measured progress or pulse
+65870-65873	COUNTER	wisent-ios-repo path length accumulators
+65874	LAYOUT	wisent-ios-repo curve rendering sample count
+65875-65876	PROTOCOL	wisent-ios-repo cubic curve coefficients
+65877-65878	COUNTER	wisent-ios-repo curve length accumulators
+65879-65883	LAYOUT	wisent-ios-repo onboarding motion and location spacing
+65884	TUNING	wisent-ios-repo review prompt advance delay
+65885-65896	LAYOUT	wisent-ios-repo slider preview and typography scale
+65897-65902	TUNING	wisent-ios-repo request/retry, free credit and image encoding/dimension settings; two different free credit defaults require shared policy review
+65903-65906	LAYOUT	wisent-ios-repo device reference geometry and theme opacity

@@ -1,0 +1,14 @@
+assigned_lines	class	note
+65774-65785	TUNING	HTTP header and ad-research keyword/location/identifier/page/country/field/cursor bounds; verify actual provider requirements rather than assume protocol constants
+65786	PROTOCOL	Ad research upstream failure HTTP status
+65787-65789	TUNING	Social research item/field bounds
+65790	SCHEMA	Eight-character social API date representation
+65791-65798	TUNING	Social research identifier/item, backend response, compute spend, deployment value and paid-ad payload bounds
+65799-65804	TUNING	Reporting metric/revenue zero/one defaults require consumer review; missing data must not masquerade as observed revenue or performance
+65805-65810	TUNING	Domain registration spend/year/record and DNS preference/lifetime policies, human-handoff spend ceiling; preserve operator spending safeguards until contract-backed replacement
+65811	COUNTER	Identity label count
+65812-65818	TUNING	Onboarding response cap, singularity numeric range and Slack text/page/identifier/cursor bounds
+65819	PROTOCOL	Slack conflict HTTP status
+65820-65821	TUNING	JWT cache lifetime and response body bound
+65822	TUNING	Accepted RSA modulus byte-size policy; cryptographic safety bounds require security contract, not blanket removal
+65823	PROTOCOL	Listener unavailable exit contract

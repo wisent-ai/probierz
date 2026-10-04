@@ -1,0 +1,196 @@
+assigned_lines	class	note
+65907-65909	TUNING	Optimizer fixed model layer count, judge retry policy and evaluation output token cap
+65910-65912	NOT	Activation pooling/mask representation comments
+65913-65922	TUNING	Optimizer generation defaults and hardcoded padding IDs; IDs/layers must derive from selected tokenizer/model
+65923	NOT	Singleton batch shape comment
+65924-65927	COUNTER	Optimizer test/token/time/best-score initial state; not measured result before evaluation
+65928	TUNING	Optimizer fixed layer-count default
+65929-65930	COUNTER	Response score initial identity and match count
+65931-65935	EXPERIMENT	Vector tester token/strength/sampling defaults
+65936	NOT	Singleton batch shape comment
+65937-65939	EXPERIMENT	Vector test generation defaults and trainer selected layer
+65940-65942	SCHEMA	GRDB snapshot fixture identifiers; provenance must be checked before external library edits
+65943-65946	PROTOCOL	Heartbeat authorization HTTP statuses
+65947	TUNING	Avatar appearance input bound
+65948-65950	COUNTER	Avatar generation progress reset state
+65951	LAYOUT	Avatar duration formatter unit count
+65952-65954	COUNTER	Image generation/download progress initial/reset state
+65955	LAYOUT	Image duration formatter unit count
+65956	COUNTER	Chat cooldown initial state
+65957	TUNING	Public prompt assistant reply threshold
+65958	COUNTER	Assistant reply count
+65959	TUNING	Chat inactivity threshold; literal five seconds conflicts with thirty-second comment
+65960-65963	LAYOUT	Chat sheet/image progress geometry and unit scale
+65964	SCHEMA	Unset/random image seed sentinel
+65965-65967	COUNTER	Image generation progress and step counters
+65968	SCHEMA	Unset/random image seed reset
+65969-65970	COUNTER	Image generation progress/step reset
+65971	TUNING	Fixed image generation total steps; progress must follow actual request/producer
+65972-65973	NOT	Onboarding age range examples; preserve age safeguards
+65974-65976	COUNTER	One-based onboarding/room step state
+65977	SCHEMA	Room creation workflow step cardinality
+65978-65982	TUNING	Room character-count and name/description/image-prompt bounds
+65983-65984	COUNTER	Room image generation progress resets
+65985	TUNING	Room image request wait
+65986-65988	COUNTER	Room image generation/edit progress resets
+65989	TUNING	Room image edit request wait
+65990	COUNTER	Room image edit initial progress
+65991-65993	LAYOUT	Home tab corner/shadow style
+65994	COUNTER	Initial scroll page
+65995-65997	TUNING	Scroll cycling minimum, page size and load-ahead threshold
+65998-66000	COUNTER	Scroll page reset and appended count
+66001-66008	LAYOUT	Scroll skeleton/item dimensions and community grid geometry
+66009	COUNTER	Companion memory count reset
+66010-66011	TUNING	Trial remaining-message zero fallback/reset requires explicit server-state distinction
+66012-66014	COUNTER	Companion stream/memory/settings revision state
+66015	TUNING	Companion trial message limit
+66016-66022	COUNTER	Companion finalized-paragraph and onboarding page counters
+66023-66040	LAYOUT	Companion overlay/pill/settings geometry
+66041-66043	TUNING	Character description/contrastive question/value bounds
+66044	COUNTER	Character creation step index
+66045	SCHEMA	Character creation workflow step cardinality
+66046	TUNING	Default character intensity
+66047-66050	NOT	Disabled trait generation/count state
+66051-66053	TUNING	Trait field bounds and default intensity
+66054-66061	LAYOUT	Trait slider handle/track geometry
+66062-66064	TUNING	Download estimate sampling interval/progress delta/window
+66065-66072	LAYOUT	Duration formatter and image crop geometry/zoom state
+66073-66076	COUNTER	TTS model loading progress initial/reset state
+66077-66083	LAYOUT	Legacy chat animation phase/opacity and bubble corners
+66084-66086	LAYOUT	Legacy chat bubble corners
+66087	SCHEMA	Single character-image picker selection
+66088	COUNTER	Legacy character creation step index
+66089-66095	SCHEMA	Legacy workflow cardinality and onboarding step discriminants
+66096	SCHEMA	Random image seed sentinel
+66097-66100	COUNTER	Daily message/ad counters
+66101-66104	TUNING	Analytics queue/default engagement/request wait and ad loading delay; missing engagement is not measured zero
+66105-66107	COUNTER	Asset publish versions and download progress reset
+66108	TUNING	Archive extraction retry count
+66109-66112	LAYOUT	Asset state progress stage markers; not measured byte fractions
+66113-66121	TUNING	Asset duration estimate sample interval/progress delta/window
+66122-66125	LAYOUT	Asset state progress stage markers
+66126	COUNTER	Local character identifier sequence
+66127-66148	TUNING	Conversation/catalog/vector page bounds, character generation/config/network waits, discovery delay and config fetch period; one-based page values are counters
+66149-66151	TUNING	Failure reporting/announcement deduplication windows and banner lifetime
+66152	SCHEMA	Single occurrence count identity
+66153	TUNING	Diagnostic text cap
+66154-66156	COUNTER	Log count and image progress resets
+66157	SCHEMA	Random image seed sentinel
+66158-66163	TUNING	Avatar request wait and diffusion steps/guidance/image-count/dimensions
+66164-66167	COUNTER	Local inference measurement reset state; reset zeros are not measured results
+66168-66169	TUNING	Synthetic generation token/sampling defaults
+66170-66180	COUNTER	Local inference loading/measurement initial/reset state
+66181-66187	TUNING	Room page/character bounds and Chatterbox streaming chunk/context/overlap choices
+66188-66190	COUNTER	Speech decoded/output/chunk counts
+66191	SCHEMA	Chatterbox model audio sample representation; verify against selected model
+66192	TUNING	Chatterbox output token cap
+66193-66202	SCHEMA	Chatterbox fixed architecture/context/vocabulary/token representation; values must match loaded model metadata
+66203-66210	LAYOUT	Chatterbox loading state/stage fractions; stages are not measured byte progress
+66211	COUNTER	Chatterbox tokenizer traversal index
+66212	TUNING	Chatterbox decoder integration step count
+66213-66217	SCHEMA	Chatterbox decoder/vocoder dimensions and convolution identity defaults; verify model representation
+66218	SCHEMA	Espeak expected sample rate contract
+66219	COUNTER	Phoneme traversal index
+66220-66224	COUNTER	MLX audio loading reset/completion state
+66225-66226	COUNTER	NeuTTS prompt/token elapsed accumulators
+66227	TUNING	NeuTTS top-k sampling
+66228-66229	SCHEMA	NeuTTS sample/hop representation
+66230-66231	TUNING	NeuTTS context/output token limits; verify context against model metadata
+66232-66237	SCHEMA	NeuTTS special token IDs and speech vocabulary range; must match tokenizer
+66238-66243	LAYOUT	NeuTTS loading reset/stage/completion fractions
+66244-66247	TUNING	NeuTTS streaming chunk/context/overlap defaults
+66248-66250	COUNTER	NeuTTS stream output/chunk counts
+66251	TUNING	Playback minimum buffered chunks
+66252-66257	COUNTER	Audio buffer counts/resets
+66258-66260	LAYOUT	Diffusion caption/border style and image unit scale
+66261-66263	TUNING	Image encoding/upload/local-save quality defaults
+66264	LAYOUT	Blur animation initial fraction
+66265	COUNTER	Color parser accumulator
+66266-66267	PROTOCOL	Hex color channel extraction and expansion
+66268	LAYOUT	Invalid color fallback channels
+66269	TUNING	Missing GIF delay fallback
+66270	PROTOCOL	Normal video playback rate identity
+66271-66276	LAYOUT	Wrapping collection geometry/layout state
+66277	TUNING	Control vector comparison strength default
+66278	COUNTER	Control vector model loading progress initial state
+66279	TUNING	Widget image maximum dimension
+66280	COUNTER	Widget color parser accumulator
+66281-66282	PROTOCOL	Widget hex color channel extraction and expansion
+66283	LAYOUT	Widget invalid color fallback channels
+66284-66286	VENDOR	Apple diffusion normalized pixel fill; Apple/HuggingFace provenance in DPMSolverMultistepScheduler.swift:2
+66287-66288	VENDOR	DPM solver algorithm order and startup count
+66289-66293	VENDOR	DPM sampling/training/beta/rho defaults
+66294-66299	VENDOR	Diffusion decoder shift, flow scheduler defaults and state
+66300	VENDOR	Multilingual embedding sequence cap
+66301-66302	VENDOR	Text/random source traversal indices
+66303-66305	VENDOR	Mersenne Twister state constants and cursor
+66306-66308	VENDOR	Standard normal distribution defaults
+66309	VENDOR	Philox stream offset
+66310	VENDOR	Philox round count
+66311-66312	VENDOR	Standard normal distribution defaults
+66313-66315	VENDOR	Sample timer moment/count accumulators
+66316-66321	VENDOR	Diffusion scheduler step/beta defaults, step offset and state
+66322-66323	VENDOR	Diffusion singleton batch dimensions
+66324-66327	VENDOR	Diffusion latent/output dimensions
+66328-66329	VENDOR	RGBA pixel byte width and opaque alpha
+66330-66333	VENDOR	Diffusion pipeline strength/refiner/image-count/step defaults
+66334-66344	VENDOR	Apple diffusion seed/guidance/scheduler/latent/image/aesthetic defaults
+66345-66347	VENDOR	Diffusion singleton batch dimensions
+66348-66351	VENDOR	Torch-compatible random cursor and Mersenne Twister constants
+66352-66354	VENDOR	Standard normal distribution defaults
+66355-66356	VENDOR	BPE tokenizer traversal indices
+66357-66368	VENDOR	Diffusion CLI generation/checkpoint/model-scale defaults
+66369	VENDOR	Diffusion CLI saved count
+66370	VENDOR	Diffusion CLI filename text bound
+66371-66376	VENDOR	MLX audio recorder time/power initial/reset values; LICENSE:3 names Anthony DePasquale
+66377-66384	VENDOR	MLX audio STT/TTS loading state
+66385	VENDOR	MLX audio example text input bound
+66386-66391	VENDOR	MLX audio playback time/duration/queue counters
+66392-66393	VENDOR	MLX sample player sample-rate/prebuffer defaults
+66394-66395	VENDOR	MLX sample player offset/queue reset
+66396-66407	VENDOR	DAC normalization axis and convolution/model shape defaults
+66408-66409	VENDOR	DAC normalization epsilon and quantizer dimensions
+66410	VENDOR	TTS playback prebuffer default
+66411-66412	VENDOR	TTS processing elapsed accumulators
+66413	VENDOR	Whisper encoder convolution comment
+66414	VENDOR	Whisper positional timescale
+66415-66417	VENDOR	Whisper attention offsets
+66418-66422	VENDOR	Whisper audio sample/FFT/hop/chunk/padding representation
+66423-66424	VENDOR	Whisper decoding sampling/length defaults
+66425	VENDOR	Whisper input shape documentation
+66426-66428	VENDOR	Whisper score/token initializers
+66429	VENDOR	Whisper logits shape documentation
+66430	VENDOR	Whisper first timestamp bound
+66431	VENDOR	Whisper probability formula comment
+66432-66433	VENDOR	Whisper cumulative probability and elapsed accumulators
+66434-66435	VENDOR	Whisper engine sampling defaults
+66436	VENDOR	Whisper sum accumulator
+66437-66443	VENDOR	Whisper multilingual/English vocabulary representation and documentation
+66444-66446	VENDOR	Whisper silence/log-probability/compression thresholds
+66447-66451	VENDOR	Whisper traversal/reset/time positions
+66452-66454	VENDOR	Whisper alignment base cost and trace discriminants
+66455-66456	VENDOR	Whisper timing filter width and softmax scale
+66457	VENDOR	Whisper probability sum
+66458	VENDOR	Whisper standardization epsilon
+66459-66462	VENDOR	Whisper moment and traversal accumulators
+66463	VENDOR	Whisper token/time conversion
+66464-66465	VENDOR	Whisper timing filter/attention scale defaults
+66466-66468	VENDOR	Whisper tensor math comments
+66469	VENDOR	Whisper cumulative length
+66470	VENDOR	Whisper text jump formula comment
+66471-66475	VENDOR	Whisper timing/probability/token/score accumulators
+66476	VENDOR	Whisper audio chunk representation
+66477	VENDOR	Whisper last speech position
+66478-66479	VENDOR	Whisper tokenizer ID documentation
+66480	VENDOR	CAMPPlus power accumulator
+66481-66485	VENDOR	CAMPPlus audio feature sample/mel/frame/preemphasis defaults
+66486-66503	VENDOR	CAMPPlus architecture/convolution/pooling/dimension defaults
+66504	VENDOR	Chatterbox generation elapsed state
+66505-66514	VENDOR	Chatterbox engine sampling/guidance/exaggeration/output defaults
+66515-66518	VENDOR	Chatterbox sample-rate/vocabulary representation
+66519	VENDOR	Chatterbox index accumulator
+66520-66527	VENDOR	Chatterbox model generation defaults
+66528-66543	VENDOR	Chatterbox TTS chunk and generation defaults
+66544-66557	VENDOR	Chatterbox transformer architecture/normalization/rotary representation defaults
+66558-66569	VENDOR	Chatterbox text/speech vocabularies/tokens/context/prompt/embedding configuration
+66570-66583	VENDOR	Chatterbox voice encoder/audio sample/mel/FFT/hop/window/frequency/normalization configuration

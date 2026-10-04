@@ -159,3 +159,4 @@ assigned_lines	class	note
 65568-65569	VENDOR	RepE class centroid axes
 65570	VENDOR	RepE component count
 65571-65583	VENDOR	RepE token/layer/component/difference/batch/evaluation-length defaults
+65584-65594	VENDOR	RepE evaluation difference/batch/seed/BOS and benchmark training sample defaults
