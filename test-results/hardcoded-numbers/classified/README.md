@@ -51,6 +51,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | weles | `QUOTED_BODY_CHARS = 300`, action and account-id length quantifiers | fcbffbec |
 | weles | `RUN_OUTPUT_DEPTH = 3`, `RUN_OUTPUT_MAX_BYTES` | fcbffbec |
 | weles | `CONTROL_LIMIT = 4096` is Skarbiec's broker control-line bound (PROTOCOL, as in brama) | — |
+| weles | Weles Desktop keeper table `keepers.prefix(40)` | weles-desktop f95f580b |
 | weles | admission, page-route, records-route, signup, Apple-expiry, vision-geometry, proxy-rate and trajectory poll values | Oko defect 30817d3d |
 | stado | janitor `MAX_DEPTH = 64`, `MAX_WORKDIR_DEPTH = 256`, scratch `MAX_DEPTH = 256` | 3bfd3e1b |
 | stado | janitor `MAX_ERRORS = 16` and the 128-character error filter | 3bfd3e1b |
@@ -122,6 +123,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-ios | `maxDiagnosticLength = 300` | a051d854 |
 | wisent-ios, turbot-ios, oko-ios | analytics `maxQueuedPayloads = 200` (defect d6df8d4d recorded and repaired for oko-ios) | wisent-ios 92f8a524; turbot-ios 8acebec0; oko-ios c883f44e |
 | wisent-ios | speech log excerpts `text.prefix(50)` (six lines now log the character count) | 80e7ec52 |
+| wisent-ios | chats stream log `prefix(5)` with 30 characters of message text, control vector preview `prefix(500)`, speech test logs `prefix(50)` | 13d58dbd |
 | wisent-ios | tokenizer ids, bounds, waits, progress steps, speech and diffusion settings | Oko defect 031b301b |
 | wisent-android | quotas, page sizes, waits, field bounds | Oko defect 446e06e4 |
 | wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
