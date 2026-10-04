@@ -1,0 +1,143 @@
+assigned_lines	class	note
+60584-60588	TUNING	Engagement batch and analytics conversation/message/text bounds
+60589	COUNTER	Engagement duration initializer
+60590	TUNING	Analytics queue capacity
+60591	SCHEMA	Onboarding step cardinality
+60592-60593	PROTOCOL	API HTTP status defaults
+60594-60596	TUNING	Market history, stale refresh symbol count and scan ceiling
+60597-60598	COUNTER	Ticker premium/order/open-interest accumulators
+60599-60602	TUNING	Tour context text/item bounds and blog reading speed/excerpt defaults
+60603-60605	COUNTER	Broker safety iteration counts; ceilings require consumer review
+60606-60607	PROTOCOL	Authenticated encryption IV/tag representation
+60608-60610	TUNING	Search depth/results, character slug and signal chart bar bounds
+60611-60613	COUNTER	SQL parameter/string iteration
+60614	TUNING	Failure diagnostic detail bound
+60615-60616	SCHEMA	Named failure client zero/one literals; consumer semantics require review
+60617-60619	TUNING	Failure throttling, outage lifetime and sweep cadence
+60620	SCHEMA	Named failure store zero literal; consumer semantics require review
+60621-60625	COUNTER	GPU job totals and health parser iteration
+60626-60627	TUNING	Elliott pattern base scores
+60628-60629	SCHEMA	Elliott pivot-window cardinalities and iteration
+60630-60635	TUNING	Saty trend/conviction and ATR periods
+60636-60640	COUNTER	Indicator iteration and accumulators
+60641	TUNING	Phase oscillator period defaults
+60642-60643	COUNTER	Indicator and model-tool iteration
+60644-60645	TUNING	Model generation token and tool iteration limits
+60646	COUNTER	Model tool iteration
+60647	PROTOCOL	Day-to-millisecond unit conversion
+60648	TUNING	Market bar minimum and interval/exchange defaults
+60649-60650	COUNTER	Invalid bar/outlier totals
+60651	TUNING	Fixed session grouping stride; interval contract must justify cardinality
+60652	PROTOCOL	Day-to-millisecond unit conversion
+60653-60655	TUNING	Calendar attempts and missing-session lookback
+60656	COUNTER	Inspected session count
+60657	PROTOCOL	Image compute unavailable status
+60658-60664	TUNING	Text/image moderation thresholds; safety policy requires centralized ownership, not blanket removal
+60665	PROTOCOL	Moderation not-found status
+60666-60668	TUNING	Security crawl page/point/guessed-path limits; audit only
+60669-60672	COUNTER	Security parser resets and guessed-path count
+60673	TUNING	Active security probe point limit
+60674	COUNTER	Tested security point count
+60675-60678	TUNING	Security probe timing and arithmetic probe constants; audit only
+60679	NOT	HTTP accept preference string; quality weights are chosen preferences
+60680-60685	COUNTER	Security candidate/package iteration, parser resets and severity totals
+60686	TUNING	Security findings persistence chunk size
+60687-60688	COUNTER	New/fixed finding totals
+60689	NOT	HSTS recommendation string with policy lifetime; not an execution constant
+60690-60691	COUNTER	Security response bytes/offset
+60692-60694	TUNING	Push token/text/key bounds
+60695	COUNTER	Push entry count
+60696	TUNING	Push delivery batch size
+60697	COUNTER	Push batch iteration
+60698-60703	TUNING	Push response bytes and reactivation delivery/query/inactivity/text defaults
+60704	COUNTER	Zero structured-policy-message predicate
+60705-60706	TUNING	Dual video duration and recent job page size
+60707-60708	SCHEMA	Named Stado zero/one literals; consumer semantics require review
+60709-60711	TUNING	Object proxy clock tolerance/lifetime and minimum backtest bars
+60712	TUNING	Non-finite backtest numeric fallback; absence must not imply measured zero
+60713-60718	COUNTER	Backtest return/drawdown/loss accumulators and reset
+60719	TUNING	Weekly trend period
+60720	COUNTER	Strategy sum
+60721-60723	TUNING	Promotion numeric fallback and candidate expected-return/confidence defaults
+60724-60725	COUNTER	Signal run totals and ad-message reset
+60726-60734	TUNING	Polish tax thresholds/rates/allowances and year-specific deduction cap; require authoritative law, year and taxpayer applicability, not arbitrary tuning
+60735	COUNTER	Tax accumulator
+60736-60739	TUNING	Cross-signal volume thresholds, lookback and print cap
+60740-60741	PROTOCOL	Neutral/bearish direction encoding
+60742-60743	COUNTER	Signal time iteration and trade totals
+60744-60747	TUNING	Related ticker cache/overlap/page defaults and paper-broker non-finite fallback
+60748	COUNTER	Zero share-change default
+60749-60752	TUNING	Execution slippage, numeric fallback and performance starting-equity defaults
+60753	COUNTER	Drawdown accumulator
+60754-60758	TUNING	Performance/portfolio starting equity, risk/heat defaults and numeric fallback
+60759-60763	COUNTER	Portfolio exposure/heat accumulators
+60764	LAYOUT	Stock PDF number precision
+60765	TUNING	Stock PDF source table row/column bounds
+60766-60776	TUNING	Preference bandit priors/exploration/arm count, sample limits, missing-value fallback and chunk size
+60777-60780	COUNTER	Preference chunk iteration and market signal aggregates
+60781	TUNING	Relative-strength conviction threshold
+60782-60785	COUNTER	Volume-weighted signal and touch accumulators/iteration
+60786-60789	TUNING	Wedge phase/return thresholds and ATR default period
+60790-60794	COUNTER	Wedge detector iteration and true-range accumulator
+60795-60799	TUNING	Wedge lookback, entry lag, scan ceiling, ATR tolerance and weekly average period
+60800-60801	COUNTER	Wedge last-index sentinel and sum
+60802	TUNING	Default underlying heat cap; zero semantics require consumer review
+60803	LAYOUT	Caption outline sampling resolution
+60804-60805	COUNTER	Outline sample iteration
+60806-60808	LAYOUT	Caption outline widths/resolution
+60809	COUNTER	Outline sample iteration
+60810-60814	LAYOUT	Caption glow, opacity, scale and stagger timing
+60815	TUNING	Carousel image encoder quality
+60816	LAYOUT	Carousel native scale
+60817	COUNTER	Slide iteration
+60818	TUNING	Carousel encoder quality default; native scale is layout
+60819	LAYOUT	Caption transition duration
+60820-60822	COUNTER	Caption frame/image indices
+60823	LAYOUT	Transition opacity initializer
+60824	COUNTER	Slideshow frame index
+60825-60833	LAYOUT	Slideshow opacity, slide distance/timing, video volume/playback defaults and caption gap
+60834-60845	LAYOUT	Text animation transforms, slide distances, opacity and timing defaults
+60846-60848	COUNTER	Word frame offsets and iteration
+60849	LAYOUT	Caption preset duration
+60850-60851	COUNTER	Preset starting frames
+60852-60859	TUNING	Render resolution/frame-rate and preset duration settings
+60860-60863	LAYOUT	Opaque color default and easing-curve coefficients
+60864-60867	COUNTER	Position origin initialization/reset
+60868-60870	TUNING	Chat steering, inference sampling/token and document chunk defaults
+60871-60872	EXPERIMENT	Carousel render fixture dimensions
+60873-60875	COUNTER	Carousel/controlnet case iteration
+60876-60878	PROTOCOL	Controlnet test exit and expected HTTP statuses
+60879	COUNTER	Chat test error reset
+60880	TUNING	Chat test response wait
+60881-60882	COUNTER	Chat test paragraph count/iteration
+60883	TUNING	Authentication fixture attempt cap
+60884	COUNTER	Authentication attempt index
+60885	TUNING	Authentication fixture cookie chunk size
+60886	COUNTER	Cookie chunk iteration
+60887-60896	EXPERIMENT	Image generation fixture dimensions, steps, strengths and denoising; audit only
+60897	NOT	Adapter settings status string
+60898-60902	EXPERIMENT	Image generation fixture denoising, dimensions, steps and guidance; audit only
+60903	NOT	Adapter settings status string
+60904-60908	EXPERIMENT	Image generation fixture denoising, dimensions, steps and guidance; audit only
+60909-60910	NOT	Adapter settings status strings
+60911-60912	EXPERIMENT	Image generation fixture denoising and seed; audit only
+60913	NOT	Adapter settings status string
+60914-60919	EXPERIMENT	Image generation fixture dimensions, denoising and sampling; audit only
+60920	NOT	Adapter settings status string
+60921-60930	EXPERIMENT	Image generation fixture adapter/seed/denoising/dimensions and sampling; audit only
+60931	NOT	Adapter settings status string
+60932-60939	EXPERIMENT	Image/pose generation fixture strengths, dimensions and seeds; audit only
+60940	TUNING	Image settings test generation wait
+60941-60942	LAYOUT	Settings comparison grid geometry
+60943	TUNING	Settings comparison image encoding quality
+60944	COUNTER	Settings case count
+60945	LAYOUT	Settings report JSON indentation
+60946-60947	EXPERIMENT	Pose fixture strengths and seed; audit only
+60948	TUNING	Video adapter strength default
+60949-60951	NOT	Commented adapter strength examples
+60952-60961	TUNING	Video dimensions, frames/rate, inference settings, encoding quality and tile policy
+60962	LAYOUT	Video config JSON indentation
+60963	SCHEMA	Video latent channels; model compatibility must supply this cardinality
+60964	PROTOCOL	Conditioned-frame zero-noise mask
+60965	TUNING	Video denoising setting
+60966-60970	TUNING	Face verification device/detector dimensions, sample count and similarity threshold

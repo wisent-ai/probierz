@@ -1,0 +1,141 @@
+assigned_lines	class	note
+61029-61031	TUNING	Diagnostic thresholds
+61032-61034	PROTOCOL	Diagnostic HTTP failure statuses
+61035	LAYOUT	Job status JSON indentation
+61036-61050	TUNING	Autoscaling factors, workload batching/GPU/concurrency presets and control strength default
+61051	LAYOUT	Debug payload JSON indentation
+61052-61054	TUNING	Debug scripts bind to fixed character/vector records; not isolated reusable inputs
+61055-61060	EXPERIMENT	Debug tensor dimensions and generation settings
+61061	COUNTER	Debug generation count
+61062-61072	EXPERIMENT	Direct generation sampling and token bounds
+61073	NOT	Zero-strength in-place operation comment
+61074	EXPERIMENT	Zero-strength operation fixture
+61075	NOT	Expected zero-strength identity comment
+61076	EXPERIMENT	Debug fixed vector width and zero-strength operation fixture
+61077	EXPERIMENT	Demo target layer
+61078-61080	PROTOCOL	Demo activation pooling axes
+61081-61083	EXPERIMENT	Demo target layer, output token bound and steering strength
+61084-61086	EXPERIMENT	Demo generation token bound and control strengths
+61087-61096	TUNING	Server backlog/connections, worker recycling/waits, keepalive, development port and worker count
+61097-61106	PROTOCOL	Authentication/error/unavailable HTTP statuses
+61107-61108	TUNING	Control strength defaults
+61109-61110	PROTOCOL	Activation pooling axes
+61111-61112	TUNING	Controlled generation token/temperature defaults
+61113-61114	PROTOCOL	MLX server HTTP statuses
+61115-61121	TUNING	MLX server port, inference defaults, target layer, fixed model ID and missing score fallback
+61122-61127	COUNTER	In-memory record identifiers and resets
+61128-61129	PROTOCOL	MLX server HTTP statuses
+61130-61135	TUNING	Alternate MLX server port, inference/target layer/model ID and score defaults
+61136-61137	PROTOCOL	Record not-found statuses
+61138	LAYOUT	Training progress stage percentage; stage marker is not measured completion
+61139	PROTOCOL	Percent completion endpoint
+61140	PROTOCOL	Vector averaging axis
+61141-61144	SCHEMA	Normalized contrastive quality score domain
+61145	TUNING	Contrastive pair page size default/bound
+61146	COUNTER	Contrastive pair nonnegative offset
+61147	TUNING	Contrastive set page size default/bound
+61148	COUNTER	Contrastive set nonnegative offset
+61149-61150	TUNING	Trait description bounds and fixed target-layer ceiling
+61151	COUNTER	One-based page index
+61152-61153	TUNING	Control vector page size and normalization bounds/default
+61154-61155	SCHEMA	Unit-interval progress representation
+61156-61158	TUNING	Real-server strength and inference defaults
+61159-61162	PROTOCOL	Real-server activation pooling axes
+61163-61164	PROTOCOL	Real-server HTTP statuses
+61165-61168	TUNING	Real-server port and inference/target-layer defaults
+61169-61170	PROTOCOL	Real-server record not-found statuses
+61171	LAYOUT	Training progress stage percentage; not measured completion
+61172	PROTOCOL	Percent completion endpoint
+61173-61179	PROTOCOL	Character generation HTTP statuses
+61180-61187	TUNING	Character description/extraction/name generation token/sampling settings
+61188-61191	PROTOCOL	Streaming character generation HTTP statuses
+61192-61198	TUNING	Streaming character generation token/sampling defaults
+61199	PROTOCOL	Chat refusal status
+61200-61201	COUNTER	Chat first-token marker and output token count
+61202	TUNING	Chat temperature
+61203-61206	PROTOCOL	Chat HTTP failure statuses
+61207	COUNTER	Chat token count
+61208	TUNING	Conversation context length bound
+61209-61212	PROTOCOL	Chat/model availability HTTP statuses
+61213	TUNING	Model load wait
+61214-61222	PROTOCOL	Chat and contrastive bulk HTTP statuses
+61223-61224	SCHEMA	Normalized contrastive score filter domain
+61225	TUNING	Contrastive pair page size default/bound
+61226	COUNTER	Contrastive pair nonnegative offset
+61227-61249	PROTOCOL	Contrastive pair/set access, mutation and generation HTTP statuses
+61250	TUNING	Contrastive set page size default/bound
+61251	COUNTER	Contrastive set nonnegative offset
+61252-61279	PROTOCOL	Contrastive set and retraining HTTP statuses
+61280	TUNING	Fixed model ID fallback for retraining
+61281-61299	PROTOCOL	Retraining/control vector HTTP statuses
+61300	TUNING	Conversation page size default/bound
+61301	COUNTER	Conversation nonnegative offset
+61302-61311	PROTOCOL	Conversation HTTP statuses
+61312	TUNING	Conversation results page size default/bound
+61313	COUNTER	Conversation results nonnegative offset
+61314-61315	PROTOCOL	Conversation HTTP statuses
+61316-61317	TUNING	Document chunk size/overlap defaults
+61318-61326	PROTOCOL	Document/image authorization and availability HTTP statuses
+61327	TUNING	Image signed URL lifetime
+61328-61329	PROTOCOL	Image failure statuses
+61330-61331	TUNING	Image URL lifetime defaults
+61332-61333	PROTOCOL	Image authorization/dependency statuses
+61334	PROTOCOL	Image input refusal status
+61335-61336	TUNING	Image upload URL lifetime
+61337-61342	PROTOCOL	Image URL request HTTP statuses
+61343-61344	TUNING	Image download URL lifetime
+61345-61357	PROTOCOL	Image request and character authorization HTTP statuses
+61358	TUNING	Character image upload URL lifetime
+61359-61400	PROTOCOL	Character/persona/trait image access and mutation HTTP statuses
+61401	TUNING	Persona image upload URL lifetime
+61402-61410	PROTOCOL	Persona/profile image access HTTP statuses
+61411	TUNING	Profile image upload URL lifetime
+61412-61424	PROTOCOL	Profile/trait image access and mutation HTTP statuses
+61425	TUNING	Trait image upload URL lifetime
+61426-61427	PROTOCOL	Image upload/notification HTTP statuses
+61428	TUNING	Missing notification timezone fallback to UTC; zero offset represents UTC but selecting it is policy
+61429-61439	PROTOCOL	Notification HTTP statuses
+61440	TUNING	Notification history page size
+61441-61471	PROTOCOL	Notification/management/persona/Redis HTTP statuses
+61472	TUNING	Hardcoded Redis migration port
+61473-61475	PROTOCOL	Redis operation HTTP statuses
+61476-61478	TUNING	Model helper tokenization/generation length and temperature
+61479-61480	PROTOCOL	Webhook HTTP statuses
+61481-61484	COUNTER	Seed cleanup outcome counts
+61485	TUNING	Seed vector generation polling cap
+61486	LAYOUT	Seed vector result JSON indentation
+61487-61488	COUNTER	Seed creation outcome counts
+61489-61490	LAYOUT	Seed mapping/pair JSON indentation
+61491	COUNTER	Pair creation count
+61492	LAYOUT	Pair JSON indentation
+61493	TUNING	Seed data polling cap
+61494-61495	EXPERIMENT	Character evaluation inference settings
+61496-61498	TUNING	Empty evaluation metric fallbacks; unavailable results must not masquerade as measured zero
+61499	LAYOUT	Evaluation report JSON indentation
+61500-61503	EXPERIMENT	Steering evaluation strengths and acceptance thresholds
+61504	LAYOUT	Steering comparison JSON indentation
+61505-61512	EXPERIMENT	Steering CLI/evaluator strength and quality thresholds
+61513-61514	COUNTER	Steering evaluation outcome totals
+61515-61518	TUNING	Empty vector evaluation metric fallbacks; unavailable results must be distinguishable
+61519	TUNING	Evaluation fixed character record ID
+61520-61521	EXPERIMENT	Evaluation inference defaults
+61522	COUNTER	Quality score accumulator
+61523-61524	LAYOUT	Generated pair JSON indentation
+61525-61533	TUNING	Alert delivery wait, autoscaling metric windows/periods, cache lifetime and normalization default
+61534	PROTOCOL	Character HTTP failure status
+61535	TUNING	Character normalization default
+61536-61537	PROTOCOL	Steering application failure statuses
+61538-61539	TUNING	Steering strength and normalization epsilon
+61540-61541	PROTOCOL	Hidden/control feature norm axes
+61542-61551	TUNING	Normalization epsilon, steering decay, generation bounds, model slot waits, reactivation sampling and chat page size
+61552	COUNTER	Chat page offset
+61553-61555	TUNING	Chat strength and inference defaults
+61556	COUNTER	Chat token count
+61557-61559	PROTOCOL	Chat/steering HTTP statuses
+61560-61573	TUNING	Chat sequence bound, pair counts/page sizes, control batch/tolerance, document chunk/search/retention defaults; embedded offsets are counters
+61574-61576	COUNTER	Document cleanup and question-pair totals
+61577	TUNING	Dataset batch size
+61578-61579	PROTOCOL	Dataset failure statuses
+61580	TUNING	Dataset name suffix attempt cap
+61581-61582	COUNTER	Dataset example/entry counts
+61583	TUNING	Pair generation CLI count and model default

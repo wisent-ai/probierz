@@ -251,3 +251,21 @@ assigned_lines	class	note
 59759-59760	LAYOUT	Landing carousel advancement and progress animation cadence
 59761	PROTOCOL	Percent progress scale
 59762-59764	COUNTER	Carousel progress resets
+60971-60972	COUNTER	Image backend pending/occurrence cardinalities
+60973-60976	TUNING	Image backend diagnostic bounds, collector wait and event throttle
+60977-60979	PROTOCOL	Image backend authentication statuses
+60980-60986	TUNING	Image proxy polling and ComfyUI inference settings
+60987-60988	SCHEMA	ComfyUI output indices
+60989-60991	TUNING	ComfyUI seed domain and adapter strength
+60992	SCHEMA	ComfyUI seed flag representation; consumer semantics require review
+60993	TUNING	ComfyUI request wait
+60994	COUNTER	First element index
+60995-60998	PROTOCOL	ComfyUI/health HTTP statuses
+60999-61008	NOT	Image style model provenance URL comments
+61009-61014	TUNING	Image request prompt/dimension/step/strength bounds and fixed adapter rank
+61015	LAYOUT	Adapter config JSON indentation
+61016	NOT	Commented image URL lifetime
+61017	PROTOCOL	Image authorization status
+61018	TUNING	Turbo guidance setting; model contract must establish compatibility
+61019-61021	PROTOCOL	Image generation/request statuses
+61022-61028	TUNING	Signed image URL lifetime, selected model/GPU count, generation wait, service port/quota and stop/restart pacing
