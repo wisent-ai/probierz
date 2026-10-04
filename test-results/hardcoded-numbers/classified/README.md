@@ -127,6 +127,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-gradio | `_MAX_DETAIL_CHARS = 500`, `SHOWN_PAIRS = 6` | 8e6dc866 |
 | wisent-gradio | onboarding bounds, copied chunk size, waits, workers, split | Oko defect 7f4d7b3a |
 | wisent-trade | failure `MAX_DETAIL_CHARS = 300` | 5d6a1e75 |
+| wisent-trade | analytics `MAX_QUEUE_SIZE = 100`, `getRecentTrades` default limit 50 | 5289d702 |
 | wisent-trade | analytics bounds, queue size, recent trades, polling, price | Oko defect 30384295 |
 | wisent-landing | failure `MAX_DETAIL_CHARS = 300`, unused `visibleItemsCount = 3` | local 206166f, not pushed: repository archived on GitHub |
 | wisent-landing-new | blog page size; archived wisent-landing waits, zones, HSTS | Oko defect 326fb734 |
