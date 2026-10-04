@@ -97,6 +97,27 @@ These are partial review records, not proof that the entire assignment list has 
 | backends | scratch and research scripts outside any product | Oko defect 51273293 |
 | brama | Brama Desktop readiness `maximumEntries = 256`, `maximumSentenceCharacters = 512`, `stadoCallTimeoutSeconds = 120`, `bundleAncestors = 14`, `ancestorWalk = 10` | brama-desktop d74fa5bc |
 | stado | `release status` `RUN_WINDOW = 10`, web deploy `RUN_WINDOW = 32` | 8ff2b125 |
+| transcript-lake | adapter and stream `TEXT_CAP = 65536`, `EXTRA_DEPTH = 4`, `PENDING_CAP = 64`, read `substr(text, 1, 240)`, `DEFAULT_LIMIT = 20`, `MAX_LIMIT = 500`, `DEFAULT_DAYS = 7`, `SHOW_LIMIT = 2000`, `SHOW_MAX_LIMIT = 50000` | 9053e2ea; docs transcript-lake-landing f54073a8 |
+| transcript-lake | goal artifact size, title bounds, redaction thresholds, export buffers, batch | Oko defect f6cd0556 |
+| transcript-label-trainer | `ERROR_EXCERPT = 160` and error/answer cuts of 80-300 characters | 3c3004f0 |
+| transcript-label-trainer | answer budgets, discovery sampling, concurrency, training and evaluation settings | Oko defect 9e410b04 |
+| trading-autonomy | comment `maxDepth = 4`, proxy `maxMessageLength = 10000` and last 20 messages, feed `MAX_ENTRIES_PER_AGENT = 3` | bb6b65da |
+| trading-autonomy | cadences, balances, slippage, spend ceilings, windows, priors, estimates, ports | Oko defect 3bd83977 |
+| wisent-backend | `_MAX_CAUSE = 300`, `_DETAIL_CHARACTERS = 400` | a86adb51 |
+| wisent-backend | inference, notification, relationship and messaging policy, waits, previews, zero fallbacks | Oko defect 47a53330 |
+| wisent-backend-mlx-local-fork | ports, inference defaults, model ids, waits, zero fallbacks | Oko defect cdc747b5 |
+| wisent-ios | `maxDiagnosticLength = 300` | a051d854 |
+| wisent-ios | tokenizer ids, bounds, waits, progress steps, speech and diffusion settings | Oko defect 031b301b |
+| wisent-android | quotas, page sizes, waits, field bounds | Oko defect 446e06e4 |
+| wisent-core | intervention, classifier and guard settings, model-name shape guesses | Oko defect e28d4138 |
+| wisent-evaluators | thresholds, weights, waits, zero confidence fallbacks | Oko defect 219e8f3f |
+| wisent-integrations | provider bounds, spend ceilings, revenue zero defaults, JWT and RSA policy | Oko defect 84eeca16 |
+| wisent-components | Figma page sizes | Oko defect 9387e5ef |
+| wisent-enterprise | `JsonDetails max = 800` (and 1,500/2,000/5,000 at call sites), `sanitizeText max = 220`/300, array `slice(0, 4)`, capture `fileLimit = 50` | 80d5c5a9 |
+| wisent-enterprise | verdict windows, import caps, polling, page size | Oko defect 11bd16d4 |
+| wisent-experiments | zero-average fallbacks, fixed BOS id | Oko defect 5c8192dd |
+| wisent-body-horror | rule gates and weights, zero fallbacks, person count | Oko defect 5f1f4de4 |
+| stado | space report and janitor ignored the volume of a declared `work_root` | 0c1d87cd; docs stado-landing b8948e7d (defect 08c47436) |
 
 ## The 10 000-file cleanup cap
 
