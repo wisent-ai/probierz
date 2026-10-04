@@ -7,9 +7,6 @@
 use crate::authoring::*;
 use serde_json::json;
 
-/// Characters of the payload digest used as the report id.
-const REPORT_ID_LENGTH: usize = 24;
-
 /// Reports are owner read/write only: they quote crawled pages and
 /// carry a signature.
 const REPORT_MODE: u32 = 0o600;
@@ -38,9 +35,9 @@ pub(crate) fn signing_key(
     }
 }
 
-/// The report id: a digest of the payload, and of the signature when
-/// the report is signed, so two reports over the same pages are still
-/// distinguishable by their signing.
+/// The report id: the whole SHA-256 digest of the payload, and of the
+/// signature when the report is signed, so two reports over the same pages
+/// are still distinguishable by their signing.
 pub(crate) fn report_id(payload: &JsonValue, signing: Option<&JsonValue>) -> String {
     let digest = match signing {
         Some(signing) => Sha256::digest(
@@ -53,7 +50,7 @@ pub(crate) fn report_id(payload: &JsonValue, signing: Option<&JsonValue>) -> Str
         ),
         None => Sha256::digest(payload.to_string().as_bytes()),
     };
-    hex::encode(digest)[..REPORT_ID_LENGTH].to_string()
+    hex::encode(digest)
 }
 
 /// Where the report goes: the named path, which must be JSON, or a

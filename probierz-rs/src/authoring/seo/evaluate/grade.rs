@@ -5,13 +5,11 @@
 //! reason, so that is an error rather than a pass. Without an
 //! adjudicator the merged score is the lower of the two and only the
 //! issues both raised count as blockers — a single grader cannot fail
-//! the verdict on its own.
+//! the verdict on its own. The graders disagree when any dimension's
+//! scores differ by more than the policy's `model.adjudicationDelta`, or by
+//! anything at all when the policy states none, or when their blockers differ.
 
 use super::*;
-
-/// Score delta above which an adjudicator is required, when the policy
-/// does not state its own.
-const DEFAULT_ADJUDICATION_DELTA: f64 = 0.2;
 
 /// Scores are reported to four decimal places, which is the resolution
 /// the report and its signature carry.
@@ -68,7 +66,7 @@ pub(crate) fn grade_with_models(
         .policy
         .pointer("/model/adjudicationDelta")
         .and_then(JsonValue::as_f64)
-        .unwrap_or(DEFAULT_ADJUDICATION_DELTA);
+        .unwrap_or_default();
     let divergence_required = score_delta > delta || blocker_mismatch;
 
     let adjudicator_grade = if divergence_required {
@@ -92,16 +90,10 @@ pub(crate) fn grade_with_models(
         &secondary_grade,
         adjudicator_grade.as_ref(),
     );
-    let model_blockers = agreed_blockers(
-        &primary_grade,
-        &secondary_codes,
-        adjudicator_grade.as_ref(),
-    );
-    let model_recommendations = recommendations(
-        &primary_grade,
-        &secondary_grade,
-        adjudicator_grade.as_ref(),
-    );
+    let model_blockers =
+        agreed_blockers(&primary_grade, &secondary_codes, adjudicator_grade.as_ref());
+    let model_recommendations =
+        recommendations(&primary_grade, &secondary_grade, adjudicator_grade.as_ref());
 
     Ok(Graded {
         model_evaluation: json!({
@@ -208,9 +200,7 @@ fn merge_dimensions(
             .chain(adjudicator_grade)
             .collect();
         let score = adjudicator_grade.map_or_else(
-            || {
-                dimension_score(primary_grade, name).min(dimension_score(secondary_grade, name))
-            },
+            || dimension_score(primary_grade, name).min(dimension_score(secondary_grade, name)),
             |grade| dimension_score(grade, name),
         );
         let mut seen = BTreeSet::new();
