@@ -194,3 +194,68 @@ assigned_lines	class	note
 66544-66557	VENDOR	Chatterbox transformer architecture/normalization/rotary representation defaults
 66558-66569	VENDOR	Chatterbox text/speech vocabularies/tokens/context/prompt/embedding configuration
 66570-66583	VENDOR	Chatterbox voice encoder/audio sample/mel/FFT/hop/window/frequency/normalization configuration
+66584-66590	VENDOR	Chatterbox audio rates and speech vocabulary
+66591	VENDOR	CAMPPlus power accumulator
+66592-66614	VENDOR	CAMPPlus feature/architecture/convolution/pooling defaults
+66615-66624	VENDOR	F0 predictor and flow model dimensions/frame/lookahead defaults
+66625-66637	VENDOR	Flow matching noise/guidance/speaker/dimension/sampling/prompt defaults
+66638-66643	VENDOR	HiFiGAN padding/activation epsilon/alpha/convolution defaults and numerical explanation
+66644-66661	VENDOR	HiFiGAN harmonic/noise/voicing/channel/rate/activation/amplitude defaults
+66662	VENDOR	HiFiGAN stride product accumulator
+66663-66667	VENDOR	Matcha time/group/attention/dropout defaults
+66668-66678	VENDOR	S3 mel/sample/hop/window/frequency/vocabulary representation
+66679-66690	VENDOR	S3 decoder convolution/group/channel/attention/block/chunk defaults
+66691	VENDOR	S3 full-context attention comment
+66692-66697	VENDOR	Conformer dropout/feed-forward scale/convolution/padding state
+66698-66705	VENDOR	Transformer positional capacity and offsets
+66706-66710	VENDOR	Transformer subsampling identity/context/offset defaults
+66711-66717	VENDOR	Conformer upsample/lookahead/mask/context defaults and interpolation comment
+66718-66731	VENDOR	Conformer dimensions/heads/blocks/dropout/chunk/convolution/upsampling defaults
+66732	VENDOR	Conformer full-context documentation
+66733-66739	VENDOR	Conformer decoding context and S3 rotary/quantization/convolution/codebook defaults
+66740	VENDOR	S3 frame/sample conversion explanation
+66741-66745	VENDOR	S3 frame bound and audio sample/hop/window/overlap configuration
+66746-66748	VENDOR	S3 segment traversal/count state
+66749	VENDOR	S3 token/audio rate
+66750	VENDOR	S3 maximum observed code length
+66751-66767	VENDOR	S3 sample/hop/token/vocabulary/mel/context/architecture configuration
+66768-66778	VENDOR	S3 padding/mel/FFT/audio/frequency and logarithmic mel conversion defaults
+66779-66785	VENDOR	T3 positional initialization and perceiver dropout/query/embedding/attention defaults
+66786-66794	VENDOR	T3 guidance/generation/sampling/quantization defaults
+66795-66803	VENDOR	Voice encoder recurrent depth, overlap/coverage/batch/rate/headroom defaults
+66804-66823	VENDOR	CosyVoice language-model dimensions/layers/heads/vocabulary/normalization defaults
+66824-66833	VENDOR	CosyVoice flow dimensions/vocabulary/frame/mel/lookahead/step defaults
+66834-66855	VENDOR	CosyVoice encoder/decoder/flow dimensions, attention, dropout, chunk and guidance defaults
+66856-66864	VENDOR	CosyVoice vocoder channels/harmonics/noise/sample/FFT defaults
+66865-66867	VENDOR	CosyVoice sampling and speech/text length-ratio defaults
+66868-66879	VENDOR	CosyVoice sample/token/vocabulary/mel/embedding/model representation
+66880	VENDOR	CosyVoice generation time initial state
+66881-66888	VENDOR	CosyVoice engine sampling/steps/audio rates and duration cap
+66889	VENDOR	CosyVoice text end offset
+66890-66917	VENDOR	CosyVoice generation and flow model defaults
+66918-66921	VENDOR	CosyVoice sample rates, text chunk cap and end-of-prompt ID
+66922-66929	VENDOR	CosyVoice TTS sampling/integration steps
+66930-66934	VENDOR	CosyVoice audio representation defaults and comments
+66935-66949	VENDOR	CosyVoice conditional flow dimensions/noise/guidance/sampling defaults
+66950	VENDOR	CosyVoice minimum interpolation length
+66951-66972	VENDOR	CosyVoice HiFiGAN harmonic/noise/voicing/architecture/audio defaults
+66973	VENDOR	CosyVoice stride product accumulator
+66974-66982	VENDOR	CosyVoice Qwen architecture/vocabulary/normalization/rotary defaults
+66983-66984	VENDOR	CosyVoice attention offset state
+66985-66990	VENDOR	CosyVoice special token IDs and model dimensions
+66991	VENDOR	CosyVoice sampling attempt count
+66992-67001	VENDOR	CosyVoice sampling attempt cap, nucleus/top-k/window/repetition and output-ratio defaults
+67002-67004	VENDOR	CosyVoice speaker embedding and sample-rate representation
+67005-67019	VENDOR	Kokoro Albert architecture/embedding/dropout/initialization/normalization defaults
+67020	VENDOR	Kokoro sequence dimension axis
+67021-67040	VENDOR	Kokoro adaptive normalization/convolution dimensions and numerical defaults
+67041-67050	VENDOR	Kokoro harmonic/noise/voicing and spectral transform defaults
+67051	VENDOR	Kokoro elapsed initial state
+67052-67055	VENDOR	Kokoro normal-speed defaults
+67056-67057	VENDOR	Kokoro duration/model dimensions
+67058-67065	VENDOR	Kokoro token bounds, audio rate/speed and processing batch defaults
+67066	VENDOR	Kokoro alignment matrix indicator
+67067	VENDOR	ESpeak traversal index
+67068-67071	VENDOR	Marvis elapsed/generation/yield counters
+67072-67082	VENDOR	Mimi convolution identity defaults
+67083	VENDOR	Mimi quantization epsilon

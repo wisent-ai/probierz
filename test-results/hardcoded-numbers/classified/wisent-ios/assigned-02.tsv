@@ -1,0 +1,89 @@
+assigned_lines	class	note
+67084-67086	VENDOR	Mimi convolution dilation/width initializers
+67087	VENDOR	Mimi query/key/value projection cardinality
+67088-67101	VENDOR	Mimi/Marvis quantization and rotary embedding defaults/axes/offsets
+67102-67118	VENDOR	Orpheus architecture/vocabulary/normalization/rotary/quantization settings
+67119	VENDOR	Orpheus elapsed initial state
+67120-67121	VENDOR	Orpheus sampling defaults
+67122-67132	VENDOR	SNAC convolution identities and sample/codebook/dimension defaults
+67133	VENDOR	SNAC maximum expansion accumulator
+67134-67138	VENDOR	SNAC weight normalization axis and convolution identities
+67139-67152	VENDOR	Orpheus token/context/sample/sampling defaults and tokenizer IDs
+67153	VENDOR	Orpheus traversal index
+67154-67157	VENDOR	Orpheus repetition penalty, tokenizer IDs and stacking axis
+67158-67170	VENDOR	OuteTTS generation and pitch extraction defaults
+67171-67173	VENDOR	OuteTTS peak/index/interpolation accumulators
+67174-67176	VENDOR	OuteTTS pitch range and numerical epsilon
+67177-67180	VENDOR	OuteTTS audio moment/position/magnitude accumulators
+67181-67182	VENDOR	OuteTTS loudness and peak targets
+67183-67184	VENDOR	OuteTTS audio moment/max accumulators
+67185-67187	VENDOR	OuteTTS sample/token rate and extension bound
+67188	VENDOR	OuteTTS elapsed initial state
+67189-67192	VENDOR	OuteTTS sampling/quantization defaults
+67193-67196	VENDOR	OuteTTS prompt token IDs and acoustic feature defaults
+67197-67208	VENDOR	Shared Llama rotary scaling defaults and offset
+67209-67214	VENDOR	Audio trimming test settings and reference comments/output
+67215-67219	VENDOR	Chatterbox benchmark seed/repetitions/warmup/elapsed/guidance settings
+67220-67222	VENDOR	Audio test accumulators and output sample rate
+67223-67224	VENDOR	Sentence tokenizer performance test repetition count
+67225-67227	VENDOR	Whisper test traversal/match counts
+67228-67233	VENDOR	Audio trimming amplitude/frame/word/probability/duration policies
+67234-67237	VENDOR	Audio trimming energy/position/score accumulators
+67238	VENDOR	Audio trimming safety margin
+67239-67255	VENDOR	Audio rate/buffer/monitor/gain/clipping/speed/context/cleanup/quality defaults
+67256-67259	VENDOR	Sentence/text splitting minimum lengths
+67260-67261	VENDOR	Text split scan offsets
+67262	VENDOR	Text split minimum length
+67263-67266	VENDOR	Apple MLX LoRA example layer/rate/report/token defaults; LoraTrain.swift:1 and CAA.swift:1 retain Apple copyright
+67267	VENDOR	MLX MNIST canvas geometry
+67268-67269	VENDOR	MLX diffusion single-step paths
+67270-67279	VENDOR	Bert architecture/normalization/vocabulary/position defaults
+67280-67294	VENDOR	NomicBert dimension alignment, rotary/offset/architecture defaults
+67295	VENDOR	MLX CAA steering strength default; upstream-owned file even in local fork
+67296-67297	VENDOR	LoRA dataset traversal indices
+67298-67305	VENDOR	LoRA training/evaluation/report/checkpoint defaults
+67306-67309	VENDOR	LoRA token counts and Baichuan offset
+67310-67315	VENDOR	Bitnet GPU block/packing constants and loops
+67316-67318	VENDOR	Bitnet/Cohere rotary defaults
+67319-67330	VENDOR	DeepSeek YaRN context/rotation/scaling defaults
+67331-67333	VENDOR	DeepSeek rotary offset and pipeline positions
+67334-67335	VENDOR	DeepSeek singleton pipeline and processing block size
+67336-67343	VENDOR	Exaone/GLM/Gemma rotary/context/normalization/logit scaling defaults
+67344	VENDOR	Gemma cache growth step
+67345-67348	VENDOR	Gemma3n normalization/scale/sparsity and Granite rotary identity
+67349-67357	VENDOR	InternLM/Llama rotary/context/offset defaults
+67358-67362	VENDOR	Llama steering position/strength/rotary and MiMo scale defaults; local integration policy still requires owning-caller review
+67363-67366	VENDOR	OpenELM dimension alignment/normalization/rotary/attention defaults
+67367-67380	VENDOR	Phi/Phi3 architecture/vocabulary/normalization/rotary defaults
+67381-67392	VENDOR	PhiMoE architecture/context/expert/normalization/rotary defaults
+67393-67408	VENDOR	Qwen rotary/context and steering position/strength masks; masks are identities, not calibration evidence
+67409-67415	VENDOR	QwenMoE/SmolLM rotary/context/layer pattern defaults
+67416-67423	VENDOR	Starcoder and scaled rotary representation defaults/offset
+67424-67425	VENDOR	Switch layer quantization defaults
+67426-67436	VENDOR	DoRA/LoRA rank/scale/layer defaults
+67437-67448	VENDOR	MLX evaluation prefill/cache/sampling/repetition/vector-norm/strength defaults
+67449-67450	VENDOR	MLX evaluation index/token counters
+67451-67453	VENDOR	MLX evaluation prefill/cache defaults
+67454-67461	VENDOR	MLX elapsed/token/cache-offset accumulators
+67462-67469	VENDOR	KV cache growth/retention/quantization defaults and cursor state
+67470-67472	VENDOR	KV cache position/result accumulators
+67473-67476	VENDOR	KV cache quantization defaults
+67477-67479	VENDOR	Gemma normalization epsilon, Float16 finite bound and vector normalization epsilon
+67480	VENDOR	MNIST traversal index
+67481	VENDOR	Vision RGBA component width
+67482-67494	VENDOR	Gemma vision model vocabulary/normalization/rotary/context/image representation and special IDs
+67495	VENDOR	Idefics image traversal index
+67496-67501	VENDOR	Idefics/SmolVLM image shape/token IDs and Qwen vision indexing/comments
+67502-67521	VENDOR	MLX diffusion VAE/text/UNet/scheduler configuration
+67522-67524	VENDOR	Diffusion image/batch defaults
+67525	VENDOR	Diffusion iteration index
+67526-67534	VENDOR	UNet/VAE upsample/group/layer/attention defaults
+67535-67544	VENDOR	MLX evaluation fixture task/sampler/tokenizer dimensions and IDs
+67545-67548	VENDOR	Linear training example epochs/batch/slope/intercept
+67549-67550	VENDOR	CAA example layer/strength
+67551-67558	VENDOR	Image CLI cache/generation/latent/grid/size/strength defaults
+67559-67565	VENDOR	LLM CLI token/sampling/repetition/seed/cache defaults
+67566-67574	VENDOR	LoRA CLI training/evaluation/report/checkpoint defaults
+67575-67578	VENDOR	MNIST CLI seed/batch/epoch/rate defaults
+67579-67580	VENDOR	SwiftTiktoken benchmark repetition and elapsed accumulator; LICENSE:3 names Anthony DePasquale
+67581-67583	VENDOR	SwiftTiktoken BPE delimiter/index sentinels
