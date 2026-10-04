@@ -29,8 +29,9 @@ use crate::stado::{shell_quote, STADO_BIN};
 
 const POINT: &str = "benchmark.autonomy";
 const TRENDS: &str = "trends";
-/// The one schedule of the loop; `stado schedule edit` changes it.
-const SCHEDULE_ID: &str = "probierz-autonomy";
+/// The one schedule of the loop, as the UUID Stado takes for a schedule's
+/// creation identity; `stado schedule edit` changes it.
+const SCHEDULE_ID: &str = "210a30e9-d31a-48a1-9d24-aa7c3653bff4";
 
 /// Topics a cycle report shows Trends accepted.
 fn watched_ok(report: &Json) -> usize {
@@ -303,9 +304,10 @@ pub(crate) fn schedule(
     let created: Json = serde_json::from_slice(&catalog::stado(&mut create)?).map_err(|error| {
         Failure::config(POINT, format!("stado schedule create answered no JSON: {error}"))
     })?;
+    let id = created["schedule_id"].as_str().unwrap_or(SCHEDULE_ID).to_string();
     print_json(&json!({
         "schedule": created,
         "command": command,
-        "next": format!("stado schedule show {SCHEDULE_ID} reads it; stado schedule edit {SCHEDULE_ID} changes it"),
+        "next": format!("stado schedule show {id} reads it; stado schedule run {id} --retry-token <TOKEN> runs it now; stado schedule edit {id} changes it"),
     }))
 }

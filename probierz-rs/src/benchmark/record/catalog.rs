@@ -41,13 +41,21 @@ pub(crate) fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
         )
     })?;
     if !output.status.success() {
+        // Stado's sentence first: the failure line is cut for a person, and a
+        // long argv ahead of it hid the reason.
+        let verb: Vec<String> = command
+            .get_args()
+            .take(2)
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
         return Err(Failure::new(
             "benchmark.catalog",
             Code::Unavailable,
             format!(
-                "{described} {}: {}",
+                "{} (stado {} {})",
+                String::from_utf8_lossy(&output.stderr).trim(),
+                verb.join(" "),
                 ended(&output.status),
-                String::from_utf8_lossy(&output.stderr).trim()
             ),
         ));
     }
