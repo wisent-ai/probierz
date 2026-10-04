@@ -183,8 +183,9 @@ Reading coverage is separate from repair, publication and real-product verificat
 | handtohuman | refused payment error cut to 400 characters | 6ffa39aa |
 | handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
 | creator-portal | `RECENT_SUBMISSIONS_LIMIT = 5` | 544fd90c |
-| creator-portal | recent submissions, code length | Oko defect 18fb6ae7 |
-| film, grant-cli, cntrlai, iskra | provider tiers, frames, training and evaluation settings | Oko defect eec9b5b4 |
+| creator-portal | verification `CODE_LENGTH = 6` (one field takes the auth service's code at its own length); defect 18fb6ae7 repaired | 87c8ef50 |
+| film, grant-cli | default frames, rate, dimensions and HD tier (film), 8-character attachment confirmation (grant-cli), by session 01a10407 | film d6d51e2e; grant-cli f35a9233 |
+| cntrlai, iskra | training and evaluation settings (Python; edit refused; iskra deletion is another session's task) | Oko defect eec9b5b4 |
 | zwiad | fixed winners and optimal band in figures, invented curves, thresholds, zero fallbacks, `TABLE_ROWS = 10` (Python; edit refused) | Oko defect 30d9d67e |
 
 ## The 10 000-file cleanup cap
