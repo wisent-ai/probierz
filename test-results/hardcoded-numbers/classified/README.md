@@ -68,6 +68,23 @@ These are partial review records, not proof that the entire assignment list has 
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
+| most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
+| lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
+| lem | model budgets, harvest bounds, generation defaults, backend port | Oko defect 68645422 |
+| glina | Glina Desktop `tail(maxCharacters: 400)` | glina-desktop a5795125 |
+| glina | preview, render, tessellation and generation values | Oko defect 0df1bf55 |
+| skarbiec | Skarbiec Desktop `previewLimit = 128_000`, `detailExcerptLength = 320` | skarbiec-desktop 8ed9664b |
+| skarbiec | lifetimes, input bounds, concurrency, import cap, Desktop waits and windows, Hub bounds | Oko defect cd6f092c |
+| skrzynka | `message list`/`outbound` `--limit` default 100 and the silent clamp to 1-500 (CLI and API) | a5981f8b |
+| skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
+| skrzynka | poll, OAuth, sync, send bounds, token margin, Desktop wait | Oko defect 9d9bef81 |
+| ster | Brama refusal `BODY_EXCERPT = 240` | b8cedf58 |
+| ster | training, synthesis, calibration and quality defaults | Oko defect 20f71342 |
+| landings | `TITLE_LENGTH_LIMIT = 65` in landing-cli's template and 14 generated landings | landing-cli d77ee59b |
+| echo-web | windows, list caps, generation defaults, money tolerances, alert floors | Oko defect 9c257cee |
+| las | budgets, ranking, waits, credential policy, display bounds | Oko defect 0baf3362 |
+| skryba | generation, training and quality defaults | Oko defect 629666b4 |
+| preferences | ranking thresholds, priors, vote weights, import caps | Oko defect 7dc96443 |
 
 ## The 10 000-file cleanup cap
 
