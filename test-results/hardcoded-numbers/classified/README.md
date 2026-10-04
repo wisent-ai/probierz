@@ -167,6 +167,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | people-rotator | `ERROR_DETAIL_LIMIT = 300` | 7acfd5ae |
 | people-rotator, patent-cli | id length, patent guidelines and deadlines | Oko defect d212ee6a |
 | compute.wisent.com | failure `MAX_DETAIL_CHARS = 300` | 67ec8906 |
+| compute.wisent.com | web analytics `MAX_QUEUE_SIZE = 100` | 4e40f1c2 |
 | compute.wisent.com | prices, hardware, ports, security parameters, cadences | Oko defect 5a051a49 |
 | codespy | `SHOWN_LINE_CHARS = 80` | a39e9439 |
 | codespy | scoring weights, file-size ceiling | Oko defect fa8f1c10 |
