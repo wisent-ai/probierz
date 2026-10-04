@@ -1,0 +1,84 @@
+assigned_lines	class	note
+37042	COUNTER	Desktop hash accumulator
+37043	PROTOCOL	Failure exit status
+37044	PROTOCOL	Binary storage unit multiplier
+37045	LAYOUT	Whole-number display threshold
+37046	COUNTER	Unit index
+37047-37049	TUNING	Watermark style and introduction duration
+37050	COUNTER	Processed count
+37051-37054	TUNING	Composition dimensions/frame rate and route duration
+37055	PROTOCOL	FNV offset basis
+37056	COUNTER	Hash iteration
+37057	TUNING	Ingest batch stride
+37058-37059	NOT	Cache header strings containing retention policy
+37060	TUNING	Content identifier cap
+37061	NOT	No-cache header
+37062	TUNING	Personalized feed limit
+37063-37064	NOT	Cache header policy strings
+37065-37067	TUNING	Generation route duration and prompt bound
+37068-37075	NOT	Cache header policy strings
+37076	TUNING	Report detail bound
+37077	NOT	Search threshold comment
+37078-37081	TUNING	Fuzzy search thresholds and result cap
+37082	NOT	Cache header policy string
+37083	TUNING	Welcome credit allowance
+37084	NOT	Cache header policy string
+37085-37086	COUNTER	Initial like counts
+37087-37088	TUNING	Collapsed tag count and profile page size
+37089	COUNTER	Page offset
+37090	TUNING	Initial video index selects a fixed starting item
+37091-37098	TUNING	Feed page/default/ceiling policies and report detail bound
+37099-37104	COUNTER	Like counts and playback resets
+37105-37108	TUNING	Render window and prompt bounds
+37109	COUNTER	Notification decoding iteration
+37110	SCHEMA	Companion archive version
+37111	COUNTER	JSON traversal depth
+37112-37114	TUNING	Feed query limits
+37115-37117	COUNTER	Feed indices and premium count
+37118	TUNING	Preview page size
+37119	COUNTER	Page offset
+37120	TUNING	Preview page size
+37121	COUNTER	Page offset
+37122	PROTOCOL	FNV offset basis
+37123-37124	COUNTER	Hash iteration and premium count
+37125-37129	TUNING	Bandit arm cap, reward range, exploration weight and invalid-number fallback
+37130	PROTOCOL	FNV offset basis
+37131-37133	COUNTER	Iteration and score/weight accumulators
+37134-37135	TUNING	Learned profile score bounds
+37136-37139	COUNTER	Score, weight and intersection accumulators, trigram iteration
+37140-37144	TUNING	Search score threshold, like-query cap and ranking weights
+37145	COUNTER	Tag score accumulator
+37146-37150	TUNING	Database result cap, chunks, cover sampling and concurrency
+37151	COUNTER	Batch iteration
+37152	PROTOCOL	FNV offset basis
+37153	COUNTER	Hash iteration
+37154	TUNING	Query page size
+37155	COUNTER	Page offset
+37156	TUNING	Preview page size
+37157-37158	COUNTER	Page offset and query iteration
+37159	TUNING	Query page size
+37160-37161	COUNTER	Page offsets
+37162	TUNING	Source page size
+37163	COUNTER	Page offset
+37164-37167	TUNING	Webhook age, price cache retention, generation credit cost and query page size
+37168	COUNTER	Page offset
+37169	PROTOCOL	Image batch stacking axis
+37170	TUNING	WebP encoder effort
+37171	NOT	Codec quantization comment
+37172-37173	TUNING	ISTFT epsilon and transform/hop defaults
+37174	NOT	Transform bin comment
+37175	TUNING	Codec model dimension and transform defaults
+37176	PROTOCOL	Real transform bin count formula
+37177-37179	TUNING	Codec sample/hop rate and rotary model parameters; model metadata must establish applicability
+37180	COUNTER	Rotary position offset
+37181	PROTOCOL	Head axis lookup; fixed head count appears only in comment
+37182-37187	TUNING	Codec model dimensions, heads, normalization groups and depth
+37188-37190	COUNTER	Comparison error accumulators and index
+37191	TUNING	Reference hop length must match tested model
+37192	COUNTER	Squared error accumulator
+37193-37200	PROTOCOL	NumPy format offsets, version/float widths and test reader error codes
+37201-37204	EXPERIMENT	Codec reference tensor and scalar fixtures
+37205	TUNING	Codec converter transform default
+37206-37207	LAYOUT	JSON indentation
+37208-37210	COUNTER	Obraz landing link counts and CLI iteration
+37211-37213	TUNING	Obraz render strength and portrait dimensions

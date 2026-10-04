@@ -1,0 +1,29 @@
+assigned_lines	class	note
+55597	LAYOUT	Shared component height
+55598-55600	PROTOCOL	Time unit conversion
+55601-55605	LAYOUT	Connection/mailbox columns
+55606-55607	TUNING	Reply body and idempotency key bounds
+55608-55616	LAYOUT	Inbox, reply and outbound columns
+55617	COUNTER	Completed reads
+55618-55619	TUNING	Reply batch size and initial message window
+55620-55621	COUNTER	Read/reply generations
+55622-55623	PROTOCOL	Registered mail submission ports; does not justify preventing custom ports
+55624-55625	TUNING	Default and maximum list limits
+55626	PROTOCOL	HTTP server-error range start
+55627	TUNING	Request wait
+55628	SCHEMA	Release disables automatic restart via flag
+55629-55630	COUNTER	Documentation argument/line iteration
+55631	TUNING	Landing title bound
+55632	COUNTER	Form ordinal
+55633-55636	TUNING	CLI list defaults; zero defaults require field context
+55637	TUNING	CLI polling cadence
+55638-55639	COUNTER	Message import counts
+55640	SCHEMA	Database schema version
+55641-55643	TUNING	Authorization code bound, OAuth lifetime and per-sync message cap
+55644	COUNTER	Skipped count
+55645-55647	TUNING	Poll interval and display-name bounds
+55648	PROTOCOL	DNS presentation hostname bound
+55649-55654	TUNING	Item/key/subject bounds, onboarding screen limits and token refresh margin
+55655	PROTOCOL	Test failure exit status
+55656	COUNTER	Pagination index; step size is test scenario page size
+55657	PROTOCOL	Test failure exit status

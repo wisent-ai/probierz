@@ -271,3 +271,13 @@ assigned_lines	class	note
 36754-36862	VENDOR	MLX upstream test fixtures, example strings and generation/build-tool constants
 36863	COUNTER	Monetizer line parser index
 36864	PROTOCOL	Monetizer usage exit status
+54664	TUNING	Onboarding screen cap
+54665	PROTOCOL	Hex radix
+54666-54668	TUNING	Patent query length, signing secret minimum and review inference
+54669	SCHEMA	Evidence identifier representation width
+54670-54675	TUNING	Patent word guideline, source freshness and jurisdiction deadlines; require current jurisdiction authority, not universal protocol assumptions
+54676	COUNTER	People router argument iteration
+54677	TUNING	Identifier bound
+54678-54680	PROTOCOL	Exit/HTTP statuses
+54681	TUNING	Error detail excerpt
+54682	COUNTER	Profile CLI argument iteration

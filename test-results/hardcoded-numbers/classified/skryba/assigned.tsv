@@ -1,0 +1,28 @@
+assigned_lines	class	note
+55504-55506	LAYOUT	Catalog form dimensions
+55507-55516	TUNING	Desktop rewrite, quality, style and training defaults
+55517	TUNING	Initial style limit; meaning of zero requires consumer review
+55518	TUNING	Training epoch default
+55519	LAYOUT	Numeric formatting precision
+55520	TUNING	Initial corpus sample setting; meaning of zero requires consumer review
+55521-55525	TUNING	Random seed and benchmark/training defaults
+55526	COUNTER	Onboarding step count
+55527-55530	TUNING	Sitemap priorities and documentation search result cap
+55531	COUNTER	Documentation argument iteration
+55532	TUNING	Profile name bound
+55533	SCHEMA	Seeded profile version
+55534-55563	TUNING	CLI generation, benchmark, learning, style and quality defaults
+55564-55565	COUNTER	Writing style import counts
+55566	SCHEMA	Learning policy version
+55567	COUNTER	KL accumulator
+55568-55570	TUNING	Optimizer beta coefficients and numerical stability parameter
+55571-55572	COUNTER	Training group and reward accumulators
+55573-55574	PROTOCOL	Percent scale and normalized probability range
+55575-55578	TUNING	Generation token margin/bounds and sampling temperature range
+55579-55580	COUNTER	Chunk word accumulator/reset
+55581-55583	TUNING	Text quality component weights
+55584-55588	TUNING	Text quality weights and allowances
+55589-55590	PROTOCOL	Normalized quality and threshold ranges
+55591-55592	COUNTER	Word counts
+55593	TUNING	Writing style lead word default
+55594-55596	COUNTER	Training skipped/word counts and chunk offset

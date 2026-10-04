@@ -1,0 +1,51 @@
+assigned_lines	class	note
+55658	TUNING	Desktop error excerpt
+55659	COUNTER	Scanned pages
+55660-55663	TUNING	Desktop search count, query and debounce settings
+55664-55665	COUNTER	Scanned page resets
+55666	TUNING	Landing title bound
+55667-55669	COUNTER	Form ordinal and analysis counters
+55670	NOT	Population deviation comment
+55671-55672	PROTOCOL	Normalized interval endpoints
+55673	COUNTER	Queue argument index
+55674-55678	LAYOUT	Embedded capture renderer dimensions and colour
+55679	COUNTER	Found sources
+55680-55682	LAYOUT	CLI capture dimensions
+55683-55692	COUNTER	Descriptor sentinel, byte totals, parser indices and score accumulator
+55693	TUNING	Preferred image aspect-ratio range
+55694	COUNTER	Source order
+55695	TUNING	Image candidate cap
+55696-55697	PROTOCOL	Image parser starting offsets; exact format interpretation requires consumer review
+55698-55703	COUNTER	Parser positions and corpus/archive totals
+55704-55706	TUNING	Archive extraction cap, host recording concurrency and memory estimate
+55707-55708	COUNTER	Argument index and tree entries
+55709	TUNING	Attempt tree entry cap
+55710-55713	COUNTER	Argument indices
+55714-55715	TUNING	Desktop crawl state/depth caps
+55716	COUNTER	Argument index
+55717	TUNING	Documentation writer batch size
+55718-55722	COUNTER	Writer order, outcome totals and argument index
+55723-55730	TUNING	Documentation inventory, robots, redirect and concurrency bounds
+55731-55732	PROTOCOL	Shared/private IPv4 ranges
+55733-55736	COUNTER	Committed byte reset, indices and observation count
+55737-55738	TUNING	Mobile crawl state/depth caps
+55739-55742	COUNTER	Argument indices
+55743-55744	TUNING	Keyword discovery count/link limits
+55745-55749	COUNTER	Indices and corpus counts
+55750	TUNING	Receipt result limit
+55751-55753	COUNTER	Argument index and corpus counts
+55754-55756	TUNING	Corpus discovery depth/directory/page ceilings
+55757-55761	COUNTER	Corpus visitation and outcome totals
+55762	TUNING	Records per catalog requirement
+55763-55765	COUNTER	Missing count and parser offsets
+55766-55772	TUNING	Motion, state, journey, interaction, accessibility and similarity qualification criteria
+55773	COUNTER	Argument index
+55774	TUNING	Verification concurrency default
+55775-55777	COUNTER	Argument index and completion totals
+55778-55779	TUNING	Media sampling rate and signature resolution
+55780	NOT	Embedded media filter with fixed sampling/resolution settings
+55781-55783	TUNING	Catalog count, motion and similarity qualification criteria
+55784-55785	COUNTER	Frames and parser position
+55786	PROTOCOL	JavaScript safe integer maximum
+55787-55793	COUNTER	Bridge byte totals, offsets and iteration
+55794	PROTOCOL	Bridge failure exit status

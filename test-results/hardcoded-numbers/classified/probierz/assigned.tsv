@@ -1,0 +1,59 @@
+assigned_lines	class	note
+54975-54979	TUNING	Desktop identifier/output bounds and ancestor walk depths
+54980	COUNTER	Visited entries
+54981-54983	TUNING	Metadata field bounds
+54984	PROTOCOL	SHA256 hex length
+54985-54987	TUNING	Display name, manifest count and visited-entry ceilings
+54988-55000	COUNTER	Generation, outcome and evidence totals
+55001-55003	PROTOCOL	Time and percent conversions
+55004-55006	LAYOUT	Loading placeholder dimensions
+55007	TUNING	Register result limit
+55008-55009	COUNTER	Refresh generations
+55010-55013	TUNING	Alert display count and sitemap priorities
+55014	COUNTER	Example request ID
+55015	TUNING	Example status polling cadence
+55016	COUNTER	Captured frame count
+55017	TUNING	Capture queue depth
+55018-55019	COUNTER	Adoption count and fixture parser index
+55020	TUNING	Account verification code length bounds require provider contract
+55021	COUNTER	Argument index
+55022-55027	TUNING	Figure judge inference, attempt/wait, score representation and excerpt defaults
+55028	COUNTER	Overall score accumulator
+55029	SCHEMA	Figure report version
+55030	TUNING	Render failure excerpt
+55031	PROTOCOL	Normalized score range
+55032	COUNTER	Score total
+55033	PROTOCOL	Normalized threshold range
+55034	TUNING	Repair round bounds
+55035	SCHEMA	SEO crawl evidence version
+55036-55037	TUNING	Adjudication delta and score rounding scale
+55038-55039	SCHEMA	SEO input/report versions
+55040	COUNTER	Quality accumulator
+55041	SCHEMA	Report ID length
+55042-55045	COUNTER	Accessibility scan counts and parser indices
+55046-55058	TUNING	Source/excerpt/patch bounds, benchmark defaults and request ID bound
+55059	SCHEMA	Benchmark request version
+55060-55068	TUNING	Description excerpt, inspection/render defaults and report result limits
+55069-55074	PROTOCOL	macOS event filters, callback selector and process error code
+55075	COUNTER	Discovery index
+55076-55077	PROTOCOL	AES-GCM counter initial states
+55078	TUNING	Evidence retention default
+55079	PROTOCOL	Seconds per day
+55080-55083	COUNTER	History scan counts and line index
+55084	PROTOCOL	Authentication tag width
+55085	TUNING	Failure detail excerpt
+55086	SCHEMA	Incident ID representation width
+55087-55090	TUNING	Incident result limit and animated report duration/rate/width ceilings
+55091	PROTOCOL	Child resource-usage selector
+55092	COUNTER	Dispatch index
+55093	TUNING	Run diagnostic tail bound
+55094-55095	COUNTER	Target/report indices
+55096-55098	TUNING	Runner context and excerpt bounds
+55099	COUNTER	Shared install count
+55100-55103	SCHEMA	Optional CLI argument cardinality
+55104	SCHEMA	Optional CLI argument cardinality
+55105	COUNTER	Unparsed count
+55106	PROTOCOL	Nonzero port range
+55107	COUNTER	Content length
+55108-55109	PROTOCOL	macOS process event filter and missing-process error
+55110	COUNTER	Initial commit timestamp; missing timestamp semantics need release contract

@@ -1,0 +1,63 @@
+assigned_lines	class	note
+55354-55363	TUNING	Desktop operation waits, diagnostic excerpts and audit/digest windows
+55364	LAYOUT	Drawer width
+55365	PROTOCOL	Email mailbox length ceiling; validation must match applicable representation
+55366-55368	TUNING	Credential polling cadence/attempts and route limit
+55369-55374	LAYOUT	Drawer, preview and journal columns
+55375	TUNING	Fault display count
+55376-55377	LAYOUT	Journal header and loading placeholders
+55378	TUNING	Digest window
+55379	LAYOUT	Lifecycle list width
+55380-55381	COUNTER	TOTP rule count
+55382-55383	TUNING	Activity group display counts
+55384	LAYOUT	Minimum bar width
+55385	TUNING	Emergency display count
+55386-55388	LAYOUT	Table, queue and title dimensions
+55389	TUNING	Saved item preview bound
+55390-55392	LAYOUT	Backend health columns
+55393-55398	TUNING	Desktop list default, hub body/proof/nonce bounds and retention defaults
+55399-55403	PROTOCOL	HTTP success range, milliseconds, port maximum and octal base
+55404-55409	TUNING	Hub name, ID, reason, key material and share bounds
+55410-55412	PROTOCOL	UUID, digest and signature encoding widths
+55413-55423	TUNING	Secret security, audit delivery and retention settings
+55424	SCHEMA	Month key representation
+55425-55427	SCHEMA	Route segment cardinalities
+55428	COUNTER	Total
+55429	TUNING	Audit export lease duration
+55430-55431	COUNTER	Audit value depth and alert attempt index
+55432	PROTOCOL	Success exit status
+55433-55434	TUNING	Recovery case and webhook lifetime settings
+55435-55437	PROTOCOL	IP versions and hexadecimal base
+55438	TUNING	Webhook URL bound
+55439-55442	PROTOCOL	HTTP status and IP encoding widths
+55443	COUNTER	Address accumulator
+55444-55448	TUNING	Landing title/priority and acquisition proof field bound
+55449-55450	PROTOCOL	Encoded acquisition proof widths; require exact encoding contract when reviewing consumer
+55451-55455	TUNING	Acquisition/capability lifetime and grant/route bounds
+55456	PROTOCOL	Usage exit status
+55457	PROTOCOL	Binary kilo multiplier
+55458-55460	TUNING	Daemon memory and crypto/GPG concurrency defaults
+55461	COUNTER	Active count reset
+55462-55463	PROTOCOL	No-process status and GPG error bit mask
+55464	TUNING	Import item cap
+55465	COUNTER	Import outcome totals
+55466	TUNING	Name bound
+55467-55468	TUNING	TOTP digit/period defaults are selectable algorithm parameters, not universal constants
+55469	COUNTER	Duplicate count
+55470	TUNING	UID entropy selection
+55471	TUNING	Adoption field bound
+55472	PROTOCOL	One extra byte for detecting exceeded bound
+55473	COUNTER	First revision
+55474-55478	TUNING	Credential endpoint/response/field bounds
+55479	PROTOCOL	Digest representation width
+55480-55486	TUNING	Fractional precision, input/lock/host/bridge and output bounds
+55487	PROTOCOL	One extra byte for detecting exceeded bound
+55488-55490	TUNING	Provider identifier and endpoint bounds
+55491	PROTOCOL	Maximum decimal port width
+55492-55493	TUNING	HTTP worker and queue defaults
+55494	COUNTER	Header byte accumulator
+55495-55496	TUNING	Network diagnostic bound and journal growth factor
+55497	COUNTER	Single-item count
+55498-55500	TUNING	Audit report cap and TOTP seed length bounds
+55501-55502	PROTOCOL	Base32 block and padding widths
+55503	COUNTER	Contract scanner collection flag

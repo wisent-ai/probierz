@@ -1,0 +1,123 @@
+assigned_lines	class	note
+54381-54382	TUNING	Desktop run and one-off result limits
+54383	COUNTER	Provider refresh generation
+54384-54387	TUNING	Calendar/list limits and event duration defaults
+54388-54389	COUNTER	Defect and frustration counts
+54390	TUNING	Prompt row cap
+54391	LAYOUT	Task editor height
+54392-54395	TUNING	Preview lines, ledger lookback, map count and termination wait
+54396	PROTOCOL	Disabled restart/install release flags
+54397	SCHEMA	Archive root stripping
+54398	TUNING	Analytics queue capacity
+54399	COUNTER	Initial engagement duration
+54400	TUNING	Analytics request wait
+54401-54412	PROTOCOL	HTTP statuses
+54413	COUNTER	None sentinel
+54414-54415	TUNING	Failure detail and goal title bounds
+54416-54419	COUNTER	Goal and planning total initializers
+54420	TUNING	Chat request wait
+54421	COUNTER	Selected tab index
+54422-54427	LAYOUT	Chat and failure banner geometry/opacity
+54428	TUNING	Goal preview days
+54429-54432	LAYOUT	Time/cost rounding and precision thresholds
+54433-54436	COUNTER	Reload generations and work count
+54437	TUNING	Top model display count
+54438-54439	PROTOCOL	Decimal unit multipliers
+54440	COUNTER	Argument iteration
+54441	TUNING	Landing title bound
+54442	COUNTER	Argument iteration
+54443-54445	LAYOUT	Documentation heading hierarchy
+54446	COUNTER	Markdown index
+54447	SCHEMA	Autonomy version
+54448-54449	TUNING	Autonomous runtime and retry delay defaults
+54450-54451	SCHEMA	Autonomy and routine versions
+54452	PROTOCOL	Enabled socket option
+54453-54455	COUNTER	Peer credential output and byte offset initializers
+54456-54457	SCHEMA	Task/defect identifier representation lengths
+54458-54459	COUNTER	Comparison accumulator and iteration
+54460-54462	PROTOCOL	RPC error codes
+54463	SCHEMA	Autonomy version
+54464-54469	TUNING	Autonomy runtime, retry, daily frequency and stale grace policy
+54470	PROTOCOL	HMAC block width
+54471-54472	LAYOUT	Broker terminal dimensions
+54473-54474	COUNTER	Byte size and OAuth parse offset
+54475-54476	TUNING	Calendar event duration and provider search horizon
+54477-54479	PROTOCOL	EventKit enum values
+54480-54488	TUNING	Calendar windows, inference temperature and fuzzy matching weights
+54489-54490	COUNTER	Matching run reset
+54491-54492	TUNING	Recall count and database page size
+54493	PROTOCOL	HTTP unauthorized
+54494-54497	TUNING	Epoch heuristic and defect similarity thresholds
+54498-54499	COUNTER	Initial handwritten ordinal and unmeasured-repeat count
+54500-54502	TUNING	Frustration heuristics and goal cursor time step
+54503	COUNTER	Scanned/changed counts
+54504-54507	TUNING	Goal evidence excerpts, batch, mapping retention and ownership grace
+54508-54509	SCHEMA	Goal document versions
+54510	COUNTER	Evaluation counts
+54511-54516	TUNING	Goal history and quote/preview bounds
+54517-54518	SCHEMA	Recompute artifact and decision versions
+54519	TUNING	Shortest eligible goal turn
+54520	SCHEMA	Hook bundle version
+54521-54522	COUNTER	Removed hook count and query parser index
+54523-54527	TUNING	Index batches, text bounds and page size
+54528-54533	COUNTER	Index offsets, counts and ledger cursors
+54534-54538	PROTOCOL	CLI and RPC error codes
+54539-54541	TUNING	MCP query/result defaults and lower bounds
+54542	SCHEMA	Onboarding version
+54543-54544	TUNING	Onboarding screen count bounds
+54545	SCHEMA	One-off record version
+54546	PROTOCOL	Refusal exit status
+54547-54554	TUNING	Peer read chunk, planning duration bounds, forecast horizon and numerical tolerance
+54555	PROTOCOL	Days per week
+54556	SCHEMA	Planning representation version
+54557-54559	TUNING	Proxy header/chunk bounds and call token allowance
+54560-54561	LAYOUT	PTY dimensions
+54562	TUNING	Completed session retention
+54563	PROTOCOL	Unspecified terminal pixel size
+54564-54565	COUNTER	Process status initializers
+54566	TUNING	PTY read chunk
+54567	PROTOCOL	Canonical UUID string length
+54568-54569	TUNING	PTY initial output and copy chunks
+54570	COUNTER	Received bytes
+54571-54572	SCHEMA	Capability and namespace representation lengths
+54573-54577	PROTOCOL	WebSocket opcode, length markers and header widths
+54578	TUNING	Relay read chunk
+54579-54580	PROTOCOL	HTTP statuses
+54581	SCHEMA	Routine version
+54582	TUNING	Ruling similarity candidate count
+54583-54586	TUNING	Operator-owned disciplinary policy; numeric audit does not authorize changing it
+54587-54589	COUNTER	Page, active and replied counts
+54590-54594	TUNING	Suggestion cadence, channel length, inference and history defaults
+54595	COUNTER	Reply processing counts
+54596-54598	TUNING	Suggestion result count, inference temperature and workspace depth
+54599	COUNTER	Work summary counts
+54600-54604	TUNING	Startup proof/grace, recent window, idle policy and concurrency limit
+54605	COUNTER	Reaped/running counts
+54606-54609	TUNING	Judge lookup, retry and nudge ceilings
+54610-54611	COUNTER	Attempt and empty-response counters
+54612-54615	PROTOCOL	HTTP statuses and probability range
+54616-54618	TUNING	Judge evidence and answer excerpt limits
+54619	SCHEMA	Task ID representation length
+54620	TUNING	Task subdivision cap
+54621	TUNING	Probability range is mathematical; missing/invalid confidence defaulting to zero is chosen behavior
+54622-54623	TUNING	Decision body cap and reading batch
+54624-54625	TUNING	Task reading page and key batch
+54626	PROTOCOL	SHA1 Git object representation length; excludes other Git object formats unless contract limits them
+54627	TUNING	Shortest commit abbreviation
+54628	SCHEMA	Defect identifier suffix length
+54629-54634	TUNING	Report excerpt, read concurrency, session selection and inactivity diagnostics
+54635-54637	PROTOCOL	Apple reference epoch, distant-past date sentinel and UUID representation
+54638-54639	TUNING	Transcript header read and sweep page size
+54640	COUNTER	Sweep offset
+54641	TUNING	Calendar diagnostic lookback
+54642-54649	LAYOUT	Calendar image geometry
+54650-54652	TUNING	Calendar display, telemetry lookback and forecast horizon
+54653	SCHEMA	Telemetry snapshot version
+54654	PROTOCOL	Per-million token pricing unit
+54655	COUNTER	Cost accumulator
+54656-54658	TUNING	Workday boundary, concurrency window and forecast sample count
+54659	COUNTER	Work seconds accumulator
+54660	PROTOCOL	Seconds per minute
+54661	TUNING	Occurrence candidate limit
+54662	COUNTER	Occurrence count
+54663	TUNING	Transcript output excerpt bound

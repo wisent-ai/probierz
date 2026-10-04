@@ -1,0 +1,87 @@
+assigned_lines	class	note
+54683	LAYOUT	Card preview grid dimensions
+54684-54688	TUNING	Mesh/texture resolution, procedural sample counts and surface isolation
+54689	GEOMETRY	Head transform
+54690-54691	COUNTER	Artwork iteration
+54692-54694	GEOMETRY	Torso, belt and scabbard geometry
+54695	COUNTER	Artwork iteration
+54696-54698	GEOMETRY	Arm, brim and plume transforms
+54699	COUNTER	Artwork iteration
+54700-54701	GEOMETRY	Segment and hood transforms
+54702	GAME	Default equipment tiers
+54703	GEOMETRY	Neck placement
+54704-54705	COUNTER	Artwork count and iteration
+54706	GEOMETRY	Haft extents
+54707	TUNING	Haft tessellation
+54708-54710	COUNTER	Mesh iteration
+54711	GEOMETRY	Shape thickness
+54712-54715	COUNTER	Mesh iteration
+54716	GEOMETRY	Repeated gear artwork placements
+54717	COUNTER	Artwork iteration
+54718	TUNING	Mesh tessellation
+54719-54724	COUNTER	Mesh iteration
+54725	GEOMETRY	Sculpt base coordinates
+54726-54730	COUNTER	Artwork iteration
+54731	GEOMETRY	Sculpt coordinate
+54732-54734	COUNTER	Mesh iteration; fixed sampling counts also control tessellation
+54735-54736	SCHEMA	Team identifiers
+54737-54739	GAME	Unit spacing, battlefield base and heal fraction
+54740	COUNTER	Initial round and wins
+54741	GAME	Projectile lifetime and range threshold
+54742-54754	COUNTER	Unit iteration, collections, totals and motion/swing resets
+54755	GAME	Collision separation distance
+54756-54758	COUNTER	Team counts and game reset
+54759-54780	GEOMETRY	Boss body, appendage and equipment artwork
+54781-54782	COUNTER	Bonus accumulator and collection reset
+54783	GEOMETRY	Building spacing
+54784	COUNTER	Building iteration
+54785-54786	TUNING	Primitive tessellation
+54787-54796	GEOMETRY	Building artwork shapes and placements
+54797	COUNTER	Artwork iteration
+54798	GEOMETRY	Trunk transform
+54799	COUNTER	Artwork iteration
+54800	GEOMETRY	Slab transform
+54801	COUNTER	Artwork iteration
+54802-54804	GEOMETRY	Sarcophagus artwork
+54805-54806	COUNTER	Card iteration and reset; default card amount in loop condition is game policy
+54807	GAME	Default faction level
+54808	COUNTER	Count
+54809	LAYOUT	Opaque material default
+54810-54813	COUNTER	Effect artwork iteration
+54814-54816	GEOMETRY	Effect mesh transforms
+54817	GAME	Combat damage and effect parameters; local pack count is a counter
+54818	PROTOCOL	Multiplicative identity reset
+54819	GAME	Revival health
+54820-54822	COUNTER	Bleed and movement resets; effect probability in body is game policy
+54823	COUNTER	Nearby count
+54824	PROTOCOL	Multiplicative identity reset
+54825	COUNTER	Sandbox iteration
+54826-54827	SCHEMA	Team identifiers
+54828	GAME	Battlefield base
+54829	COUNTER	Position accumulators
+54830	GAME	Defeated unit health
+54831	GAME	Default weapon tier
+54832-54845	GEOMETRY	Weapon and creature transforms
+54846	GAME	Default armour tier
+54847-54853	GEOMETRY	Armour and wing artwork
+54854-54858	TUNING	Scene exposure and shadow projection settings
+54859	COUNTER	Scene centre accumulator
+54860	GEOMETRY	Tree trunk placement
+54861	COUNTER	Tree tier iteration
+54862-54863	GEOMETRY	Plant artwork placements
+54864-54866	COUNTER	Terrain iteration and placement attempts
+54867-54868	TUNING	Projectile pool capacity and visual effect duration
+54869	COUNTER	Effect iteration
+54870	GEOMETRY	Landmark transform
+54871-54872	COUNTER	Landmark iteration
+54873	GAME	Maximum unit health
+54874-54876	GEOMETRY	Unit and health indicator placements
+54877	COUNTER	Body position initializer
+54878	GEOMETRY	Cavalry body placement
+54879	TUNING	Death animation duration
+54880	COUNTER	Animation state initializers
+54881	GEOMETRY	Attack animation pose
+54882	COUNTER	Shield angle initializer
+54883	GEOMETRY	Recoil pose; duration in condition is animation policy
+54884	COUNTER	Recoil offsets
+54885	COUNTER	Unset death-time sentinel

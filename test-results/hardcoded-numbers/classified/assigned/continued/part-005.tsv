@@ -1,0 +1,107 @@
+assigned_lines	class	note
+55111-55113	TUNING	Product guideline sentence/title policy
+55114	PROTOCOL	Pursuit usage exit status
+55115-55122	TUNING	Pursuit preference retrieval, review rounds and structured output attempt bounds
+55123	NOT	Schema declaration inside prompt text
+55124-55125	COUNTER	Execution round and parser depth
+55126-55129	TUNING	Commit subject quality heuristics and API page size
+55130-55131	COUNTER	Commit page and skipped count
+55132	PROTOCOL	Quality check failure status
+55133-55134	TUNING	Operator-owned file/folder limits; audit does not authorize changing them
+55135-55136	TUNING	Source scanner context windows
+55137-55138	COUNTER	Scanner count and depth
+55139-55141	TUNING	Keyword gate heuristics and source excerpt bound
+55142-55144	COUNTER	Change-selection indices
+55145	SCHEMA	Quality report version
+55146	TUNING	Generated-header recognition window
+55147-55149	COUNTER	Source and argument iteration
+55150-55152	TUNING	Numeric audit excerpt and schema context windows
+55153-55156	COUNTER	Unlaunder argument/source iteration and landing link counts
+55157	PROTOCOL	Parts per million in a whole
+55158	LAYOUT	Digit grouping
+55159-55161	TUNING	Tax deduction and catch-up age policy; requires applicable tax year and authority
+55162	PROTOCOL	Parts per million per percent
+55163	SCHEMA	Tax form checkbox cardinality
+55164-55166	PROTOCOL	EIN representation and masked SSN width
+55167	TUNING	Estimated tax installment schedule; legal policy is not timeless protocol
+55168-55177	PROTOCOL	Calendar month numbers and ordinals
+55178-55180	TUNING	Jurisdiction holiday and inauguration schedule definitions
+55181-55182	PROTOCOL	Calendar quarter units
+55183-55185	LAYOUT	Report width and video title coordinates
+55186-55188	TUNING	Video grading target, iterations and sampling
+55189-55192	COUNTER	Iteration and score accumulator
+55193	TUNING	Vision judge frame sampling
+55194-55195	COUNTER	Frame and argument iteration
+55196-55197	NOT	Browser viewport and Accept strings
+55198	TUNING	Citation interaction timing
+55199-55200	LAYOUT	Browser viewport dimensions
+55201	TUNING	Interaction iteration count
+55202	COUNTER	Line iteration
+55203	TUNING	Humanizer iteration cap
+55204-55207	COUNTER	Relevance accumulators and iteration
+55208-55209	NOT	Browser viewport and Accept strings
+55210-55211	COUNTER	Poll and pass indices; operation limits are referenced elsewhere
+55212-55213	TUNING	Figure quality target and iteration ceiling
+55214-55215	COUNTER	Figure and coordinate iteration
+55216-55217	TUNING	Figure iteration ceiling and quality target
+55218	COUNTER	Figure iteration
+55219	TUNING	Figure iteration ceiling
+55220-55221	COUNTER	Best-score accumulator and iteration
+55222	NOT	Colour-family comment
+55223-55234	COUNTER	Figure quality counts, scores and text replacement totals
+55235	TUNING	Single replacement count; may express semantic intent, requires caller context
+55236	TUNING	Minimum text length
+55237-55239	COUNTER	Rewrite counts
+55240	LAYOUT	JSON indentation
+55241-55246	TUNING	Inference length/sampling and chunk overlap defaults
+55247-55248	COUNTER	Chunk length accumulators
+55249-55250	TUNING	Rewrite CLI sampling/chunk defaults
+55251	LAYOUT	JSON indentation
+55252	TUNING	Review minimum text length
+55253	LAYOUT	JSON indentation
+55254-55269	COUNTER	Workspace cleanup, billing posture and name generation counters/flags
+55270	TUNING	Landing title bound
+55271	COUNTER	SEO CLI argument iteration
+55272-55279	TUNING	SEO text bounds, benchmark concurrency and qualification thresholds
+55280	PROTOCOL	SHA256 hex width
+55281-55283	TUNING	Singularity desktop retention/display counts
+55284	COUNTER	Sent bytes
+55285	PROTOCOL	Enabled socket option
+55286	COUNTER	Socket error output initializer
+55287-55288	SCHEMA	Control version and address cardinality
+55289-55290	PROTOCOL	Zero and newline bytes
+55291-55292	COUNTER	Record offset
+55293	SCHEMA	Mind import version
+55294	COUNTER	Documentation argument iteration
+55295	TUNING	Landing title bound
+55296	COUNTER	Documentation parser index
+55297-55298	PROTOCOL	Digest/signature hex widths
+55299-55300	EXPERIMENT	Finance example timelock and authority count
+55301	SCHEMA	Example signing version
+55302-55304	TUNING	Bootstrap line bound, manifest lifetime and clock skew
+55305-55306	PROTOCOL	Signing key encoding widths
+55307	TUNING	Identity component bound
+55308	PROTOCOL	Digest hex width
+55309-55310	TUNING	Model temperature bound and recent-action retention
+55311	SCHEMA	Ecosystem protocol version
+55312-55313	TUNING	Ecosystem page sizes
+55314-55315	SCHEMA	Execution and provisioning schemas
+55316	COUNTER	Initial CLI position/default; field context required for further interpretation
+55317	SCHEMA	Ecosystem model version
+55318-55320	TUNING	Financial policy field bounds
+55321	SCHEMA	Ledger ID representation width
+55322-55325	TUNING	Purpose, owner-event age/skew and parameter depth bounds
+55326	PROTOCOL	Digest width
+55327-55328	PROTOCOL	OS file lock operations
+55329-55331	TUNING	Lifecycle import item/source/text bounds
+55332-55333	COUNTER	Import outcome resets
+55334	SCHEMA	Lifecycle state wire version
+55335	TUNING	Brama error excerpt
+55336	PROTOCOL	Tokens per million
+55337-55340	TUNING	Agent ID, error excerpt, memory count and model output depth bounds
+55341	PROTOCOL	Process kill signal
+55342-55345	TUNING	Repository operation wait and field bounds
+55346-55349	PROTOCOL	Git status layout and hash representation widths
+55350	TUNING	Commit message bound
+55351	COUNTER	Repository parser position
+55352-55353	PROTOCOL	OS lock operations

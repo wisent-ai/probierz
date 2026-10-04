@@ -1,0 +1,35 @@
+assigned_lines	class	note
+54886-54887	COUNTER	Documentation argument iteration
+54888	TUNING	Landing title bound
+54889	COUNTER	Form ordinal
+54890	LAYOUT	CLI column width
+54891	PROTOCOL	Failure exit status
+54892-54893	COUNTER	Example process status initializers
+54894	NOT	Cache header string containing retention policy
+54895-54896	TUNING	Provisional ranking threshold and error excerpt
+54897	PROTOCOL	Default failure exit status and absent HTTP status sentinel
+54898	COUNTER	Argument iteration
+54899	PROTOCOL	Not-ready exit status
+54900	LAYOUT	Numeric display precision
+54901-54902	TUNING	Optimization pair minimum and flatten depth
+54903	COUNTER	Decision duration initializer
+54904-54905	LAYOUT	Loading placeholders
+54906	SCHEMA	Pairwise comparison cardinality
+54907	PROTOCOL	HTTP conflict
+54908	TUNING	Vote nudge threshold
+54909	COUNTER	Cumulative sum
+54910-54912	PROTOCOL	ULID encoding segment lengths and bits per character
+54913	COUNTER	Encoding iteration
+54914-54924	TUNING	Ranking evidence requirements, field bounds and vote quality/weight policy
+54925	COUNTER	Bucket iteration
+54926-54933	TUNING	Profile evidence/display limits and ranking convergence/prior parameters
+54934	PROTOCOL	Approximate normal two-sided 95 percent critical value; confidence-level choice still requires statistical contract
+54935-54944	COUNTER	Ranking iteration and accumulators
+54945	PROTOCOL	One-half coefficient; consumer interpretation must establish whether it is a chosen scheduling weight
+54946	TUNING	HTTP detail excerpt
+54947-54952	PROTOCOL	HTTP statuses
+54953	TUNING	Export imbalance threshold
+54954-54967	COUNTER	Export/import outcome counts
+54968-54970	TUNING	Import text and identifier bounds
+54971	SCHEMA	Deterministic ID representation length
+54972-54974	TUNING	Import category, candidate and preference caps

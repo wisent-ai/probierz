@@ -65,3 +65,19 @@ assigned_lines	class	note
 36995-36999	TUNING	Relay debounce, polling cadence, batch and outbound recheck window/row defaults
 37000	NOT	Binary plist comment
 37001-37003	PROTOCOL	Typedstream integer and floating point tags
+37004-37008	PROTOCOL	Typedstream object tags and tag range
+37009-37012	COUNTER	Typedstream indices, nesting and codepoint accumulator
+37013-37015	TUNING	Binary plist nesting and TTS input/chunk bounds
+37016-37018	PROTOCOL	Apple sticker and reaction discriminants
+37019	TUNING	Rich reaction length heuristic
+37020	NOT	Sticker format comment
+37021	PROTOCOL	Migration usage exit code
+37022	SCHEMA	Worker frame version
+37023-37025	TUNING	Worker heartbeat, call wait and capacity hint
+37026-37030	PROTOCOL	WebSocket close codes
+37031-37032	TUNING	Heartbeat sleep and stale-cutoff floors
+37033	PROTOCOL	Normal WebSocket close
+37034-37035	TUNING	Local worker capacity and helper call wait
+37036-37037	NOT	Diagnostic string and compatibility comment
+37038-37040	TUNING	Diagnostic class bounds and location history limits
+37041	NOT	Webhook hashing parameter comment

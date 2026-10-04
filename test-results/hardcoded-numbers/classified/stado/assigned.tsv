@@ -1,0 +1,12 @@
+assigned_lines	class	note
+55795	PROTOCOL	SSH auth router test failure status
+55796-55797	TUNING	Documentation cache cadence and content-type bound
+55798	SCHEMA	Chunk index representation width
+55799	COUNTER	Received bytes
+55800-55802	TUNING	Documentation cache and title bounds
+55803-55812	COUNTER	Documentation indices, positions and outcome counts
+55813	LAYOUT	Short revision display length
+55814-55819	COUNTER	Documentation iteration, line indices and unset-heading/position sentinels
+55820-55821	TUNING	Documentation search result count and cache cadence
+55822-55830	PROTOCOL	HTTP and DNS status codes
+55831-55833	COUNTER	DNS size and join parser iteration
