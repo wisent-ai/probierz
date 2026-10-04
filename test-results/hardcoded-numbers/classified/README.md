@@ -141,6 +141,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-extractors | dataset waits, item cap, guessed answers, zero fallbacks | Oko defect dc9f2900 |
 | wisent-optimizer | sentinels, split, bounds, zero results | Oko defect 8ed86ace |
 | wisent-terminal-session-recovery | relaunch and cadence policy | Oko defect e38ba4df |
+| wisent-marketing-asset-generator | Brama refusal `snippet` cut at 157 characters | 3c9f65a3 |
 | wisent-logo-generator, wisent-marketing-asset-generator | handcrafted quality scores, thresholds, input limits | Oko defect 464366bb |
 | wisent-uncensored-model | training reward settings | Oko defect 1686ea15 |
 | wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
