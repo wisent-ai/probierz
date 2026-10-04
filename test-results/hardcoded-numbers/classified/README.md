@@ -6,7 +6,8 @@ Continuation files use `numbers-02.tsv`. Files under `assigned/` and product `as
 files refer to inclusive line ranges in the original assignment list; every line in each
 recorded range was read. `assigned/source.json` identifies the exact input by SHA256 and
 records the contiguous reviewed ranges separately from excluded ranges.
-These are partial review records, not proof that the entire assignment list has been covered.
+The range ledger covers the complete assigned corpus outside the two excluded directories.
+Reading coverage is separate from repair, publication and real-product verification.
 
 ## Classes
 
@@ -177,6 +178,7 @@ These are partial review records, not proof that the entire assignment list has 
 | handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
 | creator-portal | recent submissions, code length | Oko defect 18fb6ae7 |
 | film, grant-cli, cntrlai, iskra | provider tiers, frames, training and evaluation settings | Oko defect eec9b5b4 |
+| zwiad | fixed winners and optimal band in figures, invented curves, thresholds, zero fallbacks, `TABLE_ROWS = 10` (Python; edit refused) | Oko defect 30d9d67e |
 
 ## The 10 000-file cleanup cap
 
@@ -186,11 +188,15 @@ the built-in disk-full rule without item, byte or scan caps. Source publication 
 establish which release a host is running. Origin, publication and deployment evidence
 are recorded in Oko.
 
-## Read so far
+## Reading coverage
 
-The product-specific records include stado, weles, tama, oko, brama, jeden, most, lem,
-glina, skarbiec, skrzynka, probierz, spis, zwiad, ster, potyczka, echo-web and wisent-app.
-The corpus-bound range records additionally cover the opening repositories, backend
-inputs and subsequent desktop/service entries. The range ledger is not a completion
-claim for all files in those repositories. Findings still require source remediation
-or a concrete blocker recorded in Oko.
+The reviewed original-list ranges are 1–785, 32688–37213 and 54381–68646:
+19 577 records in total. The archive and oh-my-pi ranges remain excluded.
+The source digest, exclusions and absence of deferred or partial reads are recorded
+in `assigned/source.json`. Large bundled records were read through their complete
+source where a clipped preview could not establish coverage.
+
+This is a claim about the assigned snapshot, not every file in every repository.
+The table above distinguishes published source repairs from unresolved findings in Oko.
+Neither complete reading nor a published source repair establishes an installed,
+tested product repair.
