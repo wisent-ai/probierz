@@ -265,14 +265,32 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     }))
 }
 
-pub(crate) fn schedule(cron: &str, host: &str, harness_dir: &str, secrets: &[String], policy_file: Option<&str>) -> Answer {
+pub(crate) fn schedule(
+    cron: &str,
+    host: &str,
+    harness_dir: &str,
+    secrets: &[String],
+    settings: &[String],
+    policy_file: Option<&str>,
+) -> Answer {
     if harness_dir.trim().is_empty() {
         return Err(Failure::invalid(POINT, "--harness-dir names the Probierz harness on the host"));
     }
-    let mut command = format!(
-        "PROBIERZ_HARNESS_DIR={} probierz benchmark cycle",
-        shell_quote(harness_dir)
-    );
+    let mut command = format!("PROBIERZ_HARNESS_DIR={}", shell_quote(harness_dir));
+    for setting in settings {
+        let named = setting.split_once('=').filter(|(name, _)| {
+            name.chars().next().is_some_and(|first| first.is_ascii_uppercase() || first == '_')
+                && name.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+        });
+        let Some((name, value)) = named else {
+            return Err(Failure::invalid(
+                POINT,
+                format!("--env {setting:?} is not NAME=VALUE with an upper-case environment name"),
+            ));
+        };
+        command.push_str(&format!(" {name}={}", shell_quote(value)));
+    }
+    command.push_str(" probierz benchmark cycle");
     if let Some(file) = policy_file {
         command.push_str(&format!(" --policy {}", shell_quote(file)));
     }

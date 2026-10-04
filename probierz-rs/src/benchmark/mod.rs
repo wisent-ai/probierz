@@ -171,6 +171,10 @@ pub enum BenchmarkCommand {
         /// A secret the cycle reads, as NAME=SKARBIEC_ITEM#FIELD; repeatable.
         #[arg(long = "secret-env")]
         secrets: Vec<String>,
+        /// A setting the cycle reads that is not secret, as NAME=VALUE, such as
+        /// STADO_MODEL_ROUTER_URL or PROBIERZ_MODEL_AGENT_ID; repeatable.
+        #[arg(long = "env", value_name = "NAME=VALUE")]
+        settings: Vec<String>,
         /// The policy file on that host; without it, the harness's autonomy.yaml.
         #[arg(long)]
         policy: Option<String>,
@@ -239,7 +243,8 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
             host,
             harness_dir,
             secrets,
+            settings,
             policy,
-        } => autonomy::schedule(&cron, &host, &harness_dir, &secrets, policy.as_deref()),
+        } => autonomy::schedule(&cron, &host, &harness_dir, &secrets, &settings, policy.as_deref()),
     }
 }
