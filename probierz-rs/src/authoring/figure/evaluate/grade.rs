@@ -12,19 +12,14 @@ use super::*;
 /// The tool call the model must make, once.
 const TOOL: &str = "record_figure_evaluation";
 
-/// Room for the evaluation, and no sampling: the same figures must
-/// score the same way twice.
-const MAX_TOKENS: u64 = 3200;
+/// No sampling: the same figures must score the same way twice. The
+/// answer's length is the routed model's own limit, not a budget chosen here.
 const TEMPERATURE: u64 = 0;
 
 /// The router is asked exactly once. A retry would let a second
 /// sampling of the same figures produce a different verdict, so the
 /// report records the one attempt it made.
 const ATTEMPTS: u64 = 1;
-
-/// How long the router may take to answer, in seconds. A vision call
-/// over two full-page renders is not fast.
-const ROUTER_TIMEOUT_SECONDS: u64 = 180;
 
 /// Scores are reported to four decimal places.
 const SCORE_SCALE: f64 = 10_000.0;
@@ -67,7 +62,6 @@ pub(crate) fn grade_figure(
         &router.agent_id,
         &router.agent_secret,
         &body,
-        ROUTER_TIMEOUT_SECONDS,
     )
     .map_err(|detail| Failure::unavailable("figure-evaluate.model", detail))?;
 
@@ -130,7 +124,7 @@ fn request_body(
         }
     });
     Ok(json!({
-        "model": router.model, "max_tokens": MAX_TOKENS, "temperature": TEMPERATURE,
+        "model": router.model, "temperature": TEMPERATURE,
         "messages": [
             { "role": "system", "content": format!(
                 "You are the release evaluator for scientific figures.\n{}\nCall {TOOL} exactly once. If the tool is unavailable, return only its arguments object as raw JSON.",

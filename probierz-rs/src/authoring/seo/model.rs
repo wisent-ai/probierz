@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn invoke_seo_model(
     model: &str,
     url: &str,
@@ -34,9 +34,8 @@ pub(crate) fn invoke_seo_model(
         .flatten()
         .filter_map(JsonValue::as_str)
         .collect();
-    let body = json!({
+    let mut request = json!({
         "model": model,
-        "max_tokens": policy.pointer("/model/maxOutputTokens").and_then(JsonValue::as_u64).unwrap_or(3200),
         "temperature": 0,
         "messages": [
             { "role": "system", "content": format!("{}\n{}\nCall record_seo_content_evaluation exactly once and return no prose outside the tool call.",
@@ -45,9 +44,18 @@ pub(crate) fn invoke_seo_model(
             { "role": "user", "content": [{ "type": "text", "text": compact }] }
         ],
         "tools": [seo_model_tool(policy)]
-    }).to_string();
+    });
+    // The answer's length is the policy's stated budget, else the routed
+    // model's own limit.
+    if let Some(budget) = policy
+        .pointer("/model/maxOutputTokens")
+        .and_then(JsonValue::as_u64)
+    {
+        request["max_tokens"] = json!(budget);
+    }
+    let body = request.to_string();
     let request_sha = hex::encode(Sha256::digest(body.as_bytes()));
-    let (status, raw) = post_router(url, token, agent_id, agent_secret, &body, 120)
+    let (status, raw) = post_router(url, token, agent_id, agent_secret, &body)
         .map_err(|detail| Failure::unavailable("seo-evaluate.model", detail))?;
     let payload: JsonValue = serde_json::from_str(&raw).map_err(|_| {
         Failure::unavailable(
@@ -185,4 +193,3 @@ pub(crate) fn sign_seo_payload(payload: &JsonValue, key: &[u8]) -> Result<JsonVa
         "publicKeyFingerprintSha256": hex::encode(Sha256::digest(der.as_bytes()))
     }))
 }
-

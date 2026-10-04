@@ -121,13 +121,15 @@ pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> 
     Ok(file)
 }
 
+/// One chat completion through the Stado model router. The call waits for the
+/// router's own answer: the router owns provider deadlines and names its
+/// failure, so a clock here would only end a slow honest answer early.
 pub(crate) fn post_router(
     url: &str,
     token: &str,
     agent_id: &str,
     agent_secret: &str,
     body: &str,
-    budget_seconds: u64,
 ) -> Result<(u16, String), String> {
     if token.trim().is_empty() {
         return Err("STADO_MODEL_ROUTER_TOKEN is required".to_string());
@@ -155,13 +157,7 @@ pub(crate) fn post_router(
     let header_file = temp_file("router-headers", headers.as_bytes())?;
     let body_file = temp_file("router-body", body.as_bytes())?;
     let output = Command::new("curl")
-        .args([
-            "--silent",
-            "--show-error",
-            "--max-time",
-            &budget_seconds.to_string(),
-            "--header",
-        ])
+        .args(["--silent", "--show-error", "--header"])
         .arg(format!("@{}", header_file.display()))
         .args(["--data-binary"])
         .arg(format!("@{}", body_file.display()))
@@ -186,4 +182,3 @@ pub(crate) fn post_router(
         .map_err(|_| "model router returned an invalid HTTP status".to_string())?;
     Ok((status, payload.to_string()))
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn draft_structured_artifact(
     harness: &Path,
     app_id: &str,
@@ -45,7 +45,7 @@ pub(crate) fn draft_structured_artifact(
     let model = selected_setting(loaded.as_ref(), target, "PROBIERZ_AUTHOR_MODEL", None)
         .unwrap_or_else(|| "any".to_string());
     let body = json!({
-        "model": model, "max_tokens": 12000, "temperature": 0.1,
+        "model": model,
         "messages": [
             { "role": "system", "content": format!("You are a Probierz authoring worker. Produce the requested artifact, then call {tool_name} exactly once with the complete file contents. Do not modify files or return prose.") },
             { "role": "user", "content": brief }
@@ -54,7 +54,7 @@ pub(crate) fn draft_structured_artifact(
             "type": "object", "properties": { "content": { "type": "string", "description": "Complete artifact contents, without Markdown fences." } }, "required": ["content"], "additionalProperties": false
         }}}]
     }).to_string();
-    let (status, raw) = post_router(&url, &token, &agent_id, &agent_secret, &body, 3600)?;
+    let (status, raw) = post_router(&url, &token, &agent_id, &agent_secret, &body)?;
     let payload: JsonValue = serde_json::from_str(&raw)
         .map_err(|_| format!("Stado model router returned non-JSON ({status})"))?;
     if !(200..300).contains(&status) {
@@ -112,7 +112,11 @@ pub(crate) fn draft_structured_artifact(
     })
 }
 
-pub(crate) fn probe(target: &str, base_url: Option<&str>, app_path: Option<&str>) -> Result<String, String> {
+pub(crate) fn probe(
+    target: &str,
+    base_url: Option<&str>,
+    app_path: Option<&str>,
+) -> Result<String, String> {
     if target == "web" {
         let url = base_url.ok_or_else(|| format!("{target} needs --base-url"))?;
         let output = command_output(
@@ -178,4 +182,3 @@ add one there and register it, then `probierz specs {target}` lists it"
         ),
     )
 }
-
