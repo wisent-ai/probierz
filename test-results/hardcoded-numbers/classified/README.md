@@ -118,6 +118,32 @@ These are partial review records, not proof that the entire assignment list has 
 | wisent-experiments | zero-average fallbacks, fixed BOS id | Oko defect 5c8192dd |
 | wisent-body-horror | rule gates and weights, zero fallbacks, person count | Oko defect 5f1f4de4 |
 | stado | space report and janitor ignored the volume of a declared `work_root` | 0c1d87cd; docs stado-landing b8948e7d (defect 08c47436) |
+| wisent-errors | `DETAIL_LIMIT = 2000` / `detailLimit` (all four languages), default trim width and `slack = 24`, Swift reporter `timeoutInterval = 5`, scanner `THRESHOLD = 4` (now a majority of the catalogue), `SHORT_PIN_LENGTH = 8` | 1afc2538 |
+| wisent-customer-support | `MAX_DETAIL_CHARS = 400` | a2ca8f13 |
+| wisent-customer-support | low-confidence threshold | Oko defect a345adb8 |
+| wisent-desktop-auth | `maxDiagnosticLength = 400` | eb2d4318 |
+| wisent-desktop-auth | identity wait, resend cooldown | Oko defect 0db57b4a |
+| wisent-gradio | `_MAX_DETAIL_CHARS = 500`, `SHOWN_PAIRS = 6` | 8e6dc866 |
+| wisent-gradio | onboarding bounds, copied chunk size, waits, workers, split | Oko defect 7f4d7b3a |
+| wisent-trade | failure `MAX_DETAIL_CHARS = 300` | 5d6a1e75 |
+| wisent-trade | analytics bounds, queue size, recent trades, polling, price | Oko defect 30384295 |
+| wisent-landing | failure `MAX_DETAIL_CHARS = 300`, unused `visibleItemsCount = 3` | local 206166f, not pushed: repository archived on GitHub |
+| wisent-landing-new | blog page size; archived wisent-landing waits, zones, HSTS | Oko defect 326fb734 |
+| wisent-supabase-oko | `SUPERSEDED_SUBSCRIPTION_LIMIT = 100` (Stripe list now paged to the end) | bab7687b |
+| wisent-supabase-oko | push alert cut, seats, checkout, model settings, email bounds | Oko defect d181d72b |
+| wisent-tour-bridge | `SKIPPED_TEXT_HEAD = 60` (Python; edit refused), waits, skew | Oko defect 93b7a6c9 |
+| wisent-extractors | dataset waits, item cap, guessed answers, zero fallbacks | Oko defect dc9f2900 |
+| wisent-optimizer | sentinels, split, bounds, zero results | Oko defect 8ed86ace |
+| wisent-terminal-session-recovery | relaunch and cadence policy | Oko defect e38ba4df |
+| wisent-logo-generator, wisent-marketing-asset-generator | handcrafted quality scores, thresholds, input limits | Oko defect 464366bb |
+| wisent-uncensored-model | training reward settings | Oko defect 1686ea15 |
+| wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
+| wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
+| wisent-visuals | zero in median, cache, encoding, wait | Oko defect ba52a0a1 |
+| wisent-cost-tracker | sink wait, rounding precision | Oko defect 38bd28c5 |
+| wisent-supabase-wisent-app | sync batch bound | Oko defect 9a3f7ffd |
+| wisent-node | inference scale default | Oko defect d2f793af |
+| wisent-ground-truth-api | extractive source count | Oko defect d0f380ac |
 
 ## The 10 000-file cleanup cap
 
