@@ -29,9 +29,6 @@ const ROUTER_TIMEOUT_SECONDS: u64 = 180;
 /// Scores are reported to four decimal places.
 const SCORE_SCALE: f64 = 10_000.0;
 
-/// How much of a long router error is quoted.
-const ERROR_EXCERPT: usize = 500;
-
 /// HTTP statuses the router may answer with and still have produced an
 /// evaluation.
 const ROUTER_OK: std::ops::Range<u16> = 200..300;
@@ -77,7 +74,7 @@ pub(crate) fn grade_figure(
     let payload: JsonValue = serde_json::from_str(&raw).map_err(|_| {
         Failure::unavailable(
             "figure-evaluate.model",
-            format!("model router returned non-JSON ({status})"),
+            format!("model router returned non-JSON ({status}): {}", raw.trim()),
         )
     })?;
     if !ROUTER_OK.contains(&status) {
@@ -89,9 +86,6 @@ pub(crate) fn grade_figure(
                     .pointer("/error/message")
                     .and_then(JsonValue::as_str)
                     .unwrap_or("request failed")
-                    .chars()
-                    .take(ERROR_EXCERPT)
-                    .collect::<String>()
             ),
         ));
     }

@@ -148,12 +148,12 @@ pub(crate) fn recorded_run(
     Ok((run, written))
 }
 
-pub(crate) fn list(harness: &Path, app_id: &str, suite_id: Option<&str>, limit: usize) -> Answer {
+pub(crate) fn list(harness: &Path, app_id: &str, suite_id: Option<&str>, limit: Option<usize>) -> Answer {
     manifest::load(harness, app_id)?;
     let runs: Vec<Json> = store::all(harness, app_id)?
         .into_iter()
         .filter(|run| suite_id.is_none_or(|id| run["suite"]["id"] == id))
-        .take(limit)
+        .take(limit.unwrap_or(usize::MAX))
         .map(|run| {
             json!({
                 "runId": run["runId"],

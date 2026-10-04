@@ -7,10 +7,6 @@ use super::*;
 const REPORT_SCHEMA_VERSION: u64 = 1;
 const REPORT_KIND: &str = "probierz-figure-evaluation";
 
-/// How much of a renderer failure is quoted as evidence. Long enough
-/// for a LaTeX error with its context, short enough to read.
-const RENDER_FAILURE_EXCERPT: usize = 4_000;
-
 /// The two renders and what was measured from them.
 pub(crate) struct Renders<'a> {
     pub(crate) reference: &'a Path,
@@ -92,7 +88,7 @@ pub(crate) fn unrenderable_candidate_report(
             "blockers": [{
                 "code": "candidate_render_failed",
                 "artifact": "candidate",
-                "evidence": detail.chars().take(RENDER_FAILURE_EXCERPT).collect::<String>()
+                "evidence": detail
             }]
         }),
     );

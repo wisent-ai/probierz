@@ -53,13 +53,13 @@ pub enum BenchmarkCommand {
         #[arg(long, value_parser = crate::cli::reporting::positive_history_limit)]
         repetitions: Option<usize>,
     },
-    /// Recorded runs, newest first.
+    /// Recorded runs, newest first: every one, or the newest --limit.
     List {
         app_id: String,
         #[arg(long)]
         suite: Option<String>,
-        #[arg(long, default_value_t = 20, value_parser = crate::cli::reporting::positive_history_limit)]
-        limit: usize,
+        #[arg(long, value_parser = crate::cli::reporting::positive_history_limit)]
+        limit: Option<usize>,
     },
     /// One recorded run with every sample.
     Show { app_id: String, run_id: String },
