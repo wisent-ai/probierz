@@ -140,3 +140,136 @@ assigned_lines	class	note
 65885-65896	LAYOUT	wisent-ios-repo slider preview and typography scale
 65897-65902	TUNING	wisent-ios-repo request/retry, free credit and image encoding/dimension settings; two different free credit defaults require shared policy review
 65903-65906	LAYOUT	wisent-ios-repo device reference geometry and theme opacity
+67603	TUNING	wisent-landing-new blog page size
+67604-67606	COUNTER	wisent-landing-new anchor index/traversal
+67607-67615	LAYOUT	wisent-landing-new hero scaling/opacity and menu icon geometry
+67616	COUNTER	wisent-landing CSV row traversal excluding header
+67617-67619	EXPERIMENT	wisent-landing documentation learning-rate/layer/strength examples; examples need selected model contract
+67620-67621	TUNING	wisent-landing context prompt route waits
+67622	NOT	wisent-landing link query ID and published performance claims; numbers in prose require cited evidence, not execution proof
+67623	LAYOUT	wisent-landing featured article vertical offset
+67624-67628	COUNTER	wisent-landing blog hash/traversal/zone initial state
+67629-67631	TUNING	wisent-landing slug-specific zone assignment; broad hardcoding audit applies
+67632-67647	LAYOUT	wisent-landing chart geometry/strokes
+67648	COUNTER	wisent-landing FAQ match maximum
+67649	LAYOUT	wisent-landing FAQ typing animation speed
+67650	NOT	wisent-landing code example string
+67651	COUNTER	wisent-landing demo text traversal
+67652	NOT	wisent-landing disabled text traversal
+67653	COUNTER	wisent-landing demo text index
+67654	TUNING	wisent-landing visible news item limit
+67655-67657	COUNTER	wisent-landing blog hash/traversal/zone initial state
+67658-67660	TUNING	wisent-landing duplicate slug-specific zone assignment
+67661-67667	LAYOUT	wisent-landing popover offsets and illustrative brain layer/neuron dimensions
+67668	COUNTER	wisent-landing illustrative layer traversal
+67669-67672	LAYOUT	wisent-landing illustrative brain geometry/margins
+67673-67674	COUNTER	wisent-landing neuron/connection traversal
+67675	LAYOUT	wisent-landing hero illustrative node count
+67676	COUNTER	wisent-landing hero node traversal
+67677-67684	LAYOUT	wisent-landing fixed illustrative diagram grid cardinality; not actual model architecture
+67685-67688	TUNING	wisent-landing recent-post count, diagnostic text/URL caps and HSTS lifetime; preserve transport security
+67689-67690	LAYOUT	wisent-landing token visualization dimensions
+67691-67692	SCHEMA	wisent-logo-generator score scale and decimal quantization
+67693-67722	TUNING	wisent-logo-generator acceptance/iteration thresholds and handcrafted score bases/bonuses/penalties/complexity counts; not independently judged quality
+67723-67724	LAYOUT	wisent-logo-generator SVG and mark geometry
+67725-67726	COUNTER	wisent-logo-generator CLI and generation round indices
+67727-67733	LAYOUT	wisent-logo-generator background cycle and trace geometry
+67734-67736	TUNING	wisent-logo-generator text/primitive/label bounds
+67737	COUNTER	wisent-logo-generator primitive traversal
+67738	TUNING	wisent-logo-generator short identifier width
+67739-67745	TUNING	wisent-marketing-asset-generator comparison normalization/palette/color-distance/coverage thresholds
+67746-67747	COUNTER	wisent-marketing-asset-generator image/text parser cursors
+67748	LAYOUT	wisent-marketing-asset-generator text opacity identity
+67749-67754	PROTOCOL	wisent-marketing-asset-generator CLI failure exits
+67755-67756	COUNTER	wisent-marketing-asset-generator CLI argument traversal
+67757-67758	PROTOCOL	wisent-marketing-asset-generator image header offsets
+67759-67763	TUNING	wisent-marketing-asset-generator font element/candidate/result caps, initial font score and image variance threshold
+67764-67765	COUNTER	wisent-marketing-asset-generator round/source indices
+67766-67768	TUNING	wisent-marketing-asset-generator handcrafted score bases; not independent quality measurements
+67769-67770	COUNTER	wisent-marketing-asset-generator byte and SVG item counts
+67771-67775	LAYOUT	wisent-marketing-asset-generator SVG padding/mark/type geometry
+67776	COUNTER	wisent-marketing-asset-generator consumed text count
+67777	LAYOUT	wisent-marketing-asset-generator text weight/opacity defaults
+67778-67780	SCHEMA	wisent-marketing-asset-generator artifact marker versions
+67781-67782	TUNING	wisent-marketing-asset-generator reference file cap and short identifier width
+67783-67784	COUNTER	wisent-marketing-asset-generator asset/candidate totals
+68109	COUNTER	wisent-model corpus progress total
+68110-68125	TUNING	wisent-model generation defaults, story/paragraph/message/turn bounds and score weights; audit only, no enhancement of sexual generation fixtures
+68126-68127	PROTOCOL	wisent-node zero/one arithmetic identities
+68128	TUNING	wisent-node inference scale default
+68129-68134	COUNTER	wisent-node vector reduction accumulators/traversal
+68135-68136	LAYOUT	wisent-optimizer JSON indentation
+68137	TUNING	wisent-optimizer best-score sentinel requires score domain check
+68138	TUNING	wisent-optimizer best-strength fallback
+68139	COUNTER	wisent-optimizer combination index
+68140-68141	PROTOCOL	wisent-optimizer tensor axes
+68142-68143	COUNTER	wisent-optimizer accuracy totals
+68144	SCHEMA	wisent-optimizer onboarding schema version
+68145-68149	TUNING	wisent-optimizer journey wait and condition/screen/transition bounds
+68150	COUNTER	wisent-optimizer condition recursion depth
+68151	TUNING	wisent-optimizer train/evaluation split
+68152	COUNTER	wisent-optimizer configuration count
+68153	TUNING	wisent-optimizer zero classification impact result needs measured-state evidence
+68154	COUNTER	wisent-optimizer configuration count
+68155-68156	TUNING	wisent-optimizer best-score sentinel and zero classification impact result need score-domain/measurement evidence
+68157-68164	TUNING	wisent-optimizer strength/weight bounds and default/zero accuracy/effectiveness/impact/duration/configuration results; cannot present absent measurements as measured zeros
+68165	TUNING	wisent-supabase-oko email template minimum length
+68166-68167	COUNTER	wisent-supabase-oko migration totals
+68168-68170	SCHEMA	wisent-supabase-oko security report column positions
+68171-68181	PROTOCOL	wisent-supabase-oko HTTP response codes
+68182-68183	TUNING	wisent-supabase-oko checkout lifetime quantity/minimum seats need billing contract
+68184-68187	TUNING	wisent-supabase-oko company/initiative context bounds and response token/sampling defaults
+68188	SCHEMA	wisent-supabase-oko authorization existence row; preserve organization access check
+68189	TUNING	wisent-supabase-oko email length bound requires email representation contract
+68190-68191	COUNTER	wisent-supabase-oko invitation byte/parse offsets
+68192	PROTOCOL	wisent-supabase-oko milliseconds conversion
+68193	TUNING	wisent-supabase-oko alert truncation limit
+68194	COUNTER	wisent-supabase-oko sent count
+68195-68196	TUNING	wisent-supabase-oko current/superseded subscription query limits; require complete retirement behavior
+68197	PROTOCOL	wisent-supabase-oko milliseconds conversion
+68198	TUNING	wisent-supabase-oko minimum seat billing policy
+68199	TUNING	wisent-supabase-wisent-app sync batch bound
+68200	PROTOCOL	wisent-supabase-wisent-app HTTP success default
+68201	COUNTER	wisent-supabase-wisent-app accepted item count
+68202	COUNTER	wisent-terminal-session-recovery argument traversal
+68203	PROTOCOL	wisent-terminal-session-recovery failure exit
+68204	COUNTER	wisent-terminal-session-recovery argument traversal
+68205-68207	PROTOCOL	wisent-terminal-session-recovery duration units
+68208-68211	TUNING	wisent-terminal-session-recovery reconcile/view intervals, relaunch bound and heap setting
+68212-68213	PROTOCOL	wisent-terminal-session-recovery MiB/millisecond conversions
+68214-68218	TUNING	wisent-terminal-session-recovery poll/health/crash/relaunch/installer settings; no manual restart performed
+68219	PROTOCOL	wisent-terminal-session-recovery signal exit base
+68220-68222	COUNTER	wisent-terminal-session-recovery rapid relaunch state/reset
+68223-68226	PROTOCOL	wisent-terminal-session-recovery documented outcome exit codes; third-party patching path is not authorized by numeric audit
+68227	TUNING	wisent-terminal-session-recovery reconcile delay
+68228-68229	PROTOCOL	wisent-tour-bridge HTTP status codes
+68230-68234	TUNING	wisent-tour-bridge timestamp skew, operation waits and logged text bound; preserve signature freshness
+68235	PROTOCOL	wisent-tour-bridge bad-request status
+68236	TUNING	wisent-trade polling interval
+68237	LAYOUT	wisent-trade chart height
+68238	COUNTER	wisent-trade argument traversal
+68239	PROTOCOL	wisent-trade CLI outcome exit code
+68240	LAYOUT	wisent-trade failure icon size
+68241-68248	TUNING	wisent-trade analytics text/ID/URL/host/queue/detail limits and recent trade count
+68249	PRICE	wisent-trade base token price requires market contract
+68250-68253	COUNTER	wisent-trade cost/return reduction totals and traversal
+68254	TUNING	wisent-uncensored-model tag reward; audit only
+68255-68256	PROTOCOL	wisent-uncensored-model HTTP status and percentage scale
+68257-68268	TUNING	wisent-uncensored-model format/length/reasoning/detection score bounds and rewards; audit only, no improvement of evasion behavior
+68269	COUNTER	wisent-uncensored-model tag count
+68270	TUNING	wisent-uncensored-model classifier result bound
+68271-68272	COUNTER	wisent-uncensored-model reward accumulators
+68273-68287	HYPER	wisent-uncensored-model training/adapter/sampling/report/save/length defaults; role is not evidence of justification, audit only
+68288-68292	COUNTER	wisent-visuals page/reference/appendix counters and parser state flags
+68293-68294	TUNING	wisent-visuals median reduction includes zero missing-data fallback; integer median rounding needs output contract
+68295-68309	COUNTER	wisent-visuals statistic traversal and page/error/match/presence flags
+68310-68311	LAYOUT	wisent-visuals banner dimensions
+68312	TUNING	wisent-visuals cache size
+68313-68316	LAYOUT	wisent-visuals variant range and dot geometry/opacity
+68317	TUNING	wisent-visuals WebP quality/encoder effort
+68318-68319	TUNING	wisent-visuals repository selection limit default; zero meaning requires consumer check
+68320	COUNTER	wisent-visuals emitted plan count
+68321-68322	TUNING	wisent-visuals WebP encoding and GitHub request wait
+68323	COUNTER	wisent-visuals first API page
+68324-68326	SCHEMA	wisent-visuals singleton README banner/title replacement cardinality; must validate expected target
+68327-68333	LAYOUT	wisent-visuals banner trace geometry/spacing/opacity

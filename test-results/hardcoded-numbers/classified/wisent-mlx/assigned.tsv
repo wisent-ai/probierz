@@ -1,0 +1,51 @@
+assigned_lines	class	note
+67785-67788	VENDOR	Apple MLX LoRA example layer/rate/report/token settings; LoraTrain.swift:1 retains Apple copyright, fork does not transfer ownership
+67789	VENDOR	MNIST canvas geometry
+67790-67791	VENDOR	Diffusion single-step paths
+67792-67801	VENDOR	Bert architecture/normalization/vocabulary/position defaults
+67802-67816	VENDOR	NomicBert alignment/rotary/architecture defaults and offsets
+67817-67818	VENDOR	LoRA dataset traversal index
+67819-67826	VENDOR	LoRA training/evaluation/report/checkpoint defaults
+67827-67830	VENDOR	LoRA token counts and Baichuan offset
+67831-67833	VENDOR	Bitnet GPU block/packing constants and traversal
+67834-67836	VENDOR	Bitnet packed GPU loop cardinalities
+67837-67838	VENDOR	Bitnet rotary defaults
+67839-67842	VENDOR	Cohere architecture defaults
+67843-67847	VENDOR	Cohere numeric fields show mismatched serialized key names (KV heads/epsilon, rotary/vocabulary, vocabulary/KV heads, epsilon/rotary, scaling/logit scale); owning integration must establish actual decoding behavior without patching external source
+67848-67859	VENDOR	DeepSeek YaRN rotation/context/scaling defaults
+67860-67863	VENDOR	DeepSeek rotary/pipeline offsets and singleton pipeline
+67864	VENDOR	DeepSeek processing block size
+67865-67877	VENDOR	Exaone/GLM/Gemma rotary/normalization/logit/adapter defaults and disabled signature comment
+67878	VENDOR	Gemma cache growth step
+67879-67882	VENDOR	Gemma3n numerical/scale/sparsity and Granite rotary identity
+67883-67897	VENDOR	InternLM/Llama/MiMo rotary/context/prediction defaults and offsets
+67898-67901	VENDOR	OpenELM alignment/normalization/rotary/attention defaults
+67902-67915	VENDOR	Phi/Phi3 architecture/vocabulary/normalization/rotary defaults
+67916-67926	VENDOR	PhiMoE architecture/context/expert/normalization defaults
+67927-67938	VENDOR	Qwen/SmolLM rotary/context/layer-pattern defaults
+67939-67946	VENDOR	Starcoder/scaled rotary vocabulary/normalization/context defaults and offset
+67947-67948	VENDOR	Switch layer quantization defaults
+67949-67959	VENDOR	DoRA/LoRA rank/scale/layer defaults
+67960-67969	VENDOR	Evaluation prefill/cache/sampling/repetition defaults
+67970-67971	VENDOR	Evaluation traversal/token counters
+67972-67974	VENDOR	Evaluation prefill/cache defaults
+67975-67982	VENDOR	Evaluation elapsed/token and cache-offset accumulators
+67983-67989	VENDOR	Cache growth/quantization/retention defaults and cursor
+67990-67991	VENDOR	Cache traversal positions
+67992-67995	VENDOR	Cache quantization defaults
+67996-67997	VENDOR	Gemma normalization epsilon and Float16 finite bound
+67998	VENDOR	MNIST traversal index
+67999	VENDOR	RGBA pixel component count
+68000-68012	VENDOR	Gemma vision vocabulary/normalization/rotary/context/image representation
+68013-68024	VENDOR	Idefics vision architecture/vocabulary/image/token defaults and cursor
+68025-68043	VENDOR	Paligemma/Qwen/SmolVLM vision normalization/context/rotary/channel/token defaults and comments
+68044-68063	VENDOR	Diffusion VAE/text/UNet/scheduler configuration
+68064-68066	VENDOR	Diffusion image/batch defaults
+68067	VENDOR	Diffusion iteration index
+68068-68076	VENDOR	UNet/VAE upsample/group/layer/attention defaults
+68077-68080	VENDOR	Linear training epochs/batch/slope/intercept defaults
+68081-68083	VENDOR	Image CLI cache/image/batch defaults
+68084-68088	VENDOR	Image CLI latent/grid/size/strength defaults
+68089-68095	VENDOR	LLM CLI token/sampling/repetition/seed/cache defaults
+68096-68104	VENDOR	LoRA CLI layer/training/report/evaluation/checkpoint defaults
+68105-68108	VENDOR	MNIST CLI seed/batch/epoch/rate defaults

@@ -1,0 +1,63 @@
+assigned_lines	class	note
+68334-68352	LAYOUT	wisent-visuals banner geometry/seed selection/spacing/opacity
+68353	NOT	wisent-visuals area chart style example
+68354-68403	LAYOUT	wisent-visuals area chart style/dimensions/DPI/padding/grid/legend/opacity/color settings
+68404	NOT	wisent-visuals bar style example
+68405-68416	LAYOUT	wisent-visuals bar style/dimensions/padding/spacing/tick count
+68417	NOT	wisent-visuals bubble style example
+68418-68438	LAYOUT	wisent-visuals bubble/radar style/dimensions/margins/rings/axes/marker range
+68439	NOT	wisent-visuals column style example
+68440-68451	LAYOUT	wisent-visuals column style/geometry/tick count
+68452	NOT	wisent-visuals line style example
+68453-68481	LAYOUT	wisent-visuals line style/DPI/strokes/opacity/padding/grid/dimensions
+68482-68497	LAYOUT	wisent-visuals pie/radar/marker styles/geometry/angles/opacity
+68498	SCHEMA	wisent-visuals identity schema version
+68499	NOT	wisent-visuals release surface style example prose
+68500-68505	TUNING	zwiad real experiment concept/layer/pair/sample/transfer bounds
+68506	LAYOUT	zwiad JSON indentation
+68507-68516	TUNING	zwiad repeated real experiment bounds/defaults across activation/analysis modules
+68517-68518	PROTOCOL	zwiad singleton cluster representation and tensor axes
+68519-68520	TUNING	zwiad best cluster/score initial fallback needs metric domain and no-valid-candidate handling
+68521	HYPER	zwiad clustering seed/restarts
+68522	PROTOCOL	zwiad cluster mean axis
+68523	TUNING	zwiad spectral concept cap
+68524	PROTOCOL	zwiad vector norm axis
+68525-68526	TUNING	zwiad recovery/silhouette zero fallback; absence must not appear measured
+68527	PROTOCOL	zwiad mean direction axis
+68528	EXPERIMENT	zwiad synthetic linear sample count/dimensions
+68529	PROTOCOL	zwiad XOR quadrant cardinality
+68530-68533	EXPERIMENT	zwiad synthetic XOR offset/dimensions and classifier seed/fold settings
+68534	NOT	zwiad neighbor-count comment
+68535-68541	HYPER	zwiad neighbor/PCA/MLP/fold/seed choices
+68542	NOT	zwiad result label and numeric display precision; label must match actual neighbor choice
+68543-68544	EXPERIMENT	zwiad synthetic sample count/dimensions
+68545-68546	LAYOUT	zwiad JSON indentation
+68547	TUNING	zwiad synthetic decomposition concept cap
+68548-68557	EXPERIMENT	zwiad synthetic dimensionality/concepts/noise/samples/layer/seed/restarts; experiment label is not justification
+68558	PROTOCOL	zwiad synthetic cluster mean axis
+68559	TUNING	zwiad zero silhouette fallback requires unavailable-state handling
+68560-68562	TUNING	zwiad decomposition cap and cross-validation folds
+68563-68577	LAYOUT	zwiad plot dimensions/fonts/angles/annotations/output DPI
+68578	NOT	zwiad synthetic dimension title; must describe actual data
+68579	SCHEMA	zwiad balanced binary chance reference with presentation style
+68580	TUNING	zwiad fixed accuracy annotation and winner label require measured results, not hardcoded conclusions
+68581	NOT	zwiad synthetic dimension title
+68582	SCHEMA	zwiad balanced binary chance reference with presentation style
+68583	TUNING	zwiad fixed winner annotation requires measured results
+68584-68588	LAYOUT	zwiad figure DPI and type sizes
+68589-68590	EXPERIMENT	zwiad illustrative point counts
+68591-68596	TUNING	zwiad fixed model layer count/chance/noise/dataset curve bumps; generated illustration must never masquerade as benchmark measurements
+68597-68618	LAYOUT	zwiad bar/annotation/figure/marker/line/legend styling and illustrative class boundaries
+68619	NOT	zwiad explanatory synthetic-data label with position/font
+68620-68627	LAYOUT	zwiad figure dimensions/DPI and curve styling
+68628	TUNING	zwiad signal threshold shown as fixed 0.6
+68629	LAYOUT	zwiad legend position/font
+68630-68631	TUNING	zwiad hardcoded optimal-layer band/label requires optimization evidence
+68632-68634	LAYOUT	zwiad figure size/DPI and bar positioning; neighbor label must match actual model
+68635	TUNING	zwiad repeated fixed signal threshold
+68636-68637	LAYOUT	zwiad category rotation/output DPI
+68638	TUNING	zwiad bootstrap repetitions/confidence interval default
+68639	LAYOUT	zwiad JSON indentation
+68640	TUNING	zwiad table row cap
+68641-68644	COUNTER	zwiad benchmark/diagnosis counts
+68645-68646	TUNING	zwiad signal and method-gap thresholds

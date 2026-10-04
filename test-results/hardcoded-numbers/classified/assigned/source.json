@@ -3,7 +3,7 @@
   "sha256": "bf860ed716ff3609954b794fb4cf2e77b6285d6c66134b749f68165268ab9d65",
   "source_lines": 68646,
   "range_semantics": "inclusive original source-list line numbers",
-  "reviewed_ranges": [[1, 785], [32688, 35059], [35117, 37213], [54381, 67583]],
+  "reviewed_ranges": [[1, 785], [32688, 35059], [35117, 37213], [54381, 68646]],
   "excluded_ranges": [
     {"start": 786, "end": 32687, "reason": "archive excluded by assignment"},
     {"start": 37214, "end": 54380, "reason": "oh-my-pi excluded by assignment"}

@@ -87,3 +87,7 @@ assigned_lines	class	note
 67575-67578	VENDOR	MNIST CLI seed/batch/epoch/rate defaults
 67579-67580	VENDOR	SwiftTiktoken benchmark repetition and elapsed accumulator; LICENSE:3 names Anthony DePasquale
 67581-67583	VENDOR	SwiftTiktoken BPE delimiter/index sentinels
+67584-67586	VENDOR	SwiftTiktoken BPE index/sentinel state
+67587	VENDOR	SwiftTiktoken input character cap; integration must respect upstream refusal or select supported alternative
+67588-67597	VENDOR	SwiftTiktoken character/byte/token/search/load counters
+67598-67602	VENDOR	SwiftTiktoken test iteration and merge-rank fixtures
