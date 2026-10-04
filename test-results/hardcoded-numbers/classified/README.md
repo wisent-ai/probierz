@@ -176,6 +176,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | byk-desktop, byk-ios | waits, queue, revision bound, code length | Oko defect b0d3f955 |
 | deep-analytics, competitor-research | bandit and graduation policy, text cuts, page sizes | Oko defect 3f41319f |
 | handtohuman | prices, minimums, payment and egress limits | Oko defect e8708637 |
+| creator-portal | `RECENT_SUBMISSIONS_LIMIT = 5` | 544fd90c |
 | creator-portal | recent submissions, code length | Oko defect 18fb6ae7 |
 | film, grant-cli, cntrlai, iskra | provider tiers, frames, training and evaluation settings | Oko defect eec9b5b4 |
 | zwiad | fixed winners and optimal band in figures, invented curves, thresholds, zero fallbacks, `TABLE_ROWS = 10` (Python; edit refused) | Oko defect 30d9d67e |
