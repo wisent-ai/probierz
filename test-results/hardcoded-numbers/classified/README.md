@@ -85,6 +85,16 @@ These are partial review records, not proof that the entire assignment list has 
 | las | budgets, ranking, waits, credential policy, display bounds | Oko defect 0baf3362 |
 | skryba | generation, training and quality defaults | Oko defect 629666b4 |
 | preferences | ranking thresholds, priors, vote weights, import caps | Oko defect 7dc96443 |
+| probierz | figure `ERROR_EXCERPT = 500`, `RENDER_FAILURE_EXCERPT = 4_000`, `benchmark list --limit` default 20 | 060be337 |
+| probierz | grading budgets, router wait, source bounds, benchmark and Desktop values | Oko defect 344dc59b |
+| brama | Brama Desktop `maximumErrorExcerptBytes = 4096`, `listedModels = 8`, `maximumIdentifierCharacters = 128` | brama-desktop f3fc3f6e |
+| brama | Brama Desktop thresholds, history, Stado wait, readiness bounds | Oko defect d8cafe10 |
+| needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
+| growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
+| potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
+| wisent-app | generation defaults, silent clamps, waits, thresholds, server port | Oko defect 2f95d07c |
+| OpenEnv | benchmark rounds, thresholds, fallbacks, training settings, server port | Oko defect dcbdb704 |
+| backends | scratch and research scripts outside any product | Oko defect 51273293 |
 
 ## The 10 000-file cleanup cap
 
