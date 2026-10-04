@@ -168,3 +168,29 @@ assigned_lines	class	note
 35085	VENDOR	Intlify message compiler: diagnostic/token/node identifiers, Unicode code points, parser positions, escape widths, traversal and diagnostic display abbreviation.
 35086	VENDOR	Intlify locale runtime and Quasar input/button components: parser transition table, plural indices, missing-result sentinel, identity counters, render flags, input cursor offsets, SVG geometry and animation delays. Omitted raw-reader portions read from wrapped source.
 35087	VENDOR	Capsolver logger/API/settings and Quasar table components: log levels, HTTP status, provider polling defaults, display precision, render flags, page options and traversal. Full record read with wrapped continuation; provider behavior unchanged.
+35088	VENDOR	Embedded IEEE754/protobuf numeric representation, wire field IDs and UTF-8 bounds; extension detector render flags, JSON indentation, typography and startup wait. Audit only; no detector or challenge-handling changes.
+35089	VENDOR	Nopecha background bundle: rule IDs/priorities, CRC/hash representation, bounded request log, settings version, provider retry/wait defaults, badge formatting and frame traversal cap. Audit only.
+35090-35091	VENDOR	Nopecha background continuations: frame lookup attempts, interpolation coefficients, coordinate defaults, pointer history, display duration and event button codes. Read without executing or improving automation.
+35092	VENDOR	Nopecha AWS bundle: checksum constants, observer scheduling, retry counts, DOM mutation cardinalities and image/audio handling waits.
+35093	VENDOR	Nopecha FunCaptcha bundle: checksum and event representation, timing/cache defaults, image threshold/dimensions, challenge cardinalities and traversal counters. No solver modification.
+35094	VENDOR	Nopecha Geetest bundle: checksum and mouse-event representation, image/display geometry, thresholds, coordinate coefficients and polling defaults. No solver modification.
+35095	VENDOR	Nopecha hCaptcha bundle: checksum/event constants, provider waits, pointer defaults, image/Base64 representation and UI observations. Assigned record ends inside multiline string.
+35096-35097	VENDOR	Nopecha hCaptcha image diagnostics continuations: initial width state, text alignment, ANSI escape code, list traversal and displayed image dimensions.
+35098	VENDOR	Nopecha hCaptcha continuation: media timeout/concurrency/size/cache defaults, HTTP status range, unit formatting, image quality, traversal and provider-specific layout/timing constants. No provider code changes.
+35099	VENDOR	Nopecha obfuscated hook: string table offsets, opaque predicates, decoding masks/shift widths, hash arithmetic and generated control-flow constants. Retained as externally owned bundle, not interpreted as Wisent policy.
+35100	VENDOR	Nopecha Lemin bundle: checksum representation, polling/cache waits, pointer events, image geometry/thresholds and Base64 length calculation.
+35101-35102	VENDOR	Nopecha Lemin diagnostics: initial state, text padding, ANSI codes, traversal and image sizing.
+35103	VENDOR	Nopecha Lemin continuation: byte units, media concurrency/timeouts/size/cache limits, status codes, image quality and provider-specific dimensions/timing. Read-only classification; no solver changes.
+35104	VENDOR	Nopecha PerimeterX bundle: CRC representation, observer waits, detection retries and positive-delay check. Read only.
+35105-35106	VENDOR	Nopecha reCAPTCHA bundle: checksum/pointer representation, timer defaults, grid dimensions/type IDs, image thresholds and traversal. No challenge-handling changes.
+35107	VENDOR	Nopecha text provider bundle: checksum constants, image representation/thresholds, polling delays and keyboard timings. No solver changes.
+35108	VENDOR	Nopecha Turnstile bundle: checksum representation, frame marker encoding, provider attempts/waits and coordinate defaults. No solver changes.
+35109	VENDOR	Nopecha event-hook bundle: event-coordinate offsets, pointer identity and time-origin arithmetic. Audit only; no event spoofing changes.
+35110	VENDOR	CssSelectorGenerator bundle: unbounded candidate defaults, traversal counters, nth-child offset, combination enumeration and hexadecimal escaping.
+35111-35112	VENDOR	Nopecha locator bundle: CRC constants, marker radius, CSS box-side indices, viewport clipping, center arithmetic, update debounce and Escape key code.
+35113	VENDOR	Nopecha demo/Preact bundle: render counters and loop guard, DOM node codes, hook IDs, checksum representation, demo count bounds and layout dimensions.
+35114	VENDOR	Nopecha setup bundle: checksum representation, URL hash offset, example key and numeric-string parsing.
+35115	VENDOR	Nopecha popup/Preact bundle: render/hook IDs, guard count, checksum constants, SVG geometry, time units, credit warning thresholds, announcement cache age and UI state IDs. Full source read using wrapped output to recover omitted bytes.
+35116	VENDOR	Nopecha popup continuation: notification delays, image-grid/annotation geometry, channel bounds, elapsed-time formatting, state IDs and startup warning delay.
+35060	VENDOR	Buster background bundle: WAV layout/sample format, browser version tables, AES/MD5/SHA/HMAC representation, API arities, core-js limits/codes, storage revisions, UUID bits, provider audio/timing defaults and contribution scheduling. Full line read with wrapped missing portions; externally owned behavior unchanged.
+35061	VENDOR	Buster base bundle: WAV representation, browser/OS versions, extension API arities, core-js codes/limits, storage/DOM readiness waits, keyboard codes and provider interaction timing/geometry. Full wrapped source read; no solver modifications.
