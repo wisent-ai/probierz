@@ -135,30 +135,20 @@ pub(crate) fn probe(
             .and_then(|value| value.split('>').nth(1))
             .and_then(|value| value.split("</title>").next())
             .unwrap_or_default();
-        let body: String = html
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .chars()
-            .take(BODY_CHARS)
-            .collect();
+        // The author sees the whole page text; what to keep is the model's
+        // reading, not a cut made here.
+        let body = html.split_whitespace().collect::<Vec<_>>().join(" ");
         return Ok(format!(
             "kind: web\nurl: {url}\ntitle: {title}\nbody text: {body}\ninteractive/headings:"
-        )
-        .chars()
-        .take(PROBE_CHARS)
-        .collect());
+        ));
     }
     let app = app_path.ok_or_else(|| format!("{target} needs --app-path"))?;
     let label = if target == "tui" {
         "initial screen (pty frame, ANSI stripped):"
     } else {
-        "accessibility tree (truncated):"
+        "accessibility tree:"
     };
-    Ok(format!("kind: {target}\napp: {app}\n{label}")
-        .chars()
-        .take(PROBE_CHARS)
-        .collect())
+    Ok(format!("kind: {target}\napp: {app}\n{label}"))
 }
 
 /// Where a spec file for this target lives, from the one inventory

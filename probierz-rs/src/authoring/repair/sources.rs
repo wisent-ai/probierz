@@ -1,11 +1,8 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn patch_paths(patch: &str) -> Result<Vec<String>, String> {
     if patch.trim().is_empty() {
         return Err("product_patch needs a non-empty patch".to_string());
-    }
-    if patch.len() > MAX_PATCH_CHARS {
-        return Err(format!("patch exceeds {MAX_PATCH_CHARS} characters"));
     }
     let mut files = BTreeSet::new();
     for line in patch
@@ -20,12 +17,6 @@ pub(crate) fn patch_paths(patch: &str) -> Result<Vec<String>, String> {
     }
     if files.is_empty() {
         return Err("patch must be a git unified diff".to_string());
-    }
-    if files.len() > MAX_CHANGED_FILES {
-        return Err(format!(
-            "patch changes {} files; limit is {MAX_CHANGED_FILES}",
-            files.len()
-        ));
     }
     for file in &files {
         let lower = file.to_ascii_lowercase();
@@ -260,4 +251,3 @@ pub(crate) fn repair_evidence(run: &JsonValue) -> JsonValue {
         .collect::<Vec<_>>();
     json!({ "failures": failures, "analysis": analysis.as_ref().and_then(|value| value.get("summary")).cloned().unwrap_or(JsonValue::Null) })
 }
-

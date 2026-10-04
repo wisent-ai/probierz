@@ -1,10 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
-pub(crate) const PROBE_CHARS: usize = 9_000;
-pub(crate) const BODY_CHARS: usize = 1_500;
-pub(crate) const MAX_PATCH_CHARS: usize = 80_000;
-pub(crate) const MAX_CHANGED_FILES: usize = 8;
-
+use serde_json::json;
 pub(crate) fn command_output(
     program: &str,
     args: &[&str],
@@ -129,4 +124,3 @@ pub(crate) fn hash_source_files(root: &Path, files: &[String]) -> Result<String,
     }
     Ok(hex::encode(hash.finalize()))
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub fn repair_failed_run(
     harness: &Path,
     app_id: &str,
@@ -16,13 +16,13 @@ pub fn repair_failed_run(
             "Automated repair needs an application ID.",
         ));
     }
-    if !(1..=3).contains(&rounds) {
+    if rounds == 0 {
         return Ok(repair_failure(
             None,
             "config",
             false,
-            format!("invalid rounds: {rounds}"),
-            "Automated repair accepts one to three rounds.",
+            "invalid rounds: 0",
+            "Automated repair needs at least one round.",
         ));
     }
     let run = match repair_source_run(harness, app_id, run_id) {
@@ -279,4 +279,3 @@ pub fn repair_failed_run(
         }
     }
 }
-

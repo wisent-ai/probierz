@@ -93,10 +93,10 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         suite: String,
         /// How many cases the suite holds.
-        #[arg(long, default_value_t = 5)]
+        #[arg(long)]
         cases: usize,
         /// Drafts allowed before the command refuses.
-        #[arg(long, default_value_t = 3)]
+        #[arg(long)]
         rounds: u32,
     },
     /// Draft, place, declare and verify one contender's driver.
@@ -110,7 +110,7 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         ours: bool,
         /// Drafts allowed before the command refuses.
-        #[arg(long, default_value_t = 3)]
+        #[arg(long)]
         rounds: u32,
     },
     /// Hand one lost case to a Jeden pursuit, then decide it with a new run.
@@ -132,10 +132,10 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         owner: String,
         /// How many of the topic's newest observations the model reads.
-        #[arg(long, default_value_t = 40)]
+        #[arg(long)]
         observations: usize,
         /// Drafts allowed per question before the command refuses.
-        #[arg(long, default_value_t = 3)]
+        #[arg(long)]
         rounds: u32,
     },
     /// Create the scouted product through Stado and start its benchmark.
@@ -145,10 +145,10 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         allow_create: bool,
         /// How many cases the first suite holds.
-        #[arg(long, default_value_t = 5)]
+        #[arg(long)]
         cases: usize,
         /// Suite drafts allowed before the command refuses.
-        #[arg(long, default_value_t = 3)]
+        #[arg(long)]
         rounds: u32,
     },
     /// One pass of the loop without the operator, under his written policy.
@@ -245,6 +245,13 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
             secrets,
             settings,
             policy,
-        } => autonomy::schedule(&cron, &host, &harness_dir, &secrets, &settings, policy.as_deref()),
+        } => autonomy::schedule(
+            &cron,
+            &host,
+            &harness_dir,
+            &secrets,
+            &settings,
+            policy.as_deref(),
+        ),
     }
 }

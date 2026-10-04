@@ -65,7 +65,7 @@ pub enum InspectCommand {
         app_path: Option<String>,
         #[arg(long = "paths")]
         mapping_paths: Vec<String>,
-        #[arg(long, default_value_t = 3)]
+        #[arg(long)]
         rounds: u32,
         #[arg(long)]
         dry_run: bool,
@@ -95,7 +95,7 @@ pub enum InspectCommand {
         app_id: String,
         #[arg(long = "run")]
         run_id: Option<String>,
-        #[arg(long, default_value_t = 2)]
+        #[arg(long)]
         rounds: u32,
         #[arg(long)]
         dry_run: bool,

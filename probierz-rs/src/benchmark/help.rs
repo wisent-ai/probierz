@@ -13,10 +13,10 @@ records who passed, how fast, and at what cost.
   probierz benchmark rivals <app>
   probierz benchmark roadmap <app> --suite <id>
   probierz benchmark pursue <app> --suite <id> --case <id> --budget-usd <USD>
-  probierz benchmark author-suite <app> --suite <id> [--cases N] [--rounds N]
-  probierz benchmark author <app> --contender <id> --suite <id> [--ours] [--rounds N]
-  probierz benchmark scout <topic> --owner <github-owner> [--observations N] [--rounds N]
-  probierz benchmark adopt <brief.json> --allow-create [--cases N] [--rounds N]
+  probierz benchmark author-suite <app> --suite <id> --cases N --rounds N
+  probierz benchmark author <app> --contender <id> --suite <id> [--ours] --rounds N
+  probierz benchmark scout <topic> --owner <github-owner> --observations N --rounds N
+  probierz benchmark adopt <brief.json> --allow-create --cases N --rounds N
   probierz benchmark cycle [--policy <autonomy.yaml>]
   probierz benchmark schedule --cron <expr> --host <host> --harness-dir <dir> [--secret-env NAME=ITEM#FIELD]... [--policy <file>]
 
