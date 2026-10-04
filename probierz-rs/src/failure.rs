@@ -10,10 +10,6 @@
 
 use std::fmt;
 
-/// The width a terminal line gets. The rule for cutting a detail is the
-/// fleet's; the width is this product's, and it has always been 300.
-const MAX_DETAIL_CHARS: usize = 300;
-
 /// How a child process ended, in words: `exited N`, or `ended by signal N`
 /// when it was killed and has no exit code. Never `exit null`.
 pub(crate) fn ended(status: &std::process::ExitStatus) -> String {
@@ -98,7 +94,7 @@ impl Failure {
         Self {
             point: point.into(),
             code,
-            detail: trim_detail(&detail.into()),
+            detail: detail.into().trim().to_string(),
         }
     }
 
@@ -158,16 +154,6 @@ impl From<serde_yaml::Error> for Failure {
     fn from(error: serde_yaml::Error) -> Self {
         Self::new("yaml", Code::Config, error.to_string())
     }
-}
-
-/// A detail is cut at a character boundary, and says that it was cut.
-fn trim_detail(detail: &str) -> String {
-    let trimmed = detail.trim();
-    if trimmed.chars().count() <= MAX_DETAIL_CHARS {
-        return trimmed.to_string();
-    }
-    let kept: String = trimmed.chars().take(MAX_DETAIL_CHARS).collect();
-    format!("{kept}…")
 }
 
 pub type Answer = Result<(), Failure>;
@@ -272,4 +258,3 @@ pub fn write_private(path: &std::path::Path, body: &[u8]) -> std::io::Result<()>
     let mut file = create_private(path)?;
     file.write_all(body)
 }
-
