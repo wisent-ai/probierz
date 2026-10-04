@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: bool) -> Answer {
     let app_id = app_id
         .ok_or_else(|| Failure::invalid("evidence.retention", "retention needs an app ID"))?;
@@ -22,7 +22,10 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
                 .unwrap_or_default(),
             retention_days(&document, kind)?,
         )?;
-        let expired = DateTime::parse_from_rfc3339(&expiry).is_ok_and(|value| value <= at);
+        let expired = expiry
+            .as_deref()
+            .and_then(|expiry| DateTime::parse_from_rfc3339(expiry).ok())
+            .is_some_and(|value| value <= at);
         items.push(json!({
             "type": "run", "appId": app_id, "runId": run.get("runId").cloned().unwrap_or(Value::Null),
             "kind": kind, "path": file.parent().unwrap_or(&file).to_string_lossy(), "expiresAt": expiry, "expired": expired,
@@ -107,4 +110,3 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
         "applied": apply, "removed": removed,
     }))
 }
-

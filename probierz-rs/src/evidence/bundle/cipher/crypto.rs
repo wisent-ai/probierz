@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 
 pub(crate) type Aes256Ctr = Ctr32BE<Aes256>;
 
@@ -58,7 +58,10 @@ pub(crate) fn key_from_file(path: Option<&Path>) -> Result<[u8; 32], Failure> {
     })
 }
 
-pub(crate) fn retention_days(document: &Value, kind: &str) -> Result<f64, Failure> {
+/// The retention the manifest's `artifacts.retain` states for `kind` (or its
+/// pull-request retention), or none: evidence nobody declared a lifetime for
+/// is kept, never expired by a number chosen here.
+pub(crate) fn retention_days(document: &Value, kind: &str) -> Result<Option<f64>, Failure> {
     let name = match kind {
         "pull-request" => "pullRequestDays",
         "nightly" => "nightlyDays",
@@ -67,21 +70,28 @@ pub(crate) fn retention_days(document: &Value, kind: &str) -> Result<f64, Failur
         _ => "adhocDays",
     };
     let retain = document.pointer("/artifacts/retain");
-    let value = retain
+    let Some(value) = retain
         .and_then(|item| item.get(name))
         .or_else(|| retain.and_then(|item| item.get("pullRequestDays")))
         .and_then(|item| item.as_f64().or_else(|| item.as_i64().map(|n| n as f64)))
-        .unwrap_or(14.0);
+    else {
+        return Ok(None);
+    };
     if !value.is_finite() || value <= 0.0 {
         return Err(Failure::config(
             "evidence.retention",
             format!("invalid artifact retention for {kind}"),
         ));
     }
-    Ok(value)
+    Ok(Some(value))
 }
 
-pub(crate) fn expires_at(started_at: &str, days: f64) -> Result<String, Failure> {
+/// When evidence started at `started_at` expires under `days`, or never when
+/// no retention is declared.
+pub(crate) fn expires_at(started_at: &str, days: Option<f64>) -> Result<Option<String>, Failure> {
+    let Some(days) = days else {
+        return Ok(None);
+    };
     let parsed = DateTime::parse_from_rfc3339(started_at).map_err(|_| {
         Failure::invalid(
             "evidence.retention",
@@ -89,9 +99,11 @@ pub(crate) fn expires_at(started_at: &str, days: f64) -> Result<String, Failure>
         )
     })?;
     let milliseconds = (days * 86_400_000.0) as i64;
-    Ok((parsed + chrono::Duration::milliseconds(milliseconds))
-        .with_timezone(&Utc)
-        .to_rfc3339_opts(SecondsFormat::Millis, true))
+    Ok(Some(
+        (parsed + chrono::Duration::milliseconds(milliseconds))
+            .with_timezone(&Utc)
+            .to_rfc3339_opts(SecondsFormat::Millis, true),
+    ))
 }
 
 pub(crate) fn encoded_header(header: &Value) -> Result<Vec<u8>, Failure> {
@@ -179,5 +191,3 @@ pub(crate) fn remove_plaintext_source(
     fs::rename(temporary, manifest_path)?;
     Ok(())
 }
-
-

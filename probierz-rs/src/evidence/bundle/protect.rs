@@ -220,7 +220,7 @@ pub(crate) fn protect_run(
         "contentIndexSha256": header.get("contentIndexSha256").cloned().unwrap_or(Value::Null),
         "keyFingerprintSha256": header.get("keyFingerprintSha256").cloned().unwrap_or(Value::Null),
         "expiresAt": header.get("expiresAt").cloned().unwrap_or(Value::Null),
-        "retentionDays": js_number(days),
+        "retentionDays": days.map(js_number),
         "files": entries.len(),
         "secretScan": header.get("secretScan").cloned().unwrap_or(Value::Null),
         "plaintextRemoved": remove_source,

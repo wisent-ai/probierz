@@ -9,9 +9,10 @@
 //!
 //! What is deleted is decided by the application's own manifest, the same
 //! `retention_days` the local plan uses, because the product that writes the
-//! evidence declares how long it is kept. A plan is printed unless `--apply`
-//! is given, and an object whose age the store cannot state is reported and
-//! never removed.
+//! evidence declares how long it is kept. No application, or one whose
+//! manifest declares no retention, expires nothing. A plan is printed unless
+//! `--apply` is given, and an object whose age the store cannot state is
+//! reported and never removed.
 
 use serde_json::json;
 
@@ -21,12 +22,9 @@ use crate::evidence::*;
 const RESULTS_ROOT: &str = "stado://probierz/results/";
 /// The kind a fleet run's evidence is retained as. The objects under
 /// `results/` are the archives and logs of dispatched runs, written flat and
-/// not attributed to an application, so they are kept for the adhoc window —
-/// the one an application's manifest declares, or the product's own default
-/// when no application is named.
+/// not attributed to an application, so they are kept for the adhoc window
+/// the named application's manifest declares.
 const DEFAULT_KIND: &str = "adhoc";
-/// What `retention_days` falls back to when a manifest declares nothing.
-const DEFAULT_RETENTION_DAYS: f64 = 14.0;
 const SECONDS_PER_DAY: i64 = 86_400;
 
 /// One object in the fleet store, as retention sees it.
@@ -75,7 +73,12 @@ fn read_objects() -> Result<Vec<FleetObject>, Failure> {
     Ok(objects)
 }
 
-pub fn fleet_retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: bool) -> Answer {
+pub fn fleet_retention(
+    harness: &Path,
+    app_id: Option<&str>,
+    at: Option<&str>,
+    apply: bool,
+) -> Answer {
     let at = match at {
         Some(value) => DateTime::parse_from_rfc3339(value)
             .map_err(|_| Failure::invalid("evidence.fleet_retention", "invalid retention time"))?
@@ -87,7 +90,7 @@ pub fn fleet_retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, a
             let application = manifest::load(harness, app)?;
             retention_days(&yaml_json(&application.document)?, DEFAULT_KIND)?
         }
-        None => DEFAULT_RETENTION_DAYS,
+        None => None,
     };
     let objects = read_objects()?;
     let mut items = Vec::new();
@@ -96,8 +99,8 @@ pub fn fleet_retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, a
     let mut undated = 0i64;
     let mut removed = 0i64;
     for object in &objects {
-        let expired = match object.modified {
-            Some(modified) if days > 0.0 => {
+        let expired = match (object.modified, days) {
+            (Some(modified), Some(days)) => {
                 (at - modified).num_seconds() as f64 > days * SECONDS_PER_DAY as f64
             }
             _ => false,
