@@ -41,6 +41,16 @@ These are partial review records, not proof that the entire assignment list has 
 | brama | `DEFAULT_TTL_SECONDS = 900`; `BRAMA_MODEL_CATALOG_TTL_SECONDS` or the process lifetime | e14e614b |
 | brama | `DEFAULT_WORKLOAD_UID/GID = 10001`; the caller's account | e14e614b |
 | brama | refresh margin, plan-usage jitter, HMAC window, grant lifetime/uses/rate: need the operator's value | Oko defect 39fa606b |
+| weles | `MAX_EDGE_TEXT = 240`, `MAX_WITHHELD_EDGES = 2048` (two copies), `MAX_EDGE_LINE_BYTES = 4096`, 2 MiB ledger cap | fcbffbec |
+| weles | MCP `EVENT_LIMIT = 500`; events are kept until read | fcbffbec |
+| weles | `MAX_PAGE_DETAIL_CHARS = 400`, `DEFAULT_LIST_LIMIT = 20` | fcbffbec |
+| weles | burned-proxy and capability `CACHE_TTL_MS = 60000` | fcbffbec |
+| weles | `STDOUT_RING_CAP = 50000`; capture is per live session | fcbffbec |
+| weles | `VISION_MAX_OUTPUT_TOKENS = 4096` | fcbffbec |
+| weles | `QUOTED_BODY_CHARS = 300`, action and account-id length quantifiers | fcbffbec |
+| weles | `RUN_OUTPUT_DEPTH = 3`, `RUN_OUTPUT_MAX_BYTES` | fcbffbec |
+| weles | `CONTROL_LIMIT = 4096` is Skarbiec's broker control-line bound (PROTOCOL, as in brama) | — |
+| weles | admission, page-route, records-route, signup, Apple-expiry, vision-geometry, proxy-rate and trajectory poll values | Oko defect 30817d3d |
 
 ## The 10 000-file cleanup cap
 
