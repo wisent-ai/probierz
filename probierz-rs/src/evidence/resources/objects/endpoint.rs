@@ -30,12 +30,35 @@ pub(crate) fn loopback(host: &str) -> bool {
     }
 }
 
-/// The loopback Stado API every fleet host serves; a host runs its own object
-/// store behind it.
-const LOCAL_STADO_API: &str = "http://127.0.0.1:18776";
-/// Where the fleet keeps this product's object-store token.
-const OBJECT_API_ITEM: &str = "probierz-object-api";
+/// Where Stado's service directory writes the object API address this
+/// machine dials. No address is built in: the object API's port is the
+/// host's own declaration, and a guessed one reaches whatever listens there.
+const OBJECT_API_MARKER: &str = ".stado/forwards/stado-object-api.local";
+/// The vault role whose item holds this product's object-store token.
+const OBJECT_API_ROLE: &str = "probierz-object-api";
 const OBJECT_API_FIELD: &str = "token";
+
+/// The object API address `STADO_API_URL` names, else the one Stado's
+/// service directory published for this machine.
+fn object_api_url() -> Result<String, Failure> {
+    let declared = std::env::var("STADO_API_URL").unwrap_or_default();
+    if !declared.is_empty() {
+        return Ok(declared);
+    }
+    let home = std::env::var("HOME").unwrap_or_default();
+    let marker = std::path::Path::new(&home).join(OBJECT_API_MARKER);
+    let published = std::fs::read_to_string(&marker).map_err(|error| {
+        Failure::config(
+            "objects.config",
+            format!(
+                "no object API address: STADO_API_URL is unset and {} cannot be read ({error}); \
+                 set STADO_API_URL or let `stado service directory publish` write it",
+                marker.display()
+            ),
+        )
+    })?;
+    Ok(published.trim().to_string())
+}
 
 /// Read the object-store token the fleet holds for Probierz.
 ///
@@ -43,14 +66,15 @@ const OBJECT_API_FIELD: &str = "token";
 /// same command from a terminal is not, and every such run used to be
 /// refused with `STADO_API_TOKEN is required for remote object storage` — a
 /// sentence about a variable rather than about the credential the fleet
-/// already holds for this product. Reading it through Stado is the path
-/// every other Probierz call to the fleet takes.
+/// already holds for this product. It is read through Stado by the role its
+/// item plays, so no item is named.
 fn token_from_vault() -> Result<String, Failure> {
     let output = std::process::Command::new(crate::stado::STADO_BIN)
         .args([
             "credentials",
             "get",
-            OBJECT_API_ITEM,
+            "--role",
+            OBJECT_API_ROLE,
             "--field",
             OBJECT_API_FIELD,
         ])
@@ -59,7 +83,7 @@ fn token_from_vault() -> Result<String, Failure> {
             Failure::config(
                 "objects.config",
                 format!(
-                    "cannot run {} to read {OBJECT_API_ITEM}: {error}",
+                    "cannot run {} to read role {OBJECT_API_ROLE}: {error}",
                     crate::stado::STADO_BIN
                 ),
             )
@@ -68,7 +92,7 @@ fn token_from_vault() -> Result<String, Failure> {
         return Err(Failure::config(
             "objects.config",
             format!(
-                "Stado refused to read {OBJECT_API_ITEM} field {OBJECT_API_FIELD}: {}",
+                "Stado refused to read role {OBJECT_API_ROLE} field {OBJECT_API_FIELD}: {}",
                 String::from_utf8_lossy(&output.stderr).trim()
             ),
         ));
@@ -77,18 +101,15 @@ fn token_from_vault() -> Result<String, Failure> {
     if token.is_empty() {
         return Err(Failure::config(
             "objects.config",
-            format!("{OBJECT_API_ITEM} field {OBJECT_API_FIELD} holds nothing in the vault"),
+            format!("the item playing role {OBJECT_API_ROLE} holds nothing in {OBJECT_API_FIELD}"),
         ));
     }
     Ok(token)
 }
 
 pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
-    let mut raw = std::env::var("STADO_API_URL").unwrap_or_default();
+    let raw = object_api_url()?;
     let mut token = std::env::var("STADO_API_TOKEN").unwrap_or_default();
-    if raw.is_empty() {
-        raw = LOCAL_STADO_API.to_string();
-    }
     if token.is_empty() {
         token = token_from_vault()?;
     }
