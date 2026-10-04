@@ -91,6 +91,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | probierz | grading budgets, router wait, source bounds, benchmark and Desktop values | Oko defect 344dc59b |
 | brama | Brama Desktop `maximumErrorExcerptBytes = 4096`, `listedModels = 8`, `maximumIdentifierCharacters = 128` | brama-desktop f3fc3f6e |
 | brama | Brama Desktop thresholds, history, Stado wait, readiness bounds | Oko defect d8cafe10 |
+| needher-ai-web | non-JSON answers cut to 300 characters (CLI, generate route, pose worker) | 735cf60e |
 | needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
 | growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
