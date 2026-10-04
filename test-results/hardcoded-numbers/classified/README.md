@@ -70,10 +70,12 @@ Reading coverage is separate from repair, publication and real-product verificat
 | oko | autonomy, calendar, judge, goal, index, telemetry, suggestion and relay values | Oko defect ed9034ca |
 | jeden | `LOCAL_OUTPUT_MAX_LINES = 200`, `REFUSAL_EXCERPT_CHARS = 120` | 0c0287ac |
 | jeden | model router failures `take(800)` (completion and stream), non-JSON answer `take(200)`, lifecycle answer `take(200)`, outbox `bound_error` 512 | 4831694c |
+| jeden-desktop | invalid RPC frame shown by `line.prefix(500)` | c36c04bd |
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
 | lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
+| lem | agent answer `prefix(12000)` (Codex, run, streaming), Weles queue and poll failures `prefix(500)` | 9a6fa882 |
 | lem | model budgets, harvest bounds, generation defaults, backend port | Oko defect 68645422 |
 | glina | Glina Desktop `tail(maxCharacters: 400)` | glina-desktop a5795125 |
 | glina | preview, render, tessellation and generation values | Oko defect 0df1bf55 |
@@ -93,6 +95,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | probierz | figure `ERROR_EXCERPT = 500`, `RENDER_FAILURE_EXCERPT = 4_000`, `benchmark list --limit` default 20 | 060be337 |
 | probierz | grading budgets, router wait, source bounds, benchmark and Desktop values | Oko defect 344dc59b |
 | brama | Brama Desktop `maximumErrorExcerptBytes = 4096`, `listedModels = 8`, `maximumIdentifierCharacters = 128` | brama-desktop f3fc3f6e |
+| brama | Brama Desktop service discovery reason `prefix(200)` | brama-desktop b0f0a33a |
 | brama | Brama Desktop thresholds, history, Stado wait, readiness bounds | Oko defect d8cafe10 |
 | needher-ai-web | non-JSON answers cut to 300 characters (CLI, generate route, pose worker) | 735cf60e |
 | needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
