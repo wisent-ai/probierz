@@ -169,6 +169,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | compute.wisent.com | prices, hardware, ports, security parameters, cadences | Oko defect 5a051a49 |
 | codespy | `SHOWN_LINE_CHARS = 80` | a39e9439 |
 | codespy | scoring weights, file-size ceiling | Oko defect fa8f1c10 |
+| people-rotator | `sanitizeId(value, maxLength = 48)` and idempotency keys cut to 128 | bddce0e9 |
 | echo | `DEFAULT_LIMIT = 200`, `MAX_LOGS = 5000`, `MAX_ERRORS = 10`, `MAX_CHAT_EVENTS = 5000` (every read now pages to the exact count) | fbabc0b0; docs echo-landing f9741bed |
 | echo-desktop | `maximumEntries = 10_000`, `defaultLimit = 200`, `maxLogs`, `maxErrorsPerKey`, `maxChatEvents`, `errorBodyPrefix = 500` | aa77397f |
 | echo, echo-web, echo-desktop | windows, onboarding caps, durations, tolerance, volumes | Oko defect dc2e1d6e |
