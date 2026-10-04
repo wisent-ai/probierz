@@ -26,12 +26,10 @@ use super::scout::identity;
 use policy::{adopted_this_week, append};
 use crate::failure::{now_iso, print_json, Answer, Failure};
 use crate::stado::{shell_quote, STADO_BIN};
+use sha2::Digest as _;
 
 const POINT: &str = "benchmark.autonomy";
 const TRENDS: &str = "trends";
-/// The one schedule of the loop, as the UUID Stado takes for a schedule's
-/// creation identity; `stado schedule edit` changes it.
-const SCHEDULE_ID: &str = "210a30e9-d31a-48a1-9d24-aa7c3653bff4";
 
 /// Topics a cycle report shows Trends accepted.
 fn watched_ok(report: &Json) -> usize {
@@ -295,8 +293,44 @@ pub(crate) fn schedule(
     if let Some(file) = policy_file {
         command.push_str(&format!(" --policy {}", shell_quote(file)));
     }
+    // A job pinned to a host but not to its provider waits in the queue for a
+    // machine type no fleet host offers; the registry names the host's kind,
+    // which is the provider its agent claims for.
+    let mut kind = Command::new(STADO_BIN);
+    kind.args(["registry", "pull", "--path", &format!("targets.{host}.kind")]);
+    let provider = String::from_utf8_lossy(&catalog::stado(&mut kind)?).trim().to_string();
+    // The creation identity is the declaration's own digest: the same inputs
+    // are the same schedule, so running this again changes nothing, and Stado
+    // keeps a removed schedule's identity, so new inputs need a new one.
+    let declaration = json!({"cron": cron, "host": host, "provider": provider, "secrets": secrets, "command": command});
+    let digest = sha2::Sha256::digest(declaration.to_string().as_bytes());
+    let hex: String = digest[..16].iter().map(|byte| format!("{byte:02x}")).collect();
+    let id = format!("{}-{}-{}-{}-{}", &hex[..8], &hex[8..12], &hex[12..16], &hex[16..20], &hex[20..]);
+    let mut list = Command::new(STADO_BIN);
+    list.args(["schedule", "list", "--json"]);
+    let schedules: Json = serde_json::from_slice(&catalog::stado(&mut list)?)
+        .map_err(|error| Failure::config(POINT, format!("stado schedule list answered no JSON: {error}")))?;
+    let ours = format!("sch-{}", hex);
+    let others: Vec<String> = schedules
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| row["deleted"] != true && row["schedule_id"] != ours.as_str())
+        .filter(|row| row["command"].as_str().is_some_and(|line| line.contains(" probierz benchmark cycle")))
+        .filter_map(|row| row["schedule_id"].as_str().map(str::to_string))
+        .collect();
+    if !others.is_empty() {
+        return Err(Failure::invalid(
+            POINT,
+            format!(
+                "the loop already runs under schedule(s) {}; one loop runs at a time, so stado schedule rm removes the old one first",
+                others.join(", ")
+            ),
+        ));
+    }
     let mut create = Command::new(STADO_BIN);
-    create.args(["schedule", "create", "--id", SCHEDULE_ID, "--json", "--cron", cron, "--pinned-host", host]);
+    create.args(["schedule", "create", "--id", id.as_str(), "--json", "--cron", cron, "--pinned-host", host]);
+    create.args(["--provider", provider.as_str(), "--pin-provider"]);
     for secret in secrets {
         create.arg("--secret-env").arg(secret);
     }
@@ -304,10 +338,9 @@ pub(crate) fn schedule(
     let created: Json = serde_json::from_slice(&catalog::stado(&mut create)?).map_err(|error| {
         Failure::config(POINT, format!("stado schedule create answered no JSON: {error}"))
     })?;
-    let id = created["schedule_id"].as_str().unwrap_or(SCHEDULE_ID).to_string();
     print_json(&json!({
         "schedule": created,
         "command": command,
-        "next": format!("stado schedule show {id} reads it; stado schedule run {id} --retry-token <TOKEN> runs it now; stado schedule edit {id} changes it"),
+        "next": format!("stado schedule show {ours} reads it; stado schedule run {ours} --retry-token <TOKEN> runs it now; stado schedule edit {ours} changes it"),
     }))
 }
