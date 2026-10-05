@@ -132,6 +132,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | transcript-label-trainer | Brama output budgets 64, 900, 256, 96 and the 192-1024 teacher clamp | bb646d0 |
 | transcript-label-trainer | GUI upload `MAX_UPLOAD_BYTES = 16 MiB`, walkthrough `--limit 5`, `MAX_STEPS = 128` (now a visited-screen check) | 2820c79 |
 | transcript-label-trainer | humanizer `PREPARE_WORKERS = 16`, `AUDIT_WORKERS = 8`, `ATTEMPTS = 4`; now required `--workers`/`--attempts` | 28ad2a0 |
+| transcript-label-trainer | goal `WORKERS = 24`, `AUDIT_WORKERS = 4`, lifecycle `WORKERS = 16`; now required `--workers`/`--audit-workers` | 90f20e7 |
 | transcript-label-trainer | answer budgets, discovery sampling, concurrency, training and evaluation settings | Oko defect 9e410b04 |
 | trading-autonomy | comment `maxDepth = 4`, proxy `maxMessageLength = 10000` and last 20 messages, feed `MAX_ENTRIES_PER_AGENT = 3` | bb6b65da |
 | trading-autonomy | cadences, balances, slippage, spend ceilings, windows, priors, estimates, ports | Oko defect 3bd83977 |
