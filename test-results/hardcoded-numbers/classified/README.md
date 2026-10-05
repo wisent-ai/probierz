@@ -182,7 +182,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-terminal-session-recovery | relaunch and cadence policy | Oko defect e38ba4df |
 | wisent-marketing-asset-generator | Brama refusal `snippet` cut at 157 characters | 3c9f65a3 |
 | wisent-logo-generator, wisent-marketing-asset-generator | handcrafted quality scores, thresholds, input limits | Oko defect 464366bb |
-| wisent-uncensored-model | training reward settings | Oko defect 1686ea15 |
+| wisent-uncensored-model | reward tag/format/length/detection weights, detector failure scored 0.0, LoRA and GRPO settings; Python rewritten in Rust over `ster tune grpo` (reward in a required configuration, Ster settings passed by the caller) | bf11258 |
 | wisent-model | answer without JSON quoted by `take(200)` | 404c7c72 |
 | wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
 | wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
