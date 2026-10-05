@@ -1,9 +1,7 @@
-//! The failure intake envelope: its failure point, codes and meaning, the bounded JSON line it becomes, and the store it is appended to.
+//! The failure intake envelope: its failure point, codes and meaning, the JSON line it becomes, and the store it is appended to.
 
 use crate::status::*;
 
-pub(crate) const MAX_LINE_BYTES: usize = 64 * 1024;
-pub(crate) const MAX_FILE_BYTES: usize = 10 * 1024 * 1024;
 pub(crate) const ERROR_CODES: [&str; 7] = [
     "config",
     "auth",
@@ -107,94 +105,28 @@ pub(crate) fn authorized(header: Option<&str>, token: &str) -> bool {
         == 0
 }
 
-pub(crate) fn bounded_line(envelope: &Value) -> Result<String, Failure> {
+/// The envelope as one stored JSON line, stamped with when it arrived. Nothing is dropped
+/// to fit a size: the context, cause and detail a service reported are kept whole.
+pub(crate) fn stored_line(envelope: &Value) -> Result<String, Failure> {
     let mut stored = envelope.clone();
     stored
         .as_object_mut()
         .ok_or_else(|| Failure::invalid("intake.envelope", "body is not a JSON object"))?
         .insert("received_at".to_string(), Value::String(now()));
-    let mut line = serde_json::to_string(&stored)?;
-    if line.len() <= MAX_LINE_BYTES {
-        return Ok(line);
-    }
-    let Some(object) = stored.as_object_mut() else {
-        return Err(Failure::invalid(
-            "intake.envelope",
-            "body is not a JSON object",
-        ));
-    };
-    object.remove("context");
-    line = serde_json::to_string(&stored)?;
-    if line.len() <= MAX_LINE_BYTES {
-        return Ok(line);
-    }
-    let Some(object) = stored.as_object_mut() else {
-        return Err(Failure::invalid(
-            "intake.envelope",
-            "body is not a JSON object",
-        ));
-    };
-    object.remove("cause");
-    let mut detail = stored
-        .get("detail")
-        .map(Value::to_string)
-        .unwrap_or_default();
-    if let Some(value) = stored.get("detail").and_then(Value::as_str) {
-        detail = value.to_string();
-    }
-    while !detail.is_empty() {
-        let Some(object) = stored.as_object_mut() else {
-            return Err(Failure::invalid(
-                "intake.envelope",
-                "body is not a JSON object",
-            ));
-        };
-        object.insert("detail".to_string(), Value::String(detail.clone()));
-        line = serde_json::to_string(&stored)?;
-        if line.len() <= MAX_LINE_BYTES {
-            return Ok(line);
-        }
-        detail = detail.chars().take(detail.chars().count() / 2).collect();
-        detail = detail.trim().to_string();
-    }
-    let Some(object) = stored.as_object_mut() else {
-        return Err(Failure::invalid(
-            "intake.envelope",
-            "body is not a JSON object",
-        ));
-    };
-    object.insert("detail".to_string(), Value::Null);
     Ok(serde_json::to_string(&stored)?)
 }
 
-pub(crate) fn rotate_if_needed(file: &Path, incoming_bytes: usize) -> Result<(), Failure> {
-    let Ok(metadata) = fs::metadata(file) else {
-        return Ok(());
-    };
-    if metadata.len() as usize + incoming_bytes <= MAX_FILE_BYTES {
-        return Ok(());
-    }
-    let content = fs::read(file)?;
-    let keep_from = content.len().saturating_sub(MAX_FILE_BYTES / 2);
-    let kept = content[keep_from..]
-        .iter()
-        .position(|byte| *byte == b'\n')
-        .map(|offset| content[(keep_from + offset + 1)..].to_vec())
-        .unwrap_or_default();
-    fs::write(file, kept)?;
-    Ok(())
-}
-
+/// Append the envelope to its service's failure file. Every failure is kept: the file is not
+/// rotated or halved at a size chosen here.
 pub(crate) fn store_envelope(envelope: &Value) -> Result<(), Failure> {
     let directory = failures_dir();
     fs::create_dir_all(&directory)?;
-    let line = bounded_line(envelope)?;
+    let line = stored_line(envelope)?;
     let service = envelope
         .get("service")
         .and_then(Value::as_str)
         .unwrap_or("");
     let file = directory.join(service_file_name(service));
-    rotate_if_needed(&file, line.len() + 1)?;
     let mut output = OpenOptions::new().create(true).append(true).open(file)?;
     output.write_all(line.as_bytes())?;
     output.write_all(b"\n")?;

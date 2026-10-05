@@ -124,15 +124,6 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
         if let Some(index) = received.windows(4).position(|window| window == b"\r\n\r\n") {
             break index + 4;
         }
-        if received.len() > MAX_LINE_BYTES + 16 * 1024 {
-            failure_response(
-                &mut stream,
-                400,
-                "unknown",
-                &format!("body exceeds the {MAX_LINE_BYTES}-byte line cap"),
-            )?;
-            return Ok(());
-        }
     };
     let headers = String::from_utf8_lossy(&received[..header_end]);
     let mut lines = headers.split("\r\n");
@@ -165,30 +156,12 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
         failure_response(&mut stream, 401, "auth", "missing or wrong bearer token")?;
         return Ok(());
     }
-    if content_length > MAX_LINE_BYTES {
-        failure_response(
-            &mut stream,
-            400,
-            "unknown",
-            &format!("body exceeds the {MAX_LINE_BYTES}-byte line cap"),
-        )?;
-        return Ok(());
-    }
     while received.len().saturating_sub(header_end) < content_length {
         let count = stream.read(&mut chunk)?;
         if count == 0 {
             break;
         }
         received.extend_from_slice(&chunk[..count]);
-        if received.len().saturating_sub(header_end) > MAX_LINE_BYTES {
-            failure_response(
-                &mut stream,
-                400,
-                "unknown",
-                &format!("body exceeds the {MAX_LINE_BYTES}-byte line cap"),
-            )?;
-            return Ok(());
-        }
     }
     let body_bytes = &received[header_end..received.len().min(header_end + content_length)];
     let body: Value = match serde_json::from_slice(body_bytes) {
