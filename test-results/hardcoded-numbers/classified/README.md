@@ -138,6 +138,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | transcript-label-trainer | discovery `CHUNK_SESSIONS = 5`; now every session in one teacher call, halved on Brama's `context_length_exceeded` | 0b29411 |
 | transcript-label-trainer | `TEXT_CAP = 12,000` session characters; now the whole session, recorded as `session_text: whole` in each artifact | 670b5bb |
 | transcript-label-trainer | humanizer progress lines every 50 / 25 rows; now one line per finished row | 63b0929 |
+| transcript-label-trainer | GGUF host evaluator: readiness 180 x 0.5 s, request wait 120 s, 3 attempts with 1<<n s backoff, 20/10 s shutdown, `max_tokens` 96, slots 8 / context 4096 / GPU layers 99, progress every 25, finish precision 0.0 when unmeasured; Python rewritten in Rust (`lifecycle-evaluate-gguf`, settings required) | 1c5bbb0 |
 | transcript-label-trainer | answer budgets, discovery sampling, concurrency, training and evaluation settings | Oko defect 9e410b04 |
 | trading-autonomy | comment `maxDepth = 4`, proxy `maxMessageLength = 10000` and last 20 messages, feed `MAX_ENTRIES_PER_AGENT = 3` | bb6b65da |
 | trading-autonomy | cadences, balances, slippage, spend ceilings, windows, priors, estimates, ports | Oko defect 3bd83977 |
