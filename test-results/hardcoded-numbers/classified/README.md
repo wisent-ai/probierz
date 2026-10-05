@@ -94,6 +94,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
 | skrzynka | Skrzynka Desktop `replyBatchSize = 6` (now `URLSessionConfiguration.ephemeral.httpMaximumConnectionsPerHost`) | skrzynka-desktop 42dc9b5f |
 | skrzynka | raw message 2 MiB skip, Skarbiec output 2 MiB, body 256 KiB, subject 500, idempotency key 200, display name 200, item id 256, OAuth code 4096, app password 4 KiB | 98a68aa |
+| skrzynka | `MAX_MESSAGES_PER_SYNC = 200` and `has_more`; every message past the cursor, one commit each | 5f5c4e5 |
 | skrzynka | poll, OAuth, sync, send bounds, token margin, Desktop wait | Oko defect 9d9bef81 |
 | ster | Brama refusal `BODY_EXCERPT = 240` | b8cedf58 |
 | ster | training, synthesis, calibration and quality defaults | Oko defect 20f71342 |
