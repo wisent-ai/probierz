@@ -176,7 +176,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-landing-new | blog page size; archived wisent-landing waits, zones, HSTS | Oko defect 326fb734 |
 | wisent-supabase-oko | `SUPERSEDED_SUBSCRIPTION_LIMIT = 100` (Stripe list now paged to the end) | bab7687b |
 | wisent-supabase-oko | push alert cut, seats, checkout, model settings, email bounds | Oko defect d181d72b |
-| wisent-tour-bridge | `SKIPPED_TEXT_HEAD = 60` (Python; edit refused), waits, skew | Oko defect 93b7a6c9 |
+| wisent-tour-bridge | `SKIPPED_TEXT_HEAD = 60`, location cut 160, waits 10/120/30 s, skew 300 s (now `TOUR_BRIDGE_MAX_SKEW_SECONDS`); Python rewritten in Rust | 47854dc |
 | wisent-extractors | dataset waits, item cap, guessed answers, zero fallbacks | Oko defect dc9f2900 |
 | wisent-optimizer | sentinels, split, bounds, zero results | Oko defect 8ed86ace |
 | wisent-terminal-session-recovery | relaunch and cadence policy | Oko defect e38ba4df |
