@@ -97,6 +97,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skrzynka | `MAX_MESSAGES_PER_SYNC = 200` and `has_more`; every message past the cursor, one commit each | 5f5c4e5 |
 | skrzynka | poll, OAuth, sync, send bounds, token margin, Desktop wait | Oko defect 9d9bef81 |
 | ster | Brama refusal `BODY_EXCERPT = 240` | b8cedf58 |
+| ster | diversity `DEFAULT_MAX_SAMPLE = 256` and its seed; every text is measured | 246860dbc |
 | ster | training, synthesis, calibration and quality defaults | Oko defect 20f71342 |
 | landings | `TITLE_LENGTH_LIMIT = 65` in landing-cli's template and 14 generated landings | landing-cli d77ee59b |
 | echo-web | windows, list caps, generation defaults, money tolerances, alert floors | Oko defect 9c257cee |
