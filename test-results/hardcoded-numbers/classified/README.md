@@ -93,6 +93,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skrzynka | `message list`/`outbound` `--limit` default 100 and the silent clamp to 1-500 (CLI and API) | a5981f8b |
 | skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
 | skrzynka | Skrzynka Desktop `replyBatchSize = 6` (now `URLSessionConfiguration.ephemeral.httpMaximumConnectionsPerHost`) | skrzynka-desktop 42dc9b5f |
+| skrzynka | raw message 2 MiB skip, Skarbiec output 2 MiB, body 256 KiB, subject 500, idempotency key 200, display name 200, item id 256, OAuth code 4096, app password 4 KiB | 98a68aa |
 | skrzynka | poll, OAuth, sync, send bounds, token margin, Desktop wait | Oko defect 9d9bef81 |
 | ster | Brama refusal `BODY_EXCERPT = 240` | b8cedf58 |
 | ster | training, synthesis, calibration and quality defaults | Oko defect 20f71342 |
@@ -113,6 +114,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | needher-ai-web | run sheet queued prompts `slice(0, 3)` | 5bfb5e02 |
 | needher-ai-web | credits, feed caps, ranking and bandit policy, render values | Oko defect 99fbac2e |
 | growth-tactics | prices in code, cost recorded as zero, waits, media and result values | Oko defect 62ba6752 |
+| potyczka | `PROJ_CAPACITY = 200`; the line buffer grows to the segments in flight | e414b85 |
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
 | wisent-app | web analytics `MAX_QUEUE_SIZE = 100` | 09bbc1b5 |
 | wisent-app | IBKR and Tavily failure bodies cut to 300 and 400 | 3316156e |
