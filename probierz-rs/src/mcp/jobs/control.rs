@@ -179,11 +179,6 @@ impl Control {
         if !metadata.is_file() || metadata.file_type().is_symlink() {
             return Err(format!("artifact is not a file: {relative}"));
         }
-        if metadata.len() > MAX_ARTIFACT_BYTES {
-            return Err(format!(
-                "artifact exceeds {MAX_ARTIFACT_BYTES} byte inline limit"
-            ));
-        }
         let file = fs::canonicalize(&lexical).map_err(|error| error.to_string())?;
         if file != root && !file.starts_with(&root) {
             return Err("artifact path escapes the run directory".to_string());
