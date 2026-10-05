@@ -1,11 +1,12 @@
-//! Asking a vision model to score the candidate against the reference,
-//! and turning its one tool call into scores.
+//! Asking a vision model to judge the candidate against the reference,
+//! and turning its one tool call into criterion blockers.
 //!
 //! The model is shown both renders and the geometry measured from them,
-//! and must answer with exactly one `record_figure_evaluation` call.
-//! More than one call is an error rather than a choice, and a missing
-//! summary or an unscored dimension is an error too — a figure
-//! evaluation with a hole in it is not evidence.
+//! and must answer with exactly one `record_figure_evaluation` call that
+//! says, for every rubric dimension, whether its criterion is met. More
+//! than one call is an error rather than a choice, and a missing summary
+//! or an unjudged dimension is an error too — a figure evaluation with a
+//! hole in it is not evidence.
 
 use super::*;
 
@@ -21,20 +22,16 @@ const TEMPERATURE: u64 = 0;
 /// report records the one attempt it made.
 const ATTEMPTS: u64 = 1;
 
-/// Scores are reported to four decimal places.
-const SCORE_SCALE: f64 = 10_000.0;
-
 /// HTTP statuses the router may answer with and still have produced an
 /// evaluation.
 const ROUTER_OK: std::ops::Range<u16> = 200..300;
 
-/// What the model said, and what its scores add up to.
+/// What the model said, and which criteria it found unmet.
 pub(crate) struct Graded {
     pub(crate) evaluation: JsonValue,
     pub(crate) model: JsonValue,
-    pub(crate) overall: f64,
-    /// Blockers from the thresholds in the rubric.
-    pub(crate) threshold_blockers: Vec<JsonValue>,
+    /// One blocker per rubric dimension the model judged unmet.
+    pub(crate) criterion_blockers: Vec<JsonValue>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -85,7 +82,7 @@ pub(crate) fn grade_figure(
     }
 
     let evaluation = evaluation_from(&payload)?;
-    let (overall, threshold_blockers) = scores(rubric, &evaluation)?;
+    let criterion_blockers = unmet(rubric, &evaluation)?;
     Ok(Graded {
         model: json!({
             "name": payload.get("model").and_then(JsonValue::as_str).unwrap_or(&router.model),
@@ -93,8 +90,7 @@ pub(crate) fn grade_figure(
             "attempts": ATTEMPTS
         }),
         evaluation,
-        overall,
-        threshold_blockers,
+        criterion_blockers,
     })
 }
 
@@ -224,39 +220,39 @@ fn evaluation_from(payload: &JsonValue) -> Result<JsonValue, Failure> {
     Ok(evaluation)
 }
 
-/// The weighted overall score, and one blocker per dimension that came
-/// in under its declared minimum.
-fn scores(rubric: &JsonValue, evaluation: &JsonValue) -> Result<(f64, Vec<JsonValue>), Failure> {
-    let mut threshold = Vec::new();
-    let mut overall = 0.0;
-    for (name, rule) in rubric["dimensions"].as_object().into_iter().flatten() {
-        let score = evaluation["dimensions"][name]["score"]
-            .as_f64()
-            .ok_or_else(|| {
-                Failure::config(
-                    "figure-evaluate.model",
-                    format!("figure model {name}.score is invalid"),
-                )
-            })?;
-        let weight = rule["weight"].as_f64().unwrap_or(0.0);
-        let minimum = rule["minimum"].as_f64().unwrap_or(0.0);
-        overall += score * weight;
-        if score < minimum {
-            threshold.push(json!({
-                "code": format!("dimension_below_minimum:{name}"),
+/// One blocker per rubric dimension the model judged unmet, carrying the
+/// issues it named.
+fn unmet(rubric: &JsonValue, evaluation: &JsonValue) -> Result<Vec<JsonValue>, Failure> {
+    let mut blockers = Vec::new();
+    for name in rubric["dimensions"]
+        .as_object()
+        .into_iter()
+        .flat_map(Map::keys)
+    {
+        let judged = &evaluation["dimensions"][name];
+        let met = judged["met"].as_bool().ok_or_else(|| {
+            Failure::config(
+                "figure-evaluate.model",
+                format!("figure model {name}.met is missing or not a boolean"),
+            )
+        })?;
+        if !met {
+            let issues: Vec<&str> = judged["issues"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(JsonValue::as_str)
+                .collect();
+            blockers.push(json!({
+                "code": format!("criterion_unmet:{name}"),
                 "artifact": "comparison",
-                "evidence": format!("{score:.3} < {minimum:.3}")
+                "evidence": if issues.is_empty() {
+                    "the model judged this criterion unmet and named no issue".to_string()
+                } else {
+                    issues.join("; ")
+                }
             }));
         }
     }
-    let overall = (overall * SCORE_SCALE).round() / SCORE_SCALE;
-    let overall_minimum = rubric["overallMinimum"].as_f64().unwrap_or(0.0);
-    if overall < overall_minimum {
-        threshold.push(json!({
-            "code": "overall_below_minimum",
-            "artifact": "comparison",
-            "evidence": format!("{overall:.3} < {overall_minimum:.3}")
-        }));
-    }
-    Ok((overall, threshold))
+    Ok(blockers)
 }

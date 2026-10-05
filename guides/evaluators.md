@@ -17,13 +17,20 @@ probierz figure-evaluate \
 ```
 
 `--reference` and `--candidate` accept SVG, TeX, PDF, PNG, JPEG, or WebP.
-`--rubric <json>` replaces the built-in scientific-figure rubric; its positive
-weights must total 1 and every score threshold must be between 0 and 1.
+`--rubric <json>` replaces the built-in scientific-figure rubric: a `name` and
+`dimensions`, each with a `criterion` sentence. The vision model judges every
+dimension met or not met, with evidence and the issues it found; there are no
+weights, per-dimension minimums or overall score, and a rubric that still
+carries `weight`, `minimum` or `overallMinimum` is refused naming the field.
 `--model` overrides `PROBIERZ_FIGURE_VISION_MODEL`. Exit status is 0 only when
-there are no deterministic, model, dimension-threshold, or overall-threshold
-blockers. The JSON report records both input and render SHA-256 identities,
-model usage, dimension evidence, the weighted score, and the complete blocker
-list; two PNG renders are written beside it.
+there are no deterministic or model blockers and every criterion is met; each
+unmet criterion is a `criterion_unmet:<dimension>` blocker carrying the issues
+the model named. The one deterministic blocker is content that reaches a canvas
+edge (`<artifact>_content_at_canvas_edge`); render size and the aspect-ratio
+drift between the two renders are reported to the model and in the report, not
+held to a chosen bar. The JSON report records both input and render SHA-256
+identities, model usage, dimension evidence and the complete blocker list; two
+PNG renders are written beside it.
 
 Process integrations may provide the router base with `--router-url` and send
 the scoped bearer over standard input with `--router-token-stdin`. This avoids

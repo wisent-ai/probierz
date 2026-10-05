@@ -84,7 +84,6 @@ pub(crate) fn unrenderable_candidate_report(
         "verdict".to_string(),
         json!({
             "pass": false,
-            "overall": 0,
             "blockers": [{
                 "code": "candidate_render_failed",
                 "artifact": "candidate",
@@ -118,7 +117,7 @@ pub(crate) fn graded_report(
             .cloned()
             .unwrap_or_default(),
     );
-    blockers.extend(graded.threshold_blockers);
+    blockers.extend(graded.criterion_blockers);
 
     fs::copy(renders.reference, &destination.reference_output)?;
     fs::copy(renders.candidate, &destination.candidate_output)?;
@@ -139,7 +138,6 @@ pub(crate) fn graded_report(
         "verdict".to_string(),
         json!({
             "pass": blockers.is_empty(),
-            "overall": graded.overall,
             "blockers": blockers
         }),
     );
