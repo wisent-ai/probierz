@@ -90,6 +90,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | skarbiec | Skarbiec Desktop journal facets `operations.prefix(8)`, `consumers.prefix(6)` | skarbiec-desktop e8cc10e0 |
 | skarbiec | Skarbiec Desktop item kind and tag facets `rank(limit: 8)`/`rank(limit: 6)`, `activityGroupCount = 5` | skarbiec-desktop ef355a93 |
 | skarbiec | Skarbiec Hub name 128, display name 256, item id and reason 1024, PEM 8192, share 65536, audit depth 4 / string 1024 / array 32, source line 262144, server events-per-push cap, database error cut at 256 | skarbiec-hub 221d512 |
+| skarbiec | Skarbiec Hub `MAX_ALERT_DELIVERY_ATTEMPTS = 100` claims per delivery pass; now the pass drains every due entry | skarbiec-hub 40aacf8 |
 | skarbiec | lifetimes, input bounds, concurrency, import cap, Desktop waits and windows, Hub bounds | Oko defect cd6f092c |
 | skrzynka | `message list`/`outbound` `--limit` default 100 and the silent clamp to 1-500 (CLI and API) | a5981f8b |
 | skrzynka | Skrzynka Desktop `defaultListLimit = 300`, `maxListLimit = 500`, `responseCeiling` | skrzynka-desktop 3f4c6361 |
