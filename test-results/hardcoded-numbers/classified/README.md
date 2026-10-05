@@ -176,7 +176,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-landing | failure `MAX_DETAIL_CHARS = 300`, unused `visibleItemsCount = 3` | local 206166f, not pushed: repository archived on GitHub |
 | wisent-landing-new | blog page size; archived wisent-landing waits, zones, HSTS | Oko defect 326fb734 |
 | wisent-supabase-oko | `SUPERSEDED_SUBSCRIPTION_LIMIT = 100` (Stripe list now paged to the end) | bab7687b |
-| wisent-supabase-oko | push alert cut, seats, checkout, model settings, email bounds | Oko defect d181d72b |
+| wisent-supabase-oko | push alert cut, seats, checkout, model settings, email bounds | d181d72b: 11d8b3e (APNs full-JSON byte budget and grapheme-safe excerpts, declared billing quantities, database-owned email limit, complete integration errors, exact template readback, isolated real qualification sources); prior chat settings repair 8017ffb; canonical docs oko-landing@8e595a0. Source published only: no builds, tests, deployments or runtime/configuration changes were performed under the standing prohibition; real backend and graphical qualification remain blocked. |
 | wisent-tour-bridge | `SKIPPED_TEXT_HEAD = 60`, location cut 160, waits 10/120/30 s, skew 300 s (now `TOUR_BRIDGE_MAX_SKEW_SECONDS`); Python rewritten in Rust | 47854dc |
 | wisent-extractors | dataset waits, item cap, guessed answers, zero fallbacks | Oko defect dc9f2900 |
 | wisent-optimizer | sentinels, split, bounds, zero results | Oko defect 8ed86ace |
