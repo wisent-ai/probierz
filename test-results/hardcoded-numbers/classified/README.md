@@ -184,7 +184,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-logo-generator, wisent-marketing-asset-generator | handcrafted quality scores, thresholds, input limits | Oko defect 464366bb |
 | wisent-uncensored-model | reward tag/format/length/detection weights, detector failure scored 0.0, LoRA and GRPO settings; Python rewritten in Rust over `ster tune grpo` (reward in a required configuration, Ster settings passed by the caller) | bf11258 |
 | wisent-model | answer without JSON quoted by `take(200)` | 404c7c72 |
-| wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
+| wisent-model | generate defaults 5/1/4000/1.0, score weights 30/40/30 over 10 turns with missing content read as 0, story bounds 201/51/10/4000, two-message floor | c7d6ad8 |
 | wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
 | wisent-visuals | banner `lru_cache(maxsize=32)`, WebP quality 90 / method 6, request wait, chart legend `len(label) * 8`, fixed axis ticks; Python rewritten in Rust (sizes required, widths measured, ticks from data) | 751a456 |
 | wisent-cost-tracker | native spend and onboarding transport; unrounded charges, no SDK request deadline, complete paginated reads and error bodies, reusable installed-package/provider journeys | 04484e3; source only, unbuilt/unexecuted; obsolete onboarding Python deletion refused by zero-Python guard; Oko defect 38bd28c5 remains open |
