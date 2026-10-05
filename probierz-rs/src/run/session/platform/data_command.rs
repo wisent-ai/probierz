@@ -1,6 +1,6 @@
-use serde_json::json;
-use crate::run::*;
 use crate::run::report::identity::Mode600;
+use crate::run::*;
+use serde_json::json;
 pub(crate) fn run_data_command(
     harness: &Path,
     config: Option<&serde_yaml::Value>,
@@ -50,14 +50,17 @@ pub(crate) fn run_data_command(
             let trimmed = safe_err.trim();
             if trimmed.is_empty() {
                 match execution.status {
-                    Some(status) => format!("data command {} with no message", crate::failure::ended(&status)),
+                    Some(status) => format!(
+                        "data command {} with no message",
+                        crate::failure::ended(&status)
+                    ),
                     None => "data command never started".to_string(),
                 }
             } else {
                 trimmed.into()
             }
         });
-        return json!({ "ok": false, "error": tail_chars(&detail, TAIL), "exitCode": execution.status.and_then(|status| status.code()) });
+        return json!({ "ok": false, "error": detail, "exitCode": execution.status.and_then(|status| status.code()) });
     }
     let stdout_text = text(&execution.stdout);
     let lines: Vec<&str> = stdout_text
@@ -77,4 +80,3 @@ pub(crate) fn append_secure(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     options.create(true).append(true).mode_600();
     options.open(path)?.write_all(bytes)
 }
-

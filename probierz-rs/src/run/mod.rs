@@ -35,8 +35,6 @@ pub(crate) use url::Url;
 pub(crate) use crate::failure::{fail, now_iso, print_json, Answer, Failure};
 pub(crate) use crate::manifest;
 
-pub(crate) const TAIL: usize = 4000;
-
 mod drive;
 mod plan;
 pub(crate) mod report;

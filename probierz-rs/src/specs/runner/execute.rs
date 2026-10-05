@@ -45,7 +45,8 @@ pub fn execute(
         "duration": duration.as_millis(),
         "startedAt": iso_timestamp(started_at),
         "completedAt": at_iso(started_at, duration),
-        "error": error.as_deref().map(clip_row_error).map(Value::from).unwrap_or(Value::Null),
+        // The row's error whole: the expectation and what the application showed both stay.
+        "error": error.as_deref().map(Value::from).unwrap_or(Value::Null),
         "media": [],
         "owner": "application",
     });

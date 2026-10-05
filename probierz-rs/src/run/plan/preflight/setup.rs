@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn setup_steps(harness: &Path, name: &str) -> Result<Vec<SetupStep>, Failure> {
     let npm = SetupStep {
         name: "npm install (workspaces)".into(),
@@ -91,8 +91,8 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
         let exit_code = result.status.and_then(|status| status.code()).unwrap_or(-1);
         done.push(json!({ "step": step.name, "command": line, "ok": ok, "exitCode": exit_code }));
         if !ok {
-            let tail = tail_chars(&text(&result.stderr), 2000);
-            failure = Some((step.name, tail));
+            // The whole stderr; `stderrTail` keeps its wire name for existing readers.
+            failure = Some((step.name, text(&result.stderr)));
             break;
         }
     }
@@ -102,14 +102,13 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
     } else {
         json!({ "target": name, "ok": true, "steps": done })
     };
-    result.as_object_mut().expect("object").insert(
-        "preflight".into(),
-        preflight(name, &BTreeMap::new())?,
-    );
+    result
+        .as_object_mut()
+        .expect("object")
+        .insert("preflight".into(), preflight(name, &BTreeMap::new())?);
     print_json(&result)?;
     if !ok {
         std::process::exit(1);
     }
     Ok(())
 }
-

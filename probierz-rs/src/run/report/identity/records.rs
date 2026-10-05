@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn write_json(file: &Path, value: &Value) -> Result<(), Failure> {
     if let Some(parent) = file.parent() {
         fs::create_dir_all(parent)?;
@@ -119,10 +119,6 @@ pub(crate) fn stamped(value: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
-pub(crate) fn tail_chars(value: &str, count: usize) -> String {
-    let length = value.chars().count();
-    value.chars().skip(length.saturating_sub(count)).collect()
-}
 
 pub(crate) fn app_surface(
     harness: &Path,
@@ -161,4 +157,3 @@ pub(crate) fn yaml_ordered_strings(value: Option<&serde_yaml::Value>) -> Map<Str
     }
     result
 }
-

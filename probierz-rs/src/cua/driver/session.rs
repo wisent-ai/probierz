@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::cua::*;
+use serde_json::json;
 
 /// Reaching the driver and starting what it should drive.
 impl Driver {
@@ -29,10 +29,7 @@ impl Driver {
             .map_err(|error| format!("cua-driver {tool} failed: {error}"))?;
         if !output.status.success() {
             let detail = output_detail(&output);
-            return Err(format!(
-                "cua-driver {tool} failed: {}",
-                tail_chars(&detail, 400)
-            ));
+            return Err(format!("cua-driver {tool} failed: {detail}"));
         }
         let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if text.is_empty() {
@@ -68,12 +65,8 @@ impl Driver {
             .get("pid")
             .or_else(|| launched.pointer("/app/pid"))
             .and_then(Value::as_u64)
-            .ok_or_else(|| {
-                format!(
-                    "launch_app returned no pid: {}",
-                    tail_chars(&launched.to_string(), 300)
-                )
-            })? as u32;
+            .ok_or_else(|| format!("launch_app returned no pid: {launched}"))?
+            as u32;
         if let Some(window_id) =
             launched
                 .get("windows")
@@ -129,5 +122,4 @@ impl Driver {
             .cloned()
             .collect())
     }
-
 }

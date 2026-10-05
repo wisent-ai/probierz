@@ -88,7 +88,7 @@ pub(crate) fn collect_platform_diagnostics(
         } else {
             error.trim()
         };
-        Value::String(tail_chars(detail, 2000))
+        Value::String(detail.to_string())
     };
     json!({
         "supported": true,

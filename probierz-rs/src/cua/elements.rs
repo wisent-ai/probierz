@@ -111,12 +111,6 @@ pub(crate) fn output_detail(output: &Output) -> String {
     }
 }
 
-pub(crate) fn tail_chars(text: &str, count: usize) -> String {
-    let mut characters: Vec<char> = text.chars().rev().take(count).collect();
-    characters.reverse();
-    characters.into_iter().collect()
-}
-
 /// Runs `command` to its own exit and captures both streams; no deadline and
 /// no poll (cli.md rule 8). `output()` drains both pipes while it waits.
 pub(crate) fn run_to_exit(command: &mut Command) -> Result<Output, String> {

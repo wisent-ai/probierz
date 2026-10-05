@@ -29,7 +29,7 @@ pub(crate) fn drain_run_stream<R: Read>(
             );
         }
         let safe = redact_text(&String::from_utf8_lossy(&buffer[..count]), secrets);
-        tail = tail_chars(&(tail + &safe), TAIL);
+        tail.push_str(&safe);
         let _ = append_secure(path, stamped(&safe).as_bytes());
     }
     (tail, first_output_ms)

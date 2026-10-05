@@ -10,12 +10,12 @@ impl Driver {
     /// shows it hung instead of guessing a limit.
     pub(crate) fn await_socket(&self, daemon_log: &Path) -> Result<(), String> {
         let not_created = || {
-            let detail = fs::read_to_string(daemon_log)
-                .ok()
-                .map(|text| tail_chars(&text, 2000))
-                .unwrap_or_default();
+            let detail = fs::read_to_string(daemon_log).unwrap_or_default();
             if detail.is_empty() {
-                format!("CuaDriver exited without creating {}", self.socket.display())
+                format!(
+                    "CuaDriver exited without creating {}",
+                    self.socket.display()
+                )
             } else {
                 format!(
                     "CuaDriver exited without creating {}:\n{detail}",
@@ -24,21 +24,36 @@ impl Driver {
             }
         };
         let Some(pid) = self.daemon_pid()? else {
-            return if self.socket.exists() { Ok(()) } else { Err(not_created()) };
+            return if self.socket.exists() {
+                Ok(())
+            } else {
+                Err(not_created())
+            };
         };
         let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
-        let watch = kernel::Watch::new(parent, pid)
-            .map_err(|error| format!("cannot watch {} for CuaDriver's socket: {error}", parent.display()))?;
+        let watch = kernel::Watch::new(parent, pid).map_err(|error| {
+            format!(
+                "cannot watch {} for CuaDriver's socket: {error}",
+                parent.display()
+            )
+        })?;
         loop {
             // Checked after both events are registered, so a socket created
             // between the launch and the registration is not missed.
             if self.socket.exists() {
                 return Ok(());
             }
-            match watch.next().map_err(|error| format!("watching CuaDriver's socket failed: {error}"))? {
+            match watch
+                .next()
+                .map_err(|error| format!("watching CuaDriver's socket failed: {error}"))?
+            {
                 kernel::Event::DirectoryChanged => {}
                 kernel::Event::DaemonExited => {
-                    return if self.socket.exists() { Ok(()) } else { Err(not_created()) };
+                    return if self.socket.exists() {
+                        Ok(())
+                    } else {
+                        Err(not_created())
+                    };
                 }
             }
         }
@@ -126,7 +141,11 @@ mod kernel {
                 unsafe { close(directory) };
                 return Err(error);
             }
-            let mut watch = Watch { kq, directory, exited_early: false };
+            let mut watch = Watch {
+                kq,
+                directory,
+                exited_early: false,
+            };
             watch.register(directory as usize, EVFILT_VNODE, NOTE_WRITE)?;
             if let Err(error) = watch.register(pid as usize, EVFILT_PROC, NOTE_EXIT) {
                 if error.raw_os_error() != Some(ESRCH) {
@@ -147,7 +166,16 @@ mod kernel {
                 udata: std::ptr::null_mut(),
             };
             // SAFETY: one valid change and no event slots, so the call returns at once.
-            let answered = unsafe { kevent(self.kq, &change, 1, std::ptr::null_mut(), 0, std::ptr::null()) };
+            let answered = unsafe {
+                kevent(
+                    self.kq,
+                    &change,
+                    1,
+                    std::ptr::null_mut(),
+                    0,
+                    std::ptr::null(),
+                )
+            };
             if answered < 0 {
                 return Err(io::Error::last_os_error());
             }
@@ -159,14 +187,34 @@ mod kernel {
             if self.exited_early {
                 return Ok(Event::DaemonExited);
             }
-            let mut fired = KEvent { ident: 0, filter: 0, flags: 0, fflags: 0, data: 0, udata: std::ptr::null_mut() };
+            let mut fired = KEvent {
+                ident: 0,
+                filter: 0,
+                flags: 0,
+                fflags: 0,
+                data: 0,
+                udata: std::ptr::null_mut(),
+            };
             // SAFETY: no changes and one writable event slot; a null wait spec
             // blocks until one registered event fires.
-            let answered = unsafe { kevent(self.kq, std::ptr::null(), 0, &mut fired, 1, std::ptr::null()) };
+            let answered = unsafe {
+                kevent(
+                    self.kq,
+                    std::ptr::null(),
+                    0,
+                    &mut fired,
+                    1,
+                    std::ptr::null(),
+                )
+            };
             if answered < 0 {
                 return Err(io::Error::last_os_error());
             }
-            Ok(if fired.filter == EVFILT_PROC { Event::DaemonExited } else { Event::DirectoryChanged })
+            Ok(if fired.filter == EVFILT_PROC {
+                Event::DaemonExited
+            } else {
+                Event::DirectoryChanged
+            })
         }
     }
 
@@ -198,11 +246,17 @@ mod kernel {
         /// CuaDriver is launched through macOS LaunchServices; no other
         /// system reaches this, and none is given a clock in its place.
         pub(super) fn new(_directory: &Path, _pid: u32) -> io::Result<Self> {
-            Err(io::Error::new(io::ErrorKind::Unsupported, "CuaDriver's socket watch exists on macOS only"))
+            Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "CuaDriver's socket watch exists on macOS only",
+            ))
         }
 
         pub(super) fn next(&self) -> io::Result<Event> {
-            Err(io::Error::new(io::ErrorKind::Unsupported, "CuaDriver's socket watch exists on macOS only"))
+            Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "CuaDriver's socket watch exists on macOS only",
+            ))
         }
     }
 }
