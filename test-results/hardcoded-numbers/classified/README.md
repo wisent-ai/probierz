@@ -186,7 +186,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-model | answer without JSON quoted by `take(200)` | 404c7c72 |
 | wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
 | wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
-| wisent-visuals | zero in median, cache, encoding, wait | Oko defect ba52a0a1 |
+| wisent-visuals | banner `lru_cache(maxsize=32)`, WebP quality 90 / method 6, request wait, chart legend `len(label) * 8`, fixed axis ticks; Python rewritten in Rust (sizes required, widths measured, ticks from data) | 751a456 |
 | wisent-cost-tracker | sink wait, rounding precision | Oko defect 38bd28c5 |
 | wisent-supabase-wisent-app | sync batch bound | Oko defect 9a3f7ffd |
 | wisent-node | inference scale default | Oko defect d2f793af |
