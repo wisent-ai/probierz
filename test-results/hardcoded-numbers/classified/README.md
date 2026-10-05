@@ -187,7 +187,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | wisent-model | generation bounds and weights | Oko defect 9bad74b1 |
 | wisent-ios-repo | credits, counts, waits, zero score | Oko defect 9f9c1732 |
 | wisent-visuals | banner `lru_cache(maxsize=32)`, WebP quality 90 / method 6, request wait, chart legend `len(label) * 8`, fixed axis ticks; Python rewritten in Rust (sizes required, widths measured, ticks from data) | 751a456 |
-| wisent-cost-tracker | sink wait, rounding precision | Oko defect 38bd28c5 |
+| wisent-cost-tracker | native spend and onboarding transport; unrounded charges, no SDK request deadline, complete paginated reads and error bodies, reusable installed-package/provider journeys | 04484e3; source only, unbuilt/unexecuted; obsolete onboarding Python deletion refused by zero-Python guard; Oko defect 38bd28c5 remains open |
 | wisent-supabase-wisent-app | sync batch bound | Oko defect 9a3f7ffd |
 | wisent-node | inference scale default | Oko defect d2f793af |
 | wisent-ground-truth-api | extractive source count | Oko defect d0f380ac |
