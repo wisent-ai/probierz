@@ -134,6 +134,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | transcript-label-trainer | humanizer `PREPARE_WORKERS = 16`, `AUDIT_WORKERS = 8`, `ATTEMPTS = 4`; now required `--workers`/`--attempts` | 28ad2a0 |
 | transcript-label-trainer | goal `WORKERS = 24`, `AUDIT_WORKERS = 4`, lifecycle `WORKERS = 16`; now required `--workers`/`--audit-workers` | 90f20e7 |
 | transcript-label-trainer | discovery `CHUNK_SESSIONS = 5`; now every session in one teacher call, halved on Brama's `context_length_exceeded` | 0b29411 |
+| transcript-label-trainer | `TEXT_CAP = 12,000` session characters; now the whole session, recorded as `session_text: whole` in each artifact | 670b5bb |
 | transcript-label-trainer | answer budgets, discovery sampling, concurrency, training and evaluation settings | Oko defect 9e410b04 |
 | trading-autonomy | comment `maxDepth = 4`, proxy `maxMessageLength = 10000` and last 20 messages, feed `MAX_ENTRIES_PER_AGENT = 3` | bb6b65da |
 | trading-autonomy | cadences, balances, slippage, spend ceilings, windows, priors, estimates, ports | Oko defect 3bd83977 |
