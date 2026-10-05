@@ -130,6 +130,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | transcript-label-trainer | `ERROR_EXCERPT = 160` and error/answer cuts of 80-300 characters | 3c3004f0 |
 | transcript-label-trainer | discover sessions 60, aspects 8, values 8, evidence 12, excerpt 4,000 characters | 207393d, e38c78a |
 | transcript-label-trainer | Brama output budgets 64, 900, 256, 96 and the 192-1024 teacher clamp | bb646d0 |
+| transcript-label-trainer | GUI upload `MAX_UPLOAD_BYTES = 16 MiB`, walkthrough `--limit 5`, `MAX_STEPS = 128` (now a visited-screen check) | 2820c79 |
 | transcript-label-trainer | answer budgets, discovery sampling, concurrency, training and evaluation settings | Oko defect 9e410b04 |
 | trading-autonomy | comment `maxDepth = 4`, proxy `maxMessageLength = 10000` and last 20 messages, feed `MAX_ENTRIES_PER_AGENT = 3` | bb6b65da |
 | trading-autonomy | cadences, balances, slippage, spend ceilings, windows, priors, estimates, ports | Oko defect 3bd83977 |
