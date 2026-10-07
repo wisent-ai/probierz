@@ -11,7 +11,9 @@ const PROBIERZ: &str = env!("CARGO_BIN_EXE_probierz");
 /// A fresh directory for one test, with an empty `apps/` so Probierz takes
 /// it as its harness.
 fn harness(name: &str) -> PathBuf {
-    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("benchmark-scout").join(name);
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("benchmark-scout")
+        .join(name);
     if root.exists() {
         std::fs::remove_dir_all(&root).expect("remove the previous run's harness");
     }
@@ -32,7 +34,11 @@ fn trends_dir() -> PathBuf {
 }
 
 fn run(root: &Path, args: &[&str], trends_state: Option<&Path>) -> Output {
-    let path = format!("{}:{}", trends_dir().display(), std::env::var("PATH").unwrap_or_default());
+    let path = format!(
+        "{}:{}",
+        trends_dir().display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let mut command = Command::new(PROBIERZ);
     command
         .args(args)
@@ -60,16 +66,40 @@ fn scout_refuses_a_topic_below_its_evidence_floor_and_writes_no_brief() {
     let root = harness("floor");
     let state = root.join("trends.state.json");
     trends(&state, &["init"]);
-    trends(&state, &["topic-add", "quiet-topic", "--term", "a term nothing published"]);
+    trends(
+        &state,
+        &[
+            "topic-add",
+            "quiet-topic",
+            "--term",
+            "a term nothing published",
+        ],
+    );
 
-    let output = run(&root, &["benchmark", "scout", "quiet-topic", "--owner", "wisent-ai"], Some(&state));
+    let output = run(
+        &root,
+        &["benchmark", "scout", "quiet-topic", "--owner", "wisent-ai"],
+        Some(&state),
+    );
 
-    assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let printed: serde_json::Value = serde_json::from_slice(&output.stdout).expect("the refusal prints the trend");
+    let printed: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("the refusal prints the trend");
     assert_eq!(printed["trend"]["evidence"], 0);
-    assert!(!root.join("test-results").join(".scout").exists(), "a refused scout wrote a brief");
-    assert!(stderr.contains("Trends reads topic quiet-topic as insufficient-evidence"), "{stderr}");
+    assert!(
+        !root.join("test-results").join(".scout").exists(),
+        "a refused scout wrote a brief"
+    );
+    assert!(
+        stderr.contains("Trends reads topic quiet-topic as insufficient-evidence"),
+        "{stderr}"
+    );
 }
 
 #[test]
@@ -78,7 +108,11 @@ fn scout_refuses_a_topic_trends_does_not_watch() {
     let state = root.join("trends.state.json");
     trends(&state, &["init"]);
 
-    let output = run(&root, &["benchmark", "scout", "never-added", "--owner", "wisent-ai"], Some(&state));
+    let output = run(
+        &root,
+        &["benchmark", "scout", "never-added", "--owner", "wisent-ai"],
+        Some(&state),
+    );
 
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -89,7 +123,17 @@ fn scout_refuses_a_topic_trends_does_not_watch() {
 fn scout_refuses_names_that_cannot_become_stado_identities() {
     let root = harness("identity");
 
-    let output = run(&root, &["benchmark", "scout", "Browser_Agents", "--owner", "wisent-ai"], None);
+    let output = run(
+        &root,
+        &[
+            "benchmark",
+            "scout",
+            "Browser_Agents",
+            "--owner",
+            "wisent-ai",
+        ],
+        None,
+    );
 
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("become Stado identities"));
@@ -109,12 +153,22 @@ fn adopt_refuses_without_the_operators_authority_and_creates_nothing() {
     )
     .expect("write the brief");
 
-    let output = run(&root, &["benchmark", "adopt", brief.to_str().expect("utf-8 path")], None);
+    let output = run(
+        &root,
+        &["benchmark", "adopt", brief.to_str().expect("utf-8 path")],
+        None,
+    );
 
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("wisent-ai/scouted") && stderr.contains("--allow-create"), "{stderr}");
-    assert!(!root.join("brief.creation.json").exists(), "a refused adoption wrote its creation request");
+    assert!(
+        stderr.contains("wisent-ai/scouted") && stderr.contains("--allow-create"),
+        "{stderr}"
+    );
+    assert!(
+        !root.join("brief.creation.json").exists(),
+        "a refused adoption wrote its creation request"
+    );
 }
 
 #[test]
@@ -123,7 +177,16 @@ fn adopt_refuses_a_file_that_is_not_a_scouted_brief() {
     let other = root.join("other.json");
     std::fs::write(&other, "{\"schema\": \"something else\"}").expect("write the file");
 
-    let output = run(&root, &["benchmark", "adopt", other.to_str().expect("utf-8 path"), "--allow-create"], None);
+    let output = run(
+        &root,
+        &[
+            "benchmark",
+            "adopt",
+            other.to_str().expect("utf-8 path"),
+            "--allow-create",
+        ],
+        None,
+    );
 
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("is not a scouted brief"));

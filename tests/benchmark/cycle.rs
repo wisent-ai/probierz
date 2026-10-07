@@ -9,7 +9,9 @@ use std::process::{Command, Output};
 const PROBIERZ: &str = env!("CARGO_BIN_EXE_probierz");
 
 fn harness(name: &str) -> PathBuf {
-    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("benchmark-cycle").join(name);
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("benchmark-cycle")
+        .join(name);
     if root.exists() {
         std::fs::remove_dir_all(&root).expect("remove the previous run's harness");
     }
@@ -31,11 +33,22 @@ fn cycle_refuses_without_a_written_policy_and_records_nothing() {
 
     let output = cycle(&root);
 
-    assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("the loop acts only under a written policy"), "{stderr}");
+    assert!(
+        stderr.contains("the loop acts only under a written policy"),
+        "{stderr}"
+    );
     assert!(stderr.contains("pursuitBudgetUsd"), "{stderr}");
-    assert!(!root.join("test-results").join(".autonomy").exists(), "a refused cycle recorded a report");
+    assert!(
+        !root.join("test-results").join(".autonomy").exists(),
+        "a refused cycle recorded a report"
+    );
 }
 
 #[test]
@@ -51,8 +64,14 @@ fn cycle_refuses_a_policy_whose_pursuit_budget_is_not_positive() {
 
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("is not a positive amount of US dollars"), "{stderr}");
-    assert!(!root.join("test-results").join(".autonomy").exists(), "a refused cycle recorded a report");
+    assert!(
+        stderr.contains("is not a positive amount of US dollars"),
+        "{stderr}"
+    );
+    assert!(
+        !root.join("test-results").join(".autonomy").exists(),
+        "a refused cycle recorded a report"
+    );
 }
 
 #[test]
