@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn registration_directory(target: &str) -> Option<&'static str> {
     match target {
         "mobile:ios" | "mobile:android" => Some("packages/mobile/test/specs"),
@@ -228,4 +228,3 @@ pub(crate) fn install_product_spec(
     fs::write(&manifest_file, serde_yaml::to_string(&document)?)?;
     Ok((product_spec, registration, manifest_file))
 }
-

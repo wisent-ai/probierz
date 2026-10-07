@@ -286,4 +286,3 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
     )?;
     Ok(result)
 }
-

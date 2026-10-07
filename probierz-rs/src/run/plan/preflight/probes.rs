@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn appium_driver_installed(name: &str, env: &BTreeMap<String, String>) -> bool {
     let home = env
         .get("APPIUM_HOME")
@@ -139,7 +139,12 @@ pub(crate) fn mac_automation_mode() -> bool {
             .contains("does not require user authentication")
 }
 
-pub(crate) fn check_row(name: impl Into<String>, ok: bool, own: bool, hint: impl Into<String>) -> Value {
+pub(crate) fn check_row(
+    name: impl Into<String>,
+    ok: bool,
+    own: bool,
+    hint: impl Into<String>,
+) -> Value {
     json!({ "name": name.into(), "ok": ok, "own": own, "hint": hint.into() })
 }
 
@@ -148,4 +153,3 @@ pub(crate) fn env_snapshot(extra: &BTreeMap<String, String>) -> BTreeMap<String,
     env.extend(extra.clone());
     env
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn resources_for(target: &str, env: &BTreeMap<String, String>) -> Vec<String> {
     let value = |name: &str| {
         env.get(name)
@@ -52,7 +52,11 @@ pub(crate) fn lock_name(resource: &str) -> String {
 /// Takes one resource's lock file and blocks until the holder releases it.
 /// The kernel drops an advisory lock when its holder's process exits, so a
 /// crashed run never leaves a stale lease and nothing polls (cli.md rule 8).
-pub(crate) fn acquire_one(harness: &Path, resource: &str, owner: &str) -> Result<fs::File, Failure> {
+pub(crate) fn acquire_one(
+    harness: &Path,
+    resource: &str,
+    owner: &str,
+) -> Result<fs::File, Failure> {
     use fs2::FileExt;
     use std::io::{Seek, SeekFrom, Write};
     let lock_root = harness.join("test-results").join(".locks");
@@ -67,7 +71,10 @@ pub(crate) fn acquire_one(harness: &Path, resource: &str, owner: &str) -> Result
     file.lock_exclusive().map_err(|error| {
         Failure::unavailable(
             "evidence.lock",
-            format!("could not lock resource {resource} at {}: {error}", path.display()),
+            format!(
+                "could not lock resource {resource} at {}: {error}",
+                path.display()
+            ),
         )
     })?;
     // The holder's identity, for an operator reading who has the device now.

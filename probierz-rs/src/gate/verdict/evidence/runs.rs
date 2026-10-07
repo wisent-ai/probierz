@@ -179,4 +179,3 @@ pub(crate) fn normalize_absolute(path: &Path) -> PathBuf {
     }
     normalized
 }
-

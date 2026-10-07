@@ -136,4 +136,3 @@ pub(crate) fn audit_access(
     output.write_all(b"\n")?;
     Ok(())
 }
-

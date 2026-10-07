@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn submit_machine(
     harness: &Path,
     selected: &discovery::Host,
@@ -180,4 +180,3 @@ pub(crate) fn copy_submission_identity(
     }
     Ok(values)
 }
-

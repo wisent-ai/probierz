@@ -32,4 +32,3 @@ pub fn publication(
     )?;
     print_json(&result)
 }
-

@@ -1,5 +1,5 @@
-use crate::run::{DateTime, Utc};
 use crate::run::*;
+use crate::run::{DateTime, Utc};
 pub(crate) fn sensitive_key(name: &str) -> bool {
     [
         "auth",
@@ -136,4 +136,3 @@ pub(crate) fn git_source_paths(
     }
     Ok(paths.into_iter().collect())
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, requires_slack(source))?;
     let scoped = scoped_oko_source(source)?;
@@ -181,4 +181,3 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
         }
     }
 }
-

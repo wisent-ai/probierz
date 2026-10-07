@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) const OKO_REQUIRED: [&str; 5] = [
     "PROBIERZ_RUN_ID",
     "OKO_E2E_EMAIL",
@@ -146,7 +146,10 @@ pub(crate) fn requires_slack(source: &BTreeMap<String, String>) -> bool {
     journeys.is_empty() || journeys.contains("slack-feedback")
 }
 
-pub(crate) fn required_oko(source: &BTreeMap<String, String>, include_slack: bool) -> Result<(), Failure> {
+pub(crate) fn required_oko(
+    source: &BTreeMap<String, String>,
+    include_slack: bool,
+) -> Result<(), Failure> {
     let mut names = OKO_REQUIRED.to_vec();
     if include_slack {
         names.extend(OKO_SLACK_REQUIRED);
@@ -179,4 +182,3 @@ pub(crate) fn fixture_slug(run_id: &str, kind: &str, index: Option<usize>) -> St
         None => format!("e2e-{}-{kind}", hash12(run_id)),
     }
 }
-

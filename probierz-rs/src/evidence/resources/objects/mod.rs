@@ -116,4 +116,3 @@ pub fn remove_object(uri: &str) -> Result<(), Failure> {
     }
     Ok(())
 }
-

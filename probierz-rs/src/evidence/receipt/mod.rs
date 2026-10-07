@@ -7,7 +7,7 @@ mod records;
 mod sign;
 mod verify;
 
-pub use sign::*;
-pub use verify::*;
 pub(crate) use identity::*;
 pub(crate) use records::*;
+pub use sign::*;
+pub use verify::*;

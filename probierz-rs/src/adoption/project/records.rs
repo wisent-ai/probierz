@@ -144,4 +144,3 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
 pub(crate) fn invocation_error(detail: impl Into<String>) -> ! {
     clap::Error::raw(clap::error::ErrorKind::InvalidValue, detail.into()).exit()
 }
-

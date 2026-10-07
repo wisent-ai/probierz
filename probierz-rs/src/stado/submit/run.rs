@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn submit_remote_run(
     harness: &Path,
     target: &str,
@@ -291,4 +291,3 @@ pub(crate) fn model_router_url(value: Option<&str>) -> Result<String, Failure> {
     }
     Ok(clean.trim_end_matches('/').to_string())
 }
-

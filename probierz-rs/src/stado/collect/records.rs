@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn safe_child(root: &Path, relative: &str, message: &str) -> Result<PathBuf, Failure> {
     if relative.is_empty()
         || Path::new(relative).is_absolute()
@@ -73,4 +73,3 @@ pub(crate) fn save_author_submission(
     fs::set_permissions(&file, fs::Permissions::from_mode(0o600))?;
     Ok(file)
 }
-

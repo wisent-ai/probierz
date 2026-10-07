@@ -78,7 +78,8 @@ fn registry_hosts() -> Vec<Host> {
         .output();
     let document = match answer {
         Ok(output) if output.status.success() => {
-            serde_json::from_slice::<serde_json::Value>(&output.stdout).map_err(|error| error.to_string())
+            serde_json::from_slice::<serde_json::Value>(&output.stdout)
+                .map_err(|error| error.to_string())
         }
         Ok(output) => Err(String::from_utf8_lossy(&output.stderr).trim().to_string()),
         Err(error) => Err(error.to_string()),
@@ -90,7 +91,12 @@ fn registry_hosts() -> Vec<Host> {
             return Vec::new();
         }
     };
-    let text = |value: &serde_json::Value, key: &str| value.get(key).and_then(serde_json::Value::as_str).map(str::to_string);
+    let text = |value: &serde_json::Value, key: &str| {
+        value
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+    };
     document
         .get("targets")
         .and_then(serde_json::Value::as_array)
@@ -99,7 +105,12 @@ fn registry_hosts() -> Vec<Host> {
         .filter(|target| text(target, "kind").as_deref() == Some("local"))
         .filter_map(|target| {
             let name = text(target, "name")?;
-            let hostname = target.get("hostnames")?.as_array()?.first()?.as_str()?.to_string();
+            let hostname = target
+                .get("hostnames")?
+                .as_array()?
+                .first()?
+                .as_str()?
+                .to_string();
             Some(Host {
                 host: format!("stado:{name}"),
                 kind: "stado",
@@ -178,7 +189,11 @@ pub fn stado_host(name: &str) -> Option<Host> {
         .into_iter()
         .find(|entry| entry.host == name)
         .or_else(|| constrained_stado_host(name))
-        .or_else(|| registry_hosts().into_iter().find(|entry| entry.host == name))
+        .or_else(|| {
+            registry_hosts()
+                .into_iter()
+                .find(|entry| entry.host == name)
+        })
 }
 
 pub fn hosts() -> Answer {
@@ -196,4 +211,3 @@ pub fn spec_dir(surface: &str) -> Option<PathBuf> {
         _ => None,
     }
 }
-

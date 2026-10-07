@@ -6,6 +6,6 @@ mod document;
 mod entry;
 mod onboarding;
 
+pub(crate) use document::*;
 pub use entry::*;
 pub use onboarding::*;
-pub(crate) use document::*;

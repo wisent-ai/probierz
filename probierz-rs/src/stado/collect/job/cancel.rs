@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn cancel_remote_run(
     harness: &Path,
     job_id: Option<&str>,
@@ -210,4 +210,3 @@ pub(crate) fn cancel_remote_run(
         "failure": evaluation_failure,
     }))
 }
-

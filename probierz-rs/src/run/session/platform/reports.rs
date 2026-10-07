@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn report_identity(path: &Path, run_id: &str, started: SystemTime) -> Value {
     if !path.exists() {
         return json!({ "ok": false, "error": "report missing" });
@@ -71,4 +71,3 @@ pub(crate) fn write_secure_text(path: &Path, value: &str) -> std::io::Result<()>
     options.create(true).truncate(true).write(true).mode_600();
     options.open(path)?.write_all(value.as_bytes())
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn preflight(name: &str, extra: &BTreeMap<String, String>) -> Result<Value, Failure> {
     let env = env_snapshot(extra);
     let setup = |target: &str| format!("probierz setup {target}");
@@ -119,4 +119,3 @@ pub(crate) struct SetupStep {
     pub(crate) skip_driver: Option<String>,
     pub(crate) skip_cua: bool,
 }
-

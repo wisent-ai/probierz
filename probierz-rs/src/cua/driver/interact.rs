@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::cua::*;
+use serde_json::json;
 
 /// Reading a window and acting inside it.
 impl Driver {
@@ -100,5 +100,4 @@ impl Driver {
     pub fn hotkey(&self, pid: u32, keys: &[&str]) -> Result<Value, String> {
         self.call("hotkey", json!({ "pid": pid, "keys": keys }))
     }
-
 }

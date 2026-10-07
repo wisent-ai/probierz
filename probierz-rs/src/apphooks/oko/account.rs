@@ -1,6 +1,8 @@
-use serde_json::json;
 use crate::apphooks::*;
-pub(crate) fn ensure_technical_account(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
+use serde_json::json;
+pub(crate) fn ensure_technical_account(
+    source: &BTreeMap<String, String>,
+) -> Result<Value, Failure> {
     required(source, &OKO_ACCOUNT_REQUIRED, "missing E2E configuration")?;
     let email = technical_email(
         source
@@ -232,7 +234,10 @@ pub(crate) fn read_state(source: &BTreeMap<String, String>) -> Result<(PathBuf, 
     Ok((path, state))
 }
 
-pub(crate) fn delete_organization(source: &BTreeMap<String, String>, org_id: &str) -> Result<(), Failure> {
+pub(crate) fn delete_organization(
+    source: &BTreeMap<String, String>,
+    org_id: &str,
+) -> Result<(), Failure> {
     supabase(
         source,
         &format!("/rest/v1/organizations?id=eq.{org_id}"),
@@ -242,4 +247,3 @@ pub(crate) fn delete_organization(source: &BTreeMap<String, String>, org_id: &st
     )?;
     Ok(())
 }
-

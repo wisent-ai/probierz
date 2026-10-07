@@ -45,7 +45,14 @@ pub fn evaluate_figure(
 ) -> Result<JsonValue, Failure> {
     let pair = FigurePair::resolve(reference, candidate)?;
     let rubric = figure_rubric(rubric_file)?;
-    let router = Router::resolve(harness, model, router_url, router_bearer, agent_id, agent_secret)?;
+    let router = Router::resolve(
+        harness,
+        model,
+        router_url,
+        router_bearer,
+        agent_id,
+        agent_secret,
+    )?;
     let destination = Destination::resolve(harness, &pair, output)?;
 
     let work = work_directory()?;

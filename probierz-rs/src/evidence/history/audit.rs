@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn last_green(
     harness: &Path,
     app_id: &str,
@@ -199,4 +199,3 @@ pub(crate) fn audit_files(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     files.sort();
     Ok(files)
 }
-

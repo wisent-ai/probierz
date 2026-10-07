@@ -21,14 +21,19 @@ use crate::stado::STADO_BIN;
 const POINT: &str = "benchmark.adopt";
 
 fn read_brief(file: &Path) -> Result<Json, Failure> {
-    let text = std::fs::read_to_string(file)
-        .map_err(|error| Failure::invalid(POINT, format!("{} cannot be read: {error}", file.display())))?;
-    let brief: Json = serde_json::from_str(&text)
-        .map_err(|error| Failure::invalid(POINT, format!("{} is not JSON: {error}", file.display())))?;
+    let text = std::fs::read_to_string(file).map_err(|error| {
+        Failure::invalid(POINT, format!("{} cannot be read: {error}", file.display()))
+    })?;
+    let brief: Json = serde_json::from_str(&text).map_err(|error| {
+        Failure::invalid(POINT, format!("{} is not JSON: {error}", file.display()))
+    })?;
     if brief["schema"] != BRIEF_SCHEMA {
         return Err(Failure::invalid(
             POINT,
-            format!("{} is not a scouted brief ({BRIEF_SCHEMA}); probierz benchmark scout writes one", file.display()),
+            format!(
+                "{} is not a scouted brief ({BRIEF_SCHEMA}); probierz benchmark scout writes one",
+                file.display()
+            ),
         ));
     }
     Ok(brief)
@@ -39,7 +44,12 @@ fn read_brief(file: &Path) -> Result<Json, Failure> {
 fn manifest_of(harness: &Path, id: &str, checkout: &str) -> Result<manifest::Manifest, Failure> {
     let file = manifest::apps_root(harness).join(id).join("probierz.yaml");
     if !file.exists() {
-        let root = match std::env::var("HOME").ok().and_then(|home| Path::new(checkout).strip_prefix(home).ok().map(Path::to_path_buf)) {
+        let root = match std::env::var("HOME").ok().and_then(|home| {
+            Path::new(checkout)
+                .strip_prefix(home)
+                .ok()
+                .map(Path::to_path_buf)
+        }) {
             Some(relative) => format!("~/{}", relative.display()),
             None => checkout.to_string(),
         };
@@ -52,10 +62,19 @@ fn manifest_of(harness: &Path, id: &str, checkout: &str) -> Result<manifest::Man
     manifest::load(harness, id)
 }
 
-pub(crate) fn adopt(harness: &Path, brief_file: &Path, allow_create: bool, cases: usize, rounds: u32) -> Answer {
+pub(crate) fn adopt(
+    harness: &Path,
+    brief_file: &Path,
+    allow_create: bool,
+    cases: usize,
+    rounds: u32,
+) -> Answer {
     let brief = read_brief(brief_file)?;
     let creation = &brief["creation"];
-    let id = creation["product"]["id"].as_str().unwrap_or_default().to_string();
+    let id = creation["product"]["id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
     if !allow_create {
         return Err(Failure::invalid(
             POINT,
@@ -73,7 +92,12 @@ pub(crate) fn adopt(harness: &Path, brief_file: &Path, allow_create: bool, cases
             .args(["product", "create", "--allow-create", "--json", "--request"])
             .arg(&request),
     )?)
-    .map_err(|error| Failure::config(POINT, format!("stado product create answered no JSON: {error}")))?;
+    .map_err(|error| {
+        Failure::config(
+            POINT,
+            format!("stado product create answered no JSON: {error}"),
+        )
+    })?;
     if created["state"] != "provisioned" {
         print_json(&json!({"brief": brief_file, "creation": created}))?;
         return Err(Failure::new(
@@ -82,17 +106,25 @@ pub(crate) fn adopt(harness: &Path, brief_file: &Path, allow_create: bool, cases
             format!("stado product create left {id} {}: {}; `stado product create --resume {} --allow-create` continues it", created["state"], created["error"], creation["request_id"].as_str().unwrap_or_default()),
         ));
     }
-    let checkout = created["checkouts"][0]["path"].as_str().unwrap_or_default().to_string();
+    let checkout = created["checkouts"][0]["path"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
     let manifest = manifest_of(harness, &id, &checkout)?;
     let mut declare = Command::new(STADO_BIN);
     declare.args(["product", "registry", "set", &id]);
     for rival in brief["rivals"].as_array().into_iter().flatten() {
         declare.arg("--add-rival").arg(rival.to_string());
     }
-    declare.arg("--benchmark").arg(brief["benchmark"].to_string());
+    declare
+        .arg("--benchmark")
+        .arg(brief["benchmark"].to_string());
     stado(&mut declare)?;
     let record = catalog::record(&id)?;
-    let suite_id = brief["benchmark"]["suites"][0].as_str().unwrap_or_default().to_string();
+    let suite_id = brief["benchmark"]["suites"][0]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
     let suite = match place::suite_file(&manifest, &suite_id) {
         Ok(file) => json!({"suite": suite_id, "file": file, "drafted": false}),
         Err(_) => author::suite_of(harness, &id, &suite_id, cases, rounds)?,

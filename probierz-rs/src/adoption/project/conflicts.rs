@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::adoption::*;
+use serde_json::json;
 pub(crate) fn conflict(
     path: &str,
     reason: &'static str,
@@ -178,4 +178,3 @@ pub(crate) fn absolute(root: &Path, relative: &str) -> Result<PathBuf, Failure> 
     }
     Ok(root.join(path))
 }
-

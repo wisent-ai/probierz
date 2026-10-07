@@ -126,4 +126,3 @@ pub(crate) fn path_text(path: &Path) -> String {
 pub(crate) fn os_text(value: &OsStr) -> &str {
     value.to_str().unwrap_or_default()
 }
-

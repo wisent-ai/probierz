@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn verify_receipt_value(
     file: &Path,
     trusted_public_key: Option<&Path>,
@@ -140,7 +140,10 @@ pub(crate) fn require(condition: bool, message: impl Into<String>) -> Result<(),
     }
 }
 
-pub(crate) fn require_string<'a>(value: Option<&'a Value>, message: &str) -> Result<&'a str, Failure> {
+pub(crate) fn require_string<'a>(
+    value: Option<&'a Value>,
+    message: &str,
+) -> Result<&'a str, Failure> {
     let text = value.and_then(Value::as_str).unwrap_or_default();
     require(!text.is_empty(), message)?;
     Ok(text)
@@ -178,4 +181,3 @@ pub(crate) fn source_revision(source: Option<&Value>) -> Option<&str> {
         .get("gitSha")?
         .as_str()
 }
-

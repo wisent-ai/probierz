@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn response_json(response: ureq::Response) -> Result<Value, Failure> {
     let status = response.status();
     let text = response
@@ -134,4 +134,3 @@ pub(crate) fn slack(
     })?;
     Ok(envelope.get("result").cloned().unwrap_or(Value::Null))
 }
-

@@ -118,8 +118,8 @@ fn merged_dimensions(
                 return Err(Failure::config(
                     "seo-evaluate",
                     format!(
-                        "invalid SEO contract: {name}.source must be model, deterministic, or hybrid"
-                    ),
+                    "invalid SEO contract: {name}.source must be model, deterministic, or hybrid"
+                ),
                 ))
             }
         };
@@ -133,16 +133,19 @@ fn merged_dimensions(
                 "source": "threshold"
             }));
         }
-        dimensions.insert(name.clone(), json!({
-            "label": rule.get("label").cloned().unwrap_or(JsonValue::Null),
-            "source": source, "weight": weight, "minimum": minimum,
-            "score": round_score(score),
-            "evidence": deterministic_value["evidence"].as_array().into_iter().flatten()
-                .chain(model_value["evidence"].as_array().into_iter().flatten())
-                .cloned().collect::<Vec<_>>(),
-            "issues": combined_issues(deterministic_value, model_value),
-            "graderScores": model_value.get("graderScores").cloned().unwrap_or(JsonValue::Null)
-        }));
+        dimensions.insert(
+            name.clone(),
+            json!({
+                "label": rule.get("label").cloned().unwrap_or(JsonValue::Null),
+                "source": source, "weight": weight, "minimum": minimum,
+                "score": round_score(score),
+                "evidence": deterministic_value["evidence"].as_array().into_iter().flatten()
+                    .chain(model_value["evidence"].as_array().into_iter().flatten())
+                    .cloned().collect::<Vec<_>>(),
+                "issues": combined_issues(deterministic_value, model_value),
+                "graderScores": model_value.get("graderScores").cloned().unwrap_or(JsonValue::Null)
+            }),
+        );
     }
     Ok((dimensions, round_score(quality)))
 }

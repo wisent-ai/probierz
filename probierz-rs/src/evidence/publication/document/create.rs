@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub(crate) fn create_publication(
     harness: &Path,
     receipt_file: &Path,

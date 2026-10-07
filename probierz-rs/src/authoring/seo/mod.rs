@@ -9,7 +9,7 @@ mod report;
 // Only the command is exported; the evaluation's own stages stay
 // inside the package, so a name like `Contract` or `Graded` cannot
 // collide with another evaluation's.
-pub use evaluate::evaluate_seo;
 pub(crate) use contract::*;
+pub use evaluate::evaluate_seo;
 pub(crate) use model::*;
 pub(crate) use report::*;

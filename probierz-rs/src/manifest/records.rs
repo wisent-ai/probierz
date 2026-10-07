@@ -120,4 +120,3 @@ pub(crate) fn key_names(mapping: &serde_yaml::Mapping) -> Vec<String> {
         .filter_map(|key| key.as_str().map(str::to_string))
         .collect()
 }
-

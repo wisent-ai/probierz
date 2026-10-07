@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn collection_directory(job_dir: &Path) -> Result<PathBuf, Failure> {
     fs::create_dir_all(job_dir)?;
     for sequence in 0..1000_u16 {
@@ -16,10 +16,7 @@ pub(crate) fn collection_directory(job_dir: &Path) -> Result<PathBuf, Failure> {
     ))
 }
 
-pub(crate) fn fetch_run_evidence(
-    harness: &Path,
-    job_id: &str,
-) -> Result<Retained, Failure> {
+pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retained, Failure> {
     let job_dir = harness.join("test-results").join(".remote").join(job_id);
     fs::create_dir_all(&job_dir)?;
     let staging = work_path(&format!(
@@ -232,4 +229,3 @@ pub(crate) fn fetch_run_evidence(
         artifact_error: None,
     })
 }
-

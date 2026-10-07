@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::adoption::*;
+use serde_json::json;
 pub(crate) fn progress_file() -> Result<PathBuf, Failure> {
     let state_root = std::env::var("XDG_STATE_HOME")
         .ok()

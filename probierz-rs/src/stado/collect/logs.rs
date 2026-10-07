@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn collect_remote_run(
     harness: &Path,
     job_id: Option<&str>,
@@ -237,4 +237,3 @@ pub(crate) fn append_line(path: &Path, text: &str) -> Answer {
     file.write_all(b"\n")?;
     Ok(())
 }
-

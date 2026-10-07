@@ -194,4 +194,3 @@ pub(crate) fn valid_environment_name(name: &str) -> bool {
     matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'_'))
         && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
-

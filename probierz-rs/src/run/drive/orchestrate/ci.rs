@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn orchestrate(
     harness: &Path,
     files: Option<Vec<String>>,
@@ -208,4 +208,3 @@ pub fn ci(harness: &Path, args: &[String]) -> Answer {
     }
     Ok(())
 }
-

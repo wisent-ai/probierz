@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn seo_script(
     app_id: &str,
     base_url: &str,
@@ -171,7 +171,11 @@ pub(crate) fn provision_inputs(
     Ok(inputs)
 }
 
-pub(crate) fn insert_source_input(inputs: &mut Map<String, Value>, app_id: &str, repository: &Path) -> Answer {
+pub(crate) fn insert_source_input(
+    inputs: &mut Map<String, Value>,
+    app_id: &str,
+    repository: &Path,
+) -> Answer {
     let source = pack_app_source(app_id, repository)?;
     inputs.insert(
         "app".into(),
@@ -191,4 +195,3 @@ pub(crate) fn safe_relative_path(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'/' | b'-'))
         && !value.split('/').any(|part| part == "..")
 }
-

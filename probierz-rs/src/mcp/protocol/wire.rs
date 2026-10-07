@@ -53,4 +53,3 @@ pub(crate) fn append_flag(arguments: &mut Vec<String>, name: &str, value: &Value
         Value::Object(_) => {}
     }
 }
-

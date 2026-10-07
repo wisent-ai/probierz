@@ -118,4 +118,3 @@ pub(crate) fn affected_journeys(app: &manifest::Manifest, files: &[PathBuf]) -> 
     }
     journeys.into_iter().collect()
 }
-

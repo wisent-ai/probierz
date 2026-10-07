@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn glb(model: Value) -> Result<Vec<u8>, Failure> {
     let mut source = serde_json::to_string(&model)?;
     while source.len() % 4 != 0 {
@@ -25,7 +25,10 @@ pub(crate) fn model_json(triangles: usize) -> Value {
     })
 }
 
-pub(crate) fn gac_fixtures(harness: &Path, source: &BTreeMap<String, String>) -> Result<Value, Failure> {
+pub(crate) fn gac_fixtures(
+    harness: &Path,
+    source: &BTreeMap<String, String>,
+) -> Result<Value, Failure> {
     let directory = source
         .get("GAC_FIXTURE_DIR")
         .filter(|value| !value.trim().is_empty())
@@ -134,4 +137,3 @@ pub(crate) fn visual_options(args: &[String]) -> Result<VisualOptions, Failure> 
     }
     Ok(options)
 }
-

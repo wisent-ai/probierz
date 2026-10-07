@@ -63,4 +63,3 @@ pub fn source_file_list(root: &Path) -> Result<Vec<u8>, Failure> {
     }
     Ok(answer)
 }
-

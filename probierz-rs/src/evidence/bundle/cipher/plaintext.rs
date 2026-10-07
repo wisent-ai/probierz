@@ -91,4 +91,3 @@ pub(crate) fn decrypt_bundle_payload(
     }
     Ok((temporary, ciphertext_bytes))
 }
-

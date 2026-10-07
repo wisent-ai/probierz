@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn files_below(root: &Path, extension: &str) -> Result<Vec<PathBuf>, Failure> {
     let mut files = Vec::new();
     let mut pending = vec![root.to_path_buf()];
@@ -154,4 +154,3 @@ pub(crate) fn quoted_values(content: &str) -> Vec<(String, usize)> {
 pub(crate) fn yaml_string<'a>(value: &'a YamlValue, key: &str) -> Option<&'a str> {
     value.get(key).and_then(YamlValue::as_str)
 }
-

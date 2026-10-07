@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 
 pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> Answer {
     let plan_only = args.iter().any(|arg| arg == "--plan");

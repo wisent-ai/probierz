@@ -56,7 +56,11 @@ fn until_read<T>(
     let mut history = Vec::new();
     let mut rejected: Option<(String, String)> = None;
     for round in 1..=rounds {
-        let asked = brief(rejected.as_ref().map(|(draft, why)| (draft.as_str(), why.as_str())));
+        let asked = brief(
+            rejected
+                .as_ref()
+                .map(|(draft, why)| (draft.as_str(), why.as_str())),
+        );
         let (content, model) = drafted(harness, "scout", &asked, tool, description)?;
         match read(&content) {
             Ok(value) => {
@@ -100,7 +104,10 @@ pub(crate) fn scout(
         ));
     }
     if observations == 0 || rounds == 0 {
-        return Err(Failure::invalid(POINT, "--observations and --rounds must be at least 1"));
+        return Err(Failure::invalid(
+            POINT,
+            "--observations and --rounds must be at least 1",
+        ));
     }
     let trend = evidence::trend(topic)?;
     if !buildable(&trend) {
@@ -127,7 +134,10 @@ pub(crate) fn scout(
     std::fs::create_dir_all(&directory)?;
     let stamp = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
     let brief_id = format!("scout-{topic}-{stamp}");
-    let candidates = evidence::candidates(&records, &directory.join(format!("{brief_id}.records.json")))?;
+    let candidates = evidence::candidates(
+        &records,
+        &directory.join(format!("{brief_id}.records.json")),
+    )?;
     let ours = catalog::products()?;
     let (opportunity, decided) = until_read(
         harness,
@@ -138,7 +148,14 @@ pub(crate) fn scout(
         |content| brief::opportunity_of(content, &candidates, &seen, &ours),
     )?;
     let document = brief::document(
-        &brief::Scouted { id: &brief_id, topic, owner, trend: &trend, seen: &seen, candidates: &candidates },
+        &brief::Scouted {
+            id: &brief_id,
+            topic,
+            owner,
+            trend: &trend,
+            seen: &seen,
+            candidates: &candidates,
+        },
         &opportunity,
         json!({"products": extracted, "opportunity": decided}),
     );

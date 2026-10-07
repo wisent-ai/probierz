@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::adoption::*;
+use serde_json::json;
 pub fn adopt_project(
     project_root: &Path,
     source_root: &Path,
@@ -230,4 +230,3 @@ pub fn list_project_adoptions(project_root: &Path) -> Result<Value, Failure> {
         "sources": sources,
     }))
 }
-

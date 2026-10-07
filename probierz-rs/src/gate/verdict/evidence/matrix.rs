@@ -176,7 +176,11 @@ pub(crate) fn matrix_cells(app: &manifest::Manifest, profile: &str) -> Result<Ve
     Ok(cells)
 }
 
-pub(crate) fn matrix_coverage(app: &manifest::Manifest, profile: &str, runs: &[Run]) -> Result<Value, String> {
+pub(crate) fn matrix_coverage(
+    app: &manifest::Manifest,
+    profile: &str,
+    runs: &[Run],
+) -> Result<Value, String> {
     let cells = matrix_cells(app, profile)?;
     let mut remaining: Vec<&Run> = runs.iter().collect();
     let mut missing = Vec::new();
@@ -248,4 +252,3 @@ pub(crate) fn receipt_run_value(run: &Run) -> Value {
         ),
     ])
 }
-

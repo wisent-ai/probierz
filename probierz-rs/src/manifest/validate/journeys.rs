@@ -7,7 +7,6 @@ pub(crate) fn validate_journeys(
     surfaces: &serde_yaml::Mapping,
     journeys: &serde_yaml::Mapping,
 ) -> Answer {
-
     for (journey_key, journey) in journeys {
         let name = journey_key.as_str().unwrap_or_default();
         require(

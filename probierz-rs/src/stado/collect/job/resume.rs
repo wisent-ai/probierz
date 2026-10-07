@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn resume_remote_run(
     harness: &Path,
     job_id: Option<&str>,
@@ -94,4 +94,3 @@ pub(crate) fn safe_job_identifier(value: &str) -> bool {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
 }
-

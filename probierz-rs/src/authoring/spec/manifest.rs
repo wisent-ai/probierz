@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 
 #[allow(clippy::too_many_arguments)]
 pub fn author_manifest(
@@ -155,4 +155,3 @@ Repository trees:\n{trees}",
         json!({ "ok": false, "reason": format!("manifest did not validate in 3 rounds: {}", last_error.unwrap_or_else(|| "unknown validation error".to_string())) }),
     )
 }
-

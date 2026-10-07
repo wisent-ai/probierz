@@ -7,7 +7,7 @@ mod publish;
 mod run;
 mod sources;
 
-pub use run::*;
 pub(crate) use brief::*;
 pub(crate) use publish::*;
+pub use run::*;
 pub(crate) use sources::*;

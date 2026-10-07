@@ -23,9 +23,9 @@ use serde_json::{json, Value as Json};
 
 use super::record::catalog;
 use super::scout::identity;
-use policy::{adopted_this_week, append};
 use crate::failure::{now_iso, print_json, Answer, Failure};
 use crate::stado::{shell_quote, STADO_BIN};
+use policy::{adopted_this_week, append};
 use sha2::Digest as _;
 
 const POINT: &str = "benchmark.autonomy";
@@ -33,9 +33,12 @@ const TRENDS: &str = "trends";
 
 /// Topics a cycle report shows Trends accepted.
 fn watched_ok(report: &Json) -> usize {
-    report["topics"]["added"]
-        .as_array()
-        .map_or(0, |added| added.iter().filter(|entry| entry["topic"]["ok"] == true).count())
+    report["topics"]["added"].as_array().map_or(0, |added| {
+        added
+            .iter()
+            .filter(|entry| entry["topic"]["ok"] == true)
+            .count()
+    })
 }
 
 /// The source kinds Trends asks by query, read from the sources it already
@@ -57,7 +60,12 @@ fn query_kinds(harness: &Path) -> Vec<String> {
 
 /// A Trends topic, with one source of every query kind Trends uses, for each
 /// catalog product Trends does not watch yet; the terms are the model's.
-fn watch(harness: &Path, products: &[Json], policy: &policy::Policy, present: &[String]) -> Vec<Json> {
+fn watch(
+    harness: &Path,
+    products: &[Json],
+    policy: &policy::Policy,
+    present: &[String],
+) -> Vec<Json> {
     let trends = Path::new(TRENDS);
     let kinds = query_kinds(harness);
     let mut added = Vec::new();
@@ -84,7 +92,14 @@ fn watch(harness: &Path, products: &[Json], policy: &policy::Policy, present: &[
             let source = format!("{id}-{kind}");
             sources.push(steps::run(
                 trends,
-                &steps::args(&["source-add", source.as_str(), "--kind", kind.as_str(), "--query", terms[0].as_str()]),
+                &steps::args(&[
+                    "source-add",
+                    source.as_str(),
+                    "--kind",
+                    kind.as_str(),
+                    "--query",
+                    terms[0].as_str(),
+                ]),
                 harness,
             ));
         }
@@ -95,14 +110,28 @@ fn watch(harness: &Path, products: &[Json], policy: &policy::Policy, present: &[
 
 /// Scout one topic, have the model judge the brief, and adopt it when the
 /// verdict accepts it.
-fn scout_one(harness: &Path, me: &Path, policy: &policy::Policy, authority: &Json, ledger: &Path, topic: &str) -> Json {
+fn scout_one(
+    harness: &Path,
+    me: &Path,
+    policy: &policy::Policy,
+    authority: &Json,
+    ledger: &Path,
+    topic: &str,
+) -> Json {
     let observations = policy.observations.to_string();
     let rounds = policy.rounds.to_string();
     let scout = steps::run(
         me,
         &steps::args(&[
-            "benchmark", "scout", topic, "--owner", policy.owner.as_str(),
-            "--observations", observations.as_str(), "--rounds", rounds.as_str(),
+            "benchmark",
+            "scout",
+            topic,
+            "--owner",
+            policy.owner.as_str(),
+            "--observations",
+            observations.as_str(),
+            "--rounds",
+            rounds.as_str(),
         ]),
         harness,
     );
@@ -117,7 +146,9 @@ fn scout_one(harness: &Path, me: &Path, policy: &policy::Policy, authority: &Jso
     };
     let verdict = match model::judge(harness, &brief, policy.rounds) {
         Ok(verdict) => verdict,
-        Err(failure) => return json!({"topic": topic, "scout": scout, "judge": {"refusal": failure.detail}}),
+        Err(failure) => {
+            return json!({"topic": topic, "scout": scout, "judge": {"refusal": failure.detail}})
+        }
     };
     if verdict["accept"] != true {
         return json!({"topic": topic, "scout": scout, "judge": verdict});
@@ -127,8 +158,14 @@ fn scout_one(harness: &Path, me: &Path, policy: &policy::Policy, authority: &Jso
     let adopt = steps::run(
         me,
         &steps::args(&[
-            "benchmark", "adopt", brief_path.as_str(), "--allow-create",
-            "--cases", cases.as_str(), "--rounds", rounds.as_str(),
+            "benchmark",
+            "adopt",
+            brief_path.as_str(),
+            "--allow-create",
+            "--cases",
+            cases.as_str(),
+            "--rounds",
+            rounds.as_str(),
         ]),
         harness,
     );
@@ -151,9 +188,21 @@ fn scout_one(harness: &Path, me: &Path, policy: &policy::Policy, authority: &Jso
 /// Run one suite, bring the roadmap in line with it, and hand the newest
 /// losses to pursuits within the policy's budget.
 fn measure(harness: &Path, me: &Path, policy: &policy::Policy, app: &str, suite: &str) -> Json {
-    let run = steps::run(me, &steps::args(&["benchmark", "run", app, "--suite", suite]), harness);
-    let roadmap = steps::run(me, &steps::args(&["benchmark", "roadmap", app, "--suite", suite]), harness);
-    let standing = steps::run(me, &steps::args(&["benchmark", "standing", app, "--suite", suite]), harness);
+    let run = steps::run(
+        me,
+        &steps::args(&["benchmark", "run", app, "--suite", suite]),
+        harness,
+    );
+    let roadmap = steps::run(
+        me,
+        &steps::args(&["benchmark", "roadmap", app, "--suite", suite]),
+        harness,
+    );
+    let standing = steps::run(
+        me,
+        &steps::args(&["benchmark", "standing", app, "--suite", suite]),
+        harness,
+    );
     let pursued: Vec<Json> = standing["answer"]["losses"]
         .as_array()
         .into_iter()
@@ -164,8 +213,15 @@ fn measure(harness: &Path, me: &Path, policy: &policy::Policy, app: &str, suite:
             steps::run(
                 me,
                 &steps::args(&[
-                    "benchmark", "pursue", app, "--suite", suite, "--case", case,
-                    "--budget-usd", policy.pursuit_budget_usd.as_str(),
+                    "benchmark",
+                    "pursue",
+                    app,
+                    "--suite",
+                    suite,
+                    "--case",
+                    case,
+                    "--budget-usd",
+                    policy.pursuit_budget_usd.as_str(),
                 ]),
                 harness,
             )
@@ -217,7 +273,8 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
                 "skipped": format!("{} product(s) a week is the policy's limit, and it is reached", policy.products_per_week),
             }));
         } else if !identity(topic) {
-            scouted.push(json!({"topic": topic, "skipped": "the topic name is not a Stado identity"}));
+            scouted
+                .push(json!({"topic": topic, "skipped": "the topic name is not a Stado identity"}));
         } else {
             scouted.push(scout_one(harness, &me, &policy, &authority, &ledger, topic));
         }
@@ -228,13 +285,21 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
         let Some(app) = product["benchmark"]["app"].as_str() else {
             continue;
         };
-        for suite in product["benchmark"]["suites"].as_array().into_iter().flatten().filter_map(Json::as_str) {
+        for suite in product["benchmark"]["suites"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Json::as_str)
+        {
             measured.push(measure(harness, &me, &policy, app, suite));
         }
     }
 
     let fed = feedback::incidents(harness, &me, &catalog::products()?);
-    let adopted = scouted.iter().filter(|entry| entry["adopt"]["ok"] == true).count();
+    let adopted = scouted
+        .iter()
+        .filter(|entry| entry["adopt"]["ok"] == true)
+        .count();
     let report = json!({
         "schema": "ai.wisent.probierz.benchmark.cycle.v1",
         "startedAt": started,
@@ -246,9 +311,16 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
         "measured": measured,
         "feedback": fed,
     });
-    let report_file = directory.join(format!("cycle-{}.json", chrono::Utc::now().format("%Y%m%d%H%M%S")));
+    let report_file = directory.join(format!(
+        "cycle-{}.json",
+        chrono::Utc::now().format("%Y%m%d%H%M%S")
+    ));
     std::fs::write(&report_file, serde_json::to_string_pretty(&report)? + "\n")?;
-    let count = |key: &str, ok: &dyn Fn(&Json) -> bool| report[key].as_array().map_or(0, |all| all.iter().filter(|entry| ok(entry)).count());
+    let count = |key: &str, ok: &dyn Fn(&Json) -> bool| {
+        report[key]
+            .as_array()
+            .map_or(0, |all| all.iter().filter(|entry| ok(entry)).count())
+    };
     let topics = report["topics"]["added"].as_array().map_or(0, Vec::len);
     let suites = report["measured"].as_array().map_or(0, Vec::len);
     let ran = count("measured", &|entry| entry["run"]["ok"] == true);
@@ -273,13 +345,20 @@ pub(crate) fn schedule(
     policy_file: Option<&str>,
 ) -> Answer {
     if harness_dir.trim().is_empty() {
-        return Err(Failure::invalid(POINT, "--harness-dir names the Probierz harness on the host"));
+        return Err(Failure::invalid(
+            POINT,
+            "--harness-dir names the Probierz harness on the host",
+        ));
     }
     let mut command = format!("PROBIERZ_HARNESS_DIR={}", shell_quote(harness_dir));
     for setting in settings {
         let named = setting.split_once('=').filter(|(name, _)| {
-            name.chars().next().is_some_and(|first| first.is_ascii_uppercase() || first == '_')
-                && name.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+            name.chars()
+                .next()
+                .is_some_and(|first| first.is_ascii_uppercase() || first == '_')
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
         });
         let Some((name, value)) = named else {
             return Err(Failure::invalid(
@@ -297,26 +376,51 @@ pub(crate) fn schedule(
     // machine type no fleet host offers; the registry names the host's kind,
     // which is the provider its agent claims for.
     let mut kind = Command::new(STADO_BIN);
-    kind.args(["registry", "pull", "--path", &format!("targets.{host}.kind")]);
-    let provider = String::from_utf8_lossy(&catalog::stado(&mut kind)?).trim().to_string();
+    kind.args([
+        "registry",
+        "pull",
+        "--path",
+        &format!("targets.{host}.kind"),
+    ]);
+    let provider = String::from_utf8_lossy(&catalog::stado(&mut kind)?)
+        .trim()
+        .to_string();
     // The creation identity is the declaration's own digest: the same inputs
     // are the same schedule, so running this again changes nothing, and Stado
     // keeps a removed schedule's identity, so new inputs need a new one.
     let declaration = json!({"cron": cron, "host": host, "provider": provider, "secrets": secrets, "command": command});
     let digest = sha2::Sha256::digest(declaration.to_string().as_bytes());
-    let hex: String = digest[..16].iter().map(|byte| format!("{byte:02x}")).collect();
-    let id = format!("{}-{}-{}-{}-{}", &hex[..8], &hex[8..12], &hex[12..16], &hex[16..20], &hex[20..]);
+    let hex: String = digest[..16]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let id = format!(
+        "{}-{}-{}-{}-{}",
+        &hex[..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..]
+    );
     let mut list = Command::new(STADO_BIN);
     list.args(["schedule", "list", "--json"]);
-    let schedules: Json = serde_json::from_slice(&catalog::stado(&mut list)?)
-        .map_err(|error| Failure::config(POINT, format!("stado schedule list answered no JSON: {error}")))?;
+    let schedules: Json = serde_json::from_slice(&catalog::stado(&mut list)?).map_err(|error| {
+        Failure::config(
+            POINT,
+            format!("stado schedule list answered no JSON: {error}"),
+        )
+    })?;
     let ours = format!("sch-{}", hex);
     let others: Vec<String> = schedules
         .as_array()
         .into_iter()
         .flatten()
         .filter(|row| row["deleted"] != true && row["schedule_id"] != ours.as_str())
-        .filter(|row| row["command"].as_str().is_some_and(|line| line.contains(" probierz benchmark cycle")))
+        .filter(|row| {
+            row["command"]
+                .as_str()
+                .is_some_and(|line| line.contains(" probierz benchmark cycle"))
+        })
         .filter_map(|row| row["schedule_id"].as_str().map(str::to_string))
         .collect();
     if !others.is_empty() {
@@ -329,14 +433,27 @@ pub(crate) fn schedule(
         ));
     }
     let mut create = Command::new(STADO_BIN);
-    create.args(["schedule", "create", "--id", id.as_str(), "--json", "--cron", cron, "--pinned-host", host]);
+    create.args([
+        "schedule",
+        "create",
+        "--id",
+        id.as_str(),
+        "--json",
+        "--cron",
+        cron,
+        "--pinned-host",
+        host,
+    ]);
     create.args(["--provider", provider.as_str(), "--pin-provider"]);
     for secret in secrets {
         create.arg("--secret-env").arg(secret);
     }
     create.arg(&command);
     let created: Json = serde_json::from_slice(&catalog::stado(&mut create)?).map_err(|error| {
-        Failure::config(POINT, format!("stado schedule create answered no JSON: {error}"))
+        Failure::config(
+            POINT,
+            format!("stado schedule create answered no JSON: {error}"),
+        )
     })?;
     print_json(&json!({
         "schedule": created,

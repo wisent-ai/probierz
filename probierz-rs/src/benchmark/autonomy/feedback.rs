@@ -18,11 +18,18 @@ const PREFIX: &str = "Repair incident ";
 
 /// Bring every product's incident items in line with the register.
 pub(super) fn incidents(harness: &Path, me: &Path, products: &[Json]) -> Json {
-    let listed = steps::run(me, &steps::args(&["incident", "list", "--state", "all", "--json"]), harness);
+    let listed = steps::run(
+        me,
+        &steps::args(&["incident", "list", "--state", "all", "--json"]),
+        harness,
+    );
     if !steps::ok(&listed) {
         return json!({"read": listed});
     }
-    let rows: Vec<Json> = listed["answer"]["incidents"].as_array().cloned().unwrap_or_default();
+    let rows: Vec<Json> = listed["answer"]["incidents"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     let mut changes = Vec::new();
     for product in products {
         let id = product["id"].as_str().unwrap_or_default();
@@ -32,7 +39,12 @@ pub(super) fn incidents(harness: &Path, me: &Path, products: &[Json]) -> Json {
             .collect();
         let wanted: Vec<String> = open
             .iter()
-            .map(|row| format!("{PREFIX}{}", row["incident_id"].as_str().unwrap_or_default()))
+            .map(|row| {
+                format!(
+                    "{PREFIX}{}",
+                    row["incident_id"].as_str().unwrap_or_default()
+                )
+            })
             .collect();
         let existing: Vec<String> = product["roadmap"]
             .as_array()
@@ -74,7 +86,9 @@ pub(super) fn incidents(harness: &Path, me: &Path, products: &[Json]) -> Json {
         for title in &removed {
             write.arg("--remove-roadmap").arg(title);
         }
-        let refusal = catalog::stado(&mut write).err().map(|failure| failure.detail);
+        let refusal = catalog::stado(&mut write)
+            .err()
+            .map(|failure| failure.detail);
         changes.push(json!({
             "product": id,
             "added": added,

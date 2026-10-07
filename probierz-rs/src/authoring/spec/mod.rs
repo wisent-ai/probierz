@@ -7,6 +7,6 @@ mod journey;
 mod manifest;
 
 pub use author::*;
+pub(crate) use draft::*;
 pub use journey::*;
 pub use manifest::*;
-pub(crate) use draft::*;

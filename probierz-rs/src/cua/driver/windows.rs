@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::cua::*;
+use serde_json::json;
 
 /// Windows, their geometry, and the sidebar rows inside them.
 impl Driver {

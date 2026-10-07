@@ -8,7 +8,9 @@ use crate::failure::{Answer, Failure};
 
 use super::store::lock;
 use super::store::{append, envelope_from_flags, envelope_problem, field, folded, read_envelope};
-use super::{actor, identity, now, register_file, INCIDENT_SCHEMA, REOPENING_SCHEMA, RESOLUTION_SCHEMA};
+use super::{
+    actor, identity, now, register_file, INCIDENT_SCHEMA, REOPENING_SCHEMA, RESOLUTION_SCHEMA,
+};
 
 /// What one recording carries, so the call site reads as the record does.
 pub struct Recorded<'a> {

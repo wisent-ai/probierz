@@ -59,4 +59,3 @@ pub(crate) fn yaml_string(value: &serde_yaml::Value) -> Option<String> {
         _ => None,
     }
 }
-

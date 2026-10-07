@@ -7,6 +7,6 @@ mod files;
 mod identity;
 
 pub use accessibility::*;
-pub use identity::*;
 pub(crate) use accessibility_scan::*;
 pub(crate) use files::*;
+pub use identity::*;

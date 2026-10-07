@@ -28,19 +28,47 @@ const REQUEST_SCHEMA_VERSION: u32 = 1;
 
 /// Hand one lost case of the newest run to Jeden, then decide it with a run
 /// Probierz records itself.
-pub(crate) fn pursue(harness: &Path, app_id: &str, suite_id: &str, case_id: &str, budget_usd: &str) -> Answer {
-    if !budget_usd.parse::<f64>().is_ok_and(|budget| budget.is_finite() && budget > 0.0) {
-        return Err(Failure::invalid(POINT, format!("--budget-usd {budget_usd} is not a positive amount of US dollars")));
+pub(crate) fn pursue(
+    harness: &Path,
+    app_id: &str,
+    suite_id: &str,
+    case_id: &str,
+    budget_usd: &str,
+) -> Answer {
+    if !budget_usd
+        .parse::<f64>()
+        .is_ok_and(|budget| budget.is_finite() && budget > 0.0)
+    {
+        return Err(Failure::invalid(
+            POINT,
+            format!("--budget-usd {budget_usd} is not a positive amount of US dollars"),
+        ));
     }
     let manifest = manifest::load(harness, app_id)?;
     let declared = declared(&manifest)?;
     let ours = declared.ours().clone();
     let file = declared.suite(suite_id)?.clone();
     let loaded = suite::load(&file, suite_id)?;
-    let case = loaded.suite.cases.iter().find(|case| case.id == case_id).ok_or_else(|| {
-        let known: Vec<&str> = loaded.suite.cases.iter().map(|case| case.id.as_str()).collect();
-        Failure::invalid(POINT, format!("suite {suite_id} holds no case {case_id}; its cases are {}", known.join(", ")))
-    })?;
+    let case = loaded
+        .suite
+        .cases
+        .iter()
+        .find(|case| case.id == case_id)
+        .ok_or_else(|| {
+            let known: Vec<&str> = loaded
+                .suite
+                .cases
+                .iter()
+                .map(|case| case.id.as_str())
+                .collect();
+            Failure::invalid(
+                POINT,
+                format!(
+                    "suite {suite_id} holds no case {case_id}; its cases are {}",
+                    known.join(", ")
+                ),
+            )
+        })?;
     let standing = commands::standing_of(harness, app_id, suite_id)?;
     let run_id = standing["runId"].as_str().unwrap_or_default().to_string();
     let loss = standing["losses"]
@@ -67,7 +95,11 @@ pub(crate) fn pursue(harness: &Path, app_id: &str, suite_id: &str, case_id: &str
         })?;
     let objective = objective(app_id, suite_id, &run_id, &ours.id, &file, case, &loss)?;
     let request_id = identifier(&format!("{run_id}-{case_id}"));
-    let directory = harness.join("test-results").join(".benchmark").join(app_id).join("pursuits");
+    let directory = harness
+        .join("test-results")
+        .join(".benchmark")
+        .join(app_id)
+        .join("pursuits");
     std::fs::create_dir_all(&directory)?;
     let request_file = directory.join(format!("{request_id}.json"));
     if !request_file.exists() {
@@ -82,12 +114,17 @@ pub(crate) fn pursue(harness: &Path, app_id: &str, suite_id: &str, case_id: &str
             "allow_write": true,
             "allow_command": true,
         });
-        std::io::Write::write_all(&mut create_private(&request_file)?, serde_json::to_string_pretty(&request)?.as_bytes())?;
+        std::io::Write::write_all(
+            &mut create_private(&request_file)?,
+            serde_json::to_string_pretty(&request)?.as_bytes(),
+        )?;
     }
     let pursuit = jeden(&request_file)?;
     let state = pursuit["state"].as_str().unwrap_or("unknown").to_string();
     if state != "succeeded" {
-        print_json(&json!({"appId": app_id, "case": case_id, "request": request_file, "pursuit": pursuit}))?;
+        print_json(
+            &json!({"appId": app_id, "case": case_id, "request": request_file, "pursuit": pursuit}),
+        )?;
         return Err(Failure::new(
             POINT,
             Code::Refused,
@@ -153,12 +190,19 @@ fn objective(
     case: &suite::Case,
     loss: &Json,
 ) -> Result<String, Failure> {
-    let winners: Vec<&str> = loss["winners"].as_array().into_iter().flatten().filter_map(Json::as_str).collect();
+    let winners: Vec<&str> = loss["winners"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Json::as_str)
+        .collect();
     let measured = |value: &Json| {
         format!(
             "pass rate {} and p50 {} ms",
             value["passRate"].as_f64().unwrap_or(0.0),
-            value["p50Ms"].as_u64().map_or("unmeasured".to_string(), |ms| ms.to_string())
+            value["p50Ms"]
+                .as_u64()
+                .map_or("unmeasured".to_string(), |ms| ms.to_string())
         )
     };
     Ok(format!(
@@ -185,7 +229,13 @@ fn objective(
 /// long is refused by Jeden with its own sentence, never cut here.
 fn identifier(text: &str) -> String {
     text.chars()
-        .map(|character| if character.is_ascii_alphanumeric() || character == '-' || character == '_' { character } else { '-' })
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || character == '-' || character == '_' {
+                character
+            } else {
+                '-'
+            }
+        })
         .collect()
 }
 

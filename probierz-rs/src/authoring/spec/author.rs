@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 
 /// Install a remotely verified candidate and update the same manifest fields as
 /// the local path.
@@ -136,4 +136,3 @@ Hard rules:\n\
     brief.push_str("\n\nCall submit_probierz_spec exactly once with the complete spec, then stop.");
     brief
 }
-

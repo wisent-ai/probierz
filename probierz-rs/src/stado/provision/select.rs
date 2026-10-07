@@ -209,4 +209,3 @@ pub(crate) fn validate_provision_candidates(
     }
     Ok(())
 }
-

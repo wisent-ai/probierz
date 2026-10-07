@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn normalize_wdio(report: &Value, tool: &str) -> Value {
     let rows = report
         .get("tests")
@@ -164,4 +164,3 @@ pub(crate) fn percent_decode(value: &str) -> String {
     }
     String::from_utf8_lossy(&out).into_owned()
 }
-

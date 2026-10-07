@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
     let source = try_json_file(manifest_path)?;
     let directory = manifest_path.parent()?;
@@ -235,4 +235,3 @@ pub(crate) fn compare_named(
     }
     (changes.len(), changes)
 }
-

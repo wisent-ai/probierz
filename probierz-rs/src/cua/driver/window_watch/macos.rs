@@ -54,7 +54,11 @@ extern "C" {
 extern "C" {
     static kCFRunLoopDefaultMode: CFStringRef;
     fn CFRelease(object: CFTypeRef);
-    fn CFStringCreateWithCString(allocator: CFTypeRef, text: *const std::ffi::c_char, encoding: u32) -> CFStringRef;
+    fn CFStringCreateWithCString(
+        allocator: CFTypeRef,
+        text: *const std::ffi::c_char,
+        encoding: u32,
+    ) -> CFStringRef;
     fn CFRunLoopGetCurrent() -> CFRunLoopRef;
     fn CFRunLoopAddSource(run_loop: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFStringRef);
     fn CFRunLoopRemoveSource(run_loop: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFStringRef);
@@ -68,13 +72,24 @@ extern "C" {
         context: *const CFFileDescriptorContext,
     ) -> CFFileDescriptorRef;
     fn CFFileDescriptorEnableCallBacks(descriptor: CFFileDescriptorRef, callbacks: usize);
-    fn CFFileDescriptorCreateRunLoopSource(allocator: CFTypeRef, descriptor: CFFileDescriptorRef, order: isize) -> CFRunLoopSourceRef;
+    fn CFFileDescriptorCreateRunLoopSource(
+        allocator: CFTypeRef,
+        descriptor: CFFileDescriptorRef,
+        order: isize,
+    ) -> CFRunLoopSourceRef;
     fn CFFileDescriptorInvalidate(descriptor: CFFileDescriptorRef);
 }
 
 extern "C" {
     fn kqueue() -> i32;
-    fn kevent(kq: i32, changelist: *const KEvent, nchanges: i32, eventlist: *mut KEvent, nevents: i32, wait_spec: *const c_void) -> i32;
+    fn kevent(
+        kq: i32,
+        changelist: *const KEvent,
+        nchanges: i32,
+        eventlist: *mut KEvent,
+        nevents: i32,
+        wait_spec: *const c_void,
+    ) -> i32;
     fn close(fd: i32) -> i32;
 }
 
@@ -112,7 +127,12 @@ pub(super) struct Watch {
     exit_source: CFRunLoopSourceRef,
 }
 
-extern "C" fn window_created(_: AXObserverRef, _: AXUIElementRef, _: CFStringRef, refcon: *mut c_void) {
+extern "C" fn window_created(
+    _: AXObserverRef,
+    _: AXUIElementRef,
+    _: CFStringRef,
+    refcon: *mut c_void,
+) {
     // SAFETY: refcon is the boxed `Seen` the watch owns while the observer
     // is registered on this thread's run loop.
     let seen = unsafe { &*(refcon as *const Seen) };
@@ -140,9 +160,19 @@ fn exit_queue(pid: u32) -> Result<(i32, bool), String> {
     // SAFETY: kqueue takes no arguments; a negative answer is its error.
     let kq = unsafe { kqueue() };
     if kq < 0 {
-        return Err(format!("cannot watch pid {pid}'s exit: {}", std::io::Error::last_os_error()));
+        return Err(format!(
+            "cannot watch pid {pid}'s exit: {}",
+            std::io::Error::last_os_error()
+        ));
     }
-    let change = KEvent { ident: pid as usize, filter: EVFILT_PROC, flags: EV_ADD, fflags: NOTE_EXIT, data: 0, udata: std::ptr::null_mut() };
+    let change = KEvent {
+        ident: pid as usize,
+        filter: EVFILT_PROC,
+        flags: EV_ADD,
+        fflags: NOTE_EXIT,
+        data: 0,
+        udata: std::ptr::null_mut(),
+    };
     // SAFETY: one valid change and no event slots, so the call returns at once.
     if unsafe { kevent(kq, &change, 1, std::ptr::null_mut(), 0, std::ptr::null()) } >= 0 {
         return Ok((kq, false));
@@ -180,13 +210,15 @@ impl Watch {
         // once in Drop, which runs on every early return below.
         unsafe {
             let run_loop = CFRunLoopGetCurrent();
-            let exit_descriptor = CFFileDescriptorCreate(std::ptr::null(), kq, 1, process_exited, &context);
+            let exit_descriptor =
+                CFFileDescriptorCreate(std::ptr::null(), kq, 1, process_exited, &context);
             if exit_descriptor.is_null() {
                 close(kq);
                 return Err(format!("cannot watch pid {pid}'s exit on the run loop"));
             }
             CFFileDescriptorEnableCallBacks(exit_descriptor, READ_CALLBACK);
-            let exit_source = CFFileDescriptorCreateRunLoopSource(std::ptr::null(), exit_descriptor, 0);
+            let exit_source =
+                CFFileDescriptorCreateRunLoopSource(std::ptr::null(), exit_descriptor, 0);
             CFRunLoopAddSource(run_loop, exit_source, kCFRunLoopDefaultMode);
             let mut watch = Watch {
                 seen,
@@ -210,9 +242,12 @@ impl Watch {
             watch.observer = observer;
             // The AX message is answered by the app's own run loop; an app that
             // cannot answer it is named with the system's error, not a limit of ours.
-            let added = AXObserverAddNotification(observer, watch.application, watch.notification, refcon);
+            let added =
+                AXObserverAddNotification(observer, watch.application, watch.notification, refcon);
             if added != 0 {
-                return Err(format!("pid {pid} did not accept a window-created observer: AXError {added}"));
+                return Err(format!(
+                    "pid {pid} did not accept a window-created observer: AXError {added}"
+                ));
             }
             watch.observer_source = AXObserverGetRunLoopSource(observer);
             CFRunLoopAddSource(run_loop, watch.observer_source, kCFRunLoopDefaultMode);
@@ -235,7 +270,10 @@ impl Watch {
         if self.seen.window.get() {
             return Ok(Event::WindowCreated);
         }
-        Err("the run loop watching for a window stopped with neither a window nor an exit".to_string())
+        Err(
+            "the run loop watching for a window stopped with neither a window nor an exit"
+                .to_string(),
+        )
     }
 }
 

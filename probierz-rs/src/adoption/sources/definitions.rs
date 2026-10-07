@@ -166,4 +166,3 @@ pub(crate) fn source_definitions(source_root: &Path) -> Result<Definitions, Fail
         source_digest: hex::encode(identity.finalize()),
     })
 }
-

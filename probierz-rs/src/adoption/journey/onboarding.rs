@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::adoption::*;
+use serde_json::json;
 
 /// Parse and render the first-use journey, optionally adopting definitions first.
 pub fn onboarding(project_root: &Path, arguments: &[String]) -> Answer {
@@ -258,4 +258,3 @@ pub fn record_passing_quality_evidence_written() {
         write_progress(&progress)
     })();
 }
-

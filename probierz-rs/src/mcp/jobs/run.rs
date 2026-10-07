@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::mcp::*;
+use serde_json::json;
 pub(crate) fn new_run_id() -> String {
     let mut bytes = [0_u8; 16];
     OsRng.fill_bytes(&mut bytes);
@@ -166,7 +166,10 @@ pub(crate) fn finish_job(
     }
     let stderr = String::from_utf8_lossy(&stderr);
     job.error = Some(if stderr.trim().is_empty() {
-        format!("probierz {} with no message", crate::failure::ended(&process_status))
+        format!(
+            "probierz {} with no message",
+            crate::failure::ended(&process_status)
+        )
     } else {
         stderr.trim().to_string()
     });
@@ -249,4 +252,3 @@ pub(crate) fn terminate_tree(pid: u32) {
             .status();
     }
 }
-

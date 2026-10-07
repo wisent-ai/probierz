@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 
 /// Every asset a publication registers, checked one at a time: its kind is
 /// declared, its artifact is the one the run signed, and no artifact is

@@ -1,6 +1,10 @@
-use serde_json::json;
 use crate::run::*;
-pub(crate) fn trace_events(file: &Path, fallback: &str, diagnostics: &mut Vec<Value>) -> Vec<Value> {
+use serde_json::json;
+pub(crate) fn trace_events(
+    file: &Path,
+    fallback: &str,
+    diagnostics: &mut Vec<Value>,
+) -> Vec<Value> {
     let parsed = (|| -> Result<Vec<Value>, String> {
         let entries = zip_entries(file)?;
         let traces: Vec<Value> = entries
@@ -88,7 +92,11 @@ pub(crate) fn trace_events(file: &Path, fallback: &str, diagnostics: &mut Vec<Va
     }
 }
 
-pub(crate) fn json_trace_events(file: &Path, fallback: &str, diagnostics: &mut Vec<Value>) -> Vec<Value> {
+pub(crate) fn json_trace_events(
+    file: &Path,
+    fallback: &str,
+    diagnostics: &mut Vec<Value>,
+) -> Vec<Value> {
     let result = (|| -> Result<Value, String> {
         let document: Value =
             serde_json::from_slice(&fs::read(file).map_err(|error| error.to_string())?)
@@ -123,4 +131,3 @@ pub(crate) fn log_events(file: &Path, source: &str) -> Vec<Value> {
     let expression = Regex::new(r"^(\d{4}-\d{2}-\d{2}T\S+)\s(.*)$").expect("regex");
     content.lines().filter_map(|line| { let groups = expression.captures(line)?; Some(json!({ "at": parse_iso(Some(&groups[1]), &fallback), "type": "log", "source": source, "message": safe_message(&groups[2]) })) }).collect()
 }
-

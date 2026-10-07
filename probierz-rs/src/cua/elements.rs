@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::cua::*;
+use serde_json::json;
 impl Snapshot {
     pub fn from_value(raw: Value) -> Self {
         let content = raw.get("structuredContent").unwrap_or(&raw);
@@ -116,4 +116,3 @@ pub(crate) fn output_detail(output: &Output) -> String {
 pub(crate) fn run_to_exit(command: &mut Command) -> Result<Output, String> {
     command.output().map_err(|error| error.to_string())
 }
-

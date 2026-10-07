@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 /// Run `command` to its end and keep its output. The child is waited for,
 /// never polled or killed on a timer: a command that fails reports its own
 /// exit and stderr.
@@ -216,4 +216,3 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
 pub(crate) fn state_uri(kind: &str) -> String {
     format!("stado://probierz/{kind}")
 }
-

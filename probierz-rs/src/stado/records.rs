@@ -237,4 +237,3 @@ pub(crate) struct Retained {
     pub(crate) author_receipt_file: Option<PathBuf>,
     pub(crate) artifact_error: Option<Value>,
 }
-

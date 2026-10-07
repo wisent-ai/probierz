@@ -187,4 +187,3 @@ pub(crate) fn parse_hook_refs(text: &str) -> Option<(String, String)> {
     }
     None
 }
-

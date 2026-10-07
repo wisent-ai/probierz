@@ -52,22 +52,36 @@ pub(super) fn trend(topic: &str) -> Result<Json, Failure> {
         .and_then(|topics| topics.iter().find(|entry| entry["topic"] == topic))
         .cloned()
         .ok_or_else(|| {
-            Failure::config(POINT, format!("trends detect --topic {topic} answered no verdict for {topic}"))
+            Failure::config(
+                POINT,
+                format!("trends detect --topic {topic} answered no verdict for {topic}"),
+            )
         })
 }
 
 /// The newest observations Trends matched to the topic.
 pub(super) fn observations(topic: &str, limit: usize) -> Result<Vec<Json>, Failure> {
     let listed = answer(
-        Command::new(TRENDS_BIN).args(["observations", "--topic", topic, "--limit", &limit.to_string()]),
+        Command::new(TRENDS_BIN).args([
+            "observations",
+            "--topic",
+            topic,
+            "--limit",
+            &limit.to_string(),
+        ]),
         TRENDS_OWNER,
     )?;
-    let seen: Vec<Json> = listed["observations"].as_array().cloned().unwrap_or_default();
+    let seen: Vec<Json> = listed["observations"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     if seen.is_empty() {
         return Err(Failure::new(
             POINT,
             Code::Refused,
-            format!("Trends holds no observation matching topic {topic}; `trends ingest` records them"),
+            format!(
+                "Trends holds no observation matching topic {topic}; `trends ingest` records them"
+            ),
         ));
     }
     Ok(seen)
@@ -77,7 +91,10 @@ pub(super) fn observations(topic: &str, limit: usize) -> Result<Vec<Json>, Failu
 /// and deduplicated by its own identity rules. The records are kept beside
 /// the brief, so the input of every candidate can be read again.
 pub(super) fn candidates(records: &[Json], file: &Path) -> Result<Vec<Json>, Failure> {
-    std::fs::write(file, serde_json::to_string_pretty(&json!({"records": records}))? + "\n")?;
+    std::fs::write(
+        file,
+        serde_json::to_string_pretty(&json!({"records": records}))? + "\n",
+    )?;
     let discovered = answer(
         Command::new(COMPETITORS_BIN)
             .arg("discover")
@@ -85,12 +102,18 @@ pub(super) fn candidates(records: &[Json], file: &Path) -> Result<Vec<Json>, Fai
             .arg(file),
         "the competitors CLI of wisent-ai/competitors-cli (its package bin) must be on PATH",
     )?;
-    let candidates: Vec<Json> = discovered["candidates"].as_array().cloned().unwrap_or_default();
+    let candidates: Vec<Json> = discovered["candidates"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     if candidates.is_empty() {
         return Err(Failure::new(
             POINT,
             Code::Refused,
-            format!("competitors discover made no candidate of the records in {}", file.display()),
+            format!(
+                "competitors discover made no candidate of the records in {}",
+                file.display()
+            ),
         ));
     }
     Ok(candidates)

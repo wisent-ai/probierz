@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn repository_identity(
     root: &Path,
     name: &str,
@@ -179,4 +179,3 @@ pub fn app_source_identity(
 pub fn source_identity_command(harness: &Path, app_id: &str) -> Result<(), Failure> {
     print_json(&app_source_identity(harness, app_id, None)?)
 }
-

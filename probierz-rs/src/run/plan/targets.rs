@@ -192,12 +192,7 @@ pub(crate) fn parse_run_args(args: &[String], allow_positionals: bool) -> Result
 
 pub(crate) fn files_after_flag(args: &[String]) -> Option<Vec<String>> {
     let start = args.iter().position(|arg| arg == "--files")? + 1;
-    let valued = [
-        "--frames",
-        "--spec",
-        "--app",
-        "--tool",
-    ];
+    let valued = ["--frames", "--spec", "--app", "--tool"];
     let mut files = Vec::new();
     let mut index = start;
     while index < args.len() {
@@ -212,4 +207,3 @@ pub(crate) fn files_after_flag(args: &[String]) -> Option<Vec<String>> {
     }
     Some(files)
 }
-

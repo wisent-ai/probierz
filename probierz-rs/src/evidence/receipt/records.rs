@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub(crate) fn write_json(path: &Path, value: &Value) -> Result<(), Failure> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -235,4 +235,3 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Value {
 pub(crate) fn signed_receipt_run_value(run: &Value, document: &Value) -> Value {
     signed_receipt_run(run, document)
 }
-

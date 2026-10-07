@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn repository_identity(
     root: &Path,
     name: &str,
@@ -180,7 +180,10 @@ pub fn app_source_identity(harness: &Path, app_id: &str) -> Result<Value, Failur
     )
 }
 
-pub(crate) fn build_identity(harness: &Path, env: &BTreeMap<String, String>) -> Result<Value, Failure> {
+pub(crate) fn build_identity(
+    harness: &Path,
+    env: &BTreeMap<String, String>,
+) -> Result<Value, Failure> {
     let candidate = [
         "PROBIERZ_BUILD_PATH",
         "APP_IOS",
@@ -221,4 +224,3 @@ pub(crate) fn build_identity(harness: &Path, env: &BTreeMap<String, String>) -> 
     };
     Ok(json!({ "path": path, "sha256": sha }))
 }
-

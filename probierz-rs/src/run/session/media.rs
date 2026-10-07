@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn walk(root: &Path, sort: bool) -> Vec<PathBuf> {
     if !root.exists() {
         return Vec::new();
@@ -130,4 +130,3 @@ pub(crate) fn js_number(value: Option<&Value>) -> f64 {
         })
         .unwrap_or(0.0)
 }
-

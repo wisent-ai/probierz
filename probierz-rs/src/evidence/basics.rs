@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 
 pub(crate) fn sha256_bytes(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
@@ -186,4 +186,3 @@ pub(crate) fn js_number(value: f64) -> Value {
             .unwrap_or(Value::Null)
     }
 }
-

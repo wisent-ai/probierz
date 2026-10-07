@@ -55,9 +55,9 @@ mod publication;
 mod receipt;
 mod resources;
 
+pub(crate) use basics::*;
 pub use bundle::*;
 pub use history::*;
 pub use publication::*;
 pub use receipt::*;
 pub use resources::*;
-pub(crate) use basics::*;

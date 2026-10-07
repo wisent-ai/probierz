@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn uuid_v4() -> Result<String, Failure> {
     let mut bytes = [0_u8; 16];
     File::open("/dev/urandom")?.read_exact(&mut bytes)?;
@@ -16,7 +16,11 @@ pub(crate) fn uuid_v4() -> Result<String, Failure> {
     ))
 }
 
-pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> Result<Value, Failure> {
+pub(crate) fn submit_remote_seo(
+    harness: &Path,
+    app_id: &str,
+    args: SeoArgs,
+) -> Result<Value, Failure> {
     let selected = host(&args.host, "stado.submit")?;
     let (base_url, primary, secondary, adjudicator) = match (
         args.base_url.as_deref(), args.primary_model.as_deref(),
@@ -118,14 +122,7 @@ pub(crate) fn submit_remote_seo(harness: &Path, app_id: &str, args: SeoArgs) -> 
         secret_names.push("PROBIERZ_SEO_RECEIPT_PRIVATE_KEY");
     }
     let secrets = remote_secret_env(harness, app_id, &secret_names)?;
-    let submission = submit_machine(
-        harness,
-        &selected,
-        &packed.hash,
-        "seo",
-        inputs,
-        secrets,
-    )?;
+    let submission = submit_machine(harness, &selected, &packed.hash, "seo", inputs, secrets)?;
     let mut result = json!({
         "host": args.host,
         "jobId": submission.job_id,

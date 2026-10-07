@@ -9,4 +9,3 @@ pub fn print_result(result: JsonValue) -> Result<bool, Failure> {
     print_json(&result)?;
     Ok(ok)
 }
-

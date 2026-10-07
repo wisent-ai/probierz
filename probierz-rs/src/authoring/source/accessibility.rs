@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 
 /// Static source/spec accessibility audit. Its JSON shape is the former JS contract.
 pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue, Failure> {
@@ -171,4 +171,3 @@ pub fn accessibility_command(harness: &Path, app_id: &str) -> Result<bool, Failu
     print_json(&result)?;
     Ok(ok)
 }
-

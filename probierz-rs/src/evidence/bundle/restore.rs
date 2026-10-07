@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::evidence::*;
+use serde_json::json;
 pub fn restore(
     harness: &Path,
     file: Option<&Path>,
@@ -207,4 +207,3 @@ pub(crate) fn restore_bundle(
         "authenticated": true,
     }))
 }
-

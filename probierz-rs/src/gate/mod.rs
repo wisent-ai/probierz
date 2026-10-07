@@ -37,7 +37,7 @@ mod config;
 mod prepush;
 mod verdict;
 
+pub(crate) use audit::*;
 pub use config::*;
 pub use prepush::*;
 pub use verdict::*;
-pub(crate) use audit::*;

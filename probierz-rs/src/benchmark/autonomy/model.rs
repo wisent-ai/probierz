@@ -34,7 +34,13 @@ fn ask<T>(
     let mut previous = String::new();
     for round in 1..=rounds {
         let asked = format!("{question}{previous}");
-        let (content, model) = drafted(harness, "autonomy", &asked, tool, "Submit the answer as one JSON document.")?;
+        let (content, model) = drafted(
+            harness,
+            "autonomy",
+            &asked,
+            tool,
+            "Submit the answer as one JSON document.",
+        )?;
         match read(&content) {
             Ok(value) => {
                 history.push(json!({"round": round, "model": model}));
@@ -54,7 +60,8 @@ fn ask<T>(
 }
 
 fn parsed(content: &str) -> Result<Json, String> {
-    serde_json::from_str(content).map_err(|error| format!("the answer is not one JSON document: {error}"))
+    serde_json::from_str(content)
+        .map_err(|error| format!("the answer is not one JSON document: {error}"))
 }
 
 /// The model's verdict on one scouted brief: `accept` and its reasons.

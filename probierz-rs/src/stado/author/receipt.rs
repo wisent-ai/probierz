@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> Answer {
     let receipt_id = safe_author_name(&args.receipt_id, "authoring receipt")?;
     let application = manifest::load(harness, &args.app)?;
@@ -189,4 +189,3 @@ pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> A
     fs::set_permissions(&receipt_file, fs::Permissions::from_mode(0o600))?;
     print_json(&json!({ "ok": true, "receipt": receipt_file }))
 }
-

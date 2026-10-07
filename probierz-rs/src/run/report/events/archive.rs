@@ -1,5 +1,5 @@
-use crate::run::{fs, DeflateDecoder, Path, Read};
 use crate::run::*;
+use crate::run::{fs, DeflateDecoder, Path, Read};
 pub(crate) fn zip_entries(file: &Path) -> Result<Vec<(String, String)>, String> {
     let buffer = fs::read(file).map_err(|error| error.to_string())?;
     if buffer.len() < 22 {
@@ -79,4 +79,3 @@ pub(crate) fn json_lines(content: &str) -> Vec<Value> {
         })
         .collect()
 }
-

@@ -3,13 +3,13 @@
 //! retention that eventually removes it.
 
 mod cipher;
+mod fleet_retention;
 mod protect;
 mod restore;
-mod fleet_retention;
 mod retention;
 
+pub(crate) use cipher::*;
+pub use fleet_retention::*;
 pub use protect::*;
 pub use restore::*;
-pub use fleet_retention::*;
 pub use retention::*;
-pub(crate) use cipher::*;

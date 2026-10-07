@@ -1,7 +1,9 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 
-pub(crate) fn matrix_expand(dimensions: Option<&serde_yaml::Value>) -> Vec<BTreeMap<String, String>> {
+pub(crate) fn matrix_expand(
+    dimensions: Option<&serde_yaml::Value>,
+) -> Vec<BTreeMap<String, String>> {
     let mut cells = vec![BTreeMap::new()];
     let mut values: Vec<(&str, &serde_yaml::Value)> = dimensions
         .and_then(serde_yaml::Value::as_mapping)
@@ -153,4 +155,3 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
         "cells": cells,
     }))
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn gac_visual_eval(
     harness: &Path,
     args: &[String],
@@ -146,4 +146,3 @@ pub(crate) fn gac_visual_eval(
         json!({ "reportPath": report_path, "total": results.len(), "passed": passed, "failed": results.len() - passed }),
     )
 }
-

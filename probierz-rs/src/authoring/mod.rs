@@ -27,7 +27,9 @@ pub(crate) use std::process::{Command, Stdio};
 pub(crate) use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) use base64::Engine;
-pub(crate) use ed25519_dalek::pkcs8::{spki::der::pem::LineEnding, DecodePrivateKey, EncodePublicKey};
+pub(crate) use ed25519_dalek::pkcs8::{
+    spki::der::pem::LineEnding, DecodePrivateKey, EncodePublicKey,
+};
 pub(crate) use ed25519_dalek::{Signer, SigningKey};
 
 pub(crate) use serde_json::{Map, Value as JsonValue};
@@ -47,7 +49,7 @@ mod spec;
 pub use figure::*;
 pub use repair::*;
 pub use result::*;
+pub(crate) use router::*;
 pub use seo::*;
 pub use source::*;
 pub use spec::*;
-pub(crate) use router::*;

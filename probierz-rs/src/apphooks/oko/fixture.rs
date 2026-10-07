@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn strategy_document(run_id: &str) -> Value {
     let names = ["Activation", "Retention", "Revenue", "Reliability"];
     let metrics: Vec<Value> = names
@@ -184,4 +184,3 @@ pub(crate) fn scoped_oko_source(
     );
     Ok(scoped)
 }
-

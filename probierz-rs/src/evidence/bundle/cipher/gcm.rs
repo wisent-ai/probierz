@@ -162,4 +162,3 @@ pub(crate) fn encrypt_bundle_payload(
         "evidence.protect",
     )
 }
-

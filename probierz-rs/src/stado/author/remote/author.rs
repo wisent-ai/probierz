@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn submit_remote_author(
     harness: &Path,
     app_id: &str,
@@ -197,4 +197,3 @@ pub(crate) fn submit_remote_author(
     }
     Ok(result)
 }
-

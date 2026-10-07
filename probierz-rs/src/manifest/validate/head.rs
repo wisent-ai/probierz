@@ -1,6 +1,5 @@
 use crate::manifest::*;
 
-
 /// Judge one manifest document. Order follows the declaration itself:
 /// identity, repositories, surfaces, journeys, then the policies that read
 /// them.
@@ -75,4 +74,3 @@ pub fn validate(document: &Value, file: &Path) -> Answer {
     validate_policies(surfaces, document, file, journeys)?;
     Ok(())
 }
-

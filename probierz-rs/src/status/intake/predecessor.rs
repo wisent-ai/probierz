@@ -140,7 +140,14 @@ fn await_exit(pid: i32) {
         data: 0,
         udata: std::ptr::null_mut(),
     };
-    let mut fired = KEvent { ident: 0, filter: 0, flags: 0, fflags: 0, data: 0, udata: std::ptr::null_mut() };
+    let mut fired = KEvent {
+        ident: 0,
+        filter: 0,
+        flags: 0,
+        fflags: 0,
+        data: 0,
+        udata: std::ptr::null_mut(),
+    };
     // SAFETY: one valid change and one writable event slot; a null timeout
     // blocks until the process exits. A pid already gone answers -1/ESRCH.
     let answered = unsafe { kevent(kq, &change, 1, &mut fired, 1, std::ptr::null()) };

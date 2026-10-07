@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn resolve_skarbiec(value: &mut Value, binary: &str) -> Result<(), Failure> {
     match value {
         Value::String(text) if text.starts_with("skarbiec://") => {
@@ -54,7 +54,10 @@ pub(crate) fn resolve_skarbiec(value: &mut Value, binary: &str) -> Result<(), Fa
     Ok(())
 }
 
-pub(crate) fn load_gac_config(path: &Path, environment: &BTreeMap<String, String>) -> Result<Value, Failure> {
+pub(crate) fn load_gac_config(
+    path: &Path,
+    environment: &BTreeMap<String, String>,
+) -> Result<Value, Failure> {
     let mut value: Value = serde_json::from_slice(&fs::read(path).map_err(|error| {
         Failure::config("apphook.gac.config", format!("{}: {error}", path.display()))
     })?)?;
@@ -207,7 +210,10 @@ pub(crate) fn score_with_brama(
     };
     serde_json::from_str(&text[start..=end]).map_err(Failure::from)
 }
-pub(crate) fn gac_root(harness: &Path, environment: &BTreeMap<String, String>) -> Result<PathBuf, Failure> {
+pub(crate) fn gac_root(
+    harness: &Path,
+    environment: &BTreeMap<String, String>,
+) -> Result<PathBuf, Failure> {
     let configured = environment
         .get("GAC_ROOT")
         .filter(|value| !value.trim().is_empty())
@@ -238,4 +244,3 @@ pub(crate) fn gac_root(harness: &Path, environment: &BTreeMap<String, String>) -
     }
     Ok(configured)
 }
-

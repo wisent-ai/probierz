@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::stado::*;
+use serde_json::json;
 pub(crate) fn terminal_failure(job_id: &str, state: &str, job: &Value) -> Value {
     let reported = job.get("error").filter(|value| !value.is_null());
     let detail = if let Some(reported) = reported {
@@ -102,4 +102,3 @@ pub(crate) fn watch_job(job_id: &str) -> Result<Value, Failure> {
         )),
     }
 }
-

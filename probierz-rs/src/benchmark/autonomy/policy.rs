@@ -36,7 +36,10 @@ pub(super) struct Policy {
 
 /// The policy, the file it was read from and the SHA-256 of its bytes, which
 /// every adoption records as its authority.
-pub(super) fn load(harness: &Path, explicit: Option<&Path>) -> Result<(PathBuf, Policy, String), Failure> {
+pub(super) fn load(
+    harness: &Path,
+    explicit: Option<&Path>,
+) -> Result<(PathBuf, Policy, String), Failure> {
     let file = explicit
         .map(Path::to_path_buf)
         .unwrap_or_else(|| harness.join(POLICY_FILE));
@@ -49,15 +52,25 @@ pub(super) fn load(harness: &Path, explicit: Option<&Path>) -> Result<(PathBuf, 
             ),
         )
     })?;
-    let policy: Policy = serde_yaml::from_str(&text)
-        .map_err(|error| Failure::config(POINT, format!("{} is not a policy: {error}", file.display())))?;
+    let policy: Policy = serde_yaml::from_str(&text).map_err(|error| {
+        Failure::config(
+            POINT,
+            format!("{} is not a policy: {error}", file.display()),
+        )
+    })?;
     if policy.schema_version != 1 {
-        return Err(Failure::config(POINT, format!("{}: schemaVersion must be 1", file.display())));
+        return Err(Failure::config(
+            POINT,
+            format!("{}: schemaVersion must be 1", file.display()),
+        ));
     }
     if policy.observations == 0 || policy.rounds == 0 || policy.cases == 0 {
         return Err(Failure::config(
             POINT,
-            format!("{}: observations, rounds and cases must be at least 1", file.display()),
+            format!(
+                "{}: observations, rounds and cases must be at least 1",
+                file.display()
+            ),
         ));
     }
     if !policy
@@ -97,6 +110,9 @@ pub(super) fn adopted_this_week(ledger: &Path) -> usize {
 /// Add one adoption to the ledger the weekly limit is counted from.
 pub(super) fn append(ledger: &Path, entry: &serde_json::Value) -> std::io::Result<()> {
     use std::io::Write;
-    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(ledger)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(ledger)?;
     writeln!(file, "{entry}")
 }

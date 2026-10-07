@@ -1,5 +1,8 @@
 use crate::adoption::*;
-pub(crate) fn files_below(root: &Path, relative_root: &str) -> Result<Vec<DefinitionFile>, Failure> {
+pub(crate) fn files_below(
+    root: &Path,
+    relative_root: &str,
+) -> Result<Vec<DefinitionFile>, Failure> {
     let start = absolute(root, relative_root)?;
     let metadata = fs::symlink_metadata(&start)?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
@@ -183,4 +186,3 @@ pub(crate) fn current_file(file: &Path) -> Result<CurrentFile, Failure> {
         mode: metadata_mode(&metadata),
     })
 }
-

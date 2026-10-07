@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 
 #[allow(clippy::too_many_arguments)]
 pub fn author_spec(
@@ -41,10 +41,7 @@ pub fn author_spec(
     }
     let probe = probe(target, base_url, app_path)
         .map_err(|detail| Failure::unavailable("author-spec.probe", detail))?;
-    let staged = directory.join(format!(
-        ".author-staging-{journey}{}",
-        SPEC_EXTENSION
-    ));
+    let staged = directory.join(format!(".author-staging-{journey}{}", SPEC_EXTENSION));
     fs::create_dir_all(&directory)?;
     let first_brief =
         author_spec_brief(app_id, journey, target, desc, &probe, 1, rounds, None, &[]);
@@ -200,4 +197,3 @@ pub(crate) fn run_authored_spec(
         "failures": failures,
     }))
 }
-

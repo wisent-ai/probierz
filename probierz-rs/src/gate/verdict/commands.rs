@@ -277,4 +277,3 @@ pub fn deactivate(harness: &Path, args: &DeactivateArgs) -> Answer {
         ("config", current),
     ]))
 }
-

@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::mcp::*;
+use serde_json::json;
 pub(crate) fn tool_answer(value: Value) -> Result<Value, String> {
     let pretty = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
     Ok(json!({ "content": [{ "type": "text", "text": pretty }] }))

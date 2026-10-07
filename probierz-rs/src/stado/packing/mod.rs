@@ -4,5 +4,5 @@
 mod files;
 mod inputs;
 
-pub(crate) use inputs::*;
 pub(crate) use files::*;
+pub(crate) use inputs::*;

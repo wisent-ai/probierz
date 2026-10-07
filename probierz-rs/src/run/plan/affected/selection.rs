@@ -1,6 +1,9 @@
-use serde_json::json;
 use crate::run::*;
-pub(crate) fn affected_app_journeys(harness: &Path, files: &[String]) -> Result<Vec<Value>, Failure> {
+use serde_json::json;
+pub(crate) fn affected_app_journeys(
+    harness: &Path,
+    files: &[String],
+) -> Result<Vec<Value>, Failure> {
     let mut matches = Vec::new();
     for app in manifest::list(harness)? {
         let declaration = manifest::load(harness, &app.app_id)?;
@@ -226,5 +229,3 @@ pub fn affected(harness: &Path, args: &[String]) -> Answer {
     };
     print_json(&result)
 }
-
-

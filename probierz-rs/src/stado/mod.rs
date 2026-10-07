@@ -54,11 +54,11 @@ mod records;
 mod sources;
 mod submit;
 
-pub use dispatch::*;
-pub use records::*;
-pub use sources::*;
 pub(crate) use author::*;
 pub(crate) use collect::*;
+pub use dispatch::*;
 pub(crate) use packing::*;
 pub(crate) use provision::*;
+pub use records::*;
+pub use sources::*;
 pub(crate) use submit::*;

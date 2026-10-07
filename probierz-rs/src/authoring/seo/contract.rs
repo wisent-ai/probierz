@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::authoring::*;
+use serde_json::json;
 pub(crate) fn seo_prerequisites(
     harness: &Path,
     app_id: &str,
@@ -171,4 +171,3 @@ pub(crate) fn seo_model_tool(policy: &JsonValue) -> JsonValue {
         }, "required": ["summary", "dimensions", "blocking_issues", "recommendations"], "additionalProperties": false }
     }})
 }
-

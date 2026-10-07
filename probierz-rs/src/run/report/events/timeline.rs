@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn modified_iso(path: &Path) -> String {
     fs::metadata(path)
         .and_then(|meta| meta.modified())
@@ -173,4 +173,3 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
     returned.extend(result.as_object().expect("object").clone());
     Value::Object(returned)
 }
-

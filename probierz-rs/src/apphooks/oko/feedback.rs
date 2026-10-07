@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::apphooks::*;
+use serde_json::json;
 pub(crate) fn oko_writer_update(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, false)?;
     let (path, mut state) = read_state(source)?;
@@ -253,4 +253,3 @@ pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Fa
     }
     Ok(json!({ "deletedOrganization": org_id, "deletedAccount": user_id.is_some() }))
 }
-

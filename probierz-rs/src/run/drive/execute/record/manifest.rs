@@ -1,5 +1,5 @@
-use serde_json::json;
 use crate::run::*;
+use serde_json::json;
 pub(crate) fn complete_run(
     mut run: Value,
     analysis: Option<&Value>,
@@ -163,4 +163,3 @@ pub(crate) fn complete_run(
     object.insert("evidence".into(), evidence);
     Ok(run)
 }
-
