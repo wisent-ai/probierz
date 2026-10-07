@@ -24,8 +24,6 @@ use crate::manifest;
 
 const POINT: &str = "benchmark.pursue";
 const JEDEN_BIN: &str = "jeden";
-/// The longest request id Jeden accepts.
-const MAX_ID_BYTES: usize = 100;
 const REQUEST_SCHEMA_VERSION: u32 = 1;
 
 /// Hand one lost case of the newest run to Jeden, then decide it with a run
@@ -182,14 +180,13 @@ fn objective(
     ))
 }
 
-/// A name Jeden accepts as a request or initiative id: ASCII letters, digits,
-/// `-` and `_`, at most 100 bytes.
+/// A request or initiative id in the characters Jeden accepts: ASCII letters,
+/// digits, `-` and `_`. Its length is Jeden's to judge: a name Jeden finds too
+/// long is refused by Jeden with its own sentence, never cut here.
 fn identifier(text: &str) -> String {
-    let mapped: String = text
-        .chars()
+    text.chars()
         .map(|character| if character.is_ascii_alphanumeric() || character == '-' || character == '_' { character } else { '-' })
-        .collect();
-    mapped.chars().take(MAX_ID_BYTES).collect()
+        .collect()
 }
 
 /// Submit the request to Jeden and read its response document. A request
