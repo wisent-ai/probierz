@@ -92,10 +92,9 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             positional.push("appId");
             "status"
         }
-        "probierz_gate_prepush" => {
-            positional.push("repo");
-            "gate prepush"
-        }
+        // `gate prepush` reads every argument as a flag: --repo, --app,
+        // --base, --head, --ci.
+        "probierz_gate_prepush" => "gate prepush",
         "probierz_author_spec" => {
             positional.extend(["appId", "journey"]);
             "author-spec"
