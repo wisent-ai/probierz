@@ -161,7 +161,7 @@ pub(crate) fn onboarding_definition() -> Value {
                 }],
                 "presentation": {
                     "title": "Release receipts come after recorded runs",
-                    "body": "A release gate consumes exact run IDs and identities. Once the required journeys have qualifying evidence, `probierz receipt` signs the resulting verdict for a release; it cannot replace the underlying run records or turn missing evidence green."
+                    "body": "A release gate consumes exact run IDs and identities. Once the required journeys have qualifying evidence, `probierz receipt create` signs the resulting verdict for a release; it cannot replace the underlying run records or turn missing evidence green."
                 }
             },
             {

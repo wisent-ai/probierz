@@ -90,39 +90,10 @@ pub enum EvidenceCommand {
         #[arg(long)]
         journey: Option<String>,
     },
-    /// Sign exact runs and policy into an evidence receipt.
+    /// Sign exact runs and policy into an evidence receipt, or verify one.
     Receipt {
-        /// Application the receipt is for (required).
-        app_id: Option<String>,
-        /// Release the receipt is for (required).
-        release: Option<String>,
-        /// Lowercase SHA-256 of the harness the runs used (required).
-        expected_harness_sha: Option<String>,
-        /// Lowercase SHA-256 of the product source the runs used (required).
-        #[arg(long = "source-sha")]
-        expected_source_sha: Option<String>,
-        /// Comma-separated run IDs to sign; at least one.
-        #[arg(long)]
-        runs: Option<String>,
-        /// Comma-separated journeys the signed runs must cover.
-        #[arg(long)]
-        journeys: Option<String>,
-        /// Lowest evidence level accepted, `E0` to `E5`.
-        #[arg(long, default_value = "E3")]
-        minimum: String,
-    },
-    /// Verify a receipt signature, payload hash, and trust anchor.
-    VerifyReceipt {
-        /// Receipt file to verify (required).
-        file: Option<PathBuf>,
-        /// Trusted Ed25519 public key file; without it the key in the
-        /// receipt is used and must match `--fingerprint`.
-        #[arg(long = "public-key")]
-        public_key: Option<PathBuf>,
-        /// Expected SHA-256 fingerprint of the signing key; falls back to
-        /// PROBIERZ_RECEIPT_PUBLIC_KEY_FINGERPRINT.
-        #[arg(long)]
-        fingerprint: Option<String>,
+        #[command(subcommand)]
+        command: ReceiptCommand,
     },
     /// Emit a verified immutable first-use publication manifest.
     Publication {
@@ -147,5 +118,43 @@ pub enum EvidenceCommand {
     Remote {
         #[command(subcommand)]
         command: stado::StadoCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ReceiptCommand {
+    /// Sign exact runs and policy into an evidence receipt.
+    Create {
+        /// Application the receipt is for (required).
+        app_id: Option<String>,
+        /// Release the receipt is for (required).
+        release: Option<String>,
+        /// Lowercase SHA-256 of the harness the runs used (required).
+        expected_harness_sha: Option<String>,
+        /// Lowercase SHA-256 of the product source the runs used (required).
+        #[arg(long = "source-sha")]
+        expected_source_sha: Option<String>,
+        /// Comma-separated run IDs to sign; at least one.
+        #[arg(long)]
+        runs: Option<String>,
+        /// Comma-separated journeys the signed runs must cover.
+        #[arg(long)]
+        journeys: Option<String>,
+        /// Lowest evidence level accepted, `E0` to `E5`.
+        #[arg(long, default_value = "E3")]
+        minimum: String,
+    },
+    /// Verify a receipt signature, payload hash, and trust anchor.
+    Verify {
+        /// Receipt file to verify (required).
+        file: Option<PathBuf>,
+        /// Trusted Ed25519 public key file; without it the key in the
+        /// receipt is used and must match `--fingerprint`.
+        #[arg(long = "public-key")]
+        public_key: Option<PathBuf>,
+        /// Expected SHA-256 fingerprint of the signing key; falls back to
+        /// PROBIERZ_RECEIPT_PUBLIC_KEY_FINGERPRINT.
+        #[arg(long)]
+        fingerprint: Option<String>,
     },
 }

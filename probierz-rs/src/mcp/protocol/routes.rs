@@ -2,6 +2,8 @@ use crate::mcp::*;
 pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>, String> {
     let mut output = Vec::new();
     let mut positional: Vec<&str> = Vec::new();
+    // A switch the command spells after its arguments (`matrix ... --plan`).
+    let mut switches: Vec<&str> = Vec::new();
     let command = match name {
         "probierz_list_surfaces" => "list",
         "probierz_list_specs" => {
@@ -56,7 +58,8 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_matrix_plan" => {
             positional.extend(["appId", "profile"]);
-            "matrix-plan"
+            switches.push("--plan");
+            "matrix"
         }
         "probierz_run_matrix" => {
             positional.extend(["appId", "profile"]);
@@ -81,7 +84,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         "probierz_audit" => "audit",
         "probierz_gate_status" => {
             positional.push("appId");
-            "gate-status"
+            "gate status"
         }
         "probierz_status" => {
             positional.push("appId");
@@ -89,7 +92,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_gate_prepush" => {
             positional.push("repo");
-            "gate-prepush"
+            "gate prepush"
         }
         "probierz_author_spec" => {
             positional.extend(["appId", "journey"]);
@@ -121,15 +124,15 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_gate_evaluate" => {
             positional.push("appId");
-            "gate-evaluate"
+            "gate evaluate"
         }
         "probierz_gate_enforce" => {
             positional.push("appId");
-            "gate-enforce"
+            "gate enforce"
         }
         "probierz_gate_activate" => {
             positional.push("appId");
-            "gate-activate"
+            "gate activate"
         }
         "probierz_compare_runs" => {
             positional.extend(["leftRunId", "rightRunId", "appId"]);
@@ -141,13 +144,13 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_create_receipt" => {
             positional.extend(["appId", "release"]);
-            "receipt-create"
+            "receipt create"
         }
         "probierz_verify_receipt" => {
             positional.push("file");
-            "receipt-verify"
+            "receipt verify"
         }
-        "probierz_create_publication_manifest" => "publication-create",
+        "probierz_create_publication_manifest" => "publication",
         _ => return Err(format!("unknown tool: {name}")),
     };
     // A command of two words is a group and its verb (`stado run`).
@@ -209,5 +212,6 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         };
         append_flag(&mut output, cli_key, value);
     }
+    output.extend(switches.iter().map(|switch| switch.to_string()));
     Ok(output)
 }

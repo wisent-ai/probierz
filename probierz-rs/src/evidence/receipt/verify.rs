@@ -119,7 +119,7 @@ pub fn verify_receipt(
     fingerprint: Option<&str>,
 ) -> Answer {
     let file = file.ok_or_else(|| {
-        Failure::invalid("evidence.verify_receipt", "verify-receipt needs a file")
+        Failure::invalid("evidence.verify_receipt", "receipt verify needs a file")
     })?;
     let result = verify_receipt_value(file, public_key, fingerprint)?;
     print_json(&result)?;

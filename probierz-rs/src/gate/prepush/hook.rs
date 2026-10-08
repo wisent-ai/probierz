@@ -99,7 +99,7 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
         fs::rename(&target, &backup)?;
     }
     let script = format!(
-        "#!/bin/sh\n{MANAGED_MARKER}\nHOOK_DIR=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nif [ -f \"$HOOK_DIR/pre-push.before-probierz-gate\" ]; then\n  \"$HOOK_DIR/pre-push.before-probierz-gate\" \"$@\" || exit $?\nfi\nGATE_CI=\"--ci\"\nif [ \"${{PROBIERZ_GATE_NO_CI:-}}\" = \"1\" ]; then GATE_CI=\"\"; fi\nexec {} --harness {} gate-prepush --hook --app {} $GATE_CI\n",
+        "#!/bin/sh\n{MANAGED_MARKER}\nHOOK_DIR=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nif [ -f \"$HOOK_DIR/pre-push.before-probierz-gate\" ]; then\n  \"$HOOK_DIR/pre-push.before-probierz-gate\" \"$@\" || exit $?\nfi\nGATE_CI=\"--ci\"\nif [ \"${{PROBIERZ_GATE_NO_CI:-}}\" = \"1\" ]; then GATE_CI=\"\"; fi\nexec {} --harness {} gate prepush --hook --app {} $GATE_CI\n",
         shell_quote(&rust_command),
         shell_quote(&harness.to_string_lossy()),
         shell_quote(&args.app_id),
@@ -142,7 +142,7 @@ pub fn uninstall(harness: &Path, args: &InstallArgs) -> Answer {
         return Err(Failure::config(
             "gate.uninstall",
             format!(
-                "{} is not the hook gate-install wrote; it was left as it is",
+                "{} is not the hook gate install wrote; it was left as it is",
                 target.display()
             ),
         ));

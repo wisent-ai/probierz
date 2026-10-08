@@ -81,42 +81,19 @@ pub enum ReportingCommand {
         command: crate::benchmark::BenchmarkCommand,
     },
     // PortGate: merge and release gates
-    /// Gate configuration and activation status for an application.
-    GateStatus { app_id: String },
-    /// Judge the changes being pushed to a repository.
+    /// The repository pre-push gate and the merge and release gates: status,
+    /// prepush, install, uninstall, evaluate, enforce, activate, deactivate.
+    Gate {
+        #[command(subcommand)]
+        command: GateCommand,
+    },
+    /// The spelling every pre-push hook installed before `gate prepush`
+    /// still runs. `gate install` rewrites such a hook to `gate prepush`;
+    /// this variant goes when no installed hook names it.
+    #[command(hide = true)]
     GatePrepush {
         #[command(flatten)]
         args: gate::PrepushArgs,
-    },
-    /// Install the repository pre-push gate, preserving an existing hook.
-    GateInstall {
-        #[command(flatten)]
-        args: gate::InstallArgs,
-    },
-    /// Remove the pre-push gate gate-install wrote and put back the hook it chained.
-    GateUninstall {
-        #[command(flatten)]
-        args: gate::InstallArgs,
-    },
-    /// Evaluate evidence against a merge or release policy.
-    GateEvaluate {
-        #[command(flatten)]
-        args: gate::GateArgs,
-    },
-    /// Enforce an activated merge or release policy.
-    GateEnforce {
-        #[command(flatten)]
-        args: gate::GateArgs,
-    },
-    /// Require a green evaluation and activate its gate.
-    GateActivate {
-        #[command(flatten)]
-        args: gate::GateArgs,
-    },
-    /// Withdraw one activated gate mode, so its policy is no longer enforced.
-    GateDeactivate {
-        #[command(flatten)]
-        args: gate::DeactivateArgs,
     },
     // PortRuns: execution, analysis, and matrix
     /// Is the target toolchain ready?
@@ -161,6 +138,48 @@ pub enum ReportingCommand {
         profile: String,
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
+    },
+}
+
+// PortGate: merge and release gates
+#[derive(Debug, Subcommand)]
+pub enum GateCommand {
+    /// Gate configuration and activation status for an application.
+    Status { app_id: String },
+    /// Judge the changes being pushed to a repository.
+    Prepush {
+        #[command(flatten)]
+        args: gate::PrepushArgs,
+    },
+    /// Install the repository pre-push gate, preserving an existing hook.
+    Install {
+        #[command(flatten)]
+        args: gate::InstallArgs,
+    },
+    /// Remove the pre-push gate `gate install` wrote and put back the hook it chained.
+    Uninstall {
+        #[command(flatten)]
+        args: gate::InstallArgs,
+    },
+    /// Evaluate evidence against a merge or release policy.
+    Evaluate {
+        #[command(flatten)]
+        args: gate::GateArgs,
+    },
+    /// Enforce an activated merge or release policy.
+    Enforce {
+        #[command(flatten)]
+        args: gate::GateArgs,
+    },
+    /// Require a green evaluation and activate its gate.
+    Activate {
+        #[command(flatten)]
+        args: gate::GateArgs,
+    },
+    /// Withdraw one activated gate mode, so its policy is no longer enforced.
+    Deactivate {
+        #[command(flatten)]
+        args: gate::DeactivateArgs,
     },
 }
 

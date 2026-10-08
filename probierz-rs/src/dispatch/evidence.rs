@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::evidence::EvidenceCommand;
+use crate::cli::evidence::{EvidenceCommand, ReceiptCommand};
 use crate::failure::Answer;
 use crate::{evidence, stado};
 
@@ -69,33 +69,35 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             target,
             journey,
         } => evidence::last_green(harness, &app_id, target.as_deref(), journey.as_deref()),
-        EvidenceCommand::Receipt {
-            app_id,
-            release,
-            expected_harness_sha,
-            expected_source_sha,
-            runs,
-            journeys,
-            minimum,
-        } => evidence::receipt(
-            harness,
-            app_id.as_deref(),
-            release.as_deref(),
-            expected_harness_sha.as_deref(),
-            expected_source_sha.as_deref(),
-            runs.as_deref(),
-            journeys.as_deref(),
-            &minimum,
-        ),
-        EvidenceCommand::VerifyReceipt {
-            file,
-            public_key,
-            fingerprint,
-        } => evidence::verify_receipt(
-            file.as_deref(),
-            public_key.as_deref(),
-            fingerprint.as_deref(),
-        ),
+        EvidenceCommand::Receipt { command } => match command {
+            ReceiptCommand::Create {
+                app_id,
+                release,
+                expected_harness_sha,
+                expected_source_sha,
+                runs,
+                journeys,
+                minimum,
+            } => evidence::receipt(
+                harness,
+                app_id.as_deref(),
+                release.as_deref(),
+                expected_harness_sha.as_deref(),
+                expected_source_sha.as_deref(),
+                runs.as_deref(),
+                journeys.as_deref(),
+                &minimum,
+            ),
+            ReceiptCommand::Verify {
+                file,
+                public_key,
+                fingerprint,
+            } => evidence::verify_receipt(
+                file.as_deref(),
+                public_key.as_deref(),
+                fingerprint.as_deref(),
+            ),
+        },
         EvidenceCommand::Publication {
             receipt,
             attempt_id,

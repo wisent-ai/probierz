@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::reporting::{dashboard_limit, IntakeCommand, ReportingCommand};
+use crate::cli::reporting::{dashboard_limit, GateCommand, IntakeCommand, ReportingCommand};
 use crate::failure::Answer;
 use crate::{adoption, gate, incidents, run, status};
 
@@ -47,14 +47,17 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::Incident { command } => incidents::dispatch(harness, command),
         ReportingCommand::Benchmark { command } => crate::benchmark::dispatch(harness, command),
         // PortGate: merge and release gates
-        ReportingCommand::GateStatus { app_id } => gate::status(harness, &app_id),
+        ReportingCommand::Gate { command } => match command {
+            GateCommand::Status { app_id } => gate::status(harness, &app_id),
+            GateCommand::Prepush { args } => gate::prepush(harness, &args),
+            GateCommand::Install { args } => gate::install(harness, &args),
+            GateCommand::Uninstall { args } => gate::uninstall(harness, &args),
+            GateCommand::Evaluate { args } => gate::evaluate(harness, &args),
+            GateCommand::Enforce { args } => gate::enforce(harness, &args),
+            GateCommand::Activate { args } => gate::activate(harness, &args),
+            GateCommand::Deactivate { args } => gate::deactivate(harness, &args),
+        },
         ReportingCommand::GatePrepush { args } => gate::prepush(harness, &args),
-        ReportingCommand::GateInstall { args } => gate::install(harness, &args),
-        ReportingCommand::GateUninstall { args } => gate::uninstall(harness, &args),
-        ReportingCommand::GateEvaluate { args } => gate::evaluate(harness, &args),
-        ReportingCommand::GateEnforce { args } => gate::enforce(harness, &args),
-        ReportingCommand::GateActivate { args } => gate::activate(harness, &args),
-        ReportingCommand::GateDeactivate { args } => gate::deactivate(harness, &args),
         // PortRuns: execution, analysis, and matrix
         ReportingCommand::Check { target } => run::check(&target),
         ReportingCommand::Setup { target, args } => run::setup(harness, &target, &args),

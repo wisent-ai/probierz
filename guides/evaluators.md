@@ -109,7 +109,7 @@ resulting evidence bundle move through `stado://probierz/inputs` and
 `stado://probierz/results`; the report, source and rendered HTML, robots and
 sitemap bodies, screenshots, mobile performance facts, exact model identities,
 request and rubric hashes, source hashes, blocker list, and receipt-compatible
-signature land under `test-results/seo/`. `probierz verify-receipt <report>`
+signature land under `test-results/seo/`. `probierz receipt verify <report>`
 checks the same canonical Ed25519 signing contract used by other Probierz
 receipts.
 
