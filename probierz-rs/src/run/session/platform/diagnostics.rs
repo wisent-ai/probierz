@@ -17,25 +17,28 @@ pub(crate) fn collect_platform_diagnostics(
         .and_then(|path| Path::new(path).file_stem())
         .and_then(|name| name.to_str())
         .map(str::to_string);
-    let elapsed = DateTime::parse_from_rfc3339(started)
-        .map(|date| {
-            ((Utc::now().timestamp_millis() - date.timestamp_millis()) as f64 / 1000.0).ceil()
-                as i64
-                + 5
-        })
-        .unwrap_or(60)
-        .max(1);
+    // The log window opens at the run's recorded start (`log show --start`),
+    // so nothing is padded and nothing guessed; a start that does not parse
+    // is reported instead of read over an invented span.
+    let since = DateTime::parse_from_rfc3339(started)
+        .map(|date| date.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
+        .map_err(|error| format!("run start {started:?} is not RFC 3339 ({error}), so no log window can be read"));
+    let unreadable_start = |error: &String| json!({ "supported": true, "file": null, "ok": false, "error": error });
     let (command, args, file) =
         if matches!(target, "desktop:mac" | "desktop:cua") && process_name.is_some() {
             let name = process_name.expect("checked");
+            let since = match &since {
+                Ok(since) => since.clone(),
+                Err(error) => return unreadable_start(error),
+            };
             (
                 "/usr/bin/log",
                 vec![
                     "show".into(),
                     "--style".into(),
                     "compact".into(),
-                    "--last".into(),
-                    format!("{elapsed}s"),
+                    "--start".into(),
+                    since,
                     "--predicate".into(),
                     format!("process == \"{name}\""),
                 ],
@@ -43,6 +46,10 @@ pub(crate) fn collect_platform_diagnostics(
             )
         } else if target == "mobile:ios" && process_name.is_some() {
             let name = process_name.expect("checked");
+            let since = match &since {
+                Ok(since) => since.clone(),
+                Err(error) => return unreadable_start(error),
+            };
             (
                 "xcrun",
                 vec![
@@ -53,8 +60,8 @@ pub(crate) fn collect_platform_diagnostics(
                     "show".into(),
                     "--style".into(),
                     "compact".into(),
-                    "--last".into(),
-                    format!("{elapsed}s"),
+                    "--start".into(),
+                    since,
                     "--predicate".into(),
                     format!("process == \"{name}\""),
                 ],
