@@ -147,7 +147,7 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
         "record": policy.get("record").and_then(serde_yaml::Value::as_bool) != Some(false),
         "frames": number(frames),
         "maximumParallel": policy.get("maximumParallel").and_then(serde_yaml::Value::as_u64),
-        "minimumCellEvidence": policy.get("minimumCellEvidence").and_then(serde_yaml::Value::as_str).unwrap_or("E3"),
+        "minimumCellEvidence": policy.get("minimumCellEvidence").and_then(serde_yaml::Value::as_str),
         "artifactEncryption": policy.get("artifactEncryption").and_then(serde_yaml::Value::as_str).unwrap_or("optional"),
         "removePlaintextAfterProtection": policy.get("removePlaintextAfterProtection").and_then(serde_yaml::Value::as_bool).unwrap_or(false),
         "release": policy.get("release").and_then(serde_yaml::Value::as_str),

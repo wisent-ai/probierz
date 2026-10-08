@@ -160,11 +160,12 @@ pub(crate) fn validate_policies(
                     )?;
                 }
             }
-            let evidence = string_of(profile, "minimumCellEvidence").unwrap_or("E3");
+            // The evidence floor is the profile's own statement; none is assumed.
+            let evidence = string_of(profile, "minimumCellEvidence");
             require(
-                matches!(evidence, "E2" | "E3"),
+                matches!(evidence, Some("E2" | "E3")),
                 file,
-                &format!("matrix.{profile_name}.minimumCellEvidence must be E2 or E3"),
+                &format!("matrix.{profile_name}.minimumCellEvidence must be stated as E2 or E3"),
             )?;
             let encryption = string_of(profile, "artifactEncryption").unwrap_or("optional");
             require(

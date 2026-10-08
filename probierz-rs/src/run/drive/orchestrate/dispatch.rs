@@ -248,7 +248,12 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
     let required = plan
         .get("minimumCellEvidence")
         .and_then(Value::as_str)
-        .unwrap_or("E3");
+        .ok_or_else(|| {
+            fail(
+                "run.matrix",
+                format!("matrix {profile} plan states no minimumCellEvidence; the manifest profile must state E2 or E3"),
+            )
+        })?;
     let rank = |level: &str| match level {
         "E0" => 0,
         "E1" => 1,
