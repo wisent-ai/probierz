@@ -12,13 +12,17 @@ use crate::{gate, incidents, run_flags_help};
 #[derive(Debug, Subcommand)]
 pub enum ReportingCommand {
     // PortStatus: status/history/dashboard/overview/intake
-    /// Stability by run, journey, and test.
+    /// Stability by run, journey, and test, with the newest passing run
+    /// (`summary.lastGreenRun`) of the selection.
     History {
         /// Application whose runs are read; no application is assumed.
         app_id: String,
         /// Only runs on this target.
         #[arg(long)]
         target: Option<String>,
+        /// Only runs that carried this journey.
+        #[arg(long)]
+        journey: Option<String>,
         /// Newest runs to read; every run when omitted.
         #[arg(long, value_parser = positive_history_limit)]
         limit: Option<usize>,

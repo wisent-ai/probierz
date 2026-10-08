@@ -76,7 +76,7 @@ pub(crate) fn dashboard_value(
     limit: usize,
 ) -> Result<Value, Failure> {
     let (loaded, document) = manifest_object(harness, app_id)?;
-    let history = run_history_value(harness, app_id, None, limit)?;
+    let history = run_history_value(harness, app_id, None, None, limit)?;
     let runs = history
         .get("runs")
         .and_then(Value::as_array)

@@ -64,11 +64,6 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
             right_run_id,
             app_id,
         } => evidence::compare(harness, Some(&left_run_id), Some(&right_run_id), &app_id),
-        EvidenceCommand::LastGreen {
-            app_id,
-            target,
-            journey,
-        } => evidence::last_green(harness, &app_id, target.as_deref(), journey.as_deref()),
         EvidenceCommand::Receipt { command } => match command {
             ReceiptCommand::Create {
                 app_id,

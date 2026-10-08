@@ -195,7 +195,7 @@ pub(crate) fn verify_repaired_spec(
         .env("PROBIERZ_REPAIR_SUPPRESS", "1")
         .output();
     let exit_code = output.ok().and_then(|value| value.status.code());
-    let latest = crate::status::run_history_value(harness, app_id, Some(target), 1)
+    let latest = crate::status::run_history_value(harness, app_id, Some(target), None, 1)
         .ok()
         .and_then(|history| {
             history

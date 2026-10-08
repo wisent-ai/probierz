@@ -94,8 +94,8 @@ pub(crate) fn repair_source_run(
     app_id: &str,
     requested: Option<&str>,
 ) -> Result<JsonValue, JsonValue> {
-    let history =
-        crate::status::run_history_value(harness, app_id, None, usize::MAX).map_err(|error| {
+    let history = crate::status::run_history_value(harness, app_id, None, None, usize::MAX)
+        .map_err(|error| {
             repair_failure(
                 None,
                 error.code.as_str(),

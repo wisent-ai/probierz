@@ -1,49 +1,5 @@
 use crate::evidence::*;
 use serde_json::json;
-pub fn last_green(
-    harness: &Path,
-    app_id: &str,
-    target: Option<&str>,
-    journey: Option<&str>,
-) -> Answer {
-    let root = match target {
-        Some(value) => harness
-            .join("test-results")
-            .join(app_id)
-            .join(value.replace(':', "-")),
-        None => harness.join("test-results").join(app_id),
-    };
-    let mut runs = manifests_below(&root)?
-        .into_iter()
-        .filter_map(|file| run_record(&file))
-        .filter(|run| {
-            target.is_none_or(|wanted| run.get("target").and_then(Value::as_str) == Some(wanted))
-        })
-        .collect::<Vec<_>>();
-    runs.sort_by(|left, right| {
-        right
-            .get("startedAt")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .cmp(
-                left.get("startedAt")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default(),
-            )
-    });
-    let run = runs.into_iter().find(|candidate| {
-        candidate.get("status").and_then(Value::as_str) == Some("passed")
-            && journey.is_none_or(|wanted| {
-                candidate
-                    .get("journeys")
-                    .and_then(Value::as_array)
-                    .is_some_and(|names| names.iter().any(|name| name.as_str() == Some(wanted)))
-            })
-    });
-    print_json(
-        &json!({ "schemaVersion": 2, "appId": app_id, "target": target, "journey": journey, "run": run }),
-    )
-}
 
 pub(crate) fn files_below(root: &Path, reject_symlinks: bool) -> Result<Vec<PathBuf>, Failure> {
     let mut pending = vec![root.to_path_buf()];

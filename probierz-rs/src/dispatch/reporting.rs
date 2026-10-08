@@ -13,11 +13,13 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::History {
             app_id,
             target,
+            journey,
             limit,
         } => status::history(
             harness,
             &app_id,
             target.as_deref(),
+            journey.as_deref(),
             limit.unwrap_or(usize::MAX),
         ),
         ReportingCommand::Dashboard { app_id, limit } => {

@@ -70,7 +70,7 @@ one explainable release decision.
   the selected driver supports it, bounded README GIF publication from one
   selected journey recording, and rubric-scored scientific figure comparison;
 - application manifests, journey coverage, source identity, run history,
-  comparisons, last-green selection, and evidence dashboards;
+  comparisons, the newest passing run per target and journey, and evidence dashboards;
 - signed evidence receipts, receipt verification, retention, protected bundles,
   secret scanning, audit history, and pull-request or release gates;
 - affected-target selection and change-driven orchestration;

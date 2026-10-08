@@ -79,17 +79,6 @@ pub enum EvidenceCommand {
         /// Application both runs belong to; no application is assumed.
         app_id: String,
     },
-    /// Find the newest passing run.
-    LastGreen {
-        /// Application whose runs are searched; no application is assumed.
-        app_id: String,
-        /// Only runs on this target.
-        #[arg(long)]
-        target: Option<String>,
-        /// Only runs of this journey.
-        #[arg(long)]
-        journey: Option<String>,
-    },
     /// Sign exact runs and policy into an evidence receipt, or verify one.
     Receipt {
         #[command(subcommand)]

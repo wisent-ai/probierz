@@ -176,10 +176,14 @@ pub(crate) fn performance_trend(runs: &[Value]) -> Value {
     })
 }
 
+/// The runs of `app_id`, newest first, narrowed to `target` and to the runs
+/// that carried `journey`, with their summary. `summary.lastGreenRun` is the
+/// newest passing run of that selection, whole.
 pub(crate) fn run_history_value(
     harness: &Path,
     app_id: &str,
     target: Option<&str>,
+    journey: Option<&str>,
     limit: usize,
 ) -> Result<Value, Failure> {
     let mut root = harness.join("test-results").join(app_id);
@@ -191,6 +195,13 @@ pub(crate) fn run_history_value(
         .filter_map(|path| run_record(path))
         .filter(|run| {
             target.is_none_or(|target| run.get("target").and_then(Value::as_str) == Some(target))
+        })
+        .filter(|run| {
+            journey.is_none_or(|wanted| {
+                run.get("journeys")
+                    .and_then(Value::as_array)
+                    .is_some_and(|names| names.iter().any(|name| name.as_str() == Some(wanted)))
+            })
         })
         .collect::<Vec<_>>();
     runs.sort_by(|left, right| {
@@ -232,6 +243,7 @@ pub(crate) fn run_history_value(
         "schemaVersion": 2,
         "appId": app_id,
         "target": target,
+        "journey": journey,
         "generatedAt": now(),
         "summary": {
             "runs": runs.len(),
@@ -249,6 +261,7 @@ pub(crate) fn run_history_value(
             "latestRunId": runs.first().and_then(|run| run.get("runId")).cloned().unwrap_or(Value::Null),
             "lastGreenRunId": runs.iter().find(|run| run.get("status").and_then(Value::as_str) == Some("passed"))
                 .and_then(|run| run.get("runId")).cloned().unwrap_or(Value::Null),
+            "lastGreenRun": runs.iter().find(|run| run.get("status").and_then(Value::as_str) == Some("passed")),
             "performanceRegression": performance.get("regression").cloned().unwrap_or(Value::Bool(false)),
         },
         "performance": performance,
@@ -258,6 +271,12 @@ pub(crate) fn run_history_value(
     }))
 }
 
-pub fn history(harness: &Path, app_id: &str, target: Option<&str>, limit: usize) -> Answer {
-    print_json(&run_history_value(harness, app_id, target, limit)?)
+pub fn history(
+    harness: &Path,
+    app_id: &str,
+    target: Option<&str>,
+    journey: Option<&str>,
+    limit: usize,
+) -> Answer {
+    print_json(&run_history_value(harness, app_id, target, journey, limit)?)
 }

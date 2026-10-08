@@ -14,7 +14,7 @@ pub(crate) fn app_status_value(
 ) -> Result<Value, Failure> {
     let base_ref = base_ref.unwrap_or(TRACKED_UPSTREAM);
     let (loaded, document) = manifest_object(harness, app_id)?;
-    let history = run_history_value(harness, app_id, None, usize::MAX)?;
+    let history = run_history_value(harness, app_id, None, None, usize::MAX)?;
     let gates = gate_status(&loaded, app_id)?;
     let mut repositories = Vec::new();
     let mut diff_files = Vec::new();

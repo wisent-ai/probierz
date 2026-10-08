@@ -56,6 +56,7 @@ pub(crate) fn repair_brief(
         harness,
         app_id,
         run.get("target").and_then(JsonValue::as_str),
+        None,
         usize::MAX,
     )
     .ok()

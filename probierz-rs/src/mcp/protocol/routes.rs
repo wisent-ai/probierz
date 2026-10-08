@@ -142,10 +142,6 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             positional.extend(["leftRunId", "rightRunId", "appId"]);
             "compare"
         }
-        "probierz_last_green" => {
-            positional.push("appId");
-            "last-green"
-        }
         "probierz_create_receipt" => {
             positional.extend(["appId", "release", "expectedHarnessSha"]);
             comma_lists.push("runs");
