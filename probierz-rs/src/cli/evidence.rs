@@ -142,41 +142,6 @@ pub enum EvidenceCommand {
         #[arg(long)]
         fingerprint: Option<String>,
     },
-    /// Emit an Echo-ingestible onboarding proof manifest.
-    PublishOnboarding {
-        /// Signed evidence receipt the proof rests on.
-        receipt: Option<PathBuf>,
-        /// Run whose onboarding is published.
-        #[arg(long = "run")]
-        run_id: Option<String>,
-        /// Onboarding journey the run proves.
-        #[arg(long = "journey")]
-        journey_id: Option<String>,
-        /// Version of that journey.
-        #[arg(long = "journey-version")]
-        journey_version: Option<String>,
-        /// ID of that journey version.
-        #[arg(long = "journey-version-id")]
-        journey_version_id: Option<String>,
-        /// The fact the journey's first success established.
-        #[arg(long = "first-success-fact")]
-        first_success_fact: Option<String>,
-        /// Screen the proof shows.
-        #[arg(long = "screen")]
-        screen_id: Option<String>,
-        /// Directory of the run's published assets.
-        #[arg(long)]
-        assets: Option<PathBuf>,
-        /// File the manifest is written to.
-        #[arg(long)]
-        output: Option<PathBuf>,
-        /// Trusted public key that verifies the receipt.
-        #[arg(long = "public-key")]
-        public_key: Option<PathBuf>,
-        /// Expected SHA-256 fingerprint of the receipt's signing key.
-        #[arg(long)]
-        fingerprint: Option<String>,
-    },
     // PortStado: remote fleet bridge; Stado is the adapter behind it.
     /// Submit, recover, resume, cancel, or author work on a remote fleet host.
     Remote {
