@@ -44,7 +44,7 @@ fn watched_ok(report: &Json) -> usize {
 /// The source kinds Trends asks by query, read from the sources it already
 /// has: a new topic gets one source of each, asked with its first term.
 fn query_kinds(harness: &Path) -> Vec<String> {
-    let listed = steps::run(Path::new(TRENDS), &steps::args(&["source-list"]), harness);
+    let listed = steps::run(Path::new(TRENDS), &steps::command("source list"), harness);
     let mut kinds: Vec<String> = listed["answer"]["sources"]
         .as_array()
         .into_iter()
@@ -81,7 +81,8 @@ fn watch(
                 continue;
             }
         };
-        let mut topic = steps::args(&["topic-add", id]);
+        let mut topic = steps::command("topic add");
+        topic.push(id.to_string());
         for term in &terms {
             topic.push("--term".to_string());
             topic.push(term.clone());
@@ -90,18 +91,15 @@ fn watch(
         let mut sources = Vec::new();
         for kind in &kinds {
             let source = format!("{id}-{kind}");
-            sources.push(steps::run(
-                trends,
-                &steps::args(&[
-                    "source-add",
-                    source.as_str(),
-                    "--kind",
-                    kind.as_str(),
-                    "--query",
-                    terms[0].as_str(),
-                ]),
-                harness,
-            ));
+            let mut add = steps::command("source add");
+            add.extend(steps::args(&[
+                source.as_str(),
+                "--kind",
+                kind.as_str(),
+                "--query",
+                terms[0].as_str(),
+            ]));
+            sources.push(steps::run(trends, &add, harness));
         }
         added.push(json!({"product": id, "terms": terms, "topic": made, "sources": sources}));
     }
@@ -241,13 +239,13 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     let trends = Path::new(TRENDS);
 
     let products = catalog::products()?;
-    let mut listed = steps::run(trends, &steps::args(&["topic-list"]), harness);
+    let mut listed = steps::run(trends, &steps::command("topic list"), harness);
     // A Trends that has no state yet is given one, read from its own error code.
     let missing = serde_json::from_str::<Json>(listed["refusal"].as_str().unwrap_or_default())
         .is_ok_and(|refusal| refusal["error"]["code"] == "state_missing");
     if missing {
         steps::run(trends, &steps::args(&["init"]), harness);
-        listed = steps::run(trends, &steps::args(&["topic-list"]), harness);
+        listed = steps::run(trends, &steps::command("topic list"), harness);
     }
     let present: Vec<String> = listed["answer"]["topics"]
         .as_array()
@@ -259,7 +257,7 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     let watched = watch(harness, &products, &policy, &present);
     let ingested = steps::run(trends, &steps::args(&["ingest"]), harness);
 
-    let relisted = steps::run(trends, &steps::args(&["topic-list"]), harness);
+    let relisted = steps::run(trends, &steps::command("topic list"), harness);
     let mut scouted = Vec::new();
     for topic in relisted["answer"]["topics"]
         .as_array()

@@ -66,15 +66,9 @@ fn scout_refuses_a_topic_below_its_evidence_floor_and_writes_no_brief() {
     let root = harness("floor");
     let state = root.join("trends.state.json");
     trends(&state, &["init"]);
-    trends(
-        &state,
-        &[
-            "topic-add",
-            "quiet-topic",
-            "--term",
-            "a term nothing published",
-        ],
-    );
+    let mut topic: Vec<&str> = "topic add".split(' ').collect();
+    topic.extend(["quiet-topic", "--term", "a term nothing published"]);
+    trends(&state, &topic);
 
     let output = run(
         &root,

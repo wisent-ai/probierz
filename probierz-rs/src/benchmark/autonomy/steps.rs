@@ -13,6 +13,12 @@ pub(super) fn args(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
 
+/// A command path as the operator types it (`topic add`), one argument per
+/// word; the values that follow it are pushed as they are, spaces and all.
+pub(super) fn command(path: &str) -> Vec<String> {
+    path.split(' ').map(str::to_string).collect()
+}
+
 /// Run one command in the cycle's harness and answer its record: the
 /// arguments, the exit status, the JSON it printed and its refusal.
 pub(super) fn run(program: &Path, args: &[String], harness: &Path) -> Json {
