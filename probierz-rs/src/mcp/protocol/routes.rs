@@ -4,6 +4,8 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
     let mut positional: Vec<&str> = Vec::new();
     // A switch the command spells after its arguments (`matrix ... --plan`).
     let mut switches: Vec<&str> = Vec::new();
+    // An array the CLI takes as one comma-separated value (`--runs a,b`).
+    let mut comma_lists: Vec<&str> = Vec::new();
     let command = match name {
         "probierz_list_surfaces" => "list",
         "probierz_list_specs" => {
@@ -123,15 +125,18 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "remote seo"
         }
         "probierz_gate_evaluate" => {
-            positional.push("appId");
+            positional.extend(["appId", "mode", "expectedHarnessSha"]);
+            comma_lists.push("runs");
             "gate evaluate"
         }
         "probierz_gate_enforce" => {
-            positional.push("appId");
+            positional.extend(["appId", "mode", "expectedHarnessSha"]);
+            comma_lists.push("runs");
             "gate enforce"
         }
         "probierz_gate_activate" => {
-            positional.push("appId");
+            positional.extend(["appId", "mode", "expectedHarnessSha"]);
+            comma_lists.push("runs");
             "gate activate"
         }
         "probierz_compare_runs" => {
@@ -143,14 +148,19 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "last-green"
         }
         "probierz_create_receipt" => {
-            positional.extend(["appId", "release"]);
+            positional.extend(["appId", "release", "expectedHarnessSha"]);
+            comma_lists.push("runs");
+            comma_lists.push("journeys");
             "receipt create"
         }
         "probierz_verify_receipt" => {
             positional.push("file");
             "receipt verify"
         }
-        "probierz_create_publication_manifest" => "publication",
+        "probierz_create_publication_manifest" => {
+            positional.extend(["receipt", "attemptId", "journeyId"]);
+            "publication"
+        }
         _ => return Err(format!("unknown tool: {name}")),
     };
     // A command of two words is a group and its verb (`stado run`).
@@ -201,7 +211,6 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "baseRef" => "base",
             "leftRunId" => "left",
             "rightRunId" => "right",
-            "runIds" => "run",
             "cargoRelease" => "cargo-release",
             "appRepo" => "app-repo",
             "noRepair" => "no-repair",
@@ -210,6 +219,17 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             "framesPerSecond" => "fps",
             other => other,
         };
+        if comma_lists.contains(&key.as_str()) {
+            let items = value
+                .as_array()
+                .ok_or_else(|| format!("{key} must be an array of strings"))?;
+            let words = items
+                .iter()
+                .map(|item| non_empty(Some(item), key))
+                .collect::<Result<Vec<_>, _>>()?;
+            append_flag(&mut output, cli_key, &Value::String(words.join(",")));
+            continue;
+        }
         append_flag(&mut output, cli_key, value);
     }
     output.extend(switches.iter().map(|switch| switch.to_string()));
