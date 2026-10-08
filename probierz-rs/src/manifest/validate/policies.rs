@@ -178,24 +178,22 @@ pub(crate) fn validate_policies(
                 file,
                 &format!("matrix.{profile_name}.removePlaintextAfterProtection must be boolean"),
             )?;
-            let max_cells = profile
-                .get("maxCells")
-                .and_then(Value::as_f64)
-                .unwrap_or(128.0);
-            require(
-                max_cells > 0.0,
-                file,
-                &format!("matrix.{profile_name}.maxCells must be positive"),
-            )?;
-            let parallel = profile
-                .get("maximumParallel")
-                .and_then(Value::as_f64)
-                .unwrap_or(4.0);
-            require(
-                parallel > 0.0,
-                file,
-                &format!("matrix.{profile_name}.maximumParallel must be positive"),
-            )?;
+            // A bound the profile states must be a positive whole number; an
+            // unstated one bounds nothing.
+            if let Some(value) = profile.get("maxCells") {
+                require(
+                    value.as_u64().and_then(std::num::NonZeroU64::new).is_some(),
+                    file,
+                    &format!("matrix.{profile_name}.maxCells must be a positive whole number"),
+                )?;
+            }
+            if let Some(value) = profile.get("maximumParallel") {
+                require(
+                    value.as_u64().and_then(std::num::NonZeroU64::new).is_some(),
+                    file,
+                    &format!("matrix.{profile_name}.maximumParallel must be a positive whole number"),
+                )?;
+            }
         }
     }
 

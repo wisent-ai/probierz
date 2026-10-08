@@ -117,18 +117,17 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
             }));
         }
     }
-    let max = policy
-        .get("maxCells")
-        .and_then(serde_yaml::Value::as_u64)
-        .unwrap_or(128) as usize;
-    if cells.len() > max {
-        return Err(fail(
-            "run.matrix",
-            format!(
-                "matrix {profile} expands to {} cells (max {max})",
-                cells.len()
-            ),
-        ));
+    // A profile bounds its matrix only when it states maxCells.
+    if let Some(max) = policy.get("maxCells").and_then(serde_yaml::Value::as_u64) {
+        if cells.len() as u64 > max {
+            return Err(fail(
+                "run.matrix",
+                format!(
+                    "matrix {profile} expands to {} cells (max {max})",
+                    cells.len()
+                ),
+            ));
+        }
     }
     let frames = policy
         .get("frames")
@@ -147,7 +146,7 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
         "profile": profile,
         "record": policy.get("record").and_then(serde_yaml::Value::as_bool) != Some(false),
         "frames": number(frames),
-        "maximumParallel": policy.get("maximumParallel").and_then(serde_yaml::Value::as_u64).unwrap_or(4).max(1),
+        "maximumParallel": policy.get("maximumParallel").and_then(serde_yaml::Value::as_u64),
         "minimumCellEvidence": policy.get("minimumCellEvidence").and_then(serde_yaml::Value::as_str).unwrap_or("E3"),
         "artifactEncryption": policy.get("artifactEncryption").and_then(serde_yaml::Value::as_str).unwrap_or("optional"),
         "removePlaintextAfterProtection": policy.get("removePlaintextAfterProtection").and_then(serde_yaml::Value::as_bool).unwrap_or(false),

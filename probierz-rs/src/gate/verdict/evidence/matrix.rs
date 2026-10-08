@@ -164,14 +164,14 @@ pub(crate) fn matrix_cells(app: &manifest::Manifest, profile: &str) -> Result<Ve
             ]));
         }
     }
-    let max_cells = yaml_get(policy, "maxCells")
-        .and_then(Yaml::as_u64)
-        .unwrap_or(128) as usize;
-    if cells.len() > max_cells {
-        return Err(format!(
-            "matrix {profile} expands to {} cells (max {max_cells})",
-            cells.len()
-        ));
+    // A profile bounds its matrix only when it states maxCells.
+    if let Some(max_cells) = yaml_get(policy, "maxCells").and_then(Yaml::as_u64) {
+        if cells.len() as u64 > max_cells {
+            return Err(format!(
+                "matrix {profile} expands to {} cells (max {max_cells})",
+                cells.len()
+            ));
+        }
     }
     Ok(cells)
 }

@@ -54,6 +54,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | weles | Weles Desktop keeper table `keepers.prefix(40)` | weles-desktop f95f580b |
 | weles | Weles Web verdict discriminators `slice(0, 3)` (card and bucket), recommendations `slice(0, 8)`, routine actions `slice(0, 4)` with overflow; defect 07fe0e19 recorded and repaired | weles-web 53f90a00 |
 | weles | admission, page-route, records-route, signup, Apple-expiry, vision-geometry, proxy-rate and trajectory poll values | Oko defect 30817d3d |
+| weles | NCBR result indicators select by displayed name rather than markdown position; ambiguous exact or ellipsis-prefix matches now refuse before opening the menu | 54c4443c, 94cb3c57, 767989e0; docs weles-landing 085b0ec; real managed-browser reader journey added but not run; complete NCBR editing remains unqualified |
 | stado | janitor `MAX_DEPTH = 64`, `MAX_WORKDIR_DEPTH = 256`, scratch `MAX_DEPTH = 256` | 3bfd3e1b |
 | stado | janitor `MAX_ERRORS = 16` and the 128-character error filter | 3bfd3e1b |
 | stado | `SERVICE_LOG_MAX_BYTES`, `SERVICE_LOG_KEEP_BYTES`, `SERVICE_LOG_SCAN_LIMIT = 512`; logs are emptied only at the disk-full threshold | 3bfd3e1b |
@@ -79,6 +80,7 @@ Reading coverage is separate from repair, publication and real-product verificat
 | jeden | loop, recovery, route, capability, billing, port, buffer and budget values | Oko defect ee1df8fa |
 | most | Most Desktop send confirmation message `prefix(160)` | most-desktop 1b6ff5bf |
 | most | waits, backoffs, heartbeats, helper and relay ports, length bounds | Oko defect 70151637 |
+| most | close reason `123` is a PROTOCOL byte budget, not a character count or removable tuning; truncation now keeps complete UTF-8 characters and the full internal reason | 36f2c82; docs most-landing 302ebb2; unbuilt/unexecuted; regression dependency declaration refused, recorded in Oko 70151637 |
 | lem | detector output `clippedOutput(limit: 8_000)`; an unknown verdict decided by `>= 50` | 0e9031d7 |
 | lem | Oko agenda failure body `data.prefix(500)` | 6f291402 |
 | lem | agent answer `prefix(12000)` (Codex, run, streaming), Weles queue and poll failures `prefix(500)` (Overleaf scan and `LemWelesQueue`) | 9a6fa882; fb734e23 |
@@ -122,6 +124,8 @@ Reading coverage is separate from repair, publication and real-product verificat
 | potyczka | projectile pool, rendering detail and animation timing | Oko defect 140a58b6 |
 | wisent-app | web analytics `MAX_QUEUE_SIZE = 100` | 09bbc1b5 |
 | wisent-app | IBKR and Tavily failure bodies cut to 300 and 400 | 3316156e |
+| wisent-app | Pentest manifest/error evidence 400 characters, CodeQL help 600, CT hosts 50, cookie evidence 200 and robots entries 25; all collected values now retained | d92f898; real persisted-report journey 1a2a4a8 and 451625c added but not run; collection coverage and historic rows are unchanged |
+| wisent-app | attribution and reactivation query values `slice(0, 2048)` | bf63ece; full values retained under the existing field allowlist; browser and collector qualification not run |
 | wisent-app | generation defaults, silent clamps, waits, thresholds, server port | Oko defect 2f95d07c |
 | OpenEnv | benchmark rounds, thresholds, fallbacks, training settings, server port | Oko defect dcbdb704 |
 | backends | scratch and research scripts outside any product | Oko defect 51273293 |
