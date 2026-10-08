@@ -42,8 +42,8 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             positional.push("reportPath");
             "analyze"
         }
-        "probierz_evaluate_figure" => "figure-evaluate",
-        "probierz_evaluate_seo" => "seo-evaluate",
+        "probierz_evaluate_figure" => "evaluate figure",
+        "probierz_evaluate_seo" => "evaluate seo",
         "probierz_create_readme_gif" => {
             positional.push("input");
             "readme-gif"

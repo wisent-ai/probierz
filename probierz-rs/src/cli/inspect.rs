@@ -67,59 +67,11 @@ pub enum InspectCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Render and rubric-score a scientific figure pair.
-    FigureEvaluate {
-        #[arg(long)]
-        reference: PathBuf,
-        #[arg(long)]
-        candidate: PathBuf,
-        #[arg(long)]
-        rubric: Option<PathBuf>,
-        #[arg(long)]
-        model: Option<String>,
-        #[arg(long = "out")]
-        output: Option<PathBuf>,
-        #[arg(long)]
-        router_url: Option<String>,
-        #[arg(long)]
-        tex_preamble: Option<PathBuf>,
-        #[arg(long)]
-        agent_id: Option<String>,
-        #[arg(long)]
-        router_token_stdin: bool,
-    },
-    /// Crawl and evaluate a declared SEO contract.
-    SeoEvaluate {
-        /// Manifest app whose SEO profile is evaluated; no app is assumed.
-        #[arg(long = "app")]
-        app_id: String,
-        #[arg(long)]
-        base_url: String,
-        #[arg(long)]
-        policy: Option<PathBuf>,
-        #[arg(long)]
-        brief: Option<PathBuf>,
-        /// The SEO profile to evaluate: pull-request, release, nightly or production.
-        #[arg(long)]
-        mode: String,
-        #[arg(long = "out")]
-        output: Option<PathBuf>,
-        #[arg(long)]
-        production_evidence: Option<PathBuf>,
-        #[arg(long)]
-        primary_model: Option<String>,
-        #[arg(long)]
-        secondary_model: Option<String>,
-        #[arg(long)]
-        adjudicator_model: Option<String>,
-        #[arg(long)]
-        router_url: Option<String>,
-        #[arg(long)]
-        agent_id: Option<String>,
-        #[arg(long)]
-        private_key_file: Option<PathBuf>,
-        #[arg(long)]
-        router_token_stdin: bool,
+    /// Render and rubric-score a scientific figure pair, or crawl and
+    /// evaluate a declared SEO contract.
+    Evaluate {
+        #[command(subcommand)]
+        command: EvaluateCommand,
     },
     // ReadmeGif
     /// Render a silent journey video as a looping README GIF.
@@ -183,5 +135,63 @@ pub enum AuthorCommand {
         dry_run: bool,
         #[arg(long = "specs")]
         with_specs: bool,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EvaluateCommand {
+    /// Render and rubric-score a scientific figure pair.
+    Figure {
+        #[arg(long)]
+        reference: PathBuf,
+        #[arg(long)]
+        candidate: PathBuf,
+        #[arg(long)]
+        rubric: Option<PathBuf>,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long = "out")]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        router_url: Option<String>,
+        #[arg(long)]
+        tex_preamble: Option<PathBuf>,
+        #[arg(long)]
+        agent_id: Option<String>,
+        #[arg(long)]
+        router_token_stdin: bool,
+    },
+    /// Crawl and evaluate a declared SEO contract.
+    Seo {
+        /// Manifest app whose SEO profile is evaluated; no app is assumed.
+        #[arg(long = "app")]
+        app_id: String,
+        #[arg(long)]
+        base_url: String,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long)]
+        brief: Option<PathBuf>,
+        /// The SEO profile to evaluate: pull-request, release, nightly or production.
+        #[arg(long)]
+        mode: String,
+        #[arg(long = "out")]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        production_evidence: Option<PathBuf>,
+        #[arg(long)]
+        primary_model: Option<String>,
+        #[arg(long)]
+        secondary_model: Option<String>,
+        #[arg(long)]
+        adjudicator_model: Option<String>,
+        #[arg(long)]
+        router_url: Option<String>,
+        #[arg(long)]
+        agent_id: Option<String>,
+        #[arg(long)]
+        private_key_file: Option<PathBuf>,
+        #[arg(long)]
+        router_token_stdin: bool,
     },
 }

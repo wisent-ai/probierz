@@ -36,7 +36,7 @@ pub(crate) fn seo_script(
         lines.push(": \"${PROBIERZ_SEO_RECEIPT_PRIVATE_KEY:?PROBIERZ_SEO_RECEIPT_PRIVATE_KEY was not materialized by Stado}\"".into());
     }
     let mut command = format!(
-        "\"$PROBIERZ\" --harness \"$HARNESS\" seo-evaluate --app {} --base-url {} --mode {} --policy {} --brief {} --primary-model {} --secondary-model {} --adjudicator-model {} --agent-id {}",
+        "\"$PROBIERZ\" --harness \"$HARNESS\" evaluate seo --app {} --base-url {} --mode {} --policy {} --brief {} --primary-model {} --secondary-model {} --adjudicator-model {} --agent-id {}",
         shell_quote(app_id), shell_quote(base_url), shell_quote(mode), shell_quote(policy), shell_quote(brief),
         shell_quote(primary), shell_quote(secondary), shell_quote(adjudicator), shell_quote(agent_id),
     );

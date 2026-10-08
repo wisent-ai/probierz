@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::inspect::{AuthorCommand, InspectCommand};
+use crate::cli::inspect::{AuthorCommand, EvaluateCommand, InspectCommand};
 use crate::failure::Answer;
 use crate::{adoption, apphooks, authoring, discovery, readme_gif};
 
@@ -45,7 +45,34 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
             }
             Ok(())
         }
-        InspectCommand::FigureEvaluate {
+        InspectCommand::Evaluate { command } => evaluate(harness, command),
+        // ReadmeGif
+        InspectCommand::ReadmeGif {
+            input,
+            output,
+            start,
+            duration,
+            fps,
+            width,
+            force,
+        } => readme_gif::create(readme_gif::Options {
+            input,
+            output,
+            start_seconds: start,
+            duration_seconds: duration,
+            frames_per_second: fps,
+            width,
+            force,
+        }),
+    }
+}
+
+/// `evaluate figure` and `evaluate seo`: each reads the router bearer (and,
+/// for SEO, the signing key) from stdin when asked, evaluates, prints the
+/// verdict and fails when it does not pass.
+fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
+    match command {
+        EvaluateCommand::Figure {
             reference,
             candidate,
             rubric,
@@ -81,7 +108,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
             }
             Ok(())
         }
-        InspectCommand::SeoEvaluate {
+        EvaluateCommand::Seo {
             app_id,
             base_url,
             policy,
@@ -135,24 +162,6 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
             }
             Ok(())
         }
-        // ReadmeGif
-        InspectCommand::ReadmeGif {
-            input,
-            output,
-            start,
-            duration,
-            fps,
-            width,
-            force,
-        } => readme_gif::create(readme_gif::Options {
-            input,
-            output,
-            start_seconds: start,
-            duration_seconds: duration,
-            frames_per_second: fps,
-            width,
-            force,
-        }),
     }
 }
 

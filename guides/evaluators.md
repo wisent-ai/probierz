@@ -10,7 +10,7 @@ Neither can be talked out of a deterministic blocker by a model.
 STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_FIGURE_VISION_MODEL='<vision-model-id>' \
-probierz figure-evaluate \
+probierz evaluate figure \
   --reference /absolute/path/intermediate.svg \
   --candidate /absolute/path/final.tex \
   --out test-results/figure-evaluations/paper-figure.json
@@ -47,7 +47,7 @@ lines only, with no document class or document body.
 
 ## Evaluate SEO
 
-`seo-evaluate` is a release evaluator, not a Lighthouse score wrapper. It reads
+`evaluate seo` is a release evaluator, not a Lighthouse score wrapper. It reads
 the manifest-declared brief and SEO policy, crawls every declared and
 sitemap-discovered URL as ordinary Chrome and Googlebot Smartphone, evaluates
 robots directives, redirects, canonicals, indexability, metadata, hreflang,
@@ -64,7 +64,7 @@ PROBIERZ_SEO_PRIMARY_MODEL='<pinned-model-a>' \
 PROBIERZ_SEO_SECONDARY_MODEL='<pinned-model-b>' \
 PROBIERZ_SEO_ADJUDICATOR_MODEL='<pinned-model-c>' \
 PROBIERZ_RECEIPT_PRIVATE_KEY_FILE=/absolute/path/seo-ed25519.pem \
-probierz seo-evaluate \
+probierz evaluate seo \
   --app landing-page \
   --base-url https://product.example.com \
   --mode release

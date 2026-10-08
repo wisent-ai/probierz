@@ -27,6 +27,10 @@ path = "../tests/gate/group.rs"
 name = "author_group"
 path = "../tests/author/group.rs"
 
+[[test]]
+name = "evaluate_group"
+path = "../tests/evaluate/group.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
