@@ -81,7 +81,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_secret_scan" => {
             positional.push("directory");
-            "secret-scan"
+            "secrets scan"
         }
         "probierz_audit" => "audit",
         "probierz_gate_status" => {

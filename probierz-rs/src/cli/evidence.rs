@@ -51,10 +51,10 @@ pub enum EvidenceCommand {
         #[arg(long)]
         fleet: bool,
     },
-    /// Find credentials and tokens in an evidence directory.
-    SecretScan {
-        /// Evidence directory to scan.
-        directory: Option<PathBuf>,
+    /// Find credentials and tokens in an evidence directory: secrets scan.
+    Secrets {
+        #[command(subcommand)]
+        command: SecretsCommand,
     },
     /// Query the tamper-evident access audit.
     Audit {
@@ -107,6 +107,16 @@ pub enum EvidenceCommand {
     Remote {
         #[command(subcommand)]
         command: stado::StadoCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SecretsCommand {
+    /// Find credentials and tokens in an evidence directory without printing
+    /// their values.
+    Scan {
+        /// Evidence directory to scan.
+        directory: Option<PathBuf>,
     },
 }
 

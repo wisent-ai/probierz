@@ -219,8 +219,9 @@ pub fn scan_secrets(root: &Path) -> Result<Value, Failure> {
 }
 
 pub fn secret_scan(root: Option<&Path>) -> Answer {
-    let root = root
-        .ok_or_else(|| Failure::invalid("evidence.secret_scan", "secret-scan needs a directory"))?;
+    let root = root.ok_or_else(|| {
+        Failure::invalid("evidence.secret_scan", "secrets scan needs a directory")
+    })?;
     let result = scan_secrets(root)?;
     print_json(&result)?;
     if result.get("passed").and_then(Value::as_bool) != Some(true) {

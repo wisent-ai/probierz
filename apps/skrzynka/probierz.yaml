@@ -135,7 +135,7 @@ pullRequestPolicy:
   # reads `run.protection.secretScan`, which exists only after
   # `probierz protect <app> <run> --key-file`; this fleet operates artifact
   # protection at release time and holds exactly one protected bundle. The
-  # repository is still scanned before merge with `probierz secret-scan`, which
+  # repository is still scanned before merge with `probierz secrets scan`, which
   # is a different instrument and not one this field can consume.
   requireSecretScan: false
 

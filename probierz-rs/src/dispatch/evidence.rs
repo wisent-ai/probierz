@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::evidence::{EvidenceCommand, ReceiptCommand};
+use crate::cli::evidence::{EvidenceCommand, ReceiptCommand, SecretsCommand};
 use crate::failure::Answer;
 use crate::{evidence, stado};
 
@@ -46,7 +46,9 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
                 evidence::retention(harness, app_id.as_deref(), at.as_deref(), apply)
             }
         }
-        EvidenceCommand::SecretScan { directory } => evidence::secret_scan(directory.as_deref()),
+        EvidenceCommand::Secrets {
+            command: SecretsCommand::Scan { directory },
+        } => evidence::secret_scan(directory.as_deref()),
         EvidenceCommand::Audit {
             app_id,
             run_id,
