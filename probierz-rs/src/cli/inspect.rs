@@ -51,44 +51,11 @@ pub enum InspectCommand {
     SourceIdentity { app_id: String },
     /// Validate stable identifiers and native selectors.
     Accessibility { app_id: String },
-    /// Draft, execute, and accept one real journey specification.
-    AuthorSpec {
-        app_id: String,
-        journey: String,
-        #[arg(long)]
-        target: String,
-        #[arg(long)]
-        desc: String,
-        #[arg(long)]
-        base_url: Option<String>,
-        #[arg(long)]
-        app_path: Option<String>,
-        #[arg(long = "paths")]
-        mapping_paths: Vec<String>,
-        #[arg(long)]
-        rounds: u32,
-        #[arg(long)]
-        dry_run: bool,
-    },
-    /// Draft and validate a complete application manifest.
-    AuthorManifest {
-        app_id: String,
-        #[arg(long)]
-        desc: String,
-        #[arg(long)]
-        target: String,
-        #[arg(long = "repo", required = true)]
-        repositories: Vec<String>,
-        #[arg(long)]
-        owner: Option<String>,
-        #[arg(long)]
-        base_url: Option<String>,
-        #[arg(long)]
-        app_path: Option<String>,
-        #[arg(long)]
-        dry_run: bool,
-        #[arg(long = "specs")]
-        with_specs: bool,
+    /// Draft, execute and accept one journey specification, or draft and
+    /// validate a whole application manifest.
+    Author {
+        #[command(subcommand)]
+        command: AuthorCommand,
     },
     /// Dispatch a bounded repair worker for a recorded failed run.
     Repair {
@@ -173,5 +140,48 @@ pub enum InspectCommand {
         width: Option<f64>,
         #[arg(long)]
         force: bool,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AuthorCommand {
+    /// Draft, execute, and accept one real journey specification.
+    Spec {
+        app_id: String,
+        journey: String,
+        #[arg(long)]
+        target: String,
+        #[arg(long)]
+        desc: String,
+        #[arg(long)]
+        base_url: Option<String>,
+        #[arg(long)]
+        app_path: Option<String>,
+        #[arg(long = "paths")]
+        mapping_paths: Vec<String>,
+        #[arg(long)]
+        rounds: u32,
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Draft and validate a complete application manifest.
+    Manifest {
+        app_id: String,
+        #[arg(long)]
+        desc: String,
+        #[arg(long)]
+        target: String,
+        #[arg(long = "repo", required = true)]
+        repositories: Vec<String>,
+        #[arg(long)]
+        owner: Option<String>,
+        #[arg(long)]
+        base_url: Option<String>,
+        #[arg(long)]
+        app_path: Option<String>,
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long = "specs")]
+        with_specs: bool,
     },
 }

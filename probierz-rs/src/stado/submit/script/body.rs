@@ -96,7 +96,7 @@ pub(crate) fn script_body(
         lines.extend([
             "set +e".into(),
             format!(
-                "\"$PROBIERZ\" --harness \"$HARNESS\" author-spec {} {} --area {} --target {} --desc {}{app_path} > \"$JOB_ROOT/work/author-result.json\"",
+                "\"$PROBIERZ\" --harness \"$HARNESS\" author spec {} {} --area {} --target {} --desc {}{app_path} > \"$JOB_ROOT/work/author-result.json\"",
                 shell_quote(app_id), shell_quote(journey), shell_quote(area), shell_quote(target), shell_quote(description),
             ),
             "PROBIERZ_RC=$?".into(),

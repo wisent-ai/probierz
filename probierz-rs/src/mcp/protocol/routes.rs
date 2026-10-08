@@ -97,7 +97,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         "probierz_gate_prepush" => "gate prepush",
         "probierz_author_spec" => {
             positional.extend(["appId", "journey"]);
-            "author-spec"
+            "author spec"
         }
         "probierz_repair" => {
             positional.push("appId");
@@ -105,7 +105,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_author_manifest" => {
             positional.push("appId");
-            "author-manifest"
+            "author manifest"
         }
         "probierz_stado_run" => {
             positional.push("target");

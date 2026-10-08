@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::inspect::InspectCommand;
+use crate::cli::inspect::{AuthorCommand, InspectCommand};
 use crate::failure::Answer;
 use crate::{adoption, apphooks, authoring, discovery, readme_gif};
 
@@ -31,62 +31,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
             }
             Ok(())
         }
-        InspectCommand::AuthorSpec {
-            app_id,
-            journey,
-            target,
-            desc,
-            base_url,
-            app_path,
-            mapping_paths,
-            rounds,
-            dry_run,
-        } => {
-            let result = authoring::author_spec(
-                harness,
-                &app_id,
-                &journey,
-                &target,
-                &desc,
-                base_url.as_deref(),
-                app_path.as_deref(),
-                &mapping_paths,
-                rounds,
-                dry_run,
-            )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
-        InspectCommand::AuthorManifest {
-            app_id,
-            desc,
-            target,
-            repositories,
-            owner,
-            base_url,
-            app_path,
-            dry_run,
-            with_specs,
-        } => {
-            let result = authoring::author_manifest(
-                harness,
-                &app_id,
-                &desc,
-                owner.as_deref(),
-                &repositories,
-                &target,
-                base_url.as_deref(),
-                app_path.as_deref(),
-                dry_run,
-                with_specs,
-            )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
+        InspectCommand::Author { command } => author(harness, command),
         InspectCommand::Repair {
             app_id,
             run_id,
@@ -208,5 +153,69 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
             width,
             force,
         }),
+    }
+}
+
+/// `author spec` and `author manifest`: each drafts with the model router,
+/// verifies what it drafted and prints the result, failing when it did not
+/// hold.
+fn author(harness: &Path, command: AuthorCommand) -> Answer {
+    match command {
+        AuthorCommand::Spec {
+            app_id,
+            journey,
+            target,
+            desc,
+            base_url,
+            app_path,
+            mapping_paths,
+            rounds,
+            dry_run,
+        } => {
+            let result = authoring::author_spec(
+                harness,
+                &app_id,
+                &journey,
+                &target,
+                &desc,
+                base_url.as_deref(),
+                app_path.as_deref(),
+                &mapping_paths,
+                rounds,
+                dry_run,
+            )?;
+            if !authoring::print_result(result)? {
+                std::process::exit(1);
+            }
+            Ok(())
+        }
+        AuthorCommand::Manifest {
+            app_id,
+            desc,
+            target,
+            repositories,
+            owner,
+            base_url,
+            app_path,
+            dry_run,
+            with_specs,
+        } => {
+            let result = authoring::author_manifest(
+                harness,
+                &app_id,
+                &desc,
+                owner.as_deref(),
+                &repositories,
+                &target,
+                base_url.as_deref(),
+                app_path.as_deref(),
+                dry_run,
+                with_specs,
+            )?;
+            if !authoring::print_result(result)? {
+                std::process::exit(1);
+            }
+            Ok(())
+        }
     }
 }
