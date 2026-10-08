@@ -21,9 +21,16 @@ pub(crate) fn collect_platform_diagnostics(
     // so nothing is padded and nothing guessed; a start that does not parse
     // is reported instead of read over an invented span.
     let since = DateTime::parse_from_rfc3339(started)
-        .map(|date| date.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
-        .map_err(|error| format!("run start {started:?} is not RFC 3339 ({error}), so no log window can be read"));
-    let unreadable_start = |error: &String| json!({ "supported": true, "file": null, "ok": false, "error": error });
+        .map(|date| {
+            date.with_timezone(&chrono::Local)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string()
+        })
+        .map_err(|error| {
+            format!("run start {started:?} is not RFC 3339 ({error}), so no log window can be read")
+        });
+    let unreadable_start =
+        |error: &String| json!({ "supported": true, "file": null, "ok": false, "error": error });
     let (command, args, file) =
         if matches!(target, "desktop:mac" | "desktop:cua") && process_name.is_some() {
             let name = process_name.expect("checked");

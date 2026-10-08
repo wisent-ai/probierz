@@ -41,7 +41,20 @@ fn the_retired_spellings_are_unknown_commands() {
 
 #[test]
 fn author_spec_without_its_target_is_refused_before_any_model_is_asked() {
-    let refused = probierz(&["author", "spec", "demo", "first-use", "--desc", "x", "--rounds", "1"]);
+    let refused = probierz(&[
+        "author",
+        "spec",
+        "demo",
+        "first-use",
+        "--desc",
+        "x",
+        "--rounds",
+        "1",
+    ]);
     assert!(!refused.status.success(), "{}", text(&refused.stdout));
-    assert!(text(&refused.stderr).contains("--target"), "{}", text(&refused.stderr));
+    assert!(
+        text(&refused.stderr).contains("--target"),
+        "{}",
+        text(&refused.stderr)
+    );
 }

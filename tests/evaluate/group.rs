@@ -44,9 +44,17 @@ fn the_retired_spellings_are_unknown_commands() {
 fn a_leaf_missing_a_required_input_is_refused() {
     let figure = probierz(&["evaluate", "figure", "--reference", "a.svg"]);
     assert!(!figure.status.success(), "{}", text(&figure.stdout));
-    assert!(text(&figure.stderr).contains("--candidate"), "{}", text(&figure.stderr));
+    assert!(
+        text(&figure.stderr).contains("--candidate"),
+        "{}",
+        text(&figure.stderr)
+    );
 
     let seo = probierz(&["evaluate", "seo", "--app", "demo", "--mode", "release"]);
     assert!(!seo.status.success(), "{}", text(&seo.stdout));
-    assert!(text(&seo.stderr).contains("--base-url"), "{}", text(&seo.stderr));
+    assert!(
+        text(&seo.stderr).contains("--base-url"),
+        "{}",
+        text(&seo.stderr)
+    );
 }

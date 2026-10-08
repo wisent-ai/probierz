@@ -192,7 +192,9 @@ pub(crate) fn validate_policies(
                 require(
                     value.as_u64().and_then(std::num::NonZeroU64::new).is_some(),
                     file,
-                    &format!("matrix.{profile_name}.maximumParallel must be a positive whole number"),
+                    &format!(
+                        "matrix.{profile_name}.maximumParallel must be a positive whole number"
+                    ),
                 )?;
             }
         }

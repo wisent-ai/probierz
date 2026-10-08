@@ -39,7 +39,10 @@ fn gate_lists_its_leaves_and_refuses_the_retired_spellings() {
     assert!(help.status.success(), "{}", text(&help.stderr));
     let listing = text(&help.stdout);
     for leaf in "status prepush install uninstall evaluate enforce activate deactivate".split(' ') {
-        assert!(listing.contains(leaf), "gate --help does not name {leaf}: {listing}");
+        assert!(
+            listing.contains(leaf),
+            "gate --help does not name {leaf}: {listing}"
+        );
     }
     for retired in "gate-status gate-install gate-uninstall gate-evaluate gate-enforce gate-activate gate-deactivate".split(' ') {
         let refused = probierz(&[retired, "--help"]);
@@ -68,7 +71,13 @@ fn gate_uninstall_removes_a_hook_gate_install_wrote_before_the_group() {
     )
     .expect("write the old managed hook");
 
-    let output = probierz(&["gate", "uninstall", "demo", "--repo", &root.to_string_lossy()]);
+    let output = probierz(&[
+        "gate",
+        "uninstall",
+        "demo",
+        "--repo",
+        &root.to_string_lossy(),
+    ]);
 
     assert!(output.status.success(), "{}", text(&output.stderr));
     let answer: serde_json::Value =
@@ -83,7 +92,13 @@ fn gate_uninstall_refuses_a_hook_it_did_not_write() {
     let hook = root.join(".git").join("hooks").join("pre-push");
     std::fs::write(&hook, "#!/bin/sh\nexec ./lint\n").expect("write a foreign hook");
 
-    let output = probierz(&["gate", "uninstall", "demo", "--repo", &root.to_string_lossy()]);
+    let output = probierz(&[
+        "gate",
+        "uninstall",
+        "demo",
+        "--repo",
+        &root.to_string_lossy(),
+    ]);
 
     assert!(!output.status.success(), "a foreign hook was removed");
     assert!(
