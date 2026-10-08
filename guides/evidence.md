@@ -80,7 +80,7 @@ Probierz owns animated product evidence. Select one recorded journey video from
 `test-results/`, trim it to the shortest complete outcome, and export it:
 
 ```bash
-probierz readme-gif test-results/APP_ID/RUN_ID/path/to/video.webm \
+probierz gif test-results/APP_ID/RUN_ID/path/to/video.webm \
   --out /path/to/product/assets/demo.gif \
   --start 0 \
   --duration 12 \

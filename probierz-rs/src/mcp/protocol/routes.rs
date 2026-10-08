@@ -24,7 +24,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_source_identity" => {
             positional.push("appId");
-            "source-identity"
+            "identity"
         }
         "probierz_check" => {
             positional.push("target");
@@ -46,7 +46,7 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         "probierz_evaluate_seo" => "evaluate seo",
         "probierz_create_readme_gif" => {
             positional.push("input");
-            "readme-gif"
+            "gif"
         }
         "probierz_affected" => "affected",
         "probierz_ci" => "ci",

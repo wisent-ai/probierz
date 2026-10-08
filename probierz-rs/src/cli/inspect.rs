@@ -48,7 +48,7 @@ pub enum InspectCommand {
     Hosts,
     // PortAuthoring: authoring, evaluation, and identity
     /// Exact path-independent harness and application source identity.
-    SourceIdentity { app_id: String },
+    Identity { app_id: String },
     /// Validate stable identifiers and native selectors.
     Accessibility { app_id: String },
     /// Draft, execute and accept one journey specification, or draft and
@@ -75,7 +75,7 @@ pub enum InspectCommand {
     },
     // ReadmeGif
     /// Render a silent journey video as a looping README GIF.
-    ReadmeGif {
+    Gif {
         input: PathBuf,
         #[arg(long = "out")]
         output: PathBuf,

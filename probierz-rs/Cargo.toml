@@ -39,6 +39,10 @@ path = "../tests/history/journey.rs"
 name = "secrets_group"
 path = "../tests/secrets/group.rs"
 
+[[test]]
+name = "inspect_names"
+path = "../tests/inspect/names.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }

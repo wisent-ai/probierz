@@ -1,6 +1,6 @@
 use crate::readme_gif::*;
 pub(crate) fn invalid(detail: impl Into<String>) -> Failure {
-    Failure::invalid("readme-gif", detail)
+    Failure::invalid("gif", detail)
 }
 
 /// A stated value must be a positive, finite number; an unstated one stays
@@ -37,7 +37,7 @@ pub(crate) fn regular_file(file: &Path, label: &str) -> Result<PathBuf, Failure>
         }
         Err(error) => {
             return Err(Failure::new(
-                "readme-gif.input",
+                "gif.input",
                 crate::failure::Code::Config,
                 error.to_string(),
             ))

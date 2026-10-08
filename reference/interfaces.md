@@ -65,7 +65,7 @@ Every way into Probierz, and what each one is allowed to do.
   non-passing, and keeps its failure details.
   GUI readiness has its own 30-minute audit deadline; an expired audit means
   readiness is unknown and no GUI job was submitted, not that the host is down.
-- **Worktree selection:** `probierz source-identity APP --app-repo /path/to/worktree`
+- **Worktree selection:** `probierz identity APP --app-repo /path/to/worktree`
   and `probierz run TARGET --app APP --app-repo /path/to/worktree --spec /path/to/spec`
   bind their evidence to the selected primary checkout without changing the
   application manifest. Other declared repositories keep their own identities.

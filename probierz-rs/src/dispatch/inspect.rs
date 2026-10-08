@@ -22,9 +22,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         InspectCommand::Cmd { target } => discovery::cmd(harness, &target),
         InspectCommand::Hosts => discovery::hosts(),
         // PortAuthoring: authoring, evaluation, and identity
-        InspectCommand::SourceIdentity { app_id } => {
-            authoring::source_identity_command(harness, &app_id)
-        }
+        InspectCommand::Identity { app_id } => authoring::source_identity_command(harness, &app_id),
         InspectCommand::Accessibility { app_id } => {
             if !authoring::accessibility_command(harness, &app_id)? {
                 std::process::exit(1);
@@ -47,7 +45,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         }
         InspectCommand::Evaluate { command } => evaluate(harness, command),
         // ReadmeGif
-        InspectCommand::ReadmeGif {
+        InspectCommand::Gif {
             input,
             output,
             start,
