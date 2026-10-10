@@ -152,7 +152,7 @@ pub(crate) fn run_surface(
         .as_ref()
         .and_then(|declaration| declaration.document.get("data"));
     let secrets = secret_values(&opts.env);
-    let seed = run_data_command(
+    let mut seed = run_data_command(
         harness,
         lifecycle.and_then(|value| value.get("seed")),
         &env,
@@ -186,6 +186,14 @@ pub(crate) fn run_surface(
                 &json!({ "conditions": updated_conditions, "seed": public_seed }),
             )?;
         }
+    }
+    let seeded_resources = crate::evidence::resources_for(name, &env);
+    if seeded_resources != lease.resources {
+        seed["ok"] = json!(false);
+        seed["error"] = json!(format!(
+            "seed changed resource selection from {:?} to {:?}; declare resources before seeding",
+            lease.resources, seeded_resources
+        ));
     }
     if seed.get("ok").and_then(Value::as_bool) != Some(true) {
         let cleanup = run_data_command(
