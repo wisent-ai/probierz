@@ -5,7 +5,7 @@ use serde_json::json;
 /// first. An adoption that conflicts is a refusal, never a process exit, so
 /// the MCP server running this in process keeps serving.
 pub fn onboarding(project_root: &Path, arguments: &[String]) -> Answer {
-    let (reset, source, replace, json) = onboarding_flags(arguments);
+    let (reset, source, replace, json) = onboarding_flags(arguments)?;
     if run_onboarding(project_root, reset, source.as_deref(), replace, json)? {
         return Ok(());
     }
@@ -16,7 +16,9 @@ pub fn onboarding(project_root: &Path, arguments: &[String]) -> Answer {
     ))
 }
 
-pub(crate) fn onboarding_flags(arguments: &[String]) -> (bool, Option<PathBuf>, bool, bool) {
+pub(crate) fn onboarding_flags(
+    arguments: &[String],
+) -> Result<(bool, Option<PathBuf>, bool, bool), Failure> {
     let mut reset = false;
     let mut source = None;
     let mut replace = false;
@@ -25,42 +27,46 @@ pub(crate) fn onboarding_flags(arguments: &[String]) -> (bool, Option<PathBuf>, 
         match argument.as_str() {
             "--reset" => {
                 if reset {
-                    invocation_error("--reset may be supplied only once");
+                    return Err(invocation_error("--reset may be supplied only once"));
                 }
                 reset = true;
             }
             "--json" => {
                 if json {
-                    invocation_error("--json may be supplied only once");
+                    return Err(invocation_error("--json may be supplied only once"));
                 }
                 json = true;
             }
             "--replace" => {
                 if replace {
-                    invocation_error("--replace may be supplied only once");
+                    return Err(invocation_error("--replace may be supplied only once"));
                 }
                 replace = true;
             }
             "--source" => {
                 if source.is_some() {
-                    invocation_error("--source may be supplied only once");
+                    return Err(invocation_error("--source may be supplied only once"));
                 }
                 let value = arguments.get(index + 1).map(String::as_str);
                 if value.is_none_or(|value| value.is_empty() || value.starts_with("--")) {
-                    invocation_error("--source needs a repository path");
+                    return Err(invocation_error("--source needs a repository path"));
                 }
                 source = value.map(PathBuf::from);
             }
             _value if index > 0 && arguments[index - 1] == "--source" => {
                 continue;
             }
-            value => invocation_error(format!("unknown onboarding option: {value}")),
+            value => {
+                return Err(invocation_error(format!(
+                    "unknown onboarding option: {value}"
+                )))
+            }
         }
     }
     if replace && source.is_none() {
-        invocation_error("--replace requires --source <repository>");
+        return Err(invocation_error("--replace requires --source <repository>"));
     }
-    (reset, source, replace, json)
+    Ok((reset, source, replace, json))
 }
 
 pub(crate) fn run_onboarding(

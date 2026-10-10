@@ -46,7 +46,9 @@ Every way into Probierz, and what each one is allowed to do.
   unsuccessfully. `probierz project adopt` and `probierz onboarding --source`
   likewise refuse a conflicting adoption (`project.adopt` with the whole
   adoption result, `onboarding.adoption` after printing the conflicts) without
-  ending the process; no files change.
+  ending the process; no files change. A wrong option to either command, or
+  to `probierz project adoptions`, is an `invalid` failure at
+  `adoption.arguments` naming the option, not a clap exit.
 - **Run and CI refusals:** a `tui`, `desktop:cua` or `web` journey whose runner
   ends unsuccessfully returns a `refused` failure with its report, and the CLI
   exits with the runner's own status. A skipped `probierz run` refuses with the

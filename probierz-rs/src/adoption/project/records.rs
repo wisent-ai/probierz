@@ -117,12 +117,18 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
         } => {
             if let Some(value) = args.first() {
                 if value.starts_with("--") {
-                    invocation_error(format!("unknown project adoption option: {value}"));
+                    return Err(invocation_error(format!(
+                        "unknown project adoption option: {value}"
+                    )));
                 }
-                invocation_error(format!("unexpected project adoption argument: {value}"));
+                return Err(invocation_error(format!(
+                    "unexpected project adoption argument: {value}"
+                )));
             }
             let Some(source) = source else {
-                invocation_error("project adopt needs --source <repository>");
+                return Err(invocation_error(
+                    "project adopt needs --source <repository>",
+                ));
             };
             let result = adopt_project(project_root, &source, replace)?;
             print_json(&result)?;
@@ -137,13 +143,15 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
         }
         ProjectCommand::Adoptions { args } => {
             if !args.is_empty() {
-                invocation_error("project adoptions accepts no options");
+                return Err(invocation_error("project adoptions accepts no options"));
             }
             print_json(&list_project_adoptions(project_root)?)
         }
     }
 }
 
-pub(crate) fn invocation_error(detail: impl Into<String>) -> ! {
-    clap::Error::raw(clap::error::ErrorKind::InvalidValue, detail.into()).exit()
+/// A refused invocation of an adoption command, answered as a failure rather
+/// than a clap exit so the in-process MCP server keeps serving.
+pub(crate) fn invocation_error(detail: impl Into<String>) -> Failure {
+    Failure::invalid("adoption.arguments", detail)
 }
