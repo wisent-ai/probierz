@@ -68,13 +68,21 @@ try {
   const declared = response(catalogue).result.tools.find(tool =>
     tool.name === 'probierz_create_publication_manifest');
   assert.ok(declared.inputSchema.required.includes('receipt'));
-  assert.equal(response(malformed).error.message, 'arguments must be a JSON object');
-  assert.equal(response(missing).error.message,
-    'probierz_create_publication_manifest requires argument receipt');
-  assert.equal(response(wrongEnvironment).error.message, 'probierz_run argument env must be object');
-  assert.equal(response(wrongWatch).error.message, 'probierz_stado_run argument watch must be boolean');
-  assert.ok(response(wrongArrayItem).error.message.startsWith('probierz_affected argument files['));
-  assert.ok(response(wrongArrayItem).error.message.endsWith('must be string'));
+  for (const [rejected, diagnostics] of [
+    [malformed, ['arguments', 'object']],
+    [missing, [missing.params.name, 'receipt']],
+    [wrongEnvironment, [wrongEnvironment.params.name, 'env', 'object']],
+    [wrongWatch, [wrongWatch.params.name, 'watch', 'boolean']],
+    [wrongArrayItem, [wrongArrayItem.params.name, 'files[', 'string']],
+  ]) {
+    const answer = response(rejected);
+    assert.ok(answer.error, 'invalid arguments must produce a JSON-RPC error');
+    assert.ok(!Object.hasOwn(answer, 'result'), 'a refused request must not also succeed');
+    for (const diagnostic of diagnostics) {
+      assert.ok(answer.error.message.includes(diagnostic),
+        `refusal must identify ${diagnostic}: ${answer.error.message}`);
+    }
+  }
   assert.deepEqual(response(ping).result, {}, 'a refusal must not end the server');
   assert.deepEqual(readdirSync(harness), ['apps'], 'refused publication must not create evidence or jobs');
   assert.deepEqual(readdirSync(join(harness, 'apps')), [], 'refused publication must not change applications');

@@ -71,9 +71,10 @@ Every way into Probierz, and what each one is allowed to do.
   tool and argument path; malformed options are never silently dropped.
   The real stdio admission journey is
   `PROBIERZ=/path/to/candidate PROBIERZ_TEST_SOURCE_REVISION=<full-sha> node tests/mcp/admission.mjs`.
-  It retains source/binary-bound commands and responses, checks publication
-  refusals leave the isolated harness untouched, and checks the server still
-  answers afterward.
+  It retains source/binary-bound commands and responses, requires a failure
+  response identifying the invalid tool argument and expected type rather than
+  a successful result, checks publication refusals leave the isolated harness
+  untouched, and checks the server still answers afterward.
 - **Repository gate:** `probierz gate install` installs the pre-push integration
   and `probierz gate uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
