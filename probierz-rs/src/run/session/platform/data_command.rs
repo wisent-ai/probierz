@@ -39,28 +39,42 @@ pub(crate) fn run_data_command(
     let execution = capture(command, &args, Some(&cwd), Some(env));
     let safe_out = redact_text(&text(&execution.stdout), secrets);
     let safe_err = redact_text(&text(&execution.stderr), secrets);
+    let mut failures = Vec::new();
     if !safe_out.is_empty() {
-        let _ = append_secure(stdout, stamped(&safe_out).as_bytes());
+        if let Err(error) = append_secure(stdout, stamped(&safe_out).as_bytes()) {
+            failures.push(format!(
+                "retain data-command stdout at {}: {error}",
+                stdout.display()
+            ));
+        }
     }
     if !safe_err.is_empty() {
-        let _ = append_secure(stderr, stamped(&safe_err).as_bytes());
+        if let Err(error) = append_secure(stderr, stamped(&safe_err).as_bytes()) {
+            failures.push(format!(
+                "retain data-command stderr at {}: {error}",
+                stderr.display()
+            ));
+        }
     }
-    if execution.error.is_some() || !execution.status.is_some_and(|status| status.success()) {
-        let detail = execution.error.unwrap_or_else(|| {
-            let trimmed = safe_err.trim();
-            if trimmed.is_empty() {
-                match execution.status {
-                    Some(status) => format!(
-                        "data command {} with no message",
-                        crate::failure::ended(&status)
-                    ),
-                    None => "data command never started".to_string(),
-                }
-            } else {
-                trimmed.into()
-            }
+    if let Some(error) = execution.error {
+        failures.push(format!("capture data command {command}: {error}"));
+    }
+    match execution.status {
+        Some(status) if status.success() => {}
+        Some(status) => failures.push(format!(
+            "data command {command} {}; stderr: {safe_err}",
+            crate::failure::ended(&status)
+        )),
+        None => failures.push(format!(
+            "data command {command} has no observed exit status"
+        )),
+    }
+    if !failures.is_empty() {
+        return json!({
+            "ok": false,
+            "error": failures.join("; "),
+            "exitCode": execution.status.and_then(|status| status.code()),
         });
-        return json!({ "ok": false, "error": detail, "exitCode": execution.status.and_then(|status| status.code()) });
     }
     let stdout_text = text(&execution.stdout);
     let lines: Vec<&str> = stdout_text
@@ -72,7 +86,10 @@ pub(crate) fn run_data_command(
     }
     match serde_json::from_str::<Value>(lines.last().expect("not empty")) {
         Ok(result) => json!({ "ok": true, "result": result }),
-        Err(_) => json!({ "ok": false, "error": "data command did not return JSON" }),
+        Err(error) => json!({
+            "ok": false,
+            "error": format!("decode data command {command} result as JSON: {error}"),
+        }),
     }
 }
 pub(crate) fn append_secure(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
