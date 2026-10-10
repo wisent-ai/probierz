@@ -249,21 +249,33 @@ pub(crate) fn render_app_status(status: &Value) -> String {
     lines.join("\n")
 }
 
-pub fn status(
-    harness: &Path,
-    app_id: &str,
-    base_ref: Option<&str>,
-    text: bool,
-) -> Result<bool, Failure> {
+/// The merge status of `app_id`, printed; an app that is not eligible is a
+/// refusal carrying its blocking reasons, never a process exit, so the MCP
+/// server that runs this in process answers the request and keeps serving.
+pub fn status(harness: &Path, app_id: &str, base_ref: Option<&str>, text: bool) -> Answer {
     let report = app_status_value(harness, app_id, base_ref)?;
-    let eligible = report
-        .pointer("/mergeEligibility/eligible")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
     if text {
         println!("{}", render_app_status(&report));
     } else {
         print_json(&report)?;
     }
-    Ok(eligible)
+    let eligibility = report.get("mergeEligibility");
+    if eligibility
+        .and_then(|value| value.get("eligible"))
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
+        return Ok(());
+    }
+    Err(Failure::new(
+        "status",
+        crate::failure::Code::Refused,
+        format!(
+            "{app_id} is not eligible to merge: {}",
+            match eligibility {
+                Some(value) => value.to_string(),
+                None => format!("the status report of {app_id} carries no mergeEligibility"),
+            }
+        ),
+    ))
 }

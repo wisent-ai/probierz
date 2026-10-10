@@ -165,9 +165,8 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
     }))
 }
 
-pub fn accessibility_command(harness: &Path, app_id: &str) -> Result<bool, Failure> {
-    let result = validate_accessibility(harness, app_id)?;
-    let ok = result["ok"].as_bool().unwrap_or(false);
-    print_json(&result)?;
-    Ok(ok)
+/// Validate and print the accessibility identifiers of `app_id`; a result
+/// that is not ok is a refusal carrying it, never a process exit.
+pub fn accessibility_command(harness: &Path, app_id: &str) -> crate::failure::Answer {
+    print_result("accessibility", validate_accessibility(harness, app_id)?)
 }

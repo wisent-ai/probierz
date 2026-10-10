@@ -34,6 +34,16 @@ Every way into Probierz, and what each one is allowed to do.
   runners return a failed report, the CLI and MCP refusal retain that report
   together with its analysis and repair results. The failure is classified as
   `refused`, not as a request that never ran, and does not terminate MCP.
+- **Merge-status and authoring refusals:** `probierz status <app>` prints the
+  status report and, when the app is not eligible to merge, refuses with the
+  complete `mergeEligibility` object, every blocking reason included.
+  `probierz accessibility`, `probierz repair`, `probierz evaluate figure`,
+  `probierz evaluate seo`, `probierz author spec` and `probierz author manifest`
+  print their result and, when it did not pass, refuse with the whole result.
+  All of them are classified as `refused` and return the refusal instead of
+  ending the process, so the in-process MCP tools that run them answer with an
+  error and the server keeps serving later requests; the CLI still exits
+  unsuccessfully.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;

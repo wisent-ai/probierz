@@ -26,11 +26,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             status::dashboard(harness, &app_id, dashboard_limit(limit.as_deref()))
         }
         ReportingCommand::Status { app_id, base, json } => {
-            let eligible = status::status(harness, &app_id, base.as_deref(), !json)?;
-            if !eligible {
-                std::process::exit(1);
-            }
-            Ok(())
+            status::status(harness, &app_id, base.as_deref(), !json)
         }
         ReportingCommand::Overview { app_ids, json } => {
             status::overview(harness, &app_ids, !json, true)

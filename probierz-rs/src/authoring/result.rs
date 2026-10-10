@@ -1,5 +1,8 @@
 use crate::authoring::*;
-pub fn print_result(result: JsonValue) -> Result<bool, Failure> {
+/// Print `result` and answer whether it held: a result that did not pass is
+/// a refusal of `point` carrying the whole result, never a process exit, so
+/// the MCP server running the command in process keeps serving.
+pub fn print_result(point: &str, result: JsonValue) -> crate::failure::Answer {
     let ok = result
         .get("ok")
         .and_then(JsonValue::as_bool)
@@ -7,5 +10,12 @@ pub fn print_result(result: JsonValue) -> Result<bool, Failure> {
         .or_else(|| result.get("pass").and_then(JsonValue::as_bool))
         .unwrap_or(true);
     print_json(&result)?;
-    Ok(ok)
+    if ok {
+        return Ok(());
+    }
+    Err(Failure::new(
+        point,
+        crate::failure::Code::Refused,
+        result.to_string(),
+    ))
 }

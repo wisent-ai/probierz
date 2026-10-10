@@ -24,10 +24,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         // PortAuthoring: authoring, evaluation, and identity
         InspectCommand::Identity { app_id } => authoring::source_identity_command(harness, &app_id),
         InspectCommand::Accessibility { app_id } => {
-            if !authoring::accessibility_command(harness, &app_id)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::accessibility_command(harness, &app_id)
         }
         InspectCommand::Author { command } => author(harness, command),
         InspectCommand::Repair {
@@ -38,10 +35,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         } => {
             let result =
                 authoring::repair_failed_run(harness, &app_id, run_id.as_deref(), rounds, dry_run)?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::print_result("repair", result)
         }
         InspectCommand::Evaluate { command } => evaluate(harness, command),
         // ReadmeGif
@@ -101,10 +95,7 @@ fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
                 agent_id.as_deref(),
                 secret,
             )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::print_result("evaluate.figure", result)
         }
         EvaluateCommand::Seo {
             app_id,
@@ -155,10 +146,7 @@ fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
                     .as_deref()
                     .filter(|value| !value.trim().is_empty()),
             )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::print_result("evaluate.seo", result)
         }
     }
 }
@@ -191,10 +179,7 @@ fn author(harness: &Path, command: AuthorCommand) -> Answer {
                 rounds,
                 dry_run,
             )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::print_result("author.spec", result)
         }
         AuthorCommand::Manifest {
             app_id,
@@ -219,10 +204,7 @@ fn author(harness: &Path, command: AuthorCommand) -> Answer {
                 dry_run,
                 with_specs,
             )?;
-            if !authoring::print_result(result)? {
-                std::process::exit(1);
-            }
-            Ok(())
+            authoring::print_result("author.manifest", result)
         }
     }
 }
