@@ -25,6 +25,9 @@ Every way into Probierz, and what each one is allowed to do.
   Process discovery treats only pgrep's documented no-match exit as absence.
   A failed lookup or malformed process identifier retains its status and cause
   rather than claiming that the daemon exited.
+- **OTP apphook refusals:** the `--after` timestamp is parsed as RFC 3339.
+  An invalid value names the parsing operation, supplied timestamp and decoder
+  cause before a broker request is sent.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
