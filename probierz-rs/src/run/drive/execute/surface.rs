@@ -123,7 +123,7 @@ pub(crate) fn run_surface(
         spec.as_deref(),
         &opts,
     );
-    let resources = crate::evidence::resources_for(name, &opts.env);
+    let resources = crate::evidence::resources_for(name, &env);
     let lease = match crate::evidence::acquire_resources(harness, &resources, &run_id) {
         Ok(lease) => lease,
         Err(error) => {

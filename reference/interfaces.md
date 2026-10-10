@@ -41,6 +41,8 @@ Every way into Probierz, and what each one is allowed to do.
   holder record retains the readable identifier. There is no clipped label
   or shortened digest. Finish active runs before upgrading from the old
   filename scheme: old and new executables must not share concurrent leases.
+  Resource selection reads the effective suite environment, including inherited
+  device settings and explicit overrides, rather than only the override map.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
