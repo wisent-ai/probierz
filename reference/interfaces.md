@@ -37,6 +37,10 @@ Every way into Probierz, and what each one is allowed to do.
   Failure to truncate, seek or write the holder record names the resource,
   lock path and underlying filesystem cause. The failed acquisition releases
   its open lock rather than returning an unrecorded holder.
+  Lock filenames use the complete SHA-256 of the resource identifier; the
+  holder record retains the readable identifier. There is no clipped label
+  or shortened digest. Finish active runs before upgrading from the old
+  filename scheme: old and new executables must not share concurrent leases.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous

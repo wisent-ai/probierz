@@ -44,9 +44,7 @@ pub fn resources_for(target: &str, env: &BTreeMap<String, String>) -> Vec<String
 }
 
 pub(crate) fn lock_name(resource: &str) -> String {
-    let mut label = segment(resource, "");
-    label.truncate(80);
-    format!("{label}-{}", &sha256_bytes(resource.as_bytes())[..12])
+    sha256_bytes(resource.as_bytes())
 }
 
 /// Takes one resource's lock file and blocks until the holder releases it.
