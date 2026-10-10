@@ -132,25 +132,17 @@ pub(crate) fn complete_run(
         && evidence.get("report").and_then(Value::as_bool) == Some(true)
         && valid
         && present;
-    // Who the failure belongs to, from which evidence failed rather than from
-    // its wording: the runner's own verdict (surface.rs) first, then a failed
-    // check or crash of the app (product), then an evidence pipeline that did
-    // not deliver (harness). A run that fits none stays unclassified.
-    let product_failed =
-        analysis.is_some_and(|value| js_number(value.get("failed")) > 0.0) || !crashes.is_empty();
-    let evidence_missing = analysis_error.is_some()
-        || analysis
-            .and_then(|value| value.get("runId"))
-            .and_then(Value::as_str)
-            != Some(&run_id)
-        || !capture_errors.is_empty()
-        || !missing.is_empty()
-        || !present;
+    // Concrete failed product checks or crashes remain product evidence even
+    // when reporting or cleanup also fails. Missing evidence alone cannot
+    // identify the owner of the original failure.
+    let product_failed = analysis.is_some_and(|value| {
+        value.get("runId").and_then(Value::as_str) == Some(&run_id)
+            && (js_number(value.get("failed")) > 0.0 || !crashes.is_empty())
+    });
     let origin = match run.get("failureOrigin").and_then(Value::as_str) {
         _ if passed => Value::Null,
+        _ if product_failed => json!("product"),
         Some(declared) => json!(declared),
-        None if product_failed => json!("product"),
-        None if evidence_missing => json!("harness"),
         None => Value::Null,
     };
     update_json(
@@ -159,6 +151,7 @@ pub(crate) fn complete_run(
     )?;
     let object = run.as_object_mut().expect("object");
     object.insert("passed".into(), json!(passed));
+    object.insert("failureOrigin".into(), origin);
     object.insert("analysisPath".into(), json!(analysis_path));
     object.insert("evidence".into(), evidence);
     Ok(run)

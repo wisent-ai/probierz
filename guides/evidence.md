@@ -22,6 +22,26 @@ failure guidance is in the published [agent interface](https://probierz.wisent.c
 The integrated Tama → Probierz → Stado workflow is documented in
 the published [pipeline documentation](https://probierz.wisent.com/docs/PIPELINE).
 
+## Failure ownership
+
+`probierz run TARGET --app APP_ID` records the same `failureOrigin` in its
+returned run and persisted run manifest. `probierz history APP_ID --target
+TARGET`, evidence and dashboard consumers project that recorded ownership as
+`failureClass`: `product`, `infrastructure`, or `unclassified`.
+
+A failed product check or application crash tied to this run remains a product
+failure even if cleanup also fails. Seed, runner-start and cleanup failures are
+observed harness failures when there is no stronger product-failure evidence.
+The underlying operation errors, cleanup result and evidence errors remain in
+the run; classification does not suppress them.
+
+A missing or invalid report, absent capture, or unsuccessful analysis alone
+does not establish which component failed. Such a run is still failed, but its
+ownership remains `unclassified`. Historical runs without a recorded origin
+are also unclassified unless they record a setup failure. Report presence alone
+is not evidence that a product assertion failed. Automatic product-code repair
+refuses unclassified and infrastructure runs instead of inventing blame.
+
 ## Register verified first-use evidence
 
 An `onboarding-first-use` journey carries an immutable `journeyId`,

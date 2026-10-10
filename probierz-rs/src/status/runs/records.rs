@@ -79,20 +79,10 @@ pub(crate) fn normalized_status(manifest: &Value) -> &str {
     }
 }
 
-/// Where a failed run stopped, read from what the runner recorded in its
-/// manifest, never from the wording of a test failure. A run whose data seed
-/// failed (`setupError`) or whose test tool produced no valid report
-/// (`reportValidation.ok` false) stopped before any product assertion ran, so
-/// the failure belongs to the harness or its environment; a run that produced
-/// a valid report failed on the product's own assertions. Status and evidence
-/// both classify through this one function. A run that records its own
-/// `failureOrigin` (surface.rs for a runner that could not start or clean up,
-/// complete_run for a failed check or crash versus missing evidence) is
-/// classified by that first.
+/// Status, history and evidence share recorded ownership. Missing reporting
+/// proves an incomplete run, not whether the product or its runner failed.
 pub(crate) fn failure_class(manifest: &Value) -> &'static str {
-    // A run that recorded its origin is classified by it; a recorded null means
-    // the evidence decided neither way and stays unclassified. Only runs from
-    // before the field existed fall back to setupError/reportValidation.
+    // An explicit null retains the producer's unresolved verdict.
     match manifest.get("failureOrigin") {
         Some(Value::String(origin)) if origin == "harness" => return "infrastructure",
         Some(Value::String(origin)) if origin == "product" => return "product",
@@ -100,14 +90,10 @@ pub(crate) fn failure_class(manifest: &Value) -> &'static str {
         None => {}
     }
     let setup_failed = string(manifest.get("setupError")).is_some();
-    let report_valid = manifest
-        .pointer("/reportValidation/ok")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    if setup_failed || !report_valid {
+    if setup_failed {
         "infrastructure"
     } else {
-        "product"
+        "unclassified"
     }
 }
 

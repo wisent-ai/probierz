@@ -194,6 +194,7 @@ pub(crate) fn run_surface(
         let error = seed.get("error").and_then(Value::as_str).unwrap_or("");
         let validation = json!({"ok":false,"error":format!("seed failed: {error}")});
         let mut result = base.as_object().expect("object").clone();
+        result.insert("failureOrigin".into(), json!("harness"));
         result.extend(json!({"ready":true,"skipped":false,"command":null,"spec":spec,"exitCode":1,"signal":null,"passed":false,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"setupError":error,"cleanup":cleanup,"stdoutTail":"","stderrTail":error}).as_object().expect("object").clone());
         update_json(
             &manifest_path,
@@ -248,11 +249,9 @@ pub(crate) fn run_surface(
     let passed = exit_code == 0
         && validation.get("ok").and_then(Value::as_bool) == Some(true)
         && cleanup.get("ok").and_then(Value::as_bool) == Some(true);
-    // No valid report or a failed cleanup is the harness's; checks decide the rest.
-    let origin = if !passed
-        && (validation.get("ok").and_then(Value::as_bool) != Some(true)
-            || cleanup.get("ok").and_then(Value::as_bool) != Some(true))
-    {
+    // A failed cleanup is observed harness work. An absent or invalid report
+    // cannot establish ownership: the product may have crashed before writing it.
+    let origin = if cleanup.get("ok").and_then(Value::as_bool) != Some(true) {
         json!("harness")
     } else {
         Value::Null
