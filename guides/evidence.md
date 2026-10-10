@@ -19,8 +19,8 @@ A successful `run` returns the run result and analysis and writes target-specifi
 artifacts under `test-results/`. It may drive a real application and therefore is
 not a read-only continuation of the discovery path. Additional command and
 failure guidance is in the published [agent interface](https://probierz.wisent.com/docs/mcp).
-The integrated Tama → Probierz → Stado workflow is documented in
-the published [pipeline documentation](https://probierz.wisent.com/docs/PIPELINE).
+The canonical overview explains
+[how a run becomes a release decision](https://probierz.wisent.com/docs#how-a-run-becomes-a-release-decision).
 
 Platform diagnostics reject an incomplete capture even when its child exits
 successfully. A failed collector retains its capture cause, redacted stderr
