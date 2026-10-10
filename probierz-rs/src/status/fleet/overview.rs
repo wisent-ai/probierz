@@ -15,22 +15,23 @@ pub(crate) fn violations_for(root: &str) -> Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() && !stdout.trim().starts_with('{') {
-        let detail = stderr
-            .lines()
-            .next()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| {
-                format!(
-                    "tama find-violations {} with no message",
+        return json!({
+            "error": format!(
+                "tama find-violations for {root} {}; stdout: {stdout}; stderr: {stderr}",
+                crate::failure::ended(&output.status)
+            )
+        });
+    }
+    let report = match serde_json::from_str::<Value>(&stdout) {
+        Ok(report) => report,
+        Err(error) => {
+            return json!({
+                "error": format!(
+                    "tama find-violations for {root} {}: invalid JSON: {error}; stdout: {stdout}; stderr: {stderr}",
                     crate::failure::ended(&output.status)
                 )
             });
-        return json!({ "error": detail });
-    }
-    let Ok(report) = serde_json::from_str::<Value>(&stdout) else {
-        return json!({ "error": "scanner output not parseable" });
+        }
     };
     let repo = report.pointer("/repos/0").unwrap_or(&report);
     json!({
