@@ -96,9 +96,34 @@ pub(crate) fn acquire_one(
     })?;
     // The holder's identity, for an operator reading who has the device now.
     let holder = json!({ "schemaVersion": 2, "resource": resource, "runId": owner, "pid": std::process::id(), "acquiredAt": now_iso() });
-    file.set_len(0)?;
-    file.seek(SeekFrom::Start(0))?;
-    file.write_all(holder.to_string().as_bytes())?;
+    file.set_len(0).map_err(|error| {
+        Failure::unavailable(
+            "evidence.lock",
+            format!(
+                "truncate holder record for {resource} at {}: {error}",
+                path.display()
+            ),
+        )
+    })?;
+    file.seek(SeekFrom::Start(0)).map_err(|error| {
+        Failure::unavailable(
+            "evidence.lock",
+            format!(
+                "seek holder record for {resource} at {}: {error}",
+                path.display()
+            ),
+        )
+    })?;
+    file.write_all(holder.to_string().as_bytes())
+        .map_err(|error| {
+            Failure::unavailable(
+                "evidence.lock",
+                format!(
+                    "write holder {owner} for {resource} at {}: {error}",
+                    path.display()
+                ),
+            )
+        })?;
     Ok(file)
 }
 
