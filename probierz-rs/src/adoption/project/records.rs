@@ -125,12 +125,15 @@ pub fn dispatch(project_root: &Path, command: ProjectCommand) -> Answer {
                 invocation_error("project adopt needs --source <repository>");
             };
             let result = adopt_project(project_root, &source, replace)?;
-            let accepted = result.get("status").and_then(Value::as_str) != Some("conflict");
             print_json(&result)?;
-            if !accepted {
-                std::process::exit(1);
+            if result.get("status").and_then(Value::as_str) != Some("conflict") {
+                return Ok(());
             }
-            Ok(())
+            Err(Failure::new(
+                "project.adopt",
+                crate::failure::Code::Refused,
+                result.to_string(),
+            ))
         }
         ProjectCommand::Adoptions { args } => {
             if !args.is_empty() {

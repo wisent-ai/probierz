@@ -43,7 +43,10 @@ Every way into Probierz, and what each one is allowed to do.
   All of them are classified as `refused` and return the refusal instead of
   ending the process, so the in-process MCP tools that run them answer with an
   error and the server keeps serving later requests; the CLI still exits
-  unsuccessfully.
+  unsuccessfully. `probierz project adopt` and `probierz onboarding --source`
+  likewise refuse a conflicting adoption (`project.adopt` with the whole
+  adoption result, `onboarding.adoption` after printing the conflicts) without
+  ending the process; no files change.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;

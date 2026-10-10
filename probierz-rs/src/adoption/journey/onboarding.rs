@@ -1,13 +1,19 @@
 use crate::adoption::*;
 use serde_json::json;
 
-/// Parse and render the first-use journey, optionally adopting definitions first.
+/// Parse and render the first-use journey, optionally adopting definitions
+/// first. An adoption that conflicts is a refusal, never a process exit, so
+/// the MCP server running this in process keeps serving.
 pub fn onboarding(project_root: &Path, arguments: &[String]) -> Answer {
     let (reset, source, replace, json) = onboarding_flags(arguments);
-    if !run_onboarding(project_root, reset, source.as_deref(), replace, json)? {
-        std::process::exit(1);
+    if run_onboarding(project_root, reset, source.as_deref(), replace, json)? {
+        return Ok(());
     }
-    Ok(())
+    Err(Failure::new(
+        "onboarding.adoption",
+        crate::failure::Code::Refused,
+        "the existing project was not adopted: its definitions conflict with the source's, as printed above; no files changed",
+    ))
 }
 
 pub(crate) fn onboarding_flags(arguments: &[String]) -> (bool, Option<PathBuf>, bool, bool) {
