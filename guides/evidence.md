@@ -41,6 +41,11 @@ the cleanup result. If recording that failure also fails, the command reports
 both the runner cause and the persistence cause; neither is replaced with a
 successful or empty run result.
 
+Seed and cleanup commands fail when their captured output cannot be retained,
+even if the child exits successfully. The result names the affected stdout or
+stderr path and filesystem cause alongside any capture or child-exit failure.
+A malformed JSON result names the command and decoder cause.
+
 A missing or invalid report, absent capture, or unsuccessful analysis alone
 does not establish which component failed. Such a run is still failed, but its
 ownership remains `unclassified`. Historical runs without a recorded origin
