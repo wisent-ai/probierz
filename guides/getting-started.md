@@ -64,6 +64,9 @@ An accepted import remains accepted if the following adoption-list read fails:
 the Workspace screen reports that read failure separately instead of claiming
 that the already-persisted definitions were not adopted. Adoption callbacks
 from a previously selected workspace do not overwrite the current screen.
+The new workspace also starts with its own refresh and adoption availability;
+an older operation cannot leave its controls permanently busy or clear the
+busy state of a new operation when it finishes.
 An unreadable source apps directory reports the inspection operation, exact
 path and operating-system cause; permission and I/O failures are not relabeled
 as a missing directory.
