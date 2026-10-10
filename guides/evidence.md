@@ -50,6 +50,10 @@ the operation, destination and operating-system cause. A failed write reports
 `file: null` and `attemptedFile`; the nested collector result preserves its
 command, arguments, exit status and error, so a storage failure does not erase
 a simultaneous platform-tool failure.
+Probierz Desktop shows the same failure in Runs → selected run → Platform
+diagnostics unavailable, including the attempted destination and retained
+collector details. This warning is separate from the suite verdict: missing
+platform evidence does not rewrite a passing product assertion as a failure.
 
 ## Register verified first-use evidence
 
