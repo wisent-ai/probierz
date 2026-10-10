@@ -19,7 +19,8 @@
       },
       "stage": {
         "bin/probierz": "bin/probierz",
-        "evidence/DIGESTS": "evidence/DIGESTS"
+        "evidence/DIGESTS": "evidence/DIGESTS",
+        "evidence/SOURCE_REVISION": "evidence/SOURCE_REVISION"
       }
     }
   },
