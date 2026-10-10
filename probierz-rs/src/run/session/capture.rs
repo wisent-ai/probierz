@@ -85,9 +85,8 @@ pub(crate) fn capture_text(program: &str, args: &[&str], cwd: Option<&Path>) -> 
 }
 
 pub(crate) fn successful(program: &str, args: &[&str]) -> bool {
-    capture_text(program, args, None)
-        .status
-        .is_some_and(|status| status.success())
+    let result = capture_text(program, args, None);
+    result.error.is_none() && result.status.is_some_and(|status| status.success())
 }
 
 pub(crate) fn text(bytes: &[u8]) -> String {
