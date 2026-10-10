@@ -9,10 +9,15 @@ Every way into Probierz, and what each one is allowed to do.
   person and the same report as JSON with `--json`; run, analysis, figure
   evaluation, SEO evaluation, and gate commands expose structured data;
   automation must not infer state from prose.
-- **Overview scanner refusals:** a failed Tama launch names the command and
-  operating-system cause. A non-JSON scanner failure retains the target
-  repository, actual exit or signal, and complete stdout and stderr. Malformed
-  JSON also names the decoding cause; it is not reported as a clean scan.
+- **Overview scanner refusals:** `probierz overview` (not `probierz errors`) runs
+  `tama violations find --repo <root> --json`. A failed Tama launch names the
+  command and operating-system cause. A non-JSON scanner failure retains the
+  target repository, actual exit or signal, and complete stdout and stderr.
+  Malformed JSON also names the decoding cause. A report without a `problems`
+  array, with any scan problem, without a repository entry, or without that
+  repository's `violations`, `skippedFiles` or `errors` array is refused with
+  the missing part and the observed output; it is never reported as a clean
+  scan.
 - **Native driver refusals:** an existing CuaDriver socket is probed once.
   Executable, socket-inspection, child-exit, JSON decoding and missing permission
   state failures retain their own cause; only an explicit false Accessibility

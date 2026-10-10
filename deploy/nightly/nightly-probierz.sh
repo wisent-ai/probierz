@@ -1,6 +1,6 @@
 #!/bin/sh
 # nightly-probierz: nightly hygiene + overview report.
-# Scans key repositories with find-violations (report only) and writes a
+# Scans key repositories with `tama violations find` (report only) and writes a
 # unified overview (journeys + eligibility + fleet) to ~/.stado/nightly/.
 set -eu
 
@@ -20,9 +20,9 @@ REPOS="${PROBIERZ_NIGHTLY_REPOS:-$WISENT/skarbiec $WISENT/jeden $WISENT/oko $WIS
 {
     echo "== nightly ${STAMP} =="
     for repo in $REPOS; do
-        echo "--- find-violations ${repo}"
+        echo "--- violations find ${repo}"
         if command -v "$TAMA_CLI" >/dev/null 2>&1; then
-            "$TAMA_CLI" find-violations --repo "$repo" 2>&1 || echo "scan refused: $repo"
+            "$TAMA_CLI" violations find --repo "$repo" 2>&1 || echo "scan refused: $repo"
         else
             echo "scan skipped: ${TAMA_CLI} is not installed; install Tama or set TAMA_CLI"
         fi

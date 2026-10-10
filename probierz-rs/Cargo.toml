@@ -43,6 +43,10 @@ path = "../tests/secrets/group.rs"
 name = "inspect_names"
 path = "../tests/inspect/names.rs"
 
+[[test]]
+name = "overview_scan"
+path = "../tests/overview/scan.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
