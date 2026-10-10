@@ -82,6 +82,9 @@ screen reports the refusal instead of silently returning. A storage or
 completion error is distinct from event delivery: once completion is recorded,
 an event-flush failure says that the events remain unsent, not that inspection
 was lost.
+The inspector also observes a selected bundle when the journey finishes
+loading or that bundle becomes available locally. Selecting the same row again
+or leaving and reopening Artifacts is not required to record that observation.
 
 ## Register verified first-use evidence
 
