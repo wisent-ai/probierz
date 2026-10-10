@@ -27,7 +27,9 @@ const report = { revision, binary, binarySha256: digest(binary),
   testSha256: digest(fileURLToPath(import.meta.url)), commands: [], passed: false };
 function run(program, args, input, env) {
   const result = spawnSync(program, args, { cwd: root, input, env, encoding: 'utf8' });
-  report.commands.push({ program, args, status: result.status, signal: result.signal,
+  report.commands.push({ program, args, input, cwd: root,
+    executableSearchPath: env?.PATH ?? process.env.PATH,
+    status: result.status, signal: result.signal,
     stdout: result.stdout, stderr: result.stderr, error: result.error?.message });
   assert.ifError(result.error);
   assert.equal(result.signal, null);
