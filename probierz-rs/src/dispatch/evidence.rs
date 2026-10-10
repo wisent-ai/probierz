@@ -48,7 +48,7 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
         }
         EvidenceCommand::Secrets {
             command: SecretsCommand::Scan { directory },
-        } => evidence::secret_scan(directory.as_deref()),
+        } => evidence::secrets_scan_command(directory.as_deref()),
         EvidenceCommand::Audit {
             app_id,
             run_id,

@@ -17,6 +17,8 @@ Every way into Probierz, and what each one is allowed to do.
   refusal instead of ending the process, so the in-process MCP tools
   `probierz_create_receipt` and `probierz_verify_receipt` answer with an error
   and the server keeps serving later requests.
+  `probierz secrets scan` likewise prints its report and then refuses with the
+  directory and number of findings instead of ending the process.
 - **Overview scanner refusals:** `probierz overview` (not `probierz errors`) runs
   `tama violations find --repo <root> --json`. A failed Tama launch names the
   command and operating-system cause. A non-JSON scanner failure retains the
