@@ -88,6 +88,12 @@ was lost.
 The inspector also observes a selected bundle when the journey finishes
 loading or that bundle becomes available locally. Selecting the same row again
 or leaving and reopening Artifacts is not required to record that observation.
+The walkthrough owns one operation through progress synchronization and event
+delivery. Repeated advance or replay requests cannot overlap that operation;
+replay reports that the current operation is still running. A real bundle
+inspection received during an operation waits for its completion. An inspection
+from the previous attempt cannot complete a replayed journey, and changing the
+busy indicator does not retry a failed inspection.
 
 ## Register verified first-use evidence
 
