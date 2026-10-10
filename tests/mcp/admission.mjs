@@ -115,6 +115,16 @@ try {
         `dependency refusal must identify ${diagnostic}: ${answer.error.message}`);
     }
   }
+  const setupMessage = refusalResponse(setup).error.message;
+  const setupReport = JSON.parse(setupMessage.slice(setupMessage.indexOf('{')));
+  assert.equal(setupReport.ok, false);
+  assert.equal(typeof setupReport.error, 'string',
+    'failed process creation must retain its operating-system cause, not null');
+  assert.equal(setupReport.stderrTail, '',
+    'a process that could not start has no child stderr');
+  assert.deepEqual(setupReport.steps.map(step => ({
+    command: step.command, ok: step.ok, exitCode: step.exitCode,
+  })), [{ command: 'npm install', ok: false, exitCode: null }]);
   assert.deepEqual(refusalResponse(recovery).result, {},
     'setup and preflight failures must leave the same server available');
   assert.deepEqual(readdirSync(harness), ['apps'], 'failed setup must not install dependencies');
