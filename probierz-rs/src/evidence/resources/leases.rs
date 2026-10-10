@@ -60,14 +60,31 @@ pub(crate) fn acquire_one(
     use fs2::FileExt;
     use std::io::{Seek, SeekFrom, Write};
     let lock_root = harness.join("test-results").join(".locks");
-    fs::create_dir_all(&lock_root)?;
+    fs::create_dir_all(&lock_root).map_err(|error| {
+        Failure::unavailable(
+            "evidence.lock",
+            format!(
+                "create resource lock directory {}: {error}",
+                lock_root.display()
+            ),
+        )
+    })?;
     let path = lock_root.join(format!("{}.lock", lock_name(resource)));
     let mut file = fs::OpenOptions::new()
         .create(true)
         .read(true)
         .write(true)
         .truncate(false)
-        .open(&path)?;
+        .open(&path)
+        .map_err(|error| {
+            Failure::unavailable(
+                "evidence.lock",
+                format!(
+                    "open lock for resource {resource} at {}: {error}",
+                    path.display()
+                ),
+            )
+        })?;
     file.lock_exclusive().map_err(|error| {
         Failure::unavailable(
             "evidence.lock",
