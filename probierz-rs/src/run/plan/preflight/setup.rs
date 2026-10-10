@@ -71,7 +71,7 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
     let opts = parse_run_args(args, false)?;
     let env = env_snapshot(&BTreeMap::new());
     let mut done = Vec::new();
-    let mut failure: Option<(String, String)> = None;
+    let mut failure: Option<(String, String, Option<String>)> = None;
     for step in setup_steps(harness, name)? {
         let line = format!("{} {}", step.command, step.args.join(" "));
         let skipped = step
