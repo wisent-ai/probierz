@@ -59,6 +59,9 @@ refuses unclassified and infrastructure runs instead of inventing blame.
 
 Platform log diagnostics use the recorded run start rather than an invented
 look-back window. A malformed start is an explicit collection refusal.
+On macOS and iOS, missing `MAC_APP_PATH` or `APP_IOS`, or a path with no
+usable process-name stem, is a supported collector's explicit refusal naming
+the field and invalid value. It is not reported as an unsupported platform.
 `platformDiagnostics.ok` requires both a successful collector and retained
 output: failure to create the diagnostics directory or write its file names
 the operation, destination and operating-system cause. A failed write reports

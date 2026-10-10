@@ -24,6 +24,22 @@ pub(crate) fn collect_platform_diagnostics(
         .and_then(|path| Path::new(path).file_stem())
         .and_then(|name| name.to_str())
         .map(str::to_string);
+    if matches!(target, "desktop:mac" | "desktop:cua" | "mobile:ios") && process_name.is_none() {
+        let field = if target == "mobile:ios" {
+            "APP_IOS"
+        } else {
+            "MAC_APP_PATH"
+        };
+        let error = match app_path {
+            Some(path) => format!(
+                "platform diagnostics for {target} cannot derive a process name from {field}={path:?}"
+            ),
+            None => format!(
+                "platform diagnostics for {target} require {field} in the run environment"
+            ),
+        };
+        return json!({ "supported": true, "file": null, "ok": false, "error": error });
+    }
     // The log window opens at the run's recorded start (`log show --start`),
     // so nothing is padded and nothing guessed; a start that does not parse
     // is reported instead of read over an invented span.
