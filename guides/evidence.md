@@ -42,6 +42,15 @@ are also unclassified unless they record a setup failure. Report presence alone
 is not evidence that a product assertion failed. Automatic product-code repair
 refuses unclassified and infrastructure runs instead of inventing blame.
 
+Platform log diagnostics use the recorded run start rather than an invented
+look-back window. A malformed start is an explicit collection refusal.
+`platformDiagnostics.ok` requires both a successful collector and retained
+output: failure to create the diagnostics directory or write its file names
+the operation, destination and operating-system cause. A failed write reports
+`file: null` and `attemptedFile`; the nested collector result preserves its
+command, arguments, exit status and error, so a storage failure does not erase
+a simultaneous platform-tool failure.
+
 ## Register verified first-use evidence
 
 An `onboarding-first-use` journey carries an immutable `journeyId`,

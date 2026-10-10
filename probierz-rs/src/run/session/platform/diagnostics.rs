@@ -7,7 +7,14 @@ pub(crate) fn collect_platform_diagnostics(
     started: &str,
 ) -> Value {
     let directory = artifacts.join("diagnostics");
-    let _ = fs::create_dir_all(&directory);
+    if let Err(error) = fs::create_dir_all(&directory) {
+        return json!({
+            "supported": true,
+            "file": null,
+            "ok": false,
+            "error": format!("create platform diagnostics directory {}: {error}", directory.display()),
+        });
+    }
     let app_path = if matches!(target, "desktop:mac" | "desktop:cua") {
         env.get("MAC_APP_PATH")
     } else {
@@ -92,7 +99,22 @@ pub(crate) fn collect_platform_diagnostics(
     let result = capture(command, &args, None, None);
     let output = redact_diagnostic(&text(&result.stdout));
     let error = redact_diagnostic(&text(&result.stderr));
-    let _ = write_secure_text(&file, &output);
+    if let Err(write_error) = write_secure_text(&file, &output) {
+        return json!({
+            "supported": true,
+            "file": null,
+            "attemptedFile": file,
+            "ok": false,
+            "error": format!("retain platform diagnostic output at {}: {write_error}", file.display()),
+            "collector": {
+                "command": command,
+                "args": args,
+                "exitCode": result.status.and_then(|status| status.code()),
+                "error": result.error,
+                "stderr": error,
+            },
+        });
+    }
     let ok = result.status.is_some_and(|status| status.success());
     let failure = if ok {
         Value::Null
