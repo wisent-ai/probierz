@@ -4,7 +4,7 @@ pub fn evaluate(harness: &Path, args: &GateArgs) -> Answer {
     let passed = truthy(property(&result, "verdict").and_then(|value| property(value, "passed")));
     print_json(&result)?;
     if !passed {
-        std::process::exit(1);
+        return Err(Failure::invalid("gate.evaluate", result.to_string()));
     }
     Ok(())
 }
@@ -68,7 +68,7 @@ pub fn enforce(harness: &Path, args: &GateArgs) -> Answer {
     let passed = truthy(property(&result, "verdict").and_then(|value| property(value, "passed")));
     print_json(&result)?;
     if !passed {
-        std::process::exit(1);
+        return Err(Failure::invalid("gate.enforce", result.to_string()));
     }
     Ok(())
 }
