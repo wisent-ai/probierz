@@ -133,31 +133,27 @@ pub(crate) fn validate_policies(
                     &format!("matrix.{profile_name} target {target} has no surface"),
                 )?;
             }
-            if let Some(dimensions) = map_of(profile, "dimensions") {
-                for (name, values) in dimensions {
-                    let name = name.as_str().unwrap_or_default();
+            validate_dimensions(profile, file, &format!("matrix.{profile_name}"))?;
+            if let Some(overrides) = profile.get("surfaces") {
+                require(
+                    overrides.is_mapping(),
+                    file,
+                    &format!("matrix.{profile_name}.surfaces must be an object"),
+                )?;
+                for (target, declaration) in overrides.as_mapping().expect("checked") {
                     require(
-                        !sensitive(name),
+                        surfaces.contains_key(target),
                         file,
-                        &format!(
-                            "matrix.{profile_name} secret dimension {name} must use secretRefs"
-                        ),
+                        &format!("matrix.{profile_name}.surfaces names an unknown surface"),
                     )?;
-                    let list = values.as_sequence();
+                    let target = target.as_str().expect("validated surface name");
+                    let path = format!("matrix.{profile_name}.surfaces.{target}");
                     require(
-                        list.map(|items| !items.is_empty()).unwrap_or(false),
+                        declaration.is_mapping(),
                         file,
-                        &format!("matrix.{profile_name}.{name} needs values"),
+                        &format!("{path} must be an object"),
                     )?;
-                    let scalar = list
-                        .expect("checked")
-                        .iter()
-                        .all(|value| value.is_string() || value.is_number() || value.is_bool());
-                    require(
-                        scalar,
-                        file,
-                        &format!("matrix.{profile_name}.{name} values must be scalar"),
-                    )?;
+                    validate_dimensions(declaration, file, &path)?;
                 }
             }
             // The evidence floor is the profile's own statement; none is assumed.
@@ -246,5 +242,44 @@ pub(crate) fn validate_policies(
         }
     }
 
+    Ok(())
+}
+
+fn validate_dimensions(declaration: &Value, file: &Path, path: &str) -> Answer {
+    let Some(dimensions) = declaration.get("dimensions") else {
+        return Ok(());
+    };
+    require(
+        dimensions.is_mapping(),
+        file,
+        &format!("{path}.dimensions must be an object"),
+    )?;
+    for (name, values) in dimensions.as_mapping().expect("checked") {
+        require(
+            name.is_string(),
+            file,
+            &format!("{path}.dimensions keys must be text"),
+        )?;
+        let name = name.as_str().expect("checked");
+        let field = format!("{path}.dimensions.{name}");
+        require(
+            !sensitive(name),
+            file,
+            &format!("{field} must use secretRefs"),
+        )?;
+        let list = values.as_sequence();
+        require(
+            list.is_some_and(|items| !items.is_empty()),
+            file,
+            &format!("{field} needs values"),
+        )?;
+        require(
+            list.expect("checked")
+                .iter()
+                .all(|value| value.is_string() || value.is_number() || value.is_bool()),
+            file,
+            &format!("{field} values must be scalar"),
+        )?;
+    }
     Ok(())
 }

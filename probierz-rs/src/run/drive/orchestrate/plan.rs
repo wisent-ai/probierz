@@ -117,6 +117,12 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
             }));
         }
     }
+    if cells.is_empty() {
+        return Err(fail(
+            "run.matrix",
+            format!("matrix {profile} expands to no cells; declare targets and non-empty dimension values"),
+        ));
+    }
     // A profile bounds its matrix only when it states maxCells.
     if let Some(max) = policy.get("maxCells").and_then(serde_yaml::Value::as_u64) {
         if cells.len() as u64 > max {
