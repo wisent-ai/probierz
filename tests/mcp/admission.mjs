@@ -20,11 +20,13 @@ mkdirSync(evidenceRoot, { recursive: true });
 const evidence = mkdtempSync(join(evidenceRoot, 'run-'));
 const harness = join(evidence, 'harness');
 mkdirSync(join(harness, 'apps'), { recursive: true });
+const emptyPath = join(evidence, 'empty-path');
+mkdirSync(emptyPath);
 const digest = file => createHash('sha256').update(readFileSync(file)).digest('hex');
 const report = { revision, binary, binarySha256: digest(binary),
   testSha256: digest(fileURLToPath(import.meta.url)), commands: [], passed: false };
-function run(program, args, input) {
-  const result = spawnSync(program, args, { cwd: root, input, encoding: 'utf8' });
+function run(program, args, input, env) {
+  const result = spawnSync(program, args, { cwd: root, input, env, encoding: 'utf8' });
   report.commands.push({ program, args, status: result.status, signal: result.signal,
     stdout: result.stdout, stderr: result.stderr, error: result.error?.message });
   assert.ifError(result.error);
@@ -86,6 +88,35 @@ try {
   assert.deepEqual(response(ping).result, {}, 'a refusal must not end the server');
   assert.deepEqual(readdirSync(harness), ['apps'], 'refused publication must not create evidence or jobs');
   assert.deepEqual(readdirSync(join(harness, 'apps')), [], 'refused publication must not change applications');
+  assert.deepEqual(readdirSync(emptyPath), [], 'the restricted PATH contains no substitute executables');
+  const setup = request('tools/call', { name: 'probierz_setup', arguments: { target: 'tui' } });
+  const check = request('tools/call', { name: 'probierz_check', arguments: { target: 'tui' } });
+  const recovery = request('ping');
+  const refused = run(binary, ['--harness', harness, 'mcp'],
+    [setup, check, recovery].map(value => JSON.stringify(value)).join('\n') + '\n',
+    { ...process.env, PATH: emptyPath });
+  const refusalResponses = refused.trim().split('\n').map(line => JSON.parse(line));
+  const refusalResponse = request => {
+    const matches = refusalResponses.filter(value => value.id === request.id);
+    assert.deepEqual(matches.map(value => value.id), [request.id]);
+    return matches.find(value => value.id === request.id);
+  };
+  for (const [rejected, diagnostics] of [
+    [setup, ['setup', 'npm install', 'failedAt', 'error', '"exitCode":null']],
+    [check, ['check', 'terminal session (script)', 'remediation']],
+  ]) {
+    const answer = refusalResponse(rejected);
+    assert.ok(answer.error, 'a missing dependency must refuse its request');
+    assert.ok(!Object.hasOwn(answer, 'result'));
+    for (const diagnostic of diagnostics) {
+      assert.ok(answer.error.message.includes(diagnostic),
+        `dependency refusal must identify ${diagnostic}: ${answer.error.message}`);
+    }
+  }
+  assert.deepEqual(refusalResponse(recovery).result, {},
+    'setup and preflight failures must leave the same server available');
+  assert.deepEqual(readdirSync(harness), ['apps'], 'failed setup must not install dependencies');
+  assert.deepEqual(readdirSync(join(harness, 'apps')), []);
   report.passed = true;
 } catch (error) {
   report.error = error.stack;

@@ -25,6 +25,12 @@ Every way into Probierz, and what each one is allowed to do.
   `exitCode` is null when no numeric exit status was observed, not a made-up
   failure code. The command returns a refusal instead of terminating the
   in-process MCP server, so later requests can still be served.
+  `probierz check <target>` and `probierz_check` likewise return the complete
+  missing-prerequisite and remediation report without ending the server.
+  The real `tests/mcp/admission.mjs` journey uses an empty executable search
+  path to exercise missing npm during setup and missing script during
+  preflight, then requires a reply to ping from that same server and verifies
+  that no dependencies or applications were installed in its isolated harness.
 - **Overview scanner refusals:** `probierz overview` (not `probierz errors`) runs
   `tama violations find --repo <root> --json`. A failed Tama launch names the
   command and operating-system cause. A non-JSON scanner failure retains the

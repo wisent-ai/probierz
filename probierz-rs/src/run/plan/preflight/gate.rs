@@ -105,7 +105,7 @@ pub fn check(name: &str) -> Answer {
         .unwrap_or(false);
     print_json(&result)?;
     if !ready {
-        std::process::exit(1);
+        return Err(Failure::invalid("check", result.to_string()));
     }
     Ok(())
 }
