@@ -134,8 +134,9 @@ pub fn receipt(
     // process, because the MCP server runs this command in its own process
     // and must go on answering after a negative receipt.
     if !errors.is_empty() {
-        return Err(Failure::invalid(
+        return Err(Failure::new(
             "evidence.receipt",
+            crate::failure::Code::Refused,
             format!(
                 "receipt {receipt_id} at {} records a failed verdict: {}",
                 file.display(),

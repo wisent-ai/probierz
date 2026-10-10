@@ -17,6 +17,8 @@ Every way into Probierz, and what each one is allowed to do.
   refusal instead of ending the process, so the in-process MCP tools
   `probierz_create_receipt` and `probierz_verify_receipt` answer with an error
   and the server keeps serving later requests.
+  Creating a signed negative receipt is classified as `refused`: its file has
+  already been written, so the failure never claims that nothing ran.
   `probierz secrets scan` likewise prints its report and then refuses with the
   directory and number of findings instead of ending the process.
 - **Gate refusals:** failed `probierz gate evaluate`, `probierz gate enforce`
