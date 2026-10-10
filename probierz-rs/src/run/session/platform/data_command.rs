@@ -57,7 +57,10 @@ pub(crate) fn run_data_command(
         }
     }
     if let Some(error) = execution.error {
-        failures.push(format!("capture data command {command}: {error}"));
+        failures.push(format!(
+            "capture data command {command}: {}",
+            redact_text(&error, secrets)
+        ));
     }
     match execution.status {
         Some(status) if status.success() => {}
