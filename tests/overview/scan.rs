@@ -16,9 +16,8 @@ const APPLICATION: &str = "tama";
 
 /// The counted scan; every count is required, so a scan that answered with
 /// an error instead does not decode.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-#[allow(dead_code)]
 struct Counted {
     violations: u64,
     skipped: u64,
@@ -66,17 +65,64 @@ fn scan(output: &Output) -> Value {
 
 #[test]
 fn the_scan_is_counted_from_the_canonical_tama_report() {
-    let scan = scan(&overview(None));
-    if let Err(error) = serde_json::from_value::<Counted>(scan.clone()) {
-        panic!("the scan is not a complete count ({error}): {scan}");
-    }
+    let status = Command::new(PROBIERZ)
+        .arg("--harness")
+        .arg(harness())
+        .args(["status", APPLICATION, "--json"])
+        .output()
+        .expect("start probierz status");
+    assert!(status.status.code().is_some(), "status ended by signal");
+    // Status can exit unsuccessfully because the application is not merge eligible.
+    let status: Value = serde_json::from_slice(&status.stdout)
+        .expect("status must report the actual application repositories");
+    let root = status
+        .pointer("/repositories/0/root")
+        .and_then(Value::as_str)
+        .expect("the application must declare its scanned repository");
+    let canonical = Command::new("tama")
+        .args(["violations", "find", "--repo", root, "--json"])
+        .output()
+        .expect("start the actual canonical Tama scanner");
+    assert!(canonical.status.code().is_some(), "Tama ended by signal");
+    let canonical: Value = serde_json::from_slice(&canonical.stdout)
+        .expect("Tama must produce its actual scan report");
+    assert!(
+        canonical["problems"].as_array().expect("scan problems").is_empty(),
+        "the canonical scan failed: {canonical}"
+    );
+    let repositories = canonical["repos"].as_array().expect("scan repositories");
+    let [repository] = repositories.as_slice() else {
+        panic!("the canonical scan must identify exactly the requested repository");
+    };
+    assert_eq!(
+        Path::new(repository["repo"].as_str().expect("scanned repository"))
+            .canonicalize().expect("resolve scanned repository"),
+        Path::new(root).canonicalize().expect("resolve requested repository")
+    );
+    let count = |field: &str| {
+        repository[field].as_array().expect("required scan array").len() as u64
+    };
+    let expected = Counted {
+        violations: count("violations"),
+        skipped: count("skippedFiles"),
+        errors: count("errors"),
+    };
+    let observed: Counted = serde_json::from_value(scan(&overview(None)))
+        .expect("overview must return complete counts");
+    assert_eq!(observed, expected, "overview must retain the actual Tama counts");
 }
 
 #[test]
 fn a_scanner_that_cannot_start_is_refused_by_name() {
-    // Tama is installed outside the system directories, so this PATH is a
-    // machine without it.
-    let scan = scan(&overview(Some("/usr/bin:/bin")));
+    let executable_path = "/usr/bin:/bin";
+    for directory in std::env::split_paths(executable_path) {
+        assert!(
+            !directory.join("tama").exists(),
+            "the missing-scanner journey requires Tama to be absent from {}",
+            directory.display()
+        );
+    }
+    let scan = scan(&overview(Some(executable_path)));
     let refused = match serde_json::from_value::<Refused>(scan.clone()) {
         Ok(refused) => refused,
         Err(error) => panic!("a missing Tama was reported as a scan ({error}): {scan}"),

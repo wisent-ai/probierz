@@ -18,6 +18,10 @@ Every way into Probierz, and what each one is allowed to do.
   repository's `violations`, `skippedFiles` or `errors` array is refused with
   the missing part, target repository, actual exit or signal, and complete
   stdout and stderr; it is never reported as a clean scan.
+  The real `overview_scan` journey compares every returned count with the
+  canonical Tama scan of the application's declared repository. Its
+  missing-scanner case verifies Tama is absent from the restricted executable
+  search path before requiring the launch refusal.
 - **Native driver refusals:** an existing CuaDriver socket is probed once.
   Executable, socket-inspection, child-exit, JSON decoding and missing permission
   state failures retain their own cause; only an explicit false Accessibility
