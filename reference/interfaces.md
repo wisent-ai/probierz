@@ -19,10 +19,11 @@ Every way into Probierz, and what each one is allowed to do.
   and the server keeps serving later requests.
   `probierz secrets scan` likewise prints its report and then refuses with the
   directory and number of findings instead of ending the process.
-- **Gate refusals:** failed `probierz gate evaluate` and `probierz gate enforce`
-  return the complete verdict, including every error and the pending-green
-  activation state, without terminating the in-process MCP server. A refused
-  gate is not a successful tool result and does not prevent later requests.
+- **Gate refusals:** failed `probierz gate evaluate`, `probierz gate enforce`
+  and `probierz gate prepush` return the complete verdict, including every error,
+  blocking reason and pending-green activation state, without terminating the
+  in-process MCP server. A refused gate is not a successful tool result and
+  does not prevent later requests.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;

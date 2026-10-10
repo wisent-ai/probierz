@@ -48,7 +48,7 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
         print_json(&result)?;
     }
     if !truthy(property(&result, "ok")) {
-        std::process::exit(1);
+        return Err(Failure::invalid("gate.prepush", result.to_string()));
     }
     Ok(())
 }
