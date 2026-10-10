@@ -9,6 +9,14 @@ impl Driver {
     /// that neither creates its socket nor exits is a hung daemon, and the run
     /// shows it hung instead of guessing a limit.
     pub(crate) fn await_socket(&self, daemon_log: &Path) -> Result<(), String> {
+        let socket_exists = || {
+            self.socket.try_exists().map_err(|error| {
+                format!(
+                    "inspect CuaDriver socket {}: {error}",
+                    self.socket.display()
+                )
+            })
+        };
         let not_created = || {
             let detail = match fs::read_to_string(daemon_log) {
                 Ok(detail) => detail,
@@ -33,7 +41,7 @@ impl Driver {
             }
         };
         let Some(pid) = self.daemon_pid()? else {
-            return if self.socket.exists() {
+            return if socket_exists()? {
                 Ok(())
             } else {
                 Err(not_created())
@@ -49,7 +57,7 @@ impl Driver {
         loop {
             // Checked after both events are registered, so a socket created
             // between the launch and the registration is not missed.
-            if self.socket.exists() {
+            if socket_exists()? {
                 return Ok(());
             }
             match watch
@@ -58,7 +66,7 @@ impl Driver {
             {
                 kernel::Event::DirectoryChanged => {}
                 kernel::Event::DaemonExited => {
-                    return if self.socket.exists() {
+                    return if socket_exists()? {
                         Ok(())
                     } else {
                         Err(not_created())
