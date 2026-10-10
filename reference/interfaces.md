@@ -22,6 +22,9 @@ Every way into Probierz, and what each one is allowed to do.
   If the launched daemon exits before creating its socket, the refusal retains
   its log; an unreadable log is reported with its path and filesystem cause,
   not presented as an empty daemon log.
+  Process discovery treats only pgrep's documented no-match exit as absence.
+  A failed lookup or malformed process identifier retains its status and cause
+  rather than claiming that the daemon exited.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
