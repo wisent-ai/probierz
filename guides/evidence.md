@@ -55,6 +55,12 @@ diagnostics unavailable, including the attempted destination and retained
 collector details. This warning is separate from the suite verdict: missing
 platform evidence does not rewrite a passing product assertion as a failure.
 
+The retained `diagnostics.json` keeps complete redacted crash and console-error
+messages, without a fixed-length preview. A log or console error without a
+string message records that missing field explicitly instead of becoming an
+empty message or disappearing from the diagnostic summary. File-backed crash
+entries identify the source path.
+
 Desktop first use records completion when a real protected evidence bundle
 has been inspected. If that fact does not satisfy the current journey, the
 screen reports the refusal instead of silently returning. A storage or

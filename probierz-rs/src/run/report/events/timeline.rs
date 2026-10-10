@@ -139,7 +139,27 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
         .iter()
         .filter(|event| event.get("type").and_then(Value::as_str) == Some("network"))
         .collect();
-    let mut crashes: Vec<Value> = events.iter().filter(|event| event.get("type").and_then(Value::as_str) == Some("log") && error_line(event.get("message").and_then(Value::as_str).unwrap_or(""))).map(|event| json!({ "at": event["at"], "source": event["source"], "message": event.get("message").and_then(Value::as_str).unwrap_or("").chars().take(500).collect::<String>() })).collect();
+    let mut crashes = Vec::new();
+    for event in events
+        .iter()
+        .filter(|event| event.get("type").and_then(Value::as_str) == Some("log"))
+    {
+        let Some(message) = event.get("message").and_then(Value::as_str) else {
+            crashes.push(json!({
+                "at": event["at"],
+                "source": event["source"],
+                "error": "timeline log event has no string message; crash classification is unavailable"
+            }));
+            continue;
+        };
+        if error_line(message) {
+            crashes.push(json!({
+                "at": event["at"],
+                "source": event["source"],
+                "message": safe_message(message)
+            }));
+        }
+    }
     let directory = artifacts.join("diagnostics");
     if let Ok(entries) = fs::read_dir(directory) {
         for entry in entries.flatten() {
@@ -149,13 +169,37 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
             }
             if let Ok(content) = fs::read_to_string(&path) {
                 for line in content.lines().filter(|line| error_line(line)) {
-                    crashes.push(json!({ "source": path.file_name().and_then(|value| value.to_str()).unwrap_or(""), "message": safe_message(line).chars().take(500).collect::<String>() }));
+                    crashes.push(json!({ "source": path, "message": safe_message(line) }));
                 }
             }
         }
     }
     let network_errors: Vec<Value> = network.iter().filter(|event| js_number(event.get("status")) >= 400.0).map(|event| json!({ "at": event["at"], "method": event["method"], "url": event["url"], "status": event["status"] })).collect();
-    let console_errors: Vec<Value> = events.iter().filter(|event| event.get("type").and_then(Value::as_str) == Some("console") && matches!(event.get("severity").and_then(Value::as_str).map(str::to_ascii_lowercase).as_deref(), Some("assert" | "error"))).map(|event| json!({ "at": event["at"], "severity": event["severity"], "message": safe_message(event.get("message").and_then(Value::as_str).unwrap_or("")).chars().take(500).collect::<String>() })).collect();
+    let mut console_errors = Vec::new();
+    for event in events.iter().filter(|event| {
+        event.get("type").and_then(Value::as_str) == Some("console")
+            && matches!(
+                event
+                    .get("severity")
+                    .and_then(Value::as_str)
+                    .map(str::to_ascii_lowercase)
+                    .as_deref(),
+                Some("assert" | "error")
+            )
+    }) {
+        match event.get("message").and_then(Value::as_str) {
+            Some(message) => console_errors.push(json!({
+                "at": event["at"],
+                "severity": event["severity"],
+                "message": safe_message(message)
+            })),
+            None => console_errors.push(json!({
+                "at": event["at"],
+                "severity": event["severity"],
+                "error": "timeline console error has no string message; its diagnostic text is unavailable"
+            })),
+        }
+    }
     let durations: Vec<f64> = network
         .iter()
         .map(|event| js_number(event.get("durationMs")))
