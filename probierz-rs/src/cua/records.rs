@@ -1,5 +1,4 @@
 use crate::cua::*;
-pub(crate) const BUNDLED_DRIVER: &str = "/Applications/CuaDriver.app/Contents/MacOS/cua-driver";
 
 #[derive(Clone, Debug)]
 pub struct Driver {

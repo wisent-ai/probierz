@@ -107,63 +107,45 @@ impl Driver {
     }
 
     pub(crate) fn ensure_daemon(&self) -> Result<(), String> {
-        let mut permissions = if self.socket.exists() {
-            self.probe_permissions()
-        } else {
-            None
-        };
-        if permissions.is_none() {
-            let daemon_binary = if self.binary != "cua-driver" {
-                self.binary.clone()
-            } else if cfg!(target_os = "macos") && Path::new(BUNDLED_DRIVER).exists() {
-                BUNDLED_DRIVER.to_string()
-            } else {
-                "cua-driver".to_string()
-            };
-            let _ = run_to_exit(
-                Command::new(&daemon_binary)
-                    .arg("stop")
-                    .arg("--socket")
-                    .arg(&self.socket),
-            );
-            let _ = fs::remove_file(&self.socket);
-            let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
-            fs::create_dir_all(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
-            let daemon_log = parent.join("probierz-daemon.log");
-            let _ = fs::remove_file(&daemon_log);
-
-            let launched = run_to_exit(
-                Command::new("/usr/bin/open")
-                    .arg("-n")
-                    .arg("-g")
-                    .arg("-a")
-                    .arg("CuaDriver")
-                    .arg("--args")
-                    .arg("serve")
-                    .arg("--socket")
-                    .arg(&self.socket),
+        if self.socket.try_exists().map_err(|error| {
+            format!(
+                "inspect CuaDriver socket {}: {error}",
+                self.socket.display()
             )
-            .map_err(|error| format!("CuaDriver app launch failed: {error}"))?;
-            if !launched.status.success() {
-                return Err(format!(
-                    "CuaDriver app launch failed: {}",
-                    output_detail(&launched).trim()
-                ));
-            }
-
-            self.await_socket(&daemon_log)?;
-
-            // The socket exists, so the daemon is answering: one read, and a
-            // refusal is the named error below (cli.md rule 8).
-            permissions = self.probe_permissions();
+        })? {
+            self.probe_permissions()?;
+            return Ok(());
         }
-        if permissions.is_none() {
-            return Err("Probierz CuaDriver daemon cannot use macOS Accessibility".to_string());
+        let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
+        let daemon_log = parent.join("probierz-daemon.log");
+        let _ = fs::remove_file(&daemon_log);
+
+        let launched = run_to_exit(
+            Command::new("/usr/bin/open")
+                .arg("-n")
+                .arg("-g")
+                .arg("-a")
+                .arg("CuaDriver")
+                .arg("--args")
+                .arg("serve")
+                .arg("--socket")
+                .arg(&self.socket),
+        )
+        .map_err(|error| format!("CuaDriver app launch failed: {error}"))?;
+        if !launched.status.success() {
+            return Err(format!(
+                "CuaDriver app launch failed: {}",
+                output_detail(&launched).trim()
+            ));
         }
+
+        self.await_socket(&daemon_log)?;
+        self.probe_permissions()?;
         Ok(())
     }
 
-    pub(crate) fn probe_permissions(&self) -> Option<Value> {
+    pub(crate) fn probe_permissions(&self) -> Result<Value, String> {
         let output = run_to_exit(
             Command::new(&self.binary)
                 .arg("call")
@@ -172,16 +154,43 @@ impl Driver {
                 .arg("--socket")
                 .arg(&self.socket),
         )
-        .ok()?;
+        .map_err(|error| {
+            format!(
+                "run {} check_permissions on {}: {error}",
+                self.binary,
+                self.socket.display()
+            )
+        })?;
         if !output.status.success() {
-            return None;
+            return Err(format!(
+                "{} check_permissions on {} {}; {}",
+                self.binary,
+                self.socket.display(),
+                crate::failure::ended(&output.status),
+                output_detail(&output)
+            ));
         }
-        let payload: Value = serde_json::from_slice(&output.stdout).ok()?;
+        let payload: Value = serde_json::from_slice(&output.stdout).map_err(|error| {
+            format!(
+                "decode CuaDriver check_permissions on {}: {error}",
+                self.socket.display()
+            )
+        })?;
         let permissions = payload.get("permissions").unwrap_or(&payload);
         let accessibility = payload
             .pointer("/permissions/accessibility")
             .or_else(|| payload.get("accessibility"))
             .and_then(Value::as_bool);
-        (accessibility == Some(true)).then(|| permissions.clone())
+        match accessibility {
+            Some(true) => Ok(permissions.clone()),
+            Some(false) => Err(format!(
+                "CuaDriver on {} reports Accessibility permission denied",
+                self.socket.display()
+            )),
+            None => Err(format!(
+                "CuaDriver check_permissions on {} returned no boolean accessibility state",
+                self.socket.display()
+            )),
+        }
     }
 }
