@@ -47,6 +47,14 @@ Every way into Probierz, and what each one is allowed to do.
   likewise refuse a conflicting adoption (`project.adopt` with the whole
   adoption result, `onboarding.adoption` after printing the conflicts) without
   ending the process; no files change.
+- **Run and CI refusals:** a `tui`, `desktop:cua` or `web` journey whose runner
+  ends unsuccessfully returns a `refused` failure with its report, and the CLI
+  exits with the runner's own status. A skipped `probierz run` refuses with the
+  whole result: a held resource lock is `unavailable` (retryable, exit 75), a
+  failed preflight is `prerequisite` (exit 1, its remediation in the result).
+  `probierz ci` refuses with the whole result when any journey or check failed
+  (`refused`) or, otherwise, when any journey was blocked (`prerequisite`).
+  None of them ends the process, so the in-process MCP server keeps serving.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;

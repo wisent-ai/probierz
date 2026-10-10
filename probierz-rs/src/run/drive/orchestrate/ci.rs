@@ -1,3 +1,4 @@
+use crate::failure::Code;
 use crate::run::*;
 use serde_json::json;
 pub(crate) fn orchestrate(
@@ -183,6 +184,20 @@ pub(crate) fn orchestrate(
     Ok(Value::Object(output))
 }
 
+/// Whether any entry of `list` in the CI `result` ended with `status`.
+fn any_ended(result: &Value, list: &str, status: &str) -> bool {
+    result
+        .get(list)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .any(|entry| entry.get("status").and_then(Value::as_str) == Some(status))
+}
+
+/// `probierz ci`: run every affected journey and print the result. A failed
+/// journey or check is a refusal and a blocked journey a missing
+/// prerequisite, each carrying the whole result, never a process exit, so
+/// the MCP server that runs this in process keeps serving.
 pub fn ci(harness: &Path, args: &[String]) -> Answer {
     let opts = parse_run_args(args, true)?;
     let files = files_after_flag(args);
@@ -191,20 +206,12 @@ pub fn ci(harness: &Path, args: &[String]) -> Answer {
         .filter(|arg| !arg.starts_with("--"))
         .map(String::as_str);
     let result = orchestrate(harness, files, reference, &opts)?;
-    let failed = result
-        .pointer("/summary/failed")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let blocked = result
-        .pointer("/summary/blocked")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
     print_json(&result)?;
-    if failed > 0 {
-        std::process::exit(1);
+    if any_ended(&result, "results", "failed") || any_ended(&result, "checks", "failed") {
+        return Err(Failure::new("ci", Code::Refused, result.to_string()));
     }
-    if blocked > 0 {
-        std::process::exit(3);
+    if any_ended(&result, "results", "blocked") {
+        return Err(Failure::new("ci", Code::Prerequisite, result.to_string()));
     }
     Ok(())
 }

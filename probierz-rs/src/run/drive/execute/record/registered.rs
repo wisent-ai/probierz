@@ -37,10 +37,15 @@ pub(crate) fn run_registered_surface(harness: &Path, name: &str, opts: &RunArgs)
     let (report, code) =
         crate::specs::execute(name, &artifacts, &report_path, filter, env, Some(run_id))?;
     print_json(&report)?;
-    if code != 0 {
-        std::process::exit(code);
+    if code == 0 {
+        return Ok(());
     }
-    Ok(())
+    Err(Failure::new(
+        "run",
+        crate::failure::Code::Refused,
+        format!("the {name} journey runner ended with status {code}; its report: {report}"),
+    )
+    .with_exit(code))
 }
 
 pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
@@ -79,7 +84,18 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
     )?;
     if result.get("skipped").and_then(Value::as_bool) == Some(true) {
         print_json(&result)?;
-        std::process::exit(3);
+        // A held resource lock clears by itself; a failed preflight needs
+        // the prerequisite its remediation names.
+        let code = if result.get("resourceLock").is_some() {
+            crate::failure::Code::Unavailable
+        } else {
+            crate::failure::Code::Prerequisite
+        };
+        return Err(Failure::new(
+            "run",
+            code,
+            format!("the {name} run was skipped: {result}"),
+        ));
     }
     let mut analysis = Value::Null;
     if opts.analyze {

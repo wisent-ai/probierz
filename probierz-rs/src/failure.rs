@@ -87,6 +87,9 @@ pub struct Failure {
     pub point: String,
     pub code: Code,
     pub detail: String,
+    /// The exit status a shell reads instead of the code's own: the status a
+    /// journey's runner ended with, which the CLI passes on unchanged.
+    pub exit: Option<i32>,
 }
 
 impl Failure {
@@ -95,7 +98,14 @@ impl Failure {
             point: point.into(),
             code,
             detail: detail.into().trim().to_string(),
+            exit: None,
         }
+    }
+
+    /// This failure, ending the CLI with `status` rather than its code's.
+    pub fn with_exit(mut self, status: i32) -> Self {
+        self.exit = Some(status);
+        self
     }
 
     pub fn invalid(point: impl Into<String>, detail: impl Into<String>) -> Self {
@@ -121,7 +131,10 @@ impl Failure {
         });
         eprintln!("probierz-failure {line}");
         eprintln!("{}", self.code.sentence());
-        self.code.exit_code()
+        match self.exit {
+            Some(status) => status,
+            None => self.code.exit_code(),
+        }
     }
 }
 
