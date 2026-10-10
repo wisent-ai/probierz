@@ -39,7 +39,14 @@ pub(crate) fn violations_for(root: &str) -> Value {
     // could not be scanned. A report missing any of them is a scan that did
     // not answer, not a clean repository: counting the absent array as zero
     // showed a failed discovery as no violations.
-    let refused = |cause: String| json!({ "error": format!("tama violations find for {root}: {cause}; stdout: {stdout}") });
+    let refused = |cause: String| {
+        json!({
+            "error": format!(
+                "tama violations find for {root} {}: {cause}; stdout: {stdout}; stderr: {stderr}",
+                crate::failure::ended(&output.status)
+            )
+        })
+    };
     match report.get("problems").and_then(Value::as_array) {
         None => return refused("the report has no problems array".to_string()),
         Some(problems) if !problems.is_empty() => {
