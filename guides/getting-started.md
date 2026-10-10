@@ -59,7 +59,9 @@ repository. Skipping this optional step leaves a usable empty project.
 Desktop's Workspace screen distinguishes an empty adoption list from a failed
 read and retains the previous list beside the concrete read error. Switching
 workspaces discards an earlier workspace's in-flight list result or error;
-canceled reads likewise cannot replace the selected workspace's state.
+canceled reads likewise cannot replace the selected workspace's state. Within
+one workspace only the newest list read is published, so the read that refresh
+started cannot overwrite the list reread after an adoption, or the reverse.
 An accepted import remains accepted if the following adoption-list read fails:
 the Workspace screen reports that read failure separately instead of claiming
 that the already-persisted definitions were not adopted. Adoption callbacks
