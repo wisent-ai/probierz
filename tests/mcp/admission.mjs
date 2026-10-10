@@ -15,6 +15,7 @@ function required(name) {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const binary = resolve(required('PROBIERZ'));
 const revision = required('PROBIERZ_TEST_SOURCE_REVISION');
+const releaseEvidence = resolve(required('PROBIERZ_TEST_RELEASE_EVIDENCE'));
 const evidenceRoot = join(root, 'probierz-rs/target/real-tests/mcp-admission');
 mkdirSync(evidenceRoot, { recursive: true });
 const evidence = mkdtempSync(join(evidenceRoot, 'run-'));
@@ -38,6 +39,19 @@ function run(program, args, input, env) {
 }
 function request(method, params) { return { jsonrpc: '2.0', id: randomUUID(), method, params }; }
 try {
+  const sourceFile = join(releaseEvidence, 'SOURCE_REVISION');
+  const digestFile = join(releaseEvidence, 'DIGESTS');
+  const releaseSource = readFileSync(sourceFile, 'utf8').trim();
+  const releaseDigests = readFileSync(digestFile, 'utf8');
+  report.releaseEvidence = {
+    directory: releaseEvidence, sourceRevision: releaseSource, digests: releaseDigests,
+    sourceFileSha256: digest(sourceFile), digestFileSha256: digest(digestFile),
+  };
+  assert.equal(releaseSource, revision, 'release source must match the declared candidate revision');
+  const candidateDigests = releaseDigests.trim().split('\n').map(line =>
+    line.match(/^\\?(?<sha256>[a-fA-F\d]+)[ \t]+/)?.groups.sha256);
+  assert.deepEqual(candidateDigests, [report.binarySha256],
+    'the candidate bytes must match the signed release artifact digest');
   assert.equal(run('git', ['rev-parse', 'HEAD']).trim(), revision);
   assert.equal(run('git', ['status', '--porcelain', '--untracked-files=no']).trim(), '',
     'candidate source must be committed');

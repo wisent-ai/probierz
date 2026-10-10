@@ -108,3 +108,4 @@ fi
 
 /usr/bin/shasum -a 256 \
   "$WISENT_OUTPUT_DIR/bin/probierz" > "$WISENT_OUTPUT_DIR/evidence/DIGESTS"
+printf '%s\n' "$revision" > "$WISENT_OUTPUT_DIR/evidence/SOURCE_REVISION"
