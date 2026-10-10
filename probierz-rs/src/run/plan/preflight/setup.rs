@@ -88,17 +88,17 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
         }
         let result = capture(&step.command, &step.args, Some(harness), None);
         let ok = result.status.is_some_and(|status| status.success());
-        let exit_code = result.status.and_then(|status| status.code()).unwrap_or(-1);
+        let exit_code = result.status.and_then(|status| status.code());
         done.push(json!({ "step": step.name, "command": line, "ok": ok, "exitCode": exit_code }));
         if !ok {
             // The whole stderr; `stderrTail` keeps its wire name for existing readers.
-            failure = Some((step.name, text(&result.stderr)));
+            failure = Some((step.name, text(&result.stderr), result.error));
             break;
         }
     }
     let ok = failure.is_none();
-    let mut result = if let Some((step, stderr)) = failure {
-        json!({ "target": name, "ok": false, "steps": done, "failedAt": step, "stderrTail": stderr })
+    let mut result = if let Some((step, stderr, error)) = failure {
+        json!({ "target": name, "ok": false, "steps": done, "failedAt": step, "stderrTail": stderr, "error": error })
     } else {
         json!({ "target": name, "ok": true, "steps": done })
     };
@@ -108,7 +108,7 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
         .insert("preflight".into(), preflight(name, &BTreeMap::new())?);
     print_json(&result)?;
     if !ok {
-        std::process::exit(1);
+        return Err(Failure::invalid("setup", result.to_string()));
     }
     Ok(())
 }
