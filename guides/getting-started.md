@@ -60,3 +60,7 @@ Desktop's Workspace screen distinguishes an empty adoption list from a failed
 read and retains the previous list beside the concrete read error. Switching
 workspaces discards an earlier workspace's in-flight list result or error;
 canceled reads likewise cannot replace the selected workspace's state.
+An accepted import remains accepted if the following adoption-list read fails:
+the Workspace screen reports that read failure separately instead of claiming
+that the already-persisted definitions were not adopted. Adoption callbacks
+from a previously selected workspace do not overwrite the current screen.
