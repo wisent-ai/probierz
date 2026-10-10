@@ -226,14 +226,6 @@ pub(crate) fn run_surface(
         &started_at,
         &artifacts,
     );
-    if suite.is_err() {
-        update_json(
-            &manifest_path,
-            &json!({"status":"failed","completedAt":now_iso(),"failureOrigin":"harness"}),
-        )?;
-    }
-    let (exit_code, out, err, performance, platform) = suite?;
-    let validation = report_identity(&report_path, &run_id, started_time);
     let cleanup = if data_seeded {
         run_data_command(
             harness,
@@ -246,6 +238,31 @@ pub(crate) fn run_surface(
     } else {
         json!({"ok":true,"result":null})
     };
+    if let Err(error) = &suite {
+        update_json(
+            &manifest_path,
+            &json!({
+                "status": "failed",
+                "completedAt": now_iso(),
+                "failureOrigin": "harness",
+                "failurePoint": error.point,
+                "errorCode": error.code.as_str(),
+                "error": error.detail,
+                "cleanup": cleanup,
+            }),
+        )
+        .map_err(|record_error| {
+            Failure::new(
+                "run.failure-record",
+                record_error.code,
+                format!(
+                    "runner failed: {error}; recording the failure also failed: {record_error}"
+                ),
+            )
+        })?;
+    }
+    let (exit_code, out, err, performance, platform) = suite?;
+    let validation = report_identity(&report_path, &run_id, started_time);
     let passed = exit_code == 0
         && validation.get("ok").and_then(Value::as_bool) == Some(true)
         && cleanup.get("ok").and_then(Value::as_bool) == Some(true);
