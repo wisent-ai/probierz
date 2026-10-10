@@ -131,10 +131,10 @@ pub(crate) fn apply_transaction(
 }
 
 pub(crate) fn repository_root(value: &Path, label: &str) -> Result<PathBuf, Failure> {
-    let canonical = fs::canonicalize(value).map_err(|_| {
+    let canonical = fs::canonicalize(value).map_err(|error| {
         fail(
             "adoption.repository",
-            format!("{label} is not an existing directory: {}", value.display()),
+            format!("cannot resolve {label} at {}: {error}", value.display()),
         )
     })?;
     let metadata = fs::symlink_metadata(&canonical)?;
@@ -147,10 +147,13 @@ pub(crate) fn repository_root(value: &Path, label: &str) -> Result<PathBuf, Fail
     let git = canonical.join(".git");
     let git_metadata = match fs::symlink_metadata(&git) {
         Ok(metadata) => metadata,
-        Err(_) => {
+        Err(error) => {
             return Err(fail(
                 "adoption.repository",
-                format!("{label} is not a Git repository: {}", canonical.display()),
+                format!(
+                    "cannot inspect {label} Git metadata {}: {error}",
+                    git.display()
+                ),
             ))
         }
     };
