@@ -115,16 +115,25 @@ pub(crate) fn collect_platform_diagnostics(
             },
         });
     }
-    let ok = result.status.is_some_and(|status| status.success());
+    let ok = result.error.is_none() && result.status.is_some_and(|status| status.success());
     let failure = if ok {
         Value::Null
     } else {
-        let detail = if error.trim().is_empty() {
-            result.error.as_deref().unwrap_or("collector failed")
-        } else {
-            error.trim()
-        };
-        Value::String(detail.to_string())
+        let mut causes = Vec::new();
+        if let Some(capture_error) = &result.error {
+            causes.push(redact_diagnostic(capture_error));
+        }
+        if !error.trim().is_empty() {
+            causes.push(error.clone());
+        }
+        match result.status {
+            Some(status) if !status.success() => {
+                causes.push(format!("{command} {}", crate::failure::ended(&status)))
+            }
+            None => causes.push(format!("{command} has no observed exit status")),
+            _ => {}
+        }
+        Value::String(causes.join("; "))
     };
     json!({
         "supported": true,
