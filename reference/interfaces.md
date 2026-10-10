@@ -9,6 +9,10 @@ Every way into Probierz, and what each one is allowed to do.
   person and the same report as JSON with `--json`; run, analysis, figure
   evaluation, SEO evaluation, and gate commands expose structured data;
   automation must not infer state from prose.
+- **Overview scanner refusals:** a failed Tama launch names the command and
+  operating-system cause. A non-JSON scanner failure retains the target
+  repository, actual exit or signal, and complete stdout and stderr. Malformed
+  JSON also names the decoding cause; it is not reported as a clean scan.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
