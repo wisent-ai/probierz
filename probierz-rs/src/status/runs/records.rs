@@ -79,21 +79,13 @@ pub(crate) fn normalized_status(manifest: &Value) -> &str {
     }
 }
 
-/// Status, history and evidence share recorded ownership. Missing reporting
-/// proves an incomplete run, not whether the product or its runner failed.
+/// Projects recorded ownership for status, history and evidence consumers.
 pub(crate) fn failure_class(manifest: &Value) -> &'static str {
-    // An explicit null retains the producer's unresolved verdict.
     match manifest.get("failureOrigin") {
-        Some(Value::String(origin)) if origin == "harness" => return "infrastructure",
-        Some(Value::String(origin)) if origin == "product" => return "product",
-        Some(_) => return "unclassified",
-        None => {}
-    }
-    let setup_failed = string(manifest.get("setupError")).is_some();
-    if setup_failed {
-        "infrastructure"
-    } else {
-        "unclassified"
+        Some(Value::String(origin)) if origin == "harness" => "infrastructure",
+        Some(Value::String(origin)) if origin == "product" => "product",
+        None if string(manifest.get("setupError")).is_some() => "infrastructure",
+        _ => "unclassified",
     }
 }
 

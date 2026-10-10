@@ -132,9 +132,7 @@ pub(crate) fn complete_run(
         && evidence.get("report").and_then(Value::as_bool) == Some(true)
         && valid
         && present;
-    // Concrete failed product checks or crashes remain product evidence even
-    // when reporting or cleanup also fails. Missing evidence alone cannot
-    // identify the owner of the original failure.
+    // Product evidence must belong to this run before it can outrank cleanup.
     let product_failed = analysis.is_some_and(|value| {
         value.get("runId").and_then(Value::as_str) == Some(&run_id)
             && (js_number(value.get("failed")) > 0.0 || !crashes.is_empty())
