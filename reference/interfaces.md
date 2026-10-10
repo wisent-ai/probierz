@@ -44,6 +44,10 @@ Every way into Probierz, and what each one is allowed to do.
   descriptions preserve the read-only versus mutation boundary;
   `probierz_evaluate_figure` and `probierz_evaluate_seo` use the same evaluators
   and evidence contracts as the CLI.
+  An asynchronous job cannot pass when its child exits unsuccessfully, even
+  if the child wrote a JSON report claiming success. The job retains that
+  report alongside the failed exit or signal and stderr. Invalid JSON retains
+  the decoder cause, observed process outcome and stderr together.
 - **Repository gate:** `probierz gate install` installs the pre-push integration
   and `probierz gate uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
