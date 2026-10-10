@@ -19,6 +19,9 @@ Every way into Probierz, and what each one is allowed to do.
   state is reported as denied permission. A failed probe does not stop the
   existing daemon or delete its socket. When the socket is absent, normal
   application launch waits for its socket and then verifies permissions.
+  If the launched daemon exits before creating its socket, the refusal retains
+  its log; an unreadable log is reported with its path and filesystem cause,
+  not presented as an empty daemon log.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
