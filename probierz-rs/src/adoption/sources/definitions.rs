@@ -3,11 +3,11 @@ use crate::adoption::*;
 /// Validate and transactionally retain definitions from another Probierz checkout.
 pub(crate) fn source_definitions(source_root: &Path) -> Result<Definitions, Failure> {
     let apps_root = source_root.join("apps");
-    let apps_metadata = fs::symlink_metadata(&apps_root).map_err(|_| {
+    let apps_metadata = fs::symlink_metadata(&apps_root).map_err(|error| {
         fail(
             "adoption.source",
             format!(
-                "selected repository has no supported Probierz apps directory: {}",
+                "cannot inspect the selected repository's Probierz apps directory {}: {error}",
                 apps_root.display()
             ),
         )
