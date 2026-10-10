@@ -48,6 +48,9 @@ Every way into Probierz, and what each one is allowed to do.
   if the child wrote a JSON report claiming success. The job retains that
   report alongside the failed exit or signal and stderr. Invalid JSON retains
   the decoder cause, observed process outcome and stderr together.
+  Artifact requests distinguish a missing report location, failed path
+  resolution, failed metadata lookup and a location that is not a directory;
+  filesystem refusals name the path, run and operating-system cause.
 - **Repository gate:** `probierz gate install` installs the pre-push integration
   and `probierz gate uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
