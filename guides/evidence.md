@@ -35,6 +35,12 @@ observed harness failures when there is no stronger product-failure evidence.
 The underlying operation errors, cleanup result and evidence errors remain in
 the run; classification does not suppress them.
 
+When suite execution itself fails, seeded-data cleanup still runs. The failed
+run manifest retains the original failure point, code and detail together with
+the cleanup result. If recording that failure also fails, the command reports
+both the runner cause and the persistence cause; neither is replaced with a
+successful or empty run result.
+
 A missing or invalid report, absent capture, or unsuccessful analysis alone
 does not establish which component failed. Such a run is still failed, but its
 ownership remains `unclassified`. Historical runs without a recorded origin
