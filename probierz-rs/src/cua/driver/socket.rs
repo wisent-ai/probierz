@@ -78,7 +78,26 @@ impl Driver {
                 .arg(format!("serve --socket {}", self.socket.display())),
         )
         .map_err(|error| format!("cannot find the CuaDriver daemon's pid: {error}"))?;
-        Ok(String::from_utf8_lossy(&output.stdout).trim().parse().ok())
+        // pgrep(1): exit 1 means no match; other failures are not daemon absence.
+        if output.status.code() == Some(1) {
+            return Ok(None);
+        }
+        if !output.status.success() {
+            return Err(format!(
+                "find CuaDriver daemon for {}: pgrep {}; {}",
+                self.socket.display(),
+                crate::failure::ended(&output.status),
+                output_detail(&output)
+            ));
+        }
+        let observed = String::from_utf8(output.stdout)
+            .map_err(|error| format!("decode CuaDriver pgrep response: {error}"))?;
+        observed.trim().parse::<u32>().map(Some).map_err(|error| {
+            format!(
+                "parse CuaDriver pid for {} from {observed:?}: {error}",
+                self.socket.display()
+            )
+        })
     }
 }
 
