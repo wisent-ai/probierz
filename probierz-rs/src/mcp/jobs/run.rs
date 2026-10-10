@@ -145,7 +145,14 @@ pub(crate) fn finish_job(
     if !stdout.is_empty() {
         match serde_json::from_slice::<Value>(&stdout) {
             Ok(result) => {
-                job.status = if result.get("skipped").and_then(Value::as_bool) == Some(true) {
+                job.status = if !process_status.success() {
+                    job.error = Some(format!(
+                        "probierz {}; stderr: {}",
+                        crate::failure::ended(&process_status),
+                        String::from_utf8_lossy(&stderr)
+                    ));
+                    "failed"
+                } else if result.get("skipped").and_then(Value::as_bool) == Some(true) {
                     "blocked"
                 } else if result.get("canceled").and_then(Value::as_bool) == Some(true) {
                     "canceled"
@@ -158,7 +165,11 @@ pub(crate) fn finish_job(
                 return;
             }
             Err(error) => {
-                job.error = Some(format!("probierz returned invalid JSON: {error}"));
+                job.error = Some(format!(
+                    "probierz returned invalid JSON ({}) — {error}; stderr: {}",
+                    crate::failure::ended(&process_status),
+                    String::from_utf8_lossy(&stderr)
+                ));
                 job.status = "failed";
                 return;
             }
