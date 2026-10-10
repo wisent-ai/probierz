@@ -1,3 +1,4 @@
+use crate::failure::Code;
 use crate::run::*;
 use serde_json::json;
 
@@ -293,7 +294,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
     });
     print_json(&output)?;
     if !passed {
-        std::process::exit(1);
+        return Err(Failure::new("run.matrix", Code::Refused, output.to_string()));
     }
     Ok(())
 }
