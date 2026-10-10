@@ -151,7 +151,11 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
         .unwrap_or(false);
     print_json(&output)?;
     if !passed {
-        std::process::exit(1);
+        return Err(Failure::new(
+            "run",
+            crate::failure::Code::Refused,
+            output.to_string(),
+        ));
     }
     Ok(())
 }

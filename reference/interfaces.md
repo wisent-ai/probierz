@@ -28,6 +28,10 @@ Every way into Probierz, and what each one is allowed to do.
   `refused` failure with its complete cell results, evidence requirement and
   summary. `probierz_run_matrix` does not terminate the MCP server when a
   matrix fails; the CLI still exits unsuccessfully and retains the same report.
+- **Completed mobile and WebDriver desktop refusals:** when these surface
+  runners return a failed report, the CLI and MCP refusal retain that report
+  together with its analysis and repair results. The failure is classified as
+  `refused`, not as a request that never ran, and does not terminate MCP.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;
