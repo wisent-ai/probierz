@@ -61,13 +61,24 @@ pub(crate) fn files_below(
 
 pub(crate) fn read_index(project_root: &Path) -> Result<AdoptionIndex, Failure> {
     let file = absolute(project_root, INDEX_RELATIVE_PATH)?;
-    if !file.exists() {
-        return Ok(AdoptionIndex {
-            schema: INDEX_SCHEMA.to_string(),
-            sources: Vec::new(),
-        });
-    }
-    let metadata = fs::symlink_metadata(&file)?;
+    let metadata = match fs::symlink_metadata(&file) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(AdoptionIndex {
+                schema: INDEX_SCHEMA.to_string(),
+                sources: Vec::new(),
+            });
+        }
+        Err(error) => {
+            return Err(fail(
+                "adoption.index",
+                format!(
+                    "cannot inspect Probierz adoption index {}: {error}",
+                    file.display()
+                ),
+            ));
+        }
+    };
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(fail(
             "adoption.index",
@@ -77,7 +88,24 @@ pub(crate) fn read_index(project_root: &Path) -> Result<AdoptionIndex, Failure> 
             ),
         ));
     }
-    let document: Value = serde_json::from_slice(&fs::read(&file)?)?;
+    let bytes = fs::read(&file).map_err(|error| {
+        fail(
+            "adoption.index",
+            format!(
+                "cannot read Probierz adoption index {}: {error}",
+                file.display()
+            ),
+        )
+    })?;
+    let document: Value = serde_json::from_slice(&bytes).map_err(|error| {
+        fail(
+            "adoption.index",
+            format!(
+                "cannot decode Probierz adoption index {}: {error}",
+                file.display()
+            ),
+        )
+    })?;
     if document.get("schema").and_then(Value::as_str) != Some(INDEX_SCHEMA)
         || !document.get("sources").is_some_and(Value::is_array)
     {
@@ -87,11 +115,11 @@ pub(crate) fn read_index(project_root: &Path) -> Result<AdoptionIndex, Failure> 
         ));
     }
     validate_index_records(&document, project_root, &file)?;
-    serde_json::from_value(document).map_err(|_| {
+    serde_json::from_value(document).map_err(|error| {
         fail(
             "adoption.index",
             format!(
-                "invalid Probierz adoption source record: {}",
+                "invalid Probierz adoption source record in {}: {error}",
                 file.display()
             ),
         )

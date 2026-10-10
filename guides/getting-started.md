@@ -67,3 +67,6 @@ from a previously selected workspace do not overwrite the current screen.
 An unreadable source apps directory reports the inspection operation, exact
 path and operating-system cause; permission and I/O failures are not relabeled
 as a missing directory.
+Only a genuinely absent adoption index means no retained adoptions. Failure
+to inspect, read or decode `apps/.adoptions.json` is an explicit refusal with
+the index path and original cause, not an empty list.
