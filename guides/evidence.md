@@ -22,6 +22,10 @@ failure guidance is in the published [agent interface](https://probierz.wisent.c
 The integrated Tama → Probierz → Stado workflow is documented in
 the published [pipeline documentation](https://probierz.wisent.com/docs/PIPELINE).
 
+Platform diagnostics reject an incomplete capture even when its child exits
+successfully. A failed collector retains its capture cause, redacted stderr
+and observed exit status together; stderr does not replace the capture cause.
+
 ## Failure ownership
 
 `probierz run TARGET --app APP_ID` records the same `failureOrigin` in its
