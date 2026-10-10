@@ -55,3 +55,8 @@ including locally changed files that disappeared upstream. A source repository's
 own `.adoptions.json` is reported and excluded as local history. Import never
 runs a spec, creates evidence, installs tools, or changes the selected source
 repository. Skipping this optional step leaves a usable empty project.
+
+Desktop's Workspace screen distinguishes an empty adoption list from a failed
+read and retains the previous list beside the concrete read error. Switching
+workspaces discards an earlier workspace's in-flight list result or error;
+canceled reads likewise cannot replace the selected workspace's state.
