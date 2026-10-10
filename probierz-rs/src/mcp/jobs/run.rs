@@ -211,9 +211,20 @@ pub(crate) fn artifact_root(job: &Arc<Mutex<Job>>) -> Result<PathBuf, String> {
         .filter(|root| !root.is_empty())
         .ok_or_else(|| format!("artifacts unavailable for runId: {}", job.run_id))?;
     let root = fs::canonicalize(root)
-        .map_err(|_| format!("artifacts unavailable for runId: {}", job.run_id))?;
-    if !root.is_dir() {
-        return Err(format!("artifacts unavailable for runId: {}", job.run_id));
+        .map_err(|error| format!("resolve artifacts {root} for runId {}: {error}", job.run_id))?;
+    let metadata = fs::metadata(&root).map_err(|error| {
+        format!(
+            "inspect artifacts {} for runId {}: {error}",
+            root.display(),
+            job.run_id
+        )
+    })?;
+    if !metadata.is_dir() {
+        return Err(format!(
+            "artifacts {} for runId {} are not a directory",
+            root.display(),
+            job.run_id
+        ));
     }
     Ok(root)
 }
