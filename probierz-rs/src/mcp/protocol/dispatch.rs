@@ -116,6 +116,48 @@ fn validate_tool_arguments(
             }
         }
     }
+    let properties = declaration
+        .pointer("/inputSchema/properties")
+        .and_then(Value::as_object)
+        .ok_or_else(|| format!("MCP tool {name} properties must be an object"))?;
+    for (field, value) in args {
+        if let Some(schema) = properties.get(field) {
+            validate_argument_type(name, field, schema, value)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_argument_type(
+    tool: &str,
+    field: &str,
+    schema: &Value,
+    value: &Value,
+) -> Result<(), String> {
+    let expected = schema
+        .get("type")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("MCP tool {tool} argument {field} has no declared type"))?;
+    let valid = match expected {
+        "string" => value.is_string(),
+        "boolean" => value.is_boolean(),
+        "number" => value.is_number(),
+        "array" => value.is_array(),
+        "object" => value.is_object(),
+        other => {
+            return Err(format!(
+                "MCP tool {tool} argument {field} declares unsupported type {other}"
+            ))
+        }
+    };
+    if !valid {
+        return Err(format!("{tool} argument {field} must be {expected}"));
+    }
+    if let (Some(items), Some(values)) = (schema.get("items"), value.as_array()) {
+        for (index, value) in values.iter().enumerate() {
+            validate_argument_type(tool, &format!("{field}[{index}]"), items, value)?;
+        }
+    }
     Ok(())
 }
 

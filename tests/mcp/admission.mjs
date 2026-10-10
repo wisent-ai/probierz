@@ -45,8 +45,18 @@ try {
     name: 'probierz_create_publication_manifest',
     arguments: { attemptId: randomUUID(), journeyId: randomUUID() },
   });
+  const wrongEnvironment = request('tools/call', {
+    name: 'probierz_run', arguments: { target: 'tui', env: 'not an object' },
+  });
+  const wrongWatch = request('tools/call', {
+    name: 'probierz_stado_run',
+    arguments: { target: 'tui', appId: randomUUID(), host: randomUUID(), watch: 'false' },
+  });
+  const wrongArrayItem = request('tools/call', {
+    name: 'probierz_affected', arguments: { files: [false] },
+  });
   const ping = request('ping');
-  const requests = [catalogue, malformed, missing, ping];
+  const requests = [catalogue, malformed, missing, wrongEnvironment, wrongWatch, wrongArrayItem, ping];
   const output = run(binary, ['--harness', harness, 'mcp'],
     requests.map(value => JSON.stringify(value)).join('\n') + '\n');
   const responses = output.trim().split('\n').map(line => JSON.parse(line));
@@ -61,6 +71,10 @@ try {
   assert.equal(response(malformed).error.message, 'arguments must be a JSON object');
   assert.equal(response(missing).error.message,
     'probierz_create_publication_manifest requires argument receipt');
+  assert.equal(response(wrongEnvironment).error.message, 'probierz_run argument env must be object');
+  assert.equal(response(wrongWatch).error.message, 'probierz_stado_run argument watch must be boolean');
+  assert.ok(response(wrongArrayItem).error.message.startsWith('probierz_affected argument files['));
+  assert.ok(response(wrongArrayItem).error.message.endsWith('must be string'));
   assert.deepEqual(response(ping).result, {}, 'a refusal must not end the server');
   assert.deepEqual(readdirSync(harness), ['apps'], 'refused publication must not create evidence or jobs');
   assert.deepEqual(readdirSync(join(harness, 'apps')), [], 'refused publication must not change applications');

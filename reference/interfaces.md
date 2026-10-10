@@ -65,6 +65,10 @@ Every way into Probierz, and what each one is allowed to do.
   by the same catalogue returned by `tools/list`. Missing coordinates are
   refused by tool and field name before CLI routing or an asynchronous job
   starts; later positional values cannot slide into an omitted coordinate.
+  Declared argument types and array element types are checked against that
+  catalogue before dispatch: `env` must be an object, `watch` a boolean, and
+  each declared string-array member must be text. A type refusal names the
+  tool and argument path; malformed options are never silently dropped.
   The real stdio admission journey is
   `PROBIERZ=/path/to/candidate PROBIERZ_TEST_SOURCE_REVISION=<full-sha> node tests/mcp/admission.mjs`.
   It retains source/binary-bound commands and responses, checks publication
