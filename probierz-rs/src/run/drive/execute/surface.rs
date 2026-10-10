@@ -226,6 +226,10 @@ pub(crate) fn run_surface(
         &started_at,
         &artifacts,
     );
+    let validation = suite
+        .as_ref()
+        .ok()
+        .map(|_| report_identity(&report_path, &run_id, started_time));
     let cleanup = if data_seeded {
         run_data_command(
             harness,
@@ -262,7 +266,7 @@ pub(crate) fn run_surface(
         })?;
     }
     let (exit_code, out, err, performance, platform) = suite?;
-    let validation = report_identity(&report_path, &run_id, started_time);
+    let validation = validation.expect("successful suite has report validation");
     let passed = exit_code == 0
         && validation.get("ok").and_then(Value::as_bool) == Some(true)
         && cleanup.get("ok").and_then(Value::as_bool) == Some(true);
