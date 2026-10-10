@@ -128,10 +128,15 @@ pub(crate) fn run_surface(
         Ok(lease) => lease,
         Err(error) => {
             let lock = json!({"error":error.to_string(),"resource":null,"owner":null});
-            update_json(
-                &manifest_path,
-                &json!({"status":"blocked","completedAt":now_iso(),"resourceLock":lock,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
-            )?;
+            artifact_hashes(&artifacts, &manifest_path)
+                .and_then(|hashes| update_json(
+                    &manifest_path,
+                    &json!({"status":"blocked","completedAt":now_iso(),"resourceLock":lock,"artifacts":hashes}),
+                ))
+                .map_err(|record_error| Failure::unavailable(
+                    "run.resources",
+                    format!("{error}; retain resource-lock refusal at {}: {record_error}", manifest_path.display()),
+                ))?;
             let mut result = base.as_object().expect("object").clone();
             result.extend(
                 json!({"ready":false,"skipped":true,"resourceLock":lock})
