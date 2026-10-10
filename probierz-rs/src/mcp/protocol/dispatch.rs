@@ -59,11 +59,13 @@ pub(crate) fn handle(request: Value, tools: &Value, control: &Arc<Control>) {
             match name {
                 Some(name) => {
                     let empty = Map::new();
-                    let args = params
-                        .and_then(|value| value.get("arguments"))
-                        .and_then(Value::as_object)
-                        .unwrap_or(&empty);
-                    call_tool(control, name, args)
+                    match params.and_then(|value| value.get("arguments")) {
+                        Some(Value::Object(args)) => validate_tool_arguments(tools, name, args)
+                            .and_then(|()| call_tool(control, name, args)),
+                        None => validate_tool_arguments(tools, name, &empty)
+                            .and_then(|()| call_tool(control, name, &empty)),
+                        Some(_) => Err("arguments must be a JSON object".to_string()),
+                    }
                 }
                 None => Err("name must be a non-empty string".to_string()),
             }
@@ -88,6 +90,33 @@ pub(crate) fn handle(request: Value, tools: &Value, control: &Arc<Control>) {
             )
         }
     }
+}
+
+fn validate_tool_arguments(
+    tools: &Value,
+    name: &str,
+    args: &Map<String, Value>,
+) -> Result<(), String> {
+    let declaration = tools
+        .as_array()
+        .ok_or_else(|| "MCP tool catalogue must be an array".to_string())?
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+        .ok_or_else(|| format!("unknown tool: {name}"))?;
+    if let Some(required) = declaration.pointer("/inputSchema/required") {
+        for field in required
+            .as_array()
+            .ok_or_else(|| format!("MCP tool {name} required fields must be an array"))?
+        {
+            let field = field
+                .as_str()
+                .ok_or_else(|| format!("MCP tool {name} required field must be text"))?;
+            if !args.contains_key(field) {
+                return Err(format!("{name} requires argument {field}"));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Serve the MCP protocol on stdio until the client closes it.

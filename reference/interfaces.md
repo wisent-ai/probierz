@@ -61,6 +61,10 @@ Every way into Probierz, and what each one is allowed to do.
   Artifact requests distinguish a missing report location, failed path
   resolution, failed metadata lookup and a location that is not a directory;
   filesystem refusals name the path, run and operating-system cause.
+  Calls must supply an object for `arguments` and every field marked required
+  by the same catalogue returned by `tools/list`. Missing coordinates are
+  refused by tool and field name before CLI routing or an asynchronous job
+  starts; later positional values cannot slide into an omitted coordinate.
 - **Repository gate:** `probierz gate install` installs the pre-push integration
   and `probierz gate uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
