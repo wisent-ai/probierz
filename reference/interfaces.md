@@ -28,6 +28,10 @@ Every way into Probierz, and what each one is allowed to do.
 - **OTP apphook refusals:** the `--after` timestamp is parsed as RFC 3339.
   An invalid value names the parsing operation, supplied timestamp and decoder
   cause before a broker request is sent.
+- **Resource lock refusals:** a failure to create the lock directory or open a
+  resource lock names that filesystem operation, the affected path and the
+  operating-system cause. Opening a lock also identifies the resource whose
+  acquisition failed; it is not reported as contention or a time limit.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
