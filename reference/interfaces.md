@@ -13,6 +13,12 @@ Every way into Probierz, and what each one is allowed to do.
   operating-system cause. A non-JSON scanner failure retains the target
   repository, actual exit or signal, and complete stdout and stderr. Malformed
   JSON also names the decoding cause; it is not reported as a clean scan.
+- **Native driver refusals:** an existing CuaDriver socket is probed once.
+  Executable, socket-inspection, child-exit, JSON decoding and missing permission
+  state failures retain their own cause; only an explicit false Accessibility
+  state is reported as denied permission. A failed probe does not stop the
+  existing daemon or delete its socket. When the socket is absent, normal
+  application launch waits for its socket and then verifies permissions.
 - **MCP:** `probierz mcp` exposes the same discovery and explicitly named
   side-effecting operations over stdio JSON-RPC; every tool is the CLI command
   of the same name run inside the server's process, and only an asynchronous
