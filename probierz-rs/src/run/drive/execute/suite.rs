@@ -106,6 +106,14 @@ pub(crate) fn execute_suite(
     started_at: &str,
     artifacts: &Path,
 ) -> Result<(i32, String, String, Value, Value), Failure> {
+    let run_started = DateTime::parse_from_rfc3339(started_at)
+        .map(|date| date.with_timezone(&Utc))
+        .map_err(|error| {
+            Failure::config(
+                "run.started-at",
+                format!("Recorded run start {started_at:?} is not RFC 3339: {error}"),
+            )
+        })?;
     let mut command = Command::new("npm");
     command
         .args(["run", script])
@@ -131,9 +139,6 @@ pub(crate) fn execute_suite(
     let err_path = stderr_path.to_path_buf();
     let out_secrets = secrets.clone();
     let err_secrets = secrets;
-    let run_started = DateTime::parse_from_rfc3339(started_at)
-        .map(|date| date.with_timezone(&Utc))
-        .unwrap_or_else(|_| Utc::now());
     let out_thread =
         thread::spawn(move || drain_run_stream(child_out, &out_path, &out_secrets, run_started));
     let err_thread =
