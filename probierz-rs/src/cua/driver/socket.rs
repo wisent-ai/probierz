@@ -10,7 +10,16 @@ impl Driver {
     /// shows it hung instead of guessing a limit.
     pub(crate) fn await_socket(&self, daemon_log: &Path) -> Result<(), String> {
         let not_created = || {
-            let detail = fs::read_to_string(daemon_log).unwrap_or_default();
+            let detail = match fs::read_to_string(daemon_log) {
+                Ok(detail) => detail,
+                Err(error) => {
+                    return format!(
+                        "CuaDriver exited without creating {}; read daemon log {}: {error}",
+                        self.socket.display(),
+                        daemon_log.display()
+                    )
+                }
+            };
             if detail.is_empty() {
                 format!(
                     "CuaDriver exited without creating {}",
