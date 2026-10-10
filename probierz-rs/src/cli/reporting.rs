@@ -91,14 +91,6 @@ pub enum ReportingCommand {
         #[command(subcommand)]
         command: GateCommand,
     },
-    /// The spelling every pre-push hook installed before `gate prepush`
-    /// still runs. `gate install` rewrites such a hook to `gate prepush`;
-    /// this variant goes when no installed hook names it.
-    #[command(hide = true)]
-    GatePrepush {
-        #[command(flatten)]
-        args: gate::PrepushArgs,
-    },
     // PortRuns: execution, analysis, and matrix
     /// Is the target toolchain ready?
     Check { target: String },

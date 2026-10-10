@@ -1,9 +1,6 @@
-//! `probierz gate` through the real binary: the eight gate verbs are one
-//! group, the retired hyphenated spellings are unknown commands, the hidden
-//! spelling hooks installed before the group still run is accepted, and
-//! `gate uninstall` removes the hook a pre-group `gate install` wrote and
-//! refuses one it did not write. Each test has a repository of its own under
-//! Cargo's target directory.
+//! The gate group uses only its canonical verbs. Retired hyphenated commands
+//! are refused, while uninstall can still identify a previously installed
+//! managed hook without preserving an obsolete CLI entrypoint.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -44,7 +41,7 @@ fn gate_lists_its_leaves_and_refuses_the_retired_spellings() {
             "gate --help does not name {leaf}: {listing}"
         );
     }
-    for retired in "gate-status gate-install gate-uninstall gate-evaluate gate-enforce gate-activate gate-deactivate".split(' ') {
+    for retired in "gate-status gate-prepush gate-install gate-uninstall gate-evaluate gate-enforce gate-activate gate-deactivate".split(' ') {
         let refused = probierz(&[retired, "--help"]);
         assert!(!refused.status.success(), "{retired} still runs");
         assert!(
@@ -53,12 +50,6 @@ fn gate_lists_its_leaves_and_refuses_the_retired_spellings() {
             text(&refused.stderr)
         );
     }
-}
-
-#[test]
-fn the_spelling_installed_hooks_run_is_still_accepted() {
-    let help = probierz(&["gate-prepush", "--help"]);
-    assert!(help.status.success(), "{}", text(&help.stderr));
 }
 
 #[test]

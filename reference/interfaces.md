@@ -19,7 +19,11 @@ Every way into Probierz, and what each one is allowed to do.
 - **Repository gate:** `probierz gate install` installs the pre-push integration
   and `probierz gate uninstall` removes it, putting back the hook it chained and
   refusing a `pre-push` it did not write; gate evaluation and enforcement remain
-  distinct commands.
+  distinct commands. `probierz gate prepush` is the only pre-push command;
+  `gate-prepush` and the other retired hyphenated spellings are refused.
+  Run `probierz gate install APP_ID --repo REPO` to migrate an older managed
+  hook to the grouped command. Installation replaces the managed hook rather
+  than chaining its obsolete invocation; unrelated hooks remain chained.
 - **Remote fleet bridge:** `probierz remote run`, `probierz remote author`, and
   `probierz remote seo` submit exact remote contracts to a Stado-placed host and
   return evidence through the configured object store; `probierz remote resume`,
