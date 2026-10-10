@@ -174,8 +174,13 @@ pub(crate) fn otp_after(args: &[String]) -> Result<DateTime<Utc>, Failure> {
                 })?;
                 after = Some(
                     DateTime::parse_from_rfc3339(value)
-                        .map_err(|_| {
-                            Failure::invalid("apphook.oko.otp", "--after needs an ISO timestamp")
+                        .map_err(|error| {
+                            Failure::invalid(
+                                "apphook.oko.otp",
+                                format!(
+                                    "parse --after {value:?} as an RFC 3339 timestamp: {error}"
+                                ),
+                            )
                         })?
                         .with_timezone(&Utc),
                 );
