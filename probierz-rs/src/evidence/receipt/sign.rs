@@ -129,12 +129,19 @@ pub fn receipt(
     write_new_json(&file, &receipt_value, true)?;
     let result = json!({ "file": file.to_string_lossy(), "receiptId": receipt_id, "receipt": receipt_value });
     print_json(&result)?;
-    if result
-        .pointer("/receipt/verdict/passed")
-        .and_then(Value::as_bool)
-        != Some(true)
-    {
-        std::process::exit(1);
+    // A failed verdict is still a signed, persisted receipt, and the answer
+    // above names it; the refusal is returned rather than ending the
+    // process, because the MCP server runs this command in its own process
+    // and must go on answering after a negative receipt.
+    if !errors.is_empty() {
+        return Err(Failure::invalid(
+            "evidence.receipt",
+            format!(
+                "receipt {receipt_id} at {} records a failed verdict: {}",
+                file.display(),
+                json!(errors)
+            ),
+        ));
     }
     Ok(())
 }

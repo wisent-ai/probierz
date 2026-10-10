@@ -56,14 +56,15 @@ pub fn verify_receipt_value(
             .as_deref()
             .is_some_and(|value| value == fingerprint);
     let payload_hash = sha256_bytes(canonical_payload.as_bytes());
-    let valid = signature_valid
-        && trusted
-        && signing.get("payloadSha256").and_then(Value::as_str) == Some(&payload_hash);
+    let payload_hash_matches =
+        signing.get("payloadSha256").and_then(Value::as_str) == Some(&payload_hash);
+    let valid = signature_valid && trusted && payload_hash_matches;
     let payload = Value::Object(payload_map);
     let mut answer = Map::new();
     answer.insert("valid".into(), json!(valid));
     answer.insert("signatureValid".into(), json!(signature_valid));
     answer.insert("trusted".into(), json!(trusted));
+    answer.insert("payloadSha256Matches".into(), json!(payload_hash_matches));
     answer.insert("fingerprint".into(), json!(fingerprint));
     answer.insert("payloadSha256".into(), json!(payload_hash));
     answer.insert(
@@ -123,8 +124,19 @@ pub fn verify_receipt(
     })?;
     let result = verify_receipt_value(file, public_key, fingerprint)?;
     print_json(&result)?;
-    if result.get("valid").and_then(Value::as_bool) != Some(true) {
-        std::process::exit(1);
+    // Refused, not exited: the MCP server runs this command in-process and
+    // must keep answering after an invalid receipt.
+    if result["valid"] != Value::Bool(true) {
+        return Err(Failure::invalid(
+            "evidence.verify_receipt",
+            format!(
+                "receipt {} is not valid: signatureValid={} trusted={} payloadSha256Matches={}",
+                file.display(),
+                result["signatureValid"],
+                result["trusted"],
+                result["payloadSha256Matches"]
+            ),
+        ));
     }
     Ok(())
 }

@@ -9,6 +9,14 @@ Every way into Probierz, and what each one is allowed to do.
   person and the same report as JSON with `--json`; run, analysis, figure
   evaluation, SEO evaluation, and gate commands expose structured data;
   automation must not infer state from prose.
+- **Receipt refusals:** `probierz receipt create` still signs and writes a
+  receipt whose verdict failed and prints it, then refuses with the receipt id,
+  its file and every verdict error. `probierz receipt verify` prints the result,
+  including `payloadSha256Matches` beside `signatureValid` and `trusted`, and
+  refuses an invalid receipt naming which of the three failed. Both return the
+  refusal instead of ending the process, so the in-process MCP tools
+  `probierz_create_receipt` and `probierz_verify_receipt` answer with an error
+  and the server keeps serving later requests.
 - **Overview scanner refusals:** `probierz overview` (not `probierz errors`) runs
   `tama violations find --repo <root> --json`. A failed Tama launch names the
   command and operating-system cause. A non-JSON scanner failure retains the
