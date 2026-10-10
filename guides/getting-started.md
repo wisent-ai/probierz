@@ -31,10 +31,10 @@ First setup can start from another Probierz repository without executing its
 journeys:
 
 ```bash
-node agent/cli.mjs onboarding --source /absolute/path/to/existing-probierz
+probierz onboarding --source /absolute/path/to/existing-probierz
 # The same operation is reusable after onboarding:
-node agent/cli.mjs project adopt --source /absolute/path/to/existing-probierz
-node agent/cli.mjs project adoptions
+probierz project adopt --source /absolute/path/to/existing-probierz
+probierz project adoptions
 ```
 
 The selected Git repository must contain validated
