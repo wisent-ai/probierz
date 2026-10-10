@@ -44,6 +44,13 @@ Every way into Probierz, and what each one is allowed to do.
   path to exercise missing npm during setup and missing script during
   preflight, then requires a reply to ping from that same server and verifies
   that no dependencies or applications were installed in its isolated harness.
+  To run it, provide `PROBIERZ` as the actual candidate executable and
+  `PROBIERZ_TEST_SOURCE_REVISION` as the full clean-checkout revision, then
+  invoke `node tests/mcp/admission.mjs` from the repository root. Reports under
+  `probierz-rs/target/real-tests/mcp-admission/` retain requests, executable
+  search paths, process results and binary/test hashes. Retain the candidate's
+  release provenance alongside the report: the checkout revision alone does
+  not establish which source produced the executable.
 - **Overview scanner refusals:** `probierz overview` (not `probierz errors`) runs
   `tama violations find --repo <root> --json`. A failed Tama launch names the
   command and operating-system cause. A non-JSON scanner failure retains the
