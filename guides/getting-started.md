@@ -73,6 +73,10 @@ as a missing directory.
 Only a genuinely absent adoption index means no retained adoptions. Failure
 to inspect, read or decode `apps/.adoptions.json` is an explicit refusal with
 the index path and original cause, not an empty list.
+If the CLI succeeds but its adoption response cannot be decoded, Desktop
+names `project adopt` or `project adoptions` and retains the decoder's cause
+and coding path. A refused command retains its original refusal instead;
+valid conflict results still list the conflicting definitions.
 Repository-path resolution and Git-metadata inspection failures likewise
 retain their concrete filesystem causes instead of implying every refusal
 means the repository is absent.
