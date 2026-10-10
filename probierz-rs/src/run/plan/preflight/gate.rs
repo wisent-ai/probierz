@@ -105,7 +105,11 @@ pub fn check(name: &str) -> Answer {
         .unwrap_or(false);
     print_json(&result)?;
     if !ready {
-        return Err(Failure::invalid("check", result.to_string()));
+        return Err(Failure::new(
+            "check",
+            crate::failure::Code::Prerequisite,
+            result.to_string(),
+        ));
     }
     Ok(())
 }

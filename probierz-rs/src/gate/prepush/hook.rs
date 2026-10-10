@@ -48,7 +48,11 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
         print_json(&result)?;
     }
     if !truthy(property(&result, "ok")) {
-        return Err(Failure::invalid("gate.prepush", result.to_string()));
+        return Err(Failure::new(
+            "gate.prepush",
+            crate::failure::Code::Refused,
+            result.to_string(),
+        ));
     }
     Ok(())
 }

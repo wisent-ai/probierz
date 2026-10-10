@@ -4,7 +4,11 @@ pub fn evaluate(harness: &Path, args: &GateArgs) -> Answer {
     let passed = truthy(property(&result, "verdict").and_then(|value| property(value, "passed")));
     print_json(&result)?;
     if !passed {
-        return Err(Failure::invalid("gate.evaluate", result.to_string()));
+        return Err(Failure::new(
+            "gate.evaluate",
+            crate::failure::Code::Refused,
+            result.to_string(),
+        ));
     }
     Ok(())
 }
@@ -68,7 +72,11 @@ pub fn enforce(harness: &Path, args: &GateArgs) -> Answer {
     let passed = truthy(property(&result, "verdict").and_then(|value| property(value, "passed")));
     print_json(&result)?;
     if !passed {
-        return Err(Failure::invalid("gate.enforce", result.to_string()));
+        return Err(Failure::new(
+            "gate.enforce",
+            crate::failure::Code::Refused,
+            result.to_string(),
+        ));
     }
     Ok(())
 }

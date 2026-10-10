@@ -24,8 +24,9 @@ Every way into Probierz, and what each one is allowed to do.
 - **Gate refusals:** failed `probierz gate evaluate`, `probierz gate enforce`
   and `probierz gate prepush` return the complete verdict, including every error,
   blocking reason and pending-green activation state, without terminating the
-  in-process MCP server. A refused gate is not a successful tool result and
-  does not prevent later requests.
+  in-process MCP server. A refused gate is classified `refused` — the verdict
+  was evaluated — is not a successful tool result and does not prevent later
+  requests.
 - **Matrix refusals:** a completed matrix that fails its verdict returns a
   `refused` failure with its complete cell results, evidence requirement and
   summary. `probierz_run_matrix` does not terminate the MCP server when a
@@ -62,9 +63,11 @@ Every way into Probierz, and what each one is allowed to do.
   launch failure also exposes its operating-system cause in `error`;
   `exitCode` is null when no numeric exit status was observed, not a made-up
   failure code. The command returns a refusal instead of terminating the
-  in-process MCP server, so later requests can still be served.
-  `probierz check <target>` and `probierz_check` likewise return the complete
-  missing-prerequisite and remediation report without ending the server.
+  in-process MCP server, so later requests can still be served: a step whose
+  program could not be started is `prerequisite`, one that ran and failed is
+  `refused`. `probierz check <target>` and `probierz_check` likewise return
+  the complete missing-prerequisite and remediation report, classified
+  `prerequisite`, without ending the server.
   The real `tests/mcp/admission.mjs` journey uses an empty executable search
   path to exercise missing npm during setup and missing script during
   preflight, then requires a reply to ping from that same server and verifies

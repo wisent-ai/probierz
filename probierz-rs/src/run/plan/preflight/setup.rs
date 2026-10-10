@@ -96,7 +96,13 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
             break;
         }
     }
-    let ok = failure.is_none();
+    // A step whose program could not be started is a missing prerequisite;
+    // one that ran and failed is a refusal its output explains.
+    let code = match &failure {
+        Some((_, _, Some(_))) => Some(crate::failure::Code::Prerequisite),
+        Some(_) => Some(crate::failure::Code::Refused),
+        None => None,
+    };
     let mut result = if let Some((step, stderr, error)) = failure {
         json!({ "target": name, "ok": false, "steps": done, "failedAt": step, "stderrTail": stderr, "error": error })
     } else {
@@ -107,8 +113,8 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
         .expect("object")
         .insert("preflight".into(), preflight(name, &BTreeMap::new())?);
     print_json(&result)?;
-    if !ok {
-        return Err(Failure::invalid("setup", result.to_string()));
+    if let Some(code) = code {
+        return Err(Failure::new("setup", code, result.to_string()));
     }
     Ok(())
 }
