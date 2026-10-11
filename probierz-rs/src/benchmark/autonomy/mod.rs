@@ -265,7 +265,7 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
         .flatten()
         .filter_map(|topic| topic["name"].as_str())
     {
-        if adopted_this_week(&ledger) >= policy.products_per_week {
+        if adopted_this_week(&ledger)? >= policy.products_per_week {
             scouted.push(json!({
                 "topic": topic,
                 "skipped": format!("{} product(s) a week is the policy's limit, and it is reached", policy.products_per_week),

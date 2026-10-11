@@ -91,11 +91,25 @@ pub(super) fn load(
     Ok((file, policy, digest))
 }
 
-/// Products the loop created in the last seven days, from its ledger.
-pub(super) fn adopted_this_week(ledger: &Path) -> usize {
+/// Products the loop created in the last seven days, from its ledger; none
+/// when there is no ledger yet. A ledger that cannot be read is refused:
+/// counted as empty, the weekly limit would never be reached.
+pub(super) fn adopted_this_week(ledger: &Path) -> Result<usize, Failure> {
     let since = chrono::Utc::now() - chrono::Duration::days(7);
-    std::fs::read_to_string(ledger)
-        .unwrap_or_default()
+    let text = match std::fs::read_to_string(ledger) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => {
+            return Err(Failure::config(
+                POINT,
+                format!(
+                    "cannot read the adoption ledger {}, so the weekly limit cannot be counted: {error}",
+                    ledger.display()
+                ),
+            ))
+        }
+    };
+    Ok(text
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
         .filter(|entry| {
@@ -104,7 +118,7 @@ pub(super) fn adopted_this_week(ledger: &Path) -> usize {
                 .and_then(|at| chrono::DateTime::parse_from_rfc3339(at).ok())
                 .is_some_and(|at| at >= since)
         })
-        .count()
+        .count())
 }
 
 /// Add one adoption to the ledger the weekly limit is counted from.
