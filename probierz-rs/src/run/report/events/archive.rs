@@ -73,13 +73,19 @@ pub(crate) fn read_u16(bytes: &[u8], at: usize) -> Option<u16> {
 pub(crate) fn read_u32(bytes: &[u8], at: usize) -> Option<u32> {
     Some(u32::from_le_bytes(bytes.get(at..at + 4)?.try_into().ok()?))
 }
+/// Every JSON line of one trace. A non-empty line that is not JSON is left
+/// out and named on stderr with its parse error, so a timeline missing events
+/// says why instead of looking like a run that recorded less.
 pub(crate) fn json_lines(content: &str) -> Vec<Value> {
     content
         .lines()
-        .filter_map(|line| {
-            (!line.trim().is_empty())
-                .then(|| serde_json::from_str(line).ok())
-                .flatten()
+        .filter(|line| !line.trim().is_empty())
+        .filter_map(|line| match serde_json::from_str(line) {
+            Ok(value) => Some(value),
+            Err(error) => {
+                eprintln!("run report: a trace line is not JSON and is left out: {error}");
+                None
+            }
         })
         .collect()
 }
