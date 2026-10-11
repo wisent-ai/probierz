@@ -41,8 +41,10 @@ async function observe(path) {
     apikey: key, Authorization: `Bearer ${key}`,
   } });
   const text = await response.text();
+  const observation = { method: 'GET', path, status: response.status, text };
+  report.observations.push(observation);
   const body = JSON.parse(text);
-  report.observations.push({ method: 'GET', path, status: response.status, body });
+  observation.body = body;
   return { ok: response.ok, body };
 }
 try {
