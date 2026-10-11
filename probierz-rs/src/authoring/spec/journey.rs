@@ -184,7 +184,7 @@ pub(crate) fn run_authored_spec(
             "passed": false,
             "status": "unknown",
             "runId": JsonValue::Null,
-            "failures": [String::from_utf8_lossy(&output.stderr).chars().take(400).collect::<String>()],
+            "failures": [String::from_utf8_lossy(&output.stderr)],
         }));
     }
     let value: JsonValue = serde_json::from_slice(&output.stdout)?;
@@ -199,8 +199,7 @@ pub(crate) fn run_authored_spec(
                 .or_else(|| failure.get("message"))
                 .and_then(JsonValue::as_str)
         })
-        .map(|message| message.chars().take(400).collect::<String>())
-        .take(6)
+        .map(str::to_owned)
         .collect::<Vec<_>>();
     Ok(json!({
         "passed": value.get("passed").and_then(JsonValue::as_bool).unwrap_or_else(|| value.get("status").and_then(JsonValue::as_str) == Some("passed")),
