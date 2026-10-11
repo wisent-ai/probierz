@@ -1,14 +1,39 @@
 use crate::apphooks::*;
 use serde_json::json;
+
+/// The organization the fixture state names. A state without one used to
+/// read as "", so the writer PATCHed `org_id=eq.` - no row - and still
+/// recorded the statement as written, and the verifier read empty tables.
+fn fixture_org_id(state: &Value) -> Result<String, Failure> {
+    state
+        .get("orgId")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            Failure::config(
+                "apphook.oko.state",
+                "the Oko fixture state names no orgId; run the fixture setup hook first",
+            )
+        })
+}
+
+/// A PostgREST answer's rows, or a failure naming the table whose answer
+/// was not a list - read as no rows, it failed the checks for the wrong reason.
+fn table_rows(answer: Value, table: &str) -> Result<Vec<Value>, Failure> {
+    match answer {
+        Value::Array(rows) => Ok(rows),
+        other => Err(Failure::unavailable(
+            "apphook.oko.verify",
+            format!("the {table} answer is not a list of rows: {other}"),
+        )),
+    }
+}
 pub(crate) fn oko_writer_update(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, false)?;
     let (path, mut state) = read_state(source)?;
     let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
-    let org_id = state
-        .get("orgId")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
+    let org_id = fixture_org_id(&state)?;
     let marker = format!("Probierz writer R+1 [{run_id}]");
     supabase(
         source,
@@ -99,10 +124,7 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
 pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, false)?;
     let (_, state) = read_state(source)?;
-    let org_id = state
-        .get("orgId")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
+    let org_id = fixture_org_id(&state)?;
     let contexts = supabase(
         source,
         &format!("/rest/v1/company_context?select=north_star_statement&org_id=eq.{org_id}"),
@@ -136,11 +158,11 @@ pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Va
     } else {
         json!([])
     };
-    let contexts = contexts.as_array().cloned().unwrap_or_default();
-    let metrics = metrics.as_array().cloned().unwrap_or_default();
-    let initiatives = initiatives.as_array().cloned().unwrap_or_default();
-    let decisions = decisions.as_array().cloned().unwrap_or_default();
-    let events = events.as_array().cloned().unwrap_or_default();
+    let contexts = table_rows(contexts, "company_context")?;
+    let metrics = table_rows(metrics, "company_metrics")?;
+    let initiatives = table_rows(initiatives, "company_initiatives")?;
+    let decisions = table_rows(decisions, "company_decisions")?;
+    let events = table_rows(events, "oko_strategic_feedback_events")?;
     let capacity: f64 = initiatives
         .iter()
         .map(|item| {
