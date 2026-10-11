@@ -45,8 +45,20 @@ fn object_api_url() -> Result<String, Failure> {
     if !declared.is_empty() {
         return Ok(declared);
     }
-    let home = std::env::var("HOME").unwrap_or_default();
-    let marker = std::path::Path::new(&home).join(OBJECT_API_MARKER);
+    let home = std::env::var_os("HOME").ok_or_else(|| {
+        Failure::config(
+            "objects.config",
+            "HOME is unset; cannot locate Stado's object API marker without STADO_API_URL",
+        )
+    })?;
+    let home = std::path::Path::new(&home);
+    if !home.is_absolute() {
+        return Err(Failure::config(
+            "objects.config",
+            format!("HOME must be an absolute directory to locate Stado's object API marker, got {}", home.display()),
+        ));
+    }
+    let marker = home.join(OBJECT_API_MARKER);
     let published = std::fs::read_to_string(&marker).map_err(|error| {
         Failure::config(
             "objects.config",
