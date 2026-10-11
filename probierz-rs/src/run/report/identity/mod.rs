@@ -4,7 +4,11 @@
 mod naming;
 mod records;
 mod source;
+mod update;
 
 pub(crate) use naming::*;
 pub(crate) use records::*;
 pub(crate) use source::*;
+// Named, not globbed: it shadows the `update_json` the `records` glob would
+// bring, which read an unreadable record as empty.
+pub(crate) use update::update_json;
