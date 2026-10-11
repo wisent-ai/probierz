@@ -35,12 +35,17 @@ fn real_media_probe_capture_preserves_status_streams_and_spawn_cause() {
     let document: serde_json::Value =
         serde_json::from_slice(&success.stdout).expect("real ffprobe metadata");
     assert_eq!(
-        document.pointer("/format/filename").and_then(serde_json::Value::as_str),
+        document
+            .pointer("/format/filename")
+            .and_then(serde_json::Value::as_str),
         fixture.to_str()
     );
     let absent = isolated.path().join("absent-recording");
     let refused = capture(&executable, &args(&absent), Some(isolated.path()), None);
-    assert!(refused.error.is_none(), "the child itself must report the missing input");
+    assert!(
+        refused.error.is_none(),
+        "the child itself must report the missing input"
+    );
     assert!(!refused.status.expect("failed probe exited").success());
     assert!(String::from_utf8_lossy(&refused.stderr).contains(&*absent.to_string_lossy()));
     let missing_program = isolated.path().join("absent-executable");
@@ -55,11 +60,16 @@ fn real_media_probe_capture_preserves_status_streams_and_spawn_cause() {
         None,
     );
     assert!(launch.status.is_none());
-    let launch_error = launch.error.expect("launch failure must remain a capture error");
+    let launch_error = launch
+        .error
+        .expect("launch failure must remain a capture error");
     assert!(launch_error.contains(&cause));
     assert!(launch_error.contains(&*missing_program.to_string_lossy()));
     assert!(launch_error.contains(&*isolated.path().to_string_lossy()));
-    assert_eq!(std::fs::read(&fixture).expect("read retained recording"), original);
+    assert_eq!(
+        std::fs::read(&fixture).expect("read retained recording"),
+        original
+    );
     eprintln!(
         "capture source={revision} fixture={} executable={executable} refused_stderr={} launch_error={launch_error}",
         fixture.display(),
