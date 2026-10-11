@@ -54,14 +54,17 @@ pub(crate) fn repair_brief(
     // A recorded spec that cannot be read is not a missing one: told "no spec
     // was found", the repair could write a spec over the one it never saw.
     let spec = match recorded_spec_path(harness, run) {
-        Some(path) => match fs::read_to_string(&path) {
+        Ok(Some(path)) => match fs::read_to_string(&path) {
             Ok(value) => format!("Current Probierz spec:\n{value}"),
             Err(error) => format!(
                 "The recorded spec {} exists and could not be read ({error}); do not choose spec_fix without it.",
                 path.display()
             ),
         },
-        None => "No exact spec file was found.".to_string(),
+        Ok(None) => "No exact spec file was found.".to_string(),
+        Err(error) => format!(
+            "The recorded spec could not be looked for ({error}); do not choose spec_fix without it."
+        ),
     };
     let green = crate::status::run_history_value(
         harness,

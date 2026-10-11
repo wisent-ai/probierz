@@ -169,28 +169,54 @@ pub(crate) fn repair_source_run(
     Ok(run)
 }
 
-pub(crate) fn find_named_file(root: &Path, name: &str) -> Option<PathBuf> {
+/// The first file called `name` under `root`. A directory that does not exist
+/// holds none; one that cannot be listed, or an entry that cannot be read, is
+/// an error naming it: read as "not found", the repair was told no spec exists
+/// for a run that has one.
+pub(crate) fn find_named_file(root: &Path, name: &str) -> Result<Option<PathBuf>, String> {
     let mut pending = vec![root.to_path_buf()];
     while let Some(directory) = pending.pop() {
-        let entries = fs::read_dir(directory).ok()?;
-        for entry in entries.filter_map(Result::ok) {
+        let entries = match fs::read_dir(&directory) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(format!("cannot list {}: {error}", directory.display())),
+        };
+        for entry in entries {
+            let entry = entry.map_err(|error| {
+                format!("cannot read an entry of {}: {error}", directory.display())
+            })?;
             let path = entry.path();
             if path.is_dir() {
                 pending.push(path);
             } else if path.file_name().and_then(OsStr::to_str) == Some(name) {
-                return Some(path);
+                return Ok(Some(path));
             }
         }
     }
-    None
+    Ok(None)
 }
 
-pub(crate) fn recorded_spec_path(harness: &Path, run: &JsonValue) -> Option<PathBuf> {
-    let name = Path::new(run.get("spec")?.as_str()?)
-        .file_name()?
-        .to_str()?;
-    let target = run.get("target")?.as_str()?;
-    find_named_file(&target_spec_dir(harness, target)?, name)
+/// The spec file a run recorded, `Ok(None)` when the run names none or no
+/// such file exists, and an error when the spec directory cannot be searched.
+pub(crate) fn recorded_spec_path(
+    harness: &Path,
+    run: &JsonValue,
+) -> Result<Option<PathBuf>, String> {
+    let Some(name) = run
+        .get("spec")
+        .and_then(JsonValue::as_str)
+        .and_then(|spec| Path::new(spec).file_name())
+        .and_then(OsStr::to_str)
+    else {
+        return Ok(None);
+    };
+    let Some(target) = run.get("target").and_then(JsonValue::as_str) else {
+        return Ok(None);
+    };
+    let Some(directory) = target_spec_dir(harness, target) else {
+        return Ok(None);
+    };
+    find_named_file(&directory, name)
 }
 
 pub(crate) fn repair_evidence(run: &JsonValue) -> JsonValue {

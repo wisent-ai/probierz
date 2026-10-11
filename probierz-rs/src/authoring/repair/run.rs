@@ -188,7 +188,7 @@ pub fn repair_failed_run(
                 .and_then(JsonValue::as_str)
                 .filter(|value| !value.trim().is_empty())
                 .ok_or_else(|| "spec_fix needs a complete replacement spec".to_string())?;
-            let existing = recorded_spec_path(harness, &run).ok_or_else(|| {
+            let existing = recorded_spec_path(harness, &run)?.ok_or_else(|| {
                 format!(
                     "cannot locate recorded spec {}",
                     run.get("spec")
