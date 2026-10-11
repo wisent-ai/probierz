@@ -12,13 +12,24 @@ pub(crate) fn appium_driver_installed(name: &str, env: &BTreeMap<String, String>
     {
         return false;
     }
+    // Only a missing manifest is a driver Appium has not registered; one
+    // that cannot be read or parsed is said with its cause, so the preflight
+    // does not send the operator to reinstall a driver that is there.
     let file = home.join("node_modules/.cache/appium/extensions.yaml");
-    let Ok(document) = fs::read_to_string(file)
-        .ok()
-        .and_then(|value| serde_yaml::from_str::<serde_yaml::Value>(&value).ok())
-        .ok_or(())
-    else {
-        return false;
+    let text = match fs::read_to_string(&file) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return false,
+        Err(error) => {
+            eprintln!("cannot read {}: {error}", file.display());
+            return false;
+        }
+    };
+    let document = match serde_yaml::from_str::<serde_yaml::Value>(&text) {
+        Ok(document) => document,
+        Err(error) => {
+            eprintln!("{} is not YAML: {error}", file.display());
+            return false;
+        }
     };
     document
         .get("drivers")
@@ -28,6 +39,9 @@ pub(crate) fn appium_driver_installed(name: &str, env: &BTreeMap<String, String>
         == Some(&format!("appium-{name}-driver"))
 }
 
+/// The simulators `xcrun simctl` lists. A simctl that fails or answers
+/// something other than JSON is said on stderr with its cause, so "no iOS
+/// simulators found" is not read as a machine without runtimes.
 pub(crate) fn simctl_devices() -> Value {
     let result = capture_text(
         "xcrun",
@@ -35,9 +49,21 @@ pub(crate) fn simctl_devices() -> Value {
         None,
     );
     if !result.status.is_some_and(|status| status.success()) {
+        eprintln!(
+            "xcrun simctl list devices failed (status {:?}, spawn error {:?}): {}",
+            result.status,
+            result.error,
+            String::from_utf8_lossy(&result.stderr).trim()
+        );
         return json!({});
     }
-    serde_json::from_slice(&result.stdout).unwrap_or_else(|_| json!({}))
+    match serde_json::from_slice(&result.stdout) {
+        Ok(document) => document,
+        Err(error) => {
+            eprintln!("xcrun simctl list devices answered no JSON: {error}");
+            json!({})
+        }
+    }
 }
 
 pub(crate) fn available_ios_runtimes() -> Vec<String> {
