@@ -1,5 +1,8 @@
 use crate::run::*;
 use serde_json::json;
+/// Every file under `root`. A directory or entry that cannot be read is left
+/// out and named on stderr with its cause: left out in silence, a run's
+/// evidence lost files with nothing saying they were there.
 pub(crate) fn walk(root: &Path, sort: bool) -> Vec<PathBuf> {
     if !root.exists() {
         return Vec::new();
@@ -7,7 +10,23 @@ pub(crate) fn walk(root: &Path, sort: bool) -> Vec<PathBuf> {
     if root.is_file() {
         return vec![root.to_path_buf()];
     }
-    let mut entries: Vec<_> = fs::read_dir(root).into_iter().flatten().flatten().collect();
+    let listing = match fs::read_dir(root) {
+        Ok(listing) => listing,
+        Err(error) => {
+            eprintln!("probierz: {} cannot be listed: {error}", root.display());
+            return Vec::new();
+        }
+    };
+    let mut entries = Vec::new();
+    for entry in listing {
+        match entry {
+            Ok(entry) => entries.push(entry),
+            Err(error) => eprintln!(
+                "probierz: an entry of {} cannot be read: {error}",
+                root.display()
+            ),
+        }
+    }
     if sort {
         entries.sort_by_key(|entry| entry.file_name());
     }
