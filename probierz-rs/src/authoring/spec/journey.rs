@@ -84,7 +84,12 @@ pub fn author_spec(
                 )
             }
         };
-        fs::write(&staged, drafted.content)?;
+        fs::write(&staged, drafted.content).map_err(|cause| {
+            Failure::config(
+                "author-spec",
+                format!("writing staged draft {}: {cause}", staged.display()),
+            )
+        })?;
         let run = run_authored_spec(harness, app_id, target, &staged, base_url, app_path)?;
         if run["passed"] == true {
             let accepted =
@@ -101,7 +106,12 @@ pub fn author_spec(
         }
         // The next round is briefed with this draft; one that cannot be read
         // back fails authoring with its cause instead of briefing blind.
-        previous = Some(fs::read_to_string(&staged)?);
+        previous = Some(fs::read_to_string(&staged).map_err(|cause| {
+            Failure::config(
+                "author-spec",
+                format!("reading staged draft {}: {cause}", staged.display()),
+            )
+        })?);
         failures = run["failures"]
             .as_array()
             .into_iter()
