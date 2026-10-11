@@ -1,9 +1,13 @@
 use crate::status::*;
 
 pub(super) fn violations_for(root: &str) -> Value {
-    let output = stado_wait::output(
-        Command::new("tama").args(["violations", "find", "--repo", root, "--json"]),
-    );
+    let output = stado_wait::output(Command::new("tama").args([
+        "violations",
+        "find",
+        "--repo",
+        root,
+        "--json",
+    ]));
     let output = match output {
         Ok(output) => output,
         Err(error) => {
@@ -48,11 +52,19 @@ pub(super) fn violations_for(root: &str) -> Value {
     };
     let requested = match Path::new(root).canonicalize() {
         Ok(path) => path,
-        Err(error) => return refused(format!("cannot resolve requested repository {root}: {error}")),
+        Err(error) => {
+            return refused(format!(
+                "cannot resolve requested repository {root}: {error}"
+            ))
+        }
     };
     let observed = match Path::new(scanned).canonicalize() {
         Ok(path) => path,
-        Err(error) => return refused(format!("cannot resolve scanned repository {scanned}: {error}")),
+        Err(error) => {
+            return refused(format!(
+                "cannot resolve scanned repository {scanned}: {error}"
+            ))
+        }
     };
     if requested != observed {
         return refused(format!(
