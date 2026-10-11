@@ -16,25 +16,31 @@ pub(crate) fn git(root: &str, arguments: &[&str]) -> Option<String> {
     (!text.is_empty()).then_some(text)
 }
 
-pub(crate) fn git_lines(root: &str, arguments: &[&str]) -> Vec<String> {
-    let Some(output) = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(arguments)
-        .output()
-        .ok()
-    else {
-        return Vec::new();
-    };
+/// The non-empty lines git prints, or why it printed none: git that cannot
+/// start or exits non-zero is the cause, never an empty answer.
+pub(crate) fn git_lines(root: &str, arguments: &[&str]) -> Result<Vec<String>, String> {
+    let mut command = Command::new("git");
+    command.arg("-C").arg(root).args(arguments);
+    let output = stado_wait::output(&mut command).map_err(|error| {
+        format!(
+            "git {} in {root} could not run: {error}",
+            arguments.join(" ")
+        )
+    })?;
     if !output.status.success() {
-        return Vec::new();
+        return Err(format!(
+            "git {} in {root} failed ({}): {}",
+            arguments.join(" "),
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
     }
-    String::from_utf8_lossy(&output.stdout)
+    Ok(String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(str::to_string)
-        .collect()
+        .collect())
 }
 
 pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {

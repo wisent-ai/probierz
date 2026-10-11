@@ -17,15 +17,34 @@ pub(crate) fn git(repo: &Path, args: &[&str]) -> Option<String> {
     }
 }
 
-pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Vec<String> {
-    let Some(text) = git(repo, args) else {
-        return Vec::new();
-    };
-    text.lines()
+/// The non-empty lines git prints, or why it printed none: git that cannot
+/// start or exits non-zero is the cause, never an empty answer. An empty list
+/// read as "nothing changed" let the gate pass on a diff it never saw.
+pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Result<Vec<String>, String> {
+    let mut command = ProcessCommand::new("git");
+    command.arg("-C").arg(repo).args(args);
+    let output = stado_wait::output(&mut command).map_err(|error| {
+        format!(
+            "git {} in {} could not run: {error}",
+            args.join(" "),
+            repo.display()
+        )
+    })?;
+    if !output.status.success() {
+        return Err(format!(
+            "git {} in {} failed ({}): {}",
+            args.join(" "),
+            repo.display(),
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(str::to_string)
-        .collect()
+        .collect())
 }
 
 pub(crate) fn manifest_repositories(app: &manifest::Manifest) -> Vec<&Yaml> {

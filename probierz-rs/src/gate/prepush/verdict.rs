@@ -49,12 +49,23 @@ pub(crate) fn prepush_value(
             ),
         ]));
     };
-    let resolved_head = resolved_head.unwrap_or_default();
+    // A head that does not resolve, or a diff git cannot produce, is the
+    // verdict's reason: read as no files, the gate passed with no journeys run.
+    let unread = |reason: String| -> Result<Value, Failure> {
+        Ok(object([
+            ("ok", Value::Bool(false)),
+            ("appId", Value::String(resolved_app.clone())),
+            ("reason", Value::String(reason)),
+        ]))
+    };
+    let Some(resolved_head) = resolved_head else {
+        return unread(format!("cannot resolve HEAD in {}", repo.display()));
+    };
     let range = format!("{resolved_base}..{resolved_head}");
-    let files: Vec<PathBuf> = git_lines(repo, &["diff", "--name-only", &range])
-        .into_iter()
-        .map(|file| repo.join(file))
-        .collect();
+    let files: Vec<PathBuf> = match git_lines(repo, &["diff", "--name-only", &range]) {
+        Ok(lines) => lines.into_iter().map(|file| repo.join(file)).collect(),
+        Err(reason) => return unread(reason),
+    };
     let journeys = affected_journeys(&app, &files);
     if journeys.is_empty() {
         return Ok(object([

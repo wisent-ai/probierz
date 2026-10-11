@@ -27,16 +27,25 @@ pub(crate) fn app_status_value(
         let root = repository.get("root").and_then(Value::as_str).unwrap_or("");
         let head = git(root, &["rev-parse", "HEAD"]);
         let base = git(root, &["rev-parse", "--verify", base_ref]);
+        // A diff git cannot produce is named on the repository row: read as
+        // no files, its journeys looked unaffected.
+        let mut diff_error = None;
         if let (Some(head), Some(base)) = (&head, &base) {
             let range = format!("{base}..{head}");
-            diff_files.extend(
-                git_lines(root, &["diff", "--name-only", &range])
-                    .into_iter()
-                    .map(|file| Path::new(root).join(file)),
-            );
+            match git_lines(root, &["diff", "--name-only", &range]) {
+                Ok(files) => {
+                    diff_files.extend(files.into_iter().map(|file| Path::new(root).join(file)))
+                }
+                Err(cause) => diff_error = Some(cause),
+            }
         }
-        repositories
-            .push(json!({ "root": root, "headSha": head, "baseRef": base_ref, "baseSha": base }));
+        repositories.push(json!({
+            "root": root,
+            "headSha": head,
+            "baseRef": base_ref,
+            "baseSha": base,
+            "diffError": diff_error,
+        }));
     }
     let affected = affected_journeys(harness, &diff_files)?;
     let runs = history

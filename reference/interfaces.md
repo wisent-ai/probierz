@@ -236,6 +236,10 @@ Every way into Probierz, and what each one is allowed to do.
   Run `probierz gate install APP_ID --repo REPO` to migrate an older managed
   hook to the grouped command. Installation replaces the managed hook rather
   than chaining its obsolete invocation; unrelated hooks remain chained.
+  `probierz gate prepush` answers `ok: false` with the cause when HEAD does
+  not resolve or git cannot produce the diff of the pushed range, instead of
+  passing with no affected journeys; `probierz status` names such a diff in
+  the repository row's `diffError`.
 - **Remote fleet bridge:** `probierz remote run`, `probierz remote author`, and
   `probierz remote seo` submit exact remote contracts to a Stado-placed host and
   return evidence through the configured object store; `probierz remote resume`,
