@@ -42,10 +42,20 @@ pub(crate) fn walk(root: &Path, sort: bool) -> Vec<PathBuf> {
     files
 }
 
-pub(crate) fn size_kb(path: &Path) -> u64 {
-    fs::metadata(path)
-        .map(|meta| (meta.len() + 512) / 1024)
-        .unwrap_or(0)
+/// The size in kilobytes, rounded, or `None` when it cannot be read: a report
+/// then carries `null` and the cause is named on stderr, where it used to say
+/// 0 KB and look like an empty recording.
+pub(crate) fn size_kb(path: &Path) -> Option<u64> {
+    match fs::metadata(path) {
+        Ok(meta) => Some((meta.len() + 512) / 1024),
+        Err(error) => {
+            eprintln!(
+                "probierz: the size of {} cannot be read: {error}",
+                path.display()
+            );
+            None
+        }
+    }
 }
 
 pub(crate) fn has_media_binary(name: &str) -> bool {
