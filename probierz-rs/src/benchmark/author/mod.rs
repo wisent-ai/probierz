@@ -145,7 +145,20 @@ pub(crate) fn contender(
     let mut history = Vec::new();
     let mut previous = None;
     if let Some(program) = place::program(&manifest, id) {
-        if let Ok(source) = std::fs::read_to_string(&program) {
+        // A declared driver that cannot be read is refused: drafting anew
+        // would write over it without its source in the brief.
+        let read = match std::fs::read_to_string(&program) {
+            Ok(source) => Some(source),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => {
+                return Err(Failure::new(
+                    "benchmark.author",
+                    Code::Config,
+                    format!("the declared {id} driver {} cannot be read: {error}", program.display()),
+                ))
+            }
+        };
+        if let Some(source) = read {
             let (run, failures) = verify(harness, app_id, suite_id, id)?;
             history.push(json!({"round": 0, "run": run, "failures": failures}));
             if failures.is_empty() {
