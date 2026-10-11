@@ -112,22 +112,67 @@ pub(crate) fn apply_transaction(
         Ok(())
     })();
 
+    // Every rollback and cleanup step reports its failure. A restore that
+    // failed used to be ignored and the backup directory then deleted, which
+    // destroyed the project files the transaction had moved aside; the backup
+    // is now kept whenever anything in it could not be put back.
+    let mut problems: Vec<String> = Vec::new();
     if operation.is_err() {
         for target in placed.iter().rev() {
-            let _ = fs::remove_file(target);
+            if let Err(error) = fs::remove_file(target) {
+                problems.push(format!("remove placed {}: {error}", target.display()));
+            }
         }
         for (target, backup) in backed_up.iter().rev() {
-            if backup.exists() {
-                if let Some(parent) = target.parent() {
-                    let _ = fs::create_dir_all(parent);
+            if !backup.exists() {
+                continue;
+            }
+            if let Some(parent) = target.parent() {
+                if let Err(error) = fs::create_dir_all(parent) {
+                    problems.push(format!("recreate {}: {error}", parent.display()));
                 }
-                let _ = fs::rename(backup, target);
+            }
+            if let Err(error) = fs::rename(backup, target) {
+                problems.push(format!(
+                    "restore {} from {}: {error}",
+                    target.display(),
+                    backup.display()
+                ));
             }
         }
     }
-    let _ = fs::remove_dir_all(&stage_root);
-    let _ = fs::remove_dir_all(&backup_root);
-    operation
+    let restored = problems.is_empty();
+    for directory in [&stage_root, &backup_root] {
+        if directory == &backup_root && !restored {
+            problems.push(format!(
+                "kept {} holding the files that were not restored",
+                backup_root.display()
+            ));
+            continue;
+        }
+        match fs::remove_dir_all(directory) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => problems.push(format!("remove {}: {error}", directory.display())),
+        }
+    }
+    match (operation, problems.is_empty()) {
+        (outcome, true) => outcome,
+        (Err(failure), false) => Err(fail(
+            "adoption.rollback",
+            format!(
+                "{failure}; rolling back also failed: {}",
+                problems.join("; ")
+            ),
+        )),
+        (Ok(()), false) => Err(fail(
+            "adoption.cleanup",
+            format!(
+                "the definitions were adopted, but cleanup failed: {}",
+                problems.join("; ")
+            ),
+        )),
+    }
 }
 
 pub(crate) fn repository_root(value: &Path, label: &str) -> Result<PathBuf, Failure> {
