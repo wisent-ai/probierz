@@ -264,16 +264,27 @@ pub fn repair_failed_run(
     match attempted {
         Ok(result) => Ok(result),
         Err(detail) => {
-            let result = repair_failure(
+            let mut result = repair_failure(
                 Some(&run_id),
                 "unknown",
                 false,
                 &detail,
                 format!("Automated repair failed: {detail}"),
             );
-            if let Some(parent) = result_path.parent() {
-                let _ = fs::create_dir_all(parent);
-                let _ = write_pretty_json(&result_path, &result);
+            // The answer still goes to stdout; a result file that could not be
+            // written is named in it rather than left missing or stale.
+            let written = match result_path.parent() {
+                Some(parent) => fs::create_dir_all(parent)
+                    .map_err(|error| format!("create {}: {error}", parent.display()))
+                    .and_then(|()| {
+                        write_pretty_json(&result_path, &result)
+                            .map_err(|error| format!("write {}: {error}", result_path.display()))
+                    }),
+                None => write_pretty_json(&result_path, &result)
+                    .map_err(|error| format!("write {}: {error}", result_path.display())),
+            };
+            if let (Err(problem), Some(object)) = (written, result.as_object_mut()) {
+                object.insert("resultFileError".to_string(), json!(problem));
             }
             Ok(result)
         }
