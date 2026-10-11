@@ -126,14 +126,29 @@ pub fn author_spec(
     )
 }
 
+/// The top of the repository as the authoring model sees it. A root or entry
+/// that cannot be read is written into the listing with its cause, so the
+/// model, and whoever reads its transcript, is not shown "(unreadable)" or a
+/// silently shorter tree.
 pub(crate) fn repo_tree(root: &Path) -> String {
-    let Ok(entries) = fs::read_dir(root) else {
-        return "(unreadable)".to_string();
+    let entries = match fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(error) => return format!("({} cannot be listed: {error})", root.display()),
     };
-    let mut entries: Vec<_> = entries.filter_map(Result::ok).take(40).collect();
+    let mut unreadable = Vec::new();
+    let mut entries: Vec<_> = entries
+        .filter_map(|entry| match entry {
+            Ok(entry) => Some(entry),
+            Err(error) => {
+                unreadable.push(format!("(an entry cannot be read: {error})"));
+                None
+            }
+        })
+        .take(40)
+        .collect();
     entries.sort_by_key(|entry| entry.file_name());
 
-    entries
+    let mut lines: Vec<String> = entries
         .into_iter()
         .map(|entry| {
             format!(
@@ -142,8 +157,9 @@ pub(crate) fn repo_tree(root: &Path) -> String {
                 if entry.path().is_dir() { "/" } else { "" }
             )
         })
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect();
+    lines.extend(unreadable);
+    lines.join("\n")
 }
 pub(crate) fn run_authored_spec(
     harness: &Path,
