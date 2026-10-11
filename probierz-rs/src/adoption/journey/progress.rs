@@ -15,9 +15,34 @@ pub(crate) fn progress_file() -> Result<PathBuf, Failure> {
     Ok(state_root.join("probierz/onboarding.json"))
 }
 
-pub(crate) fn read_progress() -> Option<Value> {
-    let file = progress_file().ok()?;
-    serde_json::from_slice(&fs::read(file).ok()?).ok()
+/// The recorded onboarding progress; `None` only when there is none. A file
+/// that cannot be read or is not JSON is refused with its path: taken for no
+/// progress, it was overwritten with a fresh journey and its completed status
+/// and evidence were lost.
+pub(crate) fn read_progress() -> Result<Option<Value>, Failure> {
+    let file = progress_file()?;
+    let bytes = match fs::read(&file) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(Failure::config(
+                "onboarding.state",
+                format!(
+                    "cannot read onboarding progress {}: {error}",
+                    file.display()
+                ),
+            ))
+        }
+    };
+    serde_json::from_slice(&bytes).map(Some).map_err(|error| {
+        Failure::config(
+            "onboarding.state",
+            format!(
+                "onboarding progress {} is not JSON: {error}",
+                file.display()
+            ),
+        )
+    })
 }
 
 pub(crate) fn write_progress(progress: &Value) -> Result<(), Failure> {

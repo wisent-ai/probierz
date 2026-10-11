@@ -87,7 +87,7 @@ pub(crate) fn run_onboarding(
         .map(|source| adopt_project(project_root, source, replace))
         .transpose()?;
 
-    let mut progress = read_progress();
+    let mut progress = read_progress()?;
     let mut reset = false;
     if reset_requested && progress.is_some() {
         progress = None;
@@ -102,7 +102,10 @@ pub(crate) fn run_onboarding(
         .is_some_and(|value| value.get("status").and_then(Value::as_str) != Some("conflict"))
     {
         let adopted = adoption.as_ref().expect("checked");
-        let mut adopted_progress = read_progress().unwrap_or_else(|| json!({}));
+        let mut adopted_progress = match read_progress()? {
+            Some(progress) => progress,
+            None => json!({}),
+        };
         let object = adopted_progress
             .as_object_mut()
             .ok_or_else(|| fail("onboarding.state", "onboarding progress is not an object"))?;
@@ -131,7 +134,7 @@ pub(crate) fn run_onboarding(
             }),
         );
         write_progress(&adopted_progress)?;
-        progress = read_progress();
+        progress = read_progress()?;
     }
 
     let done = progress
@@ -238,7 +241,10 @@ pub(crate) fn run_onboarding(
 /// Progress recording must never interfere with the evidence operation that calls it.
 pub fn record_passing_quality_evidence_written() {
     let _ = (|| -> Result<(), Failure> {
-        let mut progress = read_progress().unwrap_or_else(|| json!({}));
+        let mut progress = match read_progress()? {
+            Some(progress) => progress,
+            None => json!({}),
+        };
         if progress.get("status").and_then(Value::as_str) == Some("completed") {
             return Ok(());
         }
