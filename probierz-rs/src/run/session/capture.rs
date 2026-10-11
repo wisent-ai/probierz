@@ -92,8 +92,9 @@ pub(crate) fn successful(program: &str, args: &[&str]) -> bool {
 pub(crate) fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
+/// `$HOME`, else the home the user database records. With neither it stops
+/// with the cause instead of answering `.`, which put run state and evidence
+/// under whatever directory Probierz started from.
 pub(crate) fn home_dir() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+    std::env::home_dir().expect("neither HOME nor the user database names a home directory")
 }

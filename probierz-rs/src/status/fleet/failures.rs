@@ -2,10 +2,10 @@
 
 use crate::status::*;
 
+/// The one Probierz home lookup: answering `.` without HOME made the failure
+/// store a different, empty directory for every working directory.
 pub(crate) fn home_dir() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+    crate::run::home_dir()
 }
 
 pub(crate) fn failures_dir() -> PathBuf {
