@@ -34,14 +34,20 @@ pub(crate) fn normalized_status(document: &Value) -> String {
 }
 
 pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
+    // Only a missing manifest is no run; one that cannot be read or parsed
+    // is evidence the gate could not weigh, said with its cause.
     let text = match fs::read_to_string(file) {
         Ok(text) => text,
-        Err(_) => return Ok(None),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "run manifest {} cannot be read: {error}",
+                file.display()
+            ))
+        }
     };
-    let document: Value = match serde_json::from_str(&text) {
-        Ok(document) => document,
-        Err(_) => return Ok(None),
-    };
+    let document: Value = serde_json::from_str(&text)
+        .map_err(|error| format!("run manifest {} is not JSON: {error}", file.display()))?;
     let directory = file.parent().unwrap_or_else(|| Path::new("."));
     let analysis_path = string_property(&document, "analysisPath");
     let journeys = property(&document, "appManifest")
