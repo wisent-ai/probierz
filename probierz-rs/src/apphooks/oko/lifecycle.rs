@@ -170,7 +170,8 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                     "chat.delete",
                     json!({ "channel": channel, "ts": parent_ts }),
                 ) {
-                    rollback_errors.push(format!("Slack thread {parent_ts} in {channel}: {failure}"));
+                    rollback_errors
+                        .push(format!("Slack thread {parent_ts} in {channel}: {failure}"));
                 }
             }
             if let Err(failure) = delete_organization(&scoped, &org_id) {
@@ -186,7 +187,9 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 rollback_errors.push(format!("account {account_id}: {failure}"));
             }
             if !rollback_errors.is_empty() {
-                error.detail.push_str("; rollback could not confirm removal: ");
+                error
+                    .detail
+                    .push_str("; rollback could not confirm removal: ");
                 error.detail.push_str(&rollback_errors.join("; "));
             }
             Err(error)

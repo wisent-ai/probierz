@@ -117,7 +117,9 @@ pub(crate) fn probe_video(file: &Path) -> Result<Value, String> {
                     )
                 })?
                 .parse::<f64>()
-                .map_err(|error| format!("decode ffprobe duration for {}: {error}", file.display()))?;
+                .map_err(|error| {
+                    format!("decode ffprobe duration for {}: {error}", file.display())
+                })?;
             if !duration.is_finite() {
                 return Err(format!(
                     "ffprobe {} returned non-finite duration: {value}",
@@ -127,7 +129,9 @@ pub(crate) fn probe_video(file: &Path) -> Result<Value, String> {
             number(duration)
         }
     };
-    Ok(json!({ "durationSec": duration, "width": stream.get("width"), "height": stream.get("height") }))
+    Ok(
+        json!({ "durationSec": duration, "width": stream.get("width"), "height": stream.get("height") }),
+    )
 }
 
 pub(crate) fn extract_frames(
@@ -181,7 +185,12 @@ pub(crate) fn extract_frames(
         .map_err(|error| format!("list extracted frames in {}: {error}", output.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| format!("read extracted frame entry in {}: {error}", output.display()))?;
+        .map_err(|error| {
+            format!(
+                "read extracted frame entry in {}: {error}",
+                output.display()
+            )
+        })?;
     frames.sort();
     if frames.is_empty() {
         return Err(format!(
