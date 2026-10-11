@@ -73,8 +73,7 @@ pub(crate) fn repair_brief(
         None,
         usize::MAX,
     )
-    .ok()
-    .and_then(|history| {
+    .map(|history| {
         history
             .get("runs")
             .and_then(JsonValue::as_array)
@@ -115,7 +114,14 @@ pub(crate) fn repair_brief(
                 .unwrap_or_default()
         ),
         format!("Journey: {}", journey.unwrap_or("unknown")),
-        format!("Last green run: {}", green.as_deref().unwrap_or("none")),
+        format!(
+            "Last green run: {}",
+            match green {
+                Ok(Some(run)) => run,
+                Ok(None) => "none".to_string(),
+                Err(error) => format!("unavailable: {error}"),
+            }
+        ),
         format!(
             "Relevant product paths: {}",
             if mappings.is_empty() {

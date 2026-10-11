@@ -65,6 +65,8 @@ Every way into Probierz, and what each one is allowed to do.
   directory listing, entry inspection and metadata access. A failed search
   retains the affected path and operating-system cause in the repair brief
   and refuses a specification repair rather than claiming no file exists.
+  Failure to read prior successful runs is likewise included in the brief
+  with its cause, not reported as the absence of a successful run.
 - **Run and CI refusals:** a `tui`, `desktop:cua` or `web` journey whose runner
   ends unsuccessfully returns a `refused` failure with its report, and the CLI
   exits with the runner's own status. A skipped `probierz run` refuses with the
