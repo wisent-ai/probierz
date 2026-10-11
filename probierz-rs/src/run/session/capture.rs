@@ -79,3 +79,7 @@ pub(crate) fn text(bytes: &[u8]) -> String {
 pub(crate) fn home_dir() -> PathBuf {
     std::env::home_dir().expect("neither HOME nor the user database names a home directory")
 }
+
+#[cfg(test)]
+#[path = "../../../../tests/process/capture.rs"]
+mod capture_journey;

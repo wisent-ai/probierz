@@ -151,6 +151,16 @@ Every way into Probierz, and what each one is allowed to do.
   The command retains its configured environment, working directory and
   inherited input. Successful capture retains both streams and the real
   child status, including unsuccessful exits.
+  `tests/process/capture.rs` uses the real executable named by
+  `PROBIERZ_TEST_FFPROBE` and a genuine `PROBIERZ_TEST_VIDEO` recording to
+  qualify successful metadata output, an actual unsuccessful child exit with
+  retained stderr, and an absent executable with its real OS cause.
+  The runner binds `PROBIERZ_TEST_SOURCE_REVISION` to the tested checkout and
+  retains the command, exit status and test output. The journey only creates
+  isolated state below the package's ignored `target/real-tests/capture`;
+  it leaves the original recording unchanged. Invoke the registered
+  `capture_journey` test filter through the repository qualification runner.
+  This journey does not induce an OS pipe-read or wait failure.
 - **Native driver refusals:** an existing CuaDriver socket is probed once.
   Executable, socket-inspection, child-exit, JSON decoding and missing permission
   state failures retain their own cause; only an explicit false Accessibility
