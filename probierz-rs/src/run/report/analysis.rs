@@ -62,11 +62,15 @@ pub(crate) fn analyze_run(
                 match probe_video(&path) {
                     Ok(meta) => {
                         if extraction_requested {
-                            if let Some(artifacts) = artifacts_dir {
-                                let extracted = extract_frames(&path, artifacts, frames, &meta)
-                                    .map_err(|error| fail("run.analyze", error))?;
-                                entry.insert("frames".into(), json!(extracted));
-                            }
+                            let artifacts = artifacts_dir.ok_or_else(|| {
+                                fail(
+                                    "run.analyze",
+                                    "frame extraction requires an artifacts directory",
+                                )
+                            })?;
+                            let extracted = extract_frames(&path, artifacts, frames, &meta)
+                                .map_err(|error| fail("run.analyze", error))?;
+                            entry.insert("frames".into(), json!(extracted));
                         }
                         entry.insert("recording".into(), meta);
                     }

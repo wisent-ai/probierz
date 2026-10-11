@@ -51,6 +51,10 @@ try {
   assert.ok(video, 'the supplied real run must contain a decodable video recording');
   assert.ok(video.frames?.some(file => typeof file === 'string'), 'requested extraction must produce frame files');
   record.recording = { file: video.file, sha256: digest(video.file) };
+  const noDestination = run(binary, ['analyze', reportPath, '--frames', frames]);
+  assert.ok(noDestination.status !== null && noDestination.status !== version.status,
+    'requested extraction must refuse an absent output destination');
+  assert.ok(`${noDestination.stdout}\n${noDestination.stderr}`.includes('artifacts directory'));
   for (const frame of video.frames) {
     const inspected = run('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
       '-show_entries', 'stream=width,height', '-of', 'json', frame]);
