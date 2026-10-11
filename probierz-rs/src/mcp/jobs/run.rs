@@ -240,21 +240,33 @@ pub(crate) fn terminate_tree(pid: u32) {
     }
     #[cfg(unix)]
     {
+        // Without the process table only `pid` itself is known, and its
+        // children keep running after the kill; that is said, not assumed away.
         let mut processes: HashMap<u32, Vec<u32>> = HashMap::new();
-        if let Ok(output) = Command::new("/bin/ps")
+        match Command::new("/bin/ps")
             .args(["-axo", "pid=,ppid="])
             .output()
         {
-            for line in String::from_utf8_lossy(&output.stdout).lines() {
-                let mut columns = line.split_whitespace();
-                if let (Some(process), Some(parent)) = (columns.next(), columns.next()) {
-                    if let (Ok(process), Ok(parent)) =
-                        (process.parse::<u32>(), parent.parse::<u32>())
-                    {
-                        processes.entry(parent).or_default().push(process);
+            Ok(output) if output.status.success() => {
+                for line in String::from_utf8_lossy(&output.stdout).lines() {
+                    let mut columns = line.split_whitespace();
+                    if let (Some(process), Some(parent)) = (columns.next(), columns.next()) {
+                        if let (Ok(process), Ok(parent)) =
+                            (process.parse::<u32>(), parent.parse::<u32>())
+                        {
+                            processes.entry(parent).or_default().push(process);
+                        }
                     }
                 }
             }
+            Ok(output) => eprintln!(
+                "probierz: /bin/ps answered {} ({}); only pid {pid} is killed and its children may keep running",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+            Err(error) => eprintln!(
+                "probierz: /bin/ps could not be run ({error}); only pid {pid} is killed and its children may keep running"
+            ),
         }
         fn descendants(pid: u32, processes: &HashMap<u32, Vec<u32>>, output: &mut Vec<u32>) {
             for child in processes.get(&pid).into_iter().flatten() {
