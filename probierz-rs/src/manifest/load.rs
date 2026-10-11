@@ -35,12 +35,17 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
 
 /// A manifest names checkouts and executables under the operator's home as
 /// `~/...`, so the file carries no account name and reads the same for every
-/// operator. Every string that starts with `~/` is read under `$HOME`.
+/// operator. Every string that starts with `~/` is read under the home
+/// `crate::run::home_dir` names; left unexpanded without HOME, it named a
+/// directory called `~` under the working directory.
 pub fn expand_home(value: &mut Value) {
     match value {
         Value::String(text) => {
-            if let (Some(rest), Some(home)) = (text.strip_prefix("~/"), std::env::var_os("HOME")) {
-                *text = Path::new(&home).join(rest).to_string_lossy().into_owned();
+            if let Some(rest) = text.strip_prefix("~/") {
+                *text = crate::run::home_dir()
+                    .join(rest)
+                    .to_string_lossy()
+                    .into_owned();
             }
         }
         Value::Sequence(items) => items.iter_mut().for_each(expand_home),
