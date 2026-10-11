@@ -140,6 +140,10 @@ Every way into Probierz, and what each one is allowed to do.
   canonical Tama scan of the application's declared repository. Its
   missing-scanner case verifies Tama is absent from the restricted executable
   search path before requiring the launch refusal.
+  The process wait is announced by the shared Stado wait interface. Exactly
+  the requested repository must be returned: missing or multiple repository
+  records, absent paths, failed canonical-path resolution and mismatched
+  resolved paths are refused with the observed report and actual cause.
 - **Native driver refusals:** an existing CuaDriver socket is probed once.
   Executable, socket-inspection, child-exit, JSON decoding and missing permission
   state failures retain their own cause; only an explicit false Accessibility

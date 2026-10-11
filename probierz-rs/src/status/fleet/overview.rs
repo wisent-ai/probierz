@@ -2,77 +2,7 @@
 
 use crate::status::*;
 
-pub(crate) fn violations_for(root: &str) -> Value {
-    let output = Command::new("tama")
-        .args(["violations", "find", "--repo", root, "--json"])
-        .output();
-    let output = match output {
-        Ok(output) => output,
-        Err(error) => {
-            return json!({ "error": format!("tama violations find cannot be run: {error}") })
-        }
-    };
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !output.status.success() && !stdout.trim().starts_with('{') {
-        return json!({
-            "error": format!(
-                "tama violations find for {root} {}; stdout: {stdout}; stderr: {stderr}",
-                crate::failure::ended(&output.status)
-            )
-        });
-    }
-    let report = match serde_json::from_str::<Value>(&stdout) {
-        Ok(report) => report,
-        Err(error) => {
-            return json!({
-                "error": format!(
-                    "tama violations find for {root} {}: invalid JSON: {error}; stdout: {stdout}; stderr: {stderr}",
-                    crate::failure::ended(&output.status)
-                )
-            });
-        }
-    };
-    // Tama's `--json` answer is `ScanJsonOutput` (tama-violations
-    // scan_repos): `repos` of `ScanReport`, each with required `violations`,
-    // `skippedFiles` and `errors` arrays, plus `problems` naming targets that
-    // could not be scanned. A report missing any of them is a scan that did
-    // not answer, not a clean repository: counting the absent array as zero
-    // showed a failed discovery as no violations.
-    let refused = |cause: String| {
-        json!({
-            "error": format!(
-                "tama violations find for {root} {}: {cause}; stdout: {stdout}; stderr: {stderr}",
-                crate::failure::ended(&output.status)
-            )
-        })
-    };
-    match report.get("problems").and_then(Value::as_array) {
-        None => return refused("the report has no problems array".to_string()),
-        Some(problems) if !problems.is_empty() => {
-            return refused(format!(
-                "the scan reported problems {}",
-                Value::Array(problems.clone())
-            ))
-        }
-        Some(_) => {}
-    }
-    let Some(repo) = report.pointer("/repos/0") else {
-        return refused("the report holds no repository".to_string());
-    };
-    let count = |field: &str| {
-        repo.get(field)
-            .and_then(Value::as_array)
-            .map(Vec::len)
-            .ok_or_else(|| format!("the repository report has no {field} array"))
-    };
-    match (count("violations"), count("skippedFiles"), count("errors")) {
-        (Ok(violations), Ok(skipped), Ok(errors)) => {
-            json!({ "violations": violations, "skipped": skipped, "errors": errors })
-        }
-        (Err(cause), _, _) | (_, Err(cause), _) | (_, _, Err(cause)) => refused(cause),
-    }
-}
+mod scanner;
 
 pub(crate) fn fleet_failure(point: &str, code: &str, detail: &str, message: &str) -> Value {
     let (severity, retryable, outage) = code_meaning(code);
@@ -206,7 +136,12 @@ pub(crate) fn overview_value(
             "eligible": value_or(status.pointer("/mergeEligibility/eligible"), Value::Bool(false)),
             "blockingReasons": value_or(status.pointer("/mergeEligibility/blockingReasons"), json!([])),
             "violations": if include_violations {
-                root.map(violations_for).unwrap_or_else(|| json!({ "error": "no repository root" }))
+                match root {
+                    Some(root) => scanner::violations_for(root),
+                    None => json!({
+                        "error": format!("cannot scan {app_id}: application status has no /repositories/0/root; Tama requires the declared repository path")
+                    }),
+                }
             } else { Value::Null },
         }));
     }
