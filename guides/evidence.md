@@ -45,6 +45,12 @@ the cleanup result. If recording that failure also fails, the command reports
 both the runner cause and the persistence cause; neither is replaced with a
 successful or empty run result.
 
+The runner's process wait uses Stado's shared wait diagnostics: standard error
+names the target, harness directory and process before waiting, then reports
+completion or the actual operating-system cause. Both owned output drains are
+joined before a process-wait error is returned. The persisted `run.wait` failure
+includes the target and process identity; it is not a product assertion result.
+
 Seed and cleanup commands fail when their captured output cannot be retained,
 even if the child exits successfully. The result names the affected stdout or
 stderr path and filesystem cause alongside any capture or child-exit failure.

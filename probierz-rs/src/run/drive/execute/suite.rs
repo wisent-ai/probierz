@@ -158,12 +158,22 @@ pub(crate) fn execute_suite(
     };
     // The runner runs to its own end. Its exit status is its result; nothing
     // here decides it took too long.
-    let status = child
-        .wait()
-        .map_err(|error| Failure::unavailable("run.wait", error.to_string()))?;
+    let runner_pid = child.id();
+    let waited = stado_wait::child_output(
+        child,
+        format!("waiting for {target_name} runner in {}", harness.display()),
+    );
     let wall = started.elapsed().as_secs_f64();
     let (safe_out, first_out) = out_thread.join().unwrap_or_default();
     let (safe_err, first_err) = err_thread.join().unwrap_or_default();
+    let status = waited
+        .map_err(|error| {
+            Failure::unavailable(
+                "run.wait",
+                format!("Waiting for {target_name} runner process {runner_pid} failed: {error}"),
+            )
+        })?
+        .status;
     let first_output_ms = match (first_out, first_err) {
         (Some(left), Some(right)) => Some(left.min(right)),
         (left, right) => left.or(right),

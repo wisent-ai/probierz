@@ -67,6 +67,7 @@ ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 ureq = { version = "2", features = ["json"] }
 fs2 = "0.4.3"
+stado-wait = { git = "https://github.com/wisent-ai/stado.git", rev = "692c0438d24117735c61373c0c178f1c1e21b080" }
 
 [dev-dependencies]
 tempfile = "3"
