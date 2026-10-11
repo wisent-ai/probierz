@@ -168,16 +168,43 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
             }));
         }
     }
+    // A diagnostics log that could not be listed or read is a crash source
+    // whose content is unknown: it is entered with its error, where it used to
+    // be skipped and the crash list read as complete.
     let directory = artifacts.join("diagnostics");
-    if let Ok(entries) = fs::read_dir(directory) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_file() || path.extension().and_then(|value| value.to_str()) != Some("log") {
-                continue;
-            }
-            if let Ok(content) = fs::read_to_string(&path) {
-                for line in content.lines().filter(|line| error_line(line)) {
-                    crashes.push(json!({ "source": path, "message": safe_message(line) }));
+    match fs::read_dir(&directory) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => crashes.push(json!({
+            "source": directory,
+            "error": format!("diagnostics directory cannot be listed: {error}")
+        })),
+        Ok(entries) => {
+            for entry in entries {
+                let path = match entry {
+                    Ok(entry) => entry.path(),
+                    Err(error) => {
+                        crashes.push(json!({
+                            "source": directory,
+                            "error": format!("a diagnostics entry cannot be read: {error}")
+                        }));
+                        continue;
+                    }
+                };
+                if !path.is_file()
+                    || path.extension().and_then(|value| value.to_str()) != Some("log")
+                {
+                    continue;
+                }
+                match fs::read_to_string(&path) {
+                    Ok(content) => {
+                        for line in content.lines().filter(|line| error_line(line)) {
+                            crashes.push(json!({ "source": path, "message": safe_message(line) }));
+                        }
+                    }
+                    Err(error) => crashes.push(json!({
+                        "source": path,
+                        "error": format!("diagnostics log cannot be read: {error}")
+                    })),
                 }
             }
         }
@@ -213,15 +240,38 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
         .map(|event| js_number(event.get("durationMs")))
         .filter(|value| *value > 0.0)
         .collect();
-    let process = fs::read(artifacts.join("performance.json"))
-        .ok()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
-    let process_summary = process.as_ref().map(|value| json!({ "firstOutputMs": value["firstOutputMs"], "peakRssKb": value["peakRssKb"], "averageCpuPercent": value["averageCpuPercent"], "appProcessName": value["appProcessName"], "appPeakRssKb": value["appPeakRssKb"], "appAverageCpuPercent": value["appAverageCpuPercent"] })).unwrap_or(Value::Null);
+    let process_summary = performance_summary(&artifacts.join("performance.json"));
     let result = json!({ "schemaVersion": 1, "runId": report.pointer("/probierz/runId").cloned().unwrap_or(Value::Null), "crashes": crashes, "networkErrors": network_errors, "consoleErrors": console_errors, "performance": { "tests": { "count": assertions.len(), "p50Ms": percentile(assertions.clone(), 0.5), "p95Ms": percentile(assertions.clone(), 0.95), "maxMs": assertions.iter().copied().max_by(f64::total_cmp).map(number).unwrap_or(Value::Null) }, "network": { "count": durations.len(), "p50Ms": percentile(durations.clone(), 0.5), "p95Ms": percentile(durations.clone(), 0.95), "maxMs": durations.iter().copied().max_by(f64::total_cmp).map(number).unwrap_or(Value::Null) }, "process": process_summary } });
     let file = artifacts.join("diagnostics.json");
-    let _ = write_json(&file, &result);
     let mut returned = Map::new();
     returned.insert("file".into(), json!(file));
+    if let Err(error) = write_json(&file, &result) {
+        returned.insert("fileError".into(), json!(format!("{error}")));
+    }
     returned.extend(result.as_object().expect("object").clone());
     Value::Object(returned)
+}
+
+/// The run's process performance, `null` when the run recorded none, or the
+/// reason `performance.json` could not be read or parsed - which used to read
+/// as "no performance recorded".
+fn performance_summary(path: &Path) -> Value {
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Value::Null,
+        Err(error) => {
+            return json!({ "error": format!("{} cannot be read: {error}", path.display()) })
+        }
+    };
+    match serde_json::from_slice::<Value>(&bytes) {
+        Ok(value) => json!({
+            "firstOutputMs": value["firstOutputMs"],
+            "peakRssKb": value["peakRssKb"],
+            "averageCpuPercent": value["averageCpuPercent"],
+            "appProcessName": value["appProcessName"],
+            "appPeakRssKb": value["appPeakRssKb"],
+            "appAverageCpuPercent": value["appAverageCpuPercent"]
+        }),
+        Err(error) => json!({ "error": format!("{} is not JSON: {error}", path.display()) }),
+    }
 }
