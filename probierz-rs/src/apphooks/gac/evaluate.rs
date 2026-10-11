@@ -49,15 +49,20 @@ pub(crate) fn gac_visual_eval(
             "models.brama.{url,key} missing from pipeline config (skarbiec:// refs)",
         ));
     }
+    // An entry that cannot be read is refused with the directory, not
+    // skipped: skipped, its model was left out of the evaluation unnoticed.
+    let listing_failed = |error: std::io::Error| {
+        Failure::config(
+            "apphook.gac.visual-eval",
+            format!("{}: {error}", models.display()),
+        )
+    };
     let mut glbs: Vec<PathBuf> = fs::read_dir(&models)
-        .map_err(|error| {
-            Failure::config(
-                "apphook.gac.visual-eval",
-                format!("{}: {error}", models.display()),
-            )
-        })?
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
+        .map_err(listing_failed)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(listing_failed)?
+        .into_iter()
         .filter(|path| path.extension().and_then(|extension| extension.to_str()) == Some("glb"))
         .collect();
     glbs.sort();
