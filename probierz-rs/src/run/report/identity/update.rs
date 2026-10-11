@@ -1,6 +1,5 @@
-//! The run record's merge. `identity/mod.rs` re-exports this `update_json`
-//! by name, so it shadows the lossy one left in `records.rs` for every
-//! caller of `crate::run::*`.
+//! The run record's merge: the one `update_json` every caller of
+//! `crate::run::*` writes a run manifest through.
 
 use crate::run::*;
 use serde_json::json;

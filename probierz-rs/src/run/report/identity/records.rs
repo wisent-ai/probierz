@@ -34,16 +34,6 @@ impl Mode600 for OpenOptions {
     }
 }
 
-pub(crate) fn update_json(file: &Path, patch: &Value) -> Result<(), Failure> {
-    let mut current: Value = fs::read(file)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-        .unwrap_or_else(|| json!({}));
-    if let (Some(target), Some(values)) = (current.as_object_mut(), patch.as_object()) {
-        target.extend(values.clone());
-    }
-    write_json(file, &current)
-}
 pub(crate) fn artifact_hashes(directory: &Path, manifest_path: &Path) -> Result<Value, Failure> {
     let mut values = Vec::new();
     for file in walk(directory, true)
@@ -101,9 +91,33 @@ pub(crate) fn redact_text(value: &str, secrets: &[(String, String)]) -> String {
     for (name, secret) in secrets {
         safe = safe.replace(secret, &format!("[REDACTED:{name}]"));
     }
-    let expression = Regex::new(r"(?i)((?:AUTH|COOKIE|CREDENTIAL|EMAIL|GMAIL|KEY|OTP|PASSWORD|SECRET|SESSION|TOKEN)[A-Z0-9_]*\s*[=:]\s*)[^\s,;]+").expect("regex");
-    safe = expression.replace_all(&safe, "$1[REDACTED]").into_owned();
-    Regex::new(r#"(?i)("(?:auth|cookie|credential|email|gmail|key|otp|password|secret|session|token)[^"]*"\s*:\s*")[^"]*""#).expect("regex").replace_all(&safe, "$1[REDACTED]\"").into_owned()
+    // `NAME=value`, `NAME: value` and `"name": "value"` whose name the one
+    // secret-name declaration (`sensitive_key`) marks: the value is replaced.
+    let assignment = Regex::new(
+        r"(?P<whole>\b(?P<name>[A-Za-z][A-Za-z0-9_]*)(?P<separator>\s*[=:]\s*)[^\s,;]+)",
+    )
+    .expect("regex");
+    safe = assignment
+        .replace_all(&safe, |found: &regex::Captures<'_>| {
+            match sensitive_key(&found["name"]) {
+                true => format!("{}{}[REDACTED]", &found["name"], &found["separator"]),
+                false => found["whole"].to_string(),
+            }
+        })
+        .into_owned();
+    let field =
+        Regex::new(r#"(?P<whole>"(?P<name>[^"]*)"(?P<separator>\s*:\s*)"[^"]*")"#).expect("regex");
+    field
+        .replace_all(&safe, |found: &regex::Captures<'_>| {
+            match sensitive_key(&found["name"]) {
+                true => format!(
+                    "\"{}\"{}\"[REDACTED]\"",
+                    &found["name"], &found["separator"]
+                ),
+                false => found["whole"].to_string(),
+            }
+        })
+        .into_owned()
 }
 pub(crate) fn stamped(value: &str) -> String {
     let stamp = now_iso();
