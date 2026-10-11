@@ -186,7 +186,10 @@ pub(crate) fn find_named_file(root: &Path, name: &str) -> Result<Option<PathBuf>
                 format!("cannot read an entry of {}: {error}", directory.display())
             })?;
             let path = entry.path();
-            if path.is_dir() {
+            let metadata = fs::metadata(&path).map_err(|error| {
+                format!("cannot inspect {}: {error}", path.display())
+            })?;
+            if metadata.is_dir() {
                 pending.push(path);
             } else if path.file_name().and_then(OsStr::to_str) == Some(name) {
                 return Ok(Some(path));

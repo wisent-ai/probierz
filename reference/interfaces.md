@@ -61,6 +61,10 @@ Every way into Probierz, and what each one is allowed to do.
   ending the process; no files change. A wrong option to either command, or
   to `probierz project adoptions`, is an `invalid` failure at
   `adoption.arguments` naming the option, not a clap exit.
+  Searching for a recorded specification distinguishes absence from failed
+  directory listing, entry inspection and metadata access. A failed search
+  retains the affected path and operating-system cause in the repair brief
+  and refuses a specification repair rather than claiming no file exists.
 - **Run and CI refusals:** a `tui`, `desktop:cua` or `web` journey whose runner
   ends unsuccessfully returns a `refused` failure with its report, and the CLI
   exits with the runner's own status. A skipped `probierz run` refuses with the
