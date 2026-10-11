@@ -54,7 +54,11 @@ pub(crate) fn zip_entries(file: &Path) -> Result<Vec<(String, String)>, String> 
                 .map_err(|error| error.to_string())?;
             Some(decoded)
         } else {
-            None
+            // Skipped, a trace stored with another method vanished from the
+            // report as if the run had recorded nothing.
+            return Err(format!(
+                "zip entry {name} uses compression method {method}, which this reader does not decode"
+            ));
         };
         if let Some(content) = content {
             entries.push((name, String::from_utf8_lossy(&content).into_owned()));
