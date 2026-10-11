@@ -4,13 +4,16 @@ use std::{env, fs, path::PathBuf, time::SystemTime};
 
 #[test]
 fn manifest_updates_preserve_failed_inputs_and_recover() {
-    let revision = env::var("PROBIERZ_TEST_SOURCE_REVISION").expect("candidate revision is required");
+    let revision =
+        env::var("PROBIERZ_TEST_SOURCE_REVISION").expect("candidate revision is required");
     let fixture = PathBuf::from(
         env::var("PROBIERZ_TEST_RUN_MANIFEST").expect("real run manifest is required"),
     );
     let original = fs::read(&fixture).expect("read genuine run manifest");
     let document: Value = serde_json::from_slice(&original).expect("decode genuine run manifest");
-    let object = document.as_object().expect("real manifest must be an object");
+    let object = document
+        .as_object()
+        .expect("real manifest must be an object");
     let identity = document
         .get("runId")
         .and_then(Value::as_str)
@@ -25,7 +28,8 @@ fn manifest_updates_preserve_failed_inputs_and_recover() {
     let directory = root.join(format!("{}-{nonce}", std::process::id()));
     fs::create_dir(&directory).expect("create isolated evidence directory");
     let path = directory.join("run-manifest.json");
-    let mut report = serde_json::json!({"revision": revision, "fixture": fixture, "diagnostics": []});
+    let mut report =
+        serde_json::json!({"revision": revision, "fixture": fixture, "diagnostics": []});
     let mut diagnostics = Vec::new();
 
     update_json(&path, &document).expect("initialize a missing manifest");
