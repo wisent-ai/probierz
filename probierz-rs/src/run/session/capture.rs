@@ -17,6 +17,7 @@ pub(crate) fn capture(
     let mut command = Command::new(program);
     command
         .args(args)
+        .stdin(Stdio::inherit())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     if let Some(cwd) = cwd {
@@ -30,45 +31,25 @@ pub(crate) fn capture(
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    let mut child = match command.spawn() {
-        Ok(child) => child,
-        Err(error) => {
-            return Captured {
-                status: None,
-                stdout: Vec::new(),
-                stderr: Vec::new(),
-                error: Some(error.to_string()),
-            }
-        }
-    };
-    let mut stdout = child.stdout.take();
-    let mut stderr = child.stderr.take();
-    let out_thread = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        if let Some(ref mut stream) = stdout {
-            let _ = stream.read_to_end(&mut bytes);
-        }
-        bytes
-    });
-    let err_thread = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        if let Some(ref mut stream) = stderr {
-            let _ = stream.read_to_end(&mut bytes);
-        }
-        bytes
-    });
-    let status = match child.wait() {
-        Ok(status) => Some(status),
-        Err(_error) => {
-            let _ = child.kill();
-            None
-        }
-    };
-    Captured {
-        status,
-        stdout: out_thread.join().unwrap_or_default(),
-        stderr: err_thread.join().unwrap_or_default(),
-        error: None,
+    match stado_wait::output(&mut command) {
+        Ok(output) => Captured {
+            status: Some(output.status),
+            stdout: output.stdout,
+            stderr: output.stderr,
+            error: None,
+        },
+        Err(error) => Captured {
+            status: None,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            error: Some(format!(
+                "cannot capture {program} in {}: {error}",
+                match cwd {
+                    Some(path) => path.display().to_string(),
+                    None => "the caller's directory".to_string(),
+                }
+            )),
+        },
     }
 }
 

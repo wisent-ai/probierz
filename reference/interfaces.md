@@ -144,6 +144,13 @@ Every way into Probierz, and what each one is allowed to do.
   the requested repository must be returned: missing or multiple repository
   records, absent paths, failed canonical-path resolution and mismatched
   resolved paths are refused with the observed report and actual cause.
+- **Captured dependency commands:** child output is collected through the shared
+  Stado process wait, which announces the command and working directory.
+  Launch, stream-read and process-wait failures remain capture errors with
+  the actual operating-system cause; they are not successful empty output.
+  The command retains its configured environment, working directory and
+  inherited input. Successful capture retains both streams and the real
+  child status, including unsuccessful exits.
 - **Native driver refusals:** an existing CuaDriver socket is probed once.
   Executable, socket-inspection, child-exit, JSON decoding and missing permission
   state failures retain their own cause; only an explicit false Accessibility
