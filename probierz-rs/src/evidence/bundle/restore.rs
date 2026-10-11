@@ -17,7 +17,7 @@ pub fn restore(
         Ok(value) => {
             let app = value.get("appId").and_then(Value::as_str);
             let run = value.get("runId").and_then(Value::as_str);
-            let _ = audit_access(
+            let written = audit_access(
                 harness,
                 "artifact.restore",
                 "allowed",
@@ -29,10 +29,11 @@ pub fn restore(
                     "files": value.get("files").cloned().unwrap_or(Value::Null),
                 }),
             );
-            print_json(&value)
+            print_json(&value)?;
+            allowed_audit_written("artifact.restore", written)
         }
         Err(error) => {
-            let _ = audit_access(
+            let written = audit_access(
                 harness,
                 "artifact.restore",
                 "denied",
@@ -43,7 +44,7 @@ pub fn restore(
                     "destination": destination.to_string_lossy(), "error": error.detail,
                 }),
             );
-            Err(error)
+            Err(refusal_audited(error, written))
         }
     }
 }

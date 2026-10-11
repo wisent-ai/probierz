@@ -76,37 +76,62 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
         .iter()
         .filter(|item| item.get("expired").and_then(Value::as_bool) == Some(true))
         .count();
+    // A removal that failed used to be listed as removed anyway; it is listed
+    // under notRemoved with its error, and the command fails after answering.
     let mut removed = Vec::new();
+    let mut not_removed = Vec::new();
     if apply {
         for item in items
             .iter()
             .filter(|item| item.get("expired").and_then(Value::as_bool) == Some(true))
         {
-            let path = PathBuf::from(item.get("path").and_then(Value::as_str).unwrap_or_default());
-            if item.get("type").and_then(Value::as_str) == Some("run") {
-                let _ = fs::remove_dir_all(&path);
+            let Some(text) = item.get("path").and_then(Value::as_str) else {
+                not_removed
+                    .push(json!({ "item": item, "error": "the expired item names no path" }));
+                continue;
+            };
+            let path = PathBuf::from(text);
+            let outcome = if item.get("type").and_then(Value::as_str) == Some("run") {
+                fs::remove_dir_all(&path)
             } else {
-                let _ = fs::remove_file(&path);
+                fs::remove_file(&path)
+            };
+            match outcome {
+                Ok(()) => removed.push(json!(path.to_string_lossy())),
+                Err(error) => not_removed
+                    .push(json!({ "path": path.to_string_lossy(), "error": error.to_string() })),
             }
-            removed.push(json!(path.to_string_lossy()));
         }
     }
     let at_text = at.to_rfc3339_opts(SecondsFormat::Millis, true);
-    let _ = audit_access(
+    let action = if apply {
+        "retention.apply"
+    } else {
+        "retention.plan"
+    };
+    let written = audit_access(
         harness,
-        if apply {
-            "retention.apply"
-        } else {
-            "retention.plan"
-        },
+        action,
         "allowed",
         Some(app_id),
         None,
         None,
-        json!({ "expired": expired, "removed": removed.len(), "at": at_text }),
+        json!({ "expired": expired, "removed": removed.len(), "notRemoved": not_removed.len(), "at": at_text }),
     );
     print_json(&json!({
         "schemaVersion": 1, "appId": app_id, "at": at_text, "expired": expired, "items": items,
-        "applied": apply, "removed": removed,
-    }))
+        "applied": apply, "removed": removed, "notRemoved": not_removed,
+    }))?;
+    allowed_audit_written(action, written)?;
+    if !not_removed.is_empty() {
+        return Err(Failure::new(
+            "evidence.retention",
+            crate::failure::Code::Unknown,
+            format!(
+                "{} expired evidence path(s) could not be removed; notRemoved names each with its error",
+                not_removed.len()
+            ),
+        ));
+    }
+    Ok(())
 }

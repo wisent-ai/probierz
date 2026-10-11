@@ -28,7 +28,7 @@ pub fn protect(
     match result {
         Ok(value) => {
             let resource = value.get("file").and_then(Value::as_str).map(Path::new);
-            let _ = audit_access(
+            let written = audit_access(
                 harness,
                 "artifact.protect",
                 "allowed",
@@ -37,10 +37,11 @@ pub fn protect(
                 resource,
                 json!({ "removePlaintext": remove_source, "bundleSha256": value.get("sha256").cloned().unwrap_or(Value::Null) }),
             );
-            print_json(&value)
+            print_json(&value)?;
+            allowed_audit_written("artifact.protect", written)
         }
         Err(error) => {
-            let _ = audit_access(
+            let written = audit_access(
                 harness,
                 "artifact.protect",
                 "denied",
@@ -49,7 +50,7 @@ pub fn protect(
                 None,
                 json!({ "error": error.detail }),
             );
-            Err(error)
+            Err(refusal_audited(error, written))
         }
     }
 }
