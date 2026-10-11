@@ -108,12 +108,22 @@ pub(crate) fn render_with_blender_session(
         ));
     }
     const ADAPTER: &str = r#"import { pathToFileURL } from 'node:url';
-pub(crate) const decode = value => Buffer.from(value, 'base64').toString('utf8');
-pub(crate) const [modulePath, config, ...codes] = process.argv.slice(1);
-pub(crate) const { BlenderSession } = await import(pathToFileURL(modulePath));
-pub(crate) const session = await BlenderSession.start(JSON.parse(decode(config)));
-try { for (const code of codes) await session.execute(decode(code)); }
-finally { await session.close().catch(() => {}); }"#;
+const decode = value => Buffer.from(value, 'base64').toString('utf8');
+const [modulePath, config, ...codes] = process.argv.slice(1);
+const { BlenderSession } = await import(pathToFileURL(modulePath));
+const session = await BlenderSession.start(JSON.parse(decode(config)));
+let executed = false;
+try {
+  for (const code of codes) await session.execute(decode(code));
+  executed = true;
+} finally {
+  // A close that fails leaves Blender running: it is said, and it fails a run
+  // that otherwise succeeded; an earlier error is not replaced by it.
+  await session.close().catch((error) => {
+    console.error(`Blender MCP session close failed, Blender may still be running: ${error.message}`);
+    if (executed) throw error;
+  });
+}"#;
     let encode = |bytes: &[u8]| base64::engine::general_purpose::STANDARD.encode(bytes);
     let mut command = Command::new("node");
     command.args(["--input-type=module", "--eval", ADAPTER]);
