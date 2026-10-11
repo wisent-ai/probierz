@@ -42,6 +42,14 @@ Every way into Probierz, and what each one is allowed to do.
   path and actual cause. Evidence directory and entry-read failures also name
   the affected path instead of silently excluding runs; only a missing
   evidence directory or manifest counts as absent.
+  `tests/gate/run-evidence.rs` exercises the real filesystem reader and scan
+  using `PROBIERZ_TEST_RUN_MANIFEST` and `PROBIERZ_TEST_SOURCE_REVISION`.
+  Run `gate_evidence_preserves_read_failures_and_recovers` in the binary test
+  target with a runner that binds the source revision to that executable.
+  It retains malformed-manifest, non-directory root and direct read-failure
+  causes, verifies preservation and recovery, and writes evidence under
+  `probierz-rs/target/real-tests/gate-evidence/`. Full CLI gate evaluation and
+  graphical qualification remain separate from this filesystem journey.
 - **Matrix refusals:** a completed matrix that fails its verdict returns a
   `refused` failure with its complete cell results, evidence requirement and
   summary. `probierz_run_matrix` does not terminate the MCP server when a

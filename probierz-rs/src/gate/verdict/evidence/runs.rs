@@ -201,3 +201,7 @@ pub(crate) fn normalize_absolute(path: &Path) -> PathBuf {
     }
     normalized
 }
+
+#[cfg(test)]
+#[path = "../../../../../tests/gate/run-evidence.rs"]
+mod tests;
