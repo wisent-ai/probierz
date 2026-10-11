@@ -2,7 +2,7 @@
 // Analyze an actual recorded product run, then a damaged copy of its recording.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -90,6 +90,21 @@ try {
   const diagnostic = `${refused.stdout}\n${refused.stderr}`;
   assert.ok(diagnostic.includes(damaged));
   assert.ok(diagnostic.includes('ffprobe'));
+  rmSync(damaged);
+  const missingOptional = run(binary, ['analyze', damagedReport]);
+  assert.equal(missingOptional.status, version.status, missingOptional.stderr);
+  const missingMedia = JSON.parse(missingOptional.stdout).media.find(item => item.file === damaged);
+  assert.equal(missingMedia?.missing, true);
+  assert.ok(missingMedia.recordingError.includes(damaged));
+  const missingRefusal = run(binary, ['analyze', damagedReport, join(evidence, 'missing'), '--frames', frames]);
+  assert.ok(missingRefusal.status !== null && missingRefusal.status !== version.status,
+    'explicit extraction must refuse a missing recording');
+  assert.ok(`${missingRefusal.stdout}\n${missingRefusal.stderr}`.includes(missingMedia.recordingError),
+    'explicit extraction must preserve the actual probe failure');
+  const recovered = run(binary, ['analyze', reportPath, join(evidence, 'recovered'), '--frames', frames]);
+  assert.equal(recovered.status, version.status, recovered.stderr);
+  const recoveredVideo = JSON.parse(recovered.stdout).media.find(item => item.file === video.file);
+  assert.deepEqual(recoveredVideo.recording, video.recording);
   assert.equal(digest(reportPath), record.inputReportSha256, 'the original run report stays unchanged');
   assert.equal(digest(video.file), record.recording.sha256, 'the original recording stays unchanged');
   record.passed = true;
