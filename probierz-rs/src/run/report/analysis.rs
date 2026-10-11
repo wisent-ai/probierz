@@ -58,15 +58,21 @@ pub(crate) fn analyze_run(
         if path.exists() {
             entry.insert("sizeKb".into(), json!(size_kb(&path)));
             if kind == "video" {
-                if let Some(meta) = probe_video(&path) {
-                    entry.insert("recording".into(), meta);
-                }
-                if frames > 0.0 {
-                    if let Some(artifacts) = artifacts_dir {
-                        entry.insert(
-                            "frames".into(),
-                            json!(extract_frames(&path, artifacts, frames)),
-                        );
+                let extraction_requested = frames > 0.0;
+                match probe_video(&path) {
+                    Ok(meta) => {
+                        if extraction_requested {
+                            if let Some(artifacts) = artifacts_dir {
+                                let extracted = extract_frames(&path, artifacts, frames, &meta)
+                                    .map_err(|error| fail("run.analyze", error))?;
+                                entry.insert("frames".into(), json!(extracted));
+                            }
+                        }
+                        entry.insert("recording".into(), meta);
+                    }
+                    Err(error) if extraction_requested => return Err(fail("run.analyze", error)),
+                    Err(error) => {
+                        entry.insert("recordingError".into(), Value::String(error));
                     }
                 }
             }

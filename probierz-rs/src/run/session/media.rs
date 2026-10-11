@@ -58,15 +58,32 @@ pub(crate) fn size_kb(path: &Path) -> Option<u64> {
     }
 }
 
-pub(crate) fn has_media_binary(name: &str) -> bool {
-    successful(name, &["-version"])
+fn media_output(program: &str, args: &[String], file: &Path) -> Result<Vec<u8>, String> {
+    let result = capture(program, args, None, None);
+    if let Some(error) = result.error {
+        return Err(format!(
+            "{program} {}: {error}; stderr: {}",
+            file.display(),
+            text(&result.stderr)
+        ));
+    }
+    match result.status {
+        Some(status) if status.success() => Ok(result.stdout),
+        Some(status) => Err(format!(
+            "{program} {}: {status}; stderr: {}",
+            file.display(),
+            text(&result.stderr)
+        )),
+        None => Err(format!(
+            "{program} {}: no exit status; stderr: {}",
+            file.display(),
+            text(&result.stderr)
+        )),
+    }
 }
 
-pub(crate) fn probe_video(file: &Path) -> Option<Value> {
-    if !has_media_binary("ffprobe") {
-        return None;
-    }
-    let result = capture(
+pub(crate) fn probe_video(file: &Path) -> Result<Value, String> {
+    let output = media_output(
         "ffprobe",
         &[
             "-v".into(),
@@ -79,48 +96,76 @@ pub(crate) fn probe_video(file: &Path) -> Option<Value> {
             "json".into(),
             file.to_string_lossy().into_owned(),
         ],
-        None,
-        None,
-    );
-    if !result.status.is_some_and(|status| status.success()) || result.stdout.is_empty() {
-        return None;
-    }
-    let document: Value = serde_json::from_slice(&result.stdout).ok()?;
+        file,
+    )?;
+    let document: Value = serde_json::from_slice(&output)
+        .map_err(|error| format!("decode ffprobe output for {}: {error}", file.display()))?;
     let stream = document
         .get("streams")
         .and_then(Value::as_array)
         .and_then(|streams| streams.first())
-        .cloned()
-        .unwrap_or_else(|| json!({}));
-    let duration = document
-        .pointer("/format/duration")
-        .and_then(Value::as_str)
-        .and_then(|value| value.parse::<f64>().ok())
-        .map(number)
-        .unwrap_or(Value::Null);
-    Some(
-        json!({ "durationSec": duration, "width": stream.get("width").cloned().unwrap_or(Value::Null), "height": stream.get("height").cloned().unwrap_or(Value::Null) }),
-    )
+        .ok_or_else(|| format!("ffprobe {} returned no video stream", file.display()))?;
+    let duration = match document.pointer("/format/duration") {
+        None => Value::Null,
+        Some(value) => {
+            let duration = value
+                .as_str()
+                .ok_or_else(|| {
+                    format!(
+                        "ffprobe {} returned a non-text duration: {value}",
+                        file.display()
+                    )
+                })?
+                .parse::<f64>()
+                .map_err(|error| format!("decode ffprobe duration for {}: {error}", file.display()))?;
+            if !duration.is_finite() {
+                return Err(format!(
+                    "ffprobe {} returned non-finite duration: {value}",
+                    file.display()
+                ));
+            }
+            number(duration)
+        }
+    };
+    Ok(json!({ "durationSec": duration, "width": stream.get("width"), "height": stream.get("height") }))
 }
 
-pub(crate) fn extract_frames(video: &Path, artifacts: &Path, count: f64) -> Vec<PathBuf> {
+pub(crate) fn extract_frames(
+    video: &Path,
+    artifacts: &Path,
+    count: f64,
+    metadata: &Value,
+) -> Result<Vec<PathBuf>, String> {
     let stem = video
         .file_stem()
-        .and_then(|value| value.to_str())
-        .unwrap_or("");
+        .ok_or_else(|| format!("recording {} has no file stem", video.display()))?;
     let output = artifacts.join("frames").join(stem);
-    let _ = fs::remove_dir_all(&output);
-    if !has_media_binary("ffmpeg") {
-        return Vec::new();
-    }
-    let _ = fs::create_dir_all(&output);
-    let duration = probe_video(video)
-        .and_then(|meta| meta.get("durationSec").and_then(Value::as_f64))
-        .unwrap_or(0.0);
+    let duration = metadata
+        .get("durationSec")
+        .and_then(Value::as_f64)
+        .filter(|duration| *duration > 0.0)
+        .ok_or_else(|| {
+            format!(
+                "ffprobe {} did not report a positive recording duration",
+                video.display()
+            )
+        })?;
     let n = count.max(1.0);
-    let fps = if duration > 0.0 { n / duration } else { 1.0 };
+    let fps = n / duration;
+    match fs::remove_dir_all(&output) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!(
+                "remove frame directory {}: {error}",
+                output.display()
+            ));
+        }
+    }
+    fs::create_dir_all(&output)
+        .map_err(|error| format!("create frame directory {}: {error}", output.display()))?;
     let pattern = output.join("frame_%03d.png");
-    let result = capture(
+    media_output(
         "ffmpeg",
         &[
             "-y".into(),
@@ -130,13 +175,22 @@ pub(crate) fn extract_frames(video: &Path, artifacts: &Path, count: f64) -> Vec<
             format!("fps={fps}"),
             pattern.to_string_lossy().into_owned(),
         ],
-        None,
-        None,
-    );
-    if !result.status.is_some_and(|status| status.success()) {
-        return Vec::new();
+        video,
+    )?;
+    let mut frames = fs::read_dir(&output)
+        .map_err(|error| format!("list extracted frames in {}: {error}", output.display()))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("read extracted frame entry in {}: {error}", output.display()))?;
+    frames.sort();
+    if frames.is_empty() {
+        return Err(format!(
+            "ffmpeg {} exited successfully but produced no frames in {}",
+            video.display(),
+            output.display()
+        ));
     }
-    walk(&output, true)
+    Ok(frames)
 }
 
 pub(crate) fn number(value: f64) -> Value {
