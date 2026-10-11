@@ -31,6 +31,9 @@ Native ScreenCaptureKit failures retain the recorder's complete UTF-8 stderr in
 Multibyte characters split across pipe chunks are decoded as one stream. This
 diagnostic is not proof of a usable recording; capture errors still prevent
 evidence qualification.
+Termination reports preserve the actual signal or numeric exit status. Stderr is
+represented as its complete JSON-quoted string, including `""` when the child
+wrote nothing; a missing status is not printed as a numeric exit or success.
 
 ## Failure ownership
 

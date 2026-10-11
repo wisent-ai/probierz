@@ -34,8 +34,9 @@ const specGlob = process.env.PROBIERZ_SPEC
   : ['./test/specs/**/*.e2e.ts'];
 const captureBinary = process.env.PROBIERZ_NATIVE_CAPTURE_BIN
   || resolve(process.cwd(), '../../node_modules/.cache/probierz/screen-capture-kit');
+type CaptureExit = { code: number | null; signal: NodeJS.Signals | null };
 let nativeCapture: ChildProcess | undefined;
-let nativeCaptureClosed: Promise<number | null> | undefined;
+let nativeCaptureClosed: Promise<CaptureExit> | undefined;
 let nativeCaptureFile: string | undefined;
 let nativeCaptureStderr = '';
 
@@ -53,12 +54,12 @@ function startNativeCapture(testTitle: string) {
     '--output', nativeCaptureFile,
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
   nativeCapture = child;
-  const completion = Promise.withResolvers<number | null>();
+  const completion = Promise.withResolvers<CaptureExit>();
   nativeCaptureClosed = completion.promise;
-  child.once('close', completion.resolve);
+  child.once('close', (code, signal) => completion.resolve({ code, signal }));
   child.once('error', (error) => {
     captureErrors.push(`screen-capture-kit spawn failed: ${error.message}`);
-    completion.resolve(null);
+    completion.resolve({ code: null, signal: null });
   });
   child.stderr?.setEncoding('utf8');
   child.stderr?.on('data', (chunk) => {
@@ -77,9 +78,14 @@ async function stopNativeCapture(): Promise<string | undefined> {
   // SIGINT makes the capture finalize its file and exit; its exit status is
   // the answer, and a nonzero one is recorded with the capture's own words.
   child.kill('SIGINT');
-  const code = await closed;
+  const { code, signal } = await closed;
   if (code !== 0) {
-    captureErrors.push(`screen-capture-kit exited ${code}: ${nativeCaptureStderr.trim() || 'no diagnostic'}`);
+    const termination = signal
+      ? `terminated by ${signal}`
+      : code === null
+        ? 'closed without an exit status or termination signal'
+        : `exited ${code}`;
+    captureErrors.push(`screen-capture-kit ${termination}; stderr: ${JSON.stringify(nativeCaptureStderr)}`);
   }
   if (existsSync(file) && statSync(file).size > 0) return file;
   return undefined;
