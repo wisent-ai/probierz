@@ -51,7 +51,18 @@ pub(crate) fn repair_brief(
                 .filter_map(YamlValue::as_str)
         })
         .collect::<Vec<_>>();
-    let spec = recorded_spec_path(harness, run).and_then(|path| fs::read_to_string(path).ok());
+    // A recorded spec that cannot be read is not a missing one: told "no spec
+    // was found", the repair could write a spec over the one it never saw.
+    let spec = match recorded_spec_path(harness, run) {
+        Some(path) => match fs::read_to_string(&path) {
+            Ok(value) => format!("Current Probierz spec:\n{value}"),
+            Err(error) => format!(
+                "The recorded spec {} exists and could not be read ({error}); do not choose spec_fix without it.",
+                path.display()
+            ),
+        },
+        None => "No exact spec file was found.".to_string(),
+    };
     let green = crate::status::run_history_value(
         harness,
         app_id,
@@ -115,8 +126,7 @@ pub(crate) fn repair_brief(
             serde_json::to_string_pretty(evidence.get("failures").unwrap_or(&JsonValue::Null))
                 .unwrap_or_else(|_| "[]".to_string())
         ),
-        spec.map(|value| format!("Current Probierz spec:\n{value}"))
-            .unwrap_or_else(|| "No exact spec file was found.".to_string()),
+        spec,
     ];
     if let Some(prior) = prior {
         sections.push(format!(
