@@ -25,6 +25,9 @@ The canonical overview explains
 Platform diagnostics reject an incomplete capture even when its child exits
 successfully. A failed collector retains its capture cause, redacted stderr
 and observed exit status together; stderr does not replace the capture cause.
+`exitCode` is null when no numeric exit code was observed, including signal
+termination; the diagnostic retains that observed termination separately rather
+than inventing a negative exit code.
 
 Native ScreenCaptureKit failures retain the recorder's complete UTF-8 stderr in
 `probierz.captureErrors`, including an initial cause followed by later output.

@@ -155,7 +155,7 @@ pub(crate) fn collect_platform_diagnostics(
         "supported": true,
         "file": file,
         "ok": ok,
-        "exitCode": result.status.and_then(|status| status.code()).unwrap_or(-1),
+        "exitCode": result.status.and_then(|status| status.code()),
         "error": failure,
     })
 }
