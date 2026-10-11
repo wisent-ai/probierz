@@ -154,7 +154,10 @@ pub(crate) fn contender(
                 return Err(Failure::new(
                     "benchmark.author",
                     Code::Config,
-                    format!("the declared {id} driver {} cannot be read: {error}", program.display()),
+                    format!(
+                        "the declared {id} driver {} cannot be read: {error}",
+                        program.display()
+                    ),
                 ))
             }
         };

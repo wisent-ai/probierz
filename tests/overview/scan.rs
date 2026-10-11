@@ -87,7 +87,10 @@ fn the_scan_is_counted_from_the_canonical_tama_report() {
     let canonical: Value = serde_json::from_slice(&canonical.stdout)
         .expect("Tama must produce its actual scan report");
     assert!(
-        canonical["problems"].as_array().expect("scan problems").is_empty(),
+        canonical["problems"]
+            .as_array()
+            .expect("scan problems")
+            .is_empty(),
         "the canonical scan failed: {canonical}"
     );
     let repositories = canonical["repos"].as_array().expect("scan repositories");
@@ -96,11 +99,17 @@ fn the_scan_is_counted_from_the_canonical_tama_report() {
     };
     assert_eq!(
         Path::new(repository["repo"].as_str().expect("scanned repository"))
-            .canonicalize().expect("resolve scanned repository"),
-        Path::new(root).canonicalize().expect("resolve requested repository")
+            .canonicalize()
+            .expect("resolve scanned repository"),
+        Path::new(root)
+            .canonicalize()
+            .expect("resolve requested repository")
     );
     let count = |field: &str| {
-        repository[field].as_array().expect("required scan array").len() as u64
+        repository[field]
+            .as_array()
+            .expect("required scan array")
+            .len() as u64
     };
     let expected = Counted {
         violations: count("violations"),
@@ -109,7 +118,10 @@ fn the_scan_is_counted_from_the_canonical_tama_report() {
     };
     let observed: Counted = serde_json::from_value(scan(&overview(None)))
         .expect("overview must return complete counts");
-    assert_eq!(observed, expected, "overview must retain the actual Tama counts");
+    assert_eq!(
+        observed, expected,
+        "overview must retain the actual Tama counts"
+    );
 }
 
 #[test]

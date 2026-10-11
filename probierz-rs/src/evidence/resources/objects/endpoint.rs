@@ -55,7 +55,10 @@ fn object_api_url() -> Result<String, Failure> {
     if !home.is_absolute() {
         return Err(Failure::config(
             "objects.config",
-            format!("HOME must be an absolute directory to locate Stado's object API marker, got {}", home.display()),
+            format!(
+                "HOME must be an absolute directory to locate Stado's object API marker, got {}",
+                home.display()
+            ),
         ));
     }
     let marker = home.join(OBJECT_API_MARKER);

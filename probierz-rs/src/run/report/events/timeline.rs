@@ -27,8 +27,16 @@ pub(crate) fn build_timeline(
     let mut diagnostics = Vec::new();
     let fallback = parse_iso(started, &now_iso());
     let mut events = Vec::new();
-    events.extend(log_events(&artifacts.join("stdout.log"), "stdout", &mut diagnostics));
-    events.extend(log_events(&artifacts.join("stderr.log"), "stderr", &mut diagnostics));
+    events.extend(log_events(
+        &artifacts.join("stdout.log"),
+        "stdout",
+        &mut diagnostics,
+    ));
+    events.extend(log_events(
+        &artifacts.join("stderr.log"),
+        "stderr",
+        &mut diagnostics,
+    ));
     let mut cursor = DateTime::parse_from_rfc3339(&fallback)
         .map(|date| date.timestamp_millis())
         .unwrap_or_else(|_| Utc::now().timestamp_millis());

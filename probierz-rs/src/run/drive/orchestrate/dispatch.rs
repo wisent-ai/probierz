@@ -293,8 +293,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         "results": results,
     });
     print_json(&output)?;
-    if !passed {
-        return Err(Failure::new("run.matrix", Code::Refused, output.to_string()));
-    }
-    Ok(())
+    passed
+        .then_some(())
+        .ok_or_else(|| Failure::new("run.matrix", Code::Refused, output.to_string()))
 }
