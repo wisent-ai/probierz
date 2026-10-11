@@ -24,8 +24,18 @@ pub(crate) fn update_json(file: &Path, patch: &Value) -> Result<(), Failure> {
             ))
         }
     };
-    if let (Some(target), Some(values)) = (current.as_object_mut(), patch.as_object()) {
-        target.extend(values.clone());
-    }
+    let target = current.as_object_mut().ok_or_else(|| {
+        Failure::config(
+            "run.record.update",
+            format!("{} must contain a JSON object", file.display()),
+        )
+    })?;
+    let values = patch.as_object().ok_or_else(|| {
+        Failure::config(
+            "run.record.update",
+            format!("{} update patch must be a JSON object", file.display()),
+        )
+    })?;
+    target.extend(values.clone());
     write_json(file, &current)
 }

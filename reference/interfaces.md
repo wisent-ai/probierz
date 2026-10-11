@@ -69,6 +69,11 @@ Every way into Probierz, and what each one is allowed to do.
   `probierz ci` refuses with the whole result when any journey or check failed
   (`refused`) or, otherwise, when any journey was blocked (`prerequisite`).
   None of them ends the process, so the in-process MCP server keeps serving.
+  Run-record updates preserve an existing manifest when it cannot be read,
+  decoded as JSON, or interpreted as an object. The refusal names
+  `run.record.update`, the manifest path and the actual read, decoding or
+  object-shape cause. Only a missing manifest starts an empty object; an
+  invalid patch is refused before writing rather than silently ignored.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;
