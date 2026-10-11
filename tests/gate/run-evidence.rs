@@ -4,7 +4,8 @@ use std::{env, fs, path::PathBuf, time::SystemTime};
 
 #[test]
 fn gate_evidence_preserves_read_failures_and_recovers() {
-    let revision = env::var("PROBIERZ_TEST_SOURCE_REVISION").expect("candidate revision is required");
+    let revision =
+        env::var("PROBIERZ_TEST_SOURCE_REVISION").expect("candidate revision is required");
     let fixture = PathBuf::from(
         env::var("PROBIERZ_TEST_RUN_MANIFEST").expect("genuine run manifest is required"),
     );
@@ -30,7 +31,9 @@ fn gate_evidence_preserves_read_failures_and_recovers() {
     fs::write(&manifest, &original).unwrap();
     let runs = all_runs(&directory, &app).unwrap();
     assert_eq!(
-        runs.iter().map(|run| run.run_id.as_str()).collect::<Vec<_>>(),
+        runs.iter()
+            .map(|run| run.run_id.as_str())
+            .collect::<Vec<_>>(),
         vec![identity]
     );
     let mut malformed = String::from_utf8(original.clone())
@@ -49,7 +52,9 @@ fn gate_evidence_preserves_read_failures_and_recovers() {
     let retained = directory.join("retained-evidence");
     fs::rename(&evidence, &retained).unwrap();
     fs::write(&evidence, &original).unwrap();
-    let cause = fs::read_dir(&evidence).err().expect("file is not a directory");
+    let cause = fs::read_dir(&evidence)
+        .err()
+        .expect("file is not a directory");
     let traversal_error = all_runs(&directory, &app).unwrap_err();
     assert!(traversal_error.contains(&evidence.display().to_string()));
     assert!(traversal_error.contains(&cause.to_string()));
@@ -68,7 +73,10 @@ fn gate_evidence_preserves_read_failures_and_recovers() {
     fs::rename(&saved, &manifest).unwrap();
     let recovered = all_runs(&directory, &app).unwrap();
     assert_eq!(
-        recovered.iter().map(|run| run.run_id.as_str()).collect::<Vec<_>>(),
+        recovered
+            .iter()
+            .map(|run| run.run_id.as_str())
+            .collect::<Vec<_>>(),
         vec![identity]
     );
     assert_eq!(fs::read(&manifest).unwrap(), original);
