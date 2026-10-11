@@ -123,9 +123,17 @@ pub(crate) fn json_trace_events(
     }
 }
 
-pub(crate) fn log_events(file: &Path, source: &str) -> Vec<Value> {
-    let Ok(content) = fs::read_to_string(file) else {
-        return Vec::new();
+/// The timestamped lines of one run log. A log the run did not write has no
+/// events; one that exists and cannot be read is a diagnostic naming it, so
+/// the timeline does not look like a run that printed nothing.
+pub(crate) fn log_events(file: &Path, source: &str, diagnostics: &mut Vec<Value>) -> Vec<Value> {
+    let content = match fs::read_to_string(file) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(error) => {
+            diagnostics.push(json!({ "artifact": file, "error": error.to_string() }));
+            return Vec::new();
+        }
     };
     let fallback = modified_iso(file);
     let expression = Regex::new(r"^(\d{4}-\d{2}-\d{2}T\S+)\s(.*)$").expect("regex");
