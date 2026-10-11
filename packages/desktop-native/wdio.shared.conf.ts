@@ -60,8 +60,9 @@ function startNativeCapture(testTitle: string) {
     captureErrors.push(`screen-capture-kit spawn failed: ${error.message}`);
     completion.resolve(null);
   });
+  child.stderr?.setEncoding('utf8');
   child.stderr?.on('data', (chunk) => {
-    nativeCaptureStderr = (nativeCaptureStderr + String(chunk)).slice(-2000);
+    nativeCaptureStderr += String(chunk);
   });
 }
 

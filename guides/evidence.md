@@ -26,6 +26,12 @@ Platform diagnostics reject an incomplete capture even when its child exits
 successfully. A failed collector retains its capture cause, redacted stderr
 and observed exit status together; stderr does not replace the capture cause.
 
+Native ScreenCaptureKit failures retain the recorder's complete UTF-8 stderr in
+`probierz.captureErrors`, including an initial cause followed by later output.
+Multibyte characters split across pipe chunks are decoded as one stream. This
+diagnostic is not proof of a usable recording; capture errors still prevent
+evidence qualification.
+
 ## Failure ownership
 
 `probierz run TARGET --app APP_ID` records the same `failureOrigin` in its
