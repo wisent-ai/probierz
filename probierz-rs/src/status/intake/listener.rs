@@ -50,10 +50,25 @@ pub(crate) fn intake_token() -> Result<(String, bool, PathBuf), Failure> {
         }
     }
     let file = home_dir().join(".probierz").join("intake-token");
-    if let Ok(existing) = fs::read_to_string(&file) {
-        let existing = existing.trim().to_string();
-        if !existing.is_empty() {
-            return Ok((existing, false, file));
+    // Only a token file that is not there, or holds nothing, is minted anew.
+    // One that exists and cannot be read is refused: replacing it would cut
+    // off every client already paired with the token it holds.
+    match fs::read_to_string(&file) {
+        Ok(existing) => {
+            let existing = existing.trim().to_string();
+            if !existing.is_empty() {
+                return Ok((existing, false, file));
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(Failure::config(
+                "intake.token",
+                format!(
+                    "cannot read the intake token {}, so it is not replaced: {error}",
+                    file.display()
+                ),
+            ))
         }
     }
     let parent = file.parent().unwrap_or(Path::new("."));
