@@ -39,3 +39,7 @@ pub(crate) fn update_json(file: &Path, patch: &Value) -> Result<(), Failure> {
     target.extend(values.clone());
     write_json(file, &current)
 }
+
+#[cfg(test)]
+#[path = "../../../../../tests/records/update.rs"]
+mod tests;

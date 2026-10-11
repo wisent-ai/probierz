@@ -80,6 +80,16 @@ Every way into Probierz, and what each one is allowed to do.
   `run.record.update`, the manifest path and the actual read, decoding or
   object-shape cause. Only a missing manifest starts an empty object; an
   invalid patch is refused before writing rather than silently ignored.
+  `tests/records/update.rs` exercises the actual Rust update boundary against
+  an isolated filesystem and a supplied genuine run manifest. It covers
+  creation, preservation of unrelated fields during merge, malformed JSON,
+  non-object records and patches, an actual read failure, and recovery.
+  Supply `PROBIERZ_TEST_RUN_MANIFEST` and `PROBIERZ_TEST_SOURCE_REVISION`;
+  the qualification runner must bind that revision to the test executable.
+  Run the `manifest_updates_preserve_failed_inputs_and_recover` test in the
+  Probierz binary test target and retain its output and the evidence under
+  `probierz-rs/target/real-tests/manifest-update/`. This filesystem journey
+  does not replace full CLI run lifecycle or native graphical qualification.
 - **Setup refusals:** `probierz setup <target>` and `probierz_setup` preserve
   the failed step, command, full stderr and preflight report. A subprocess
   launch failure also exposes its operating-system cause in `error`;
