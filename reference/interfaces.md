@@ -38,6 +38,10 @@ Every way into Probierz, and what each one is allowed to do.
   in-process MCP server. A refused gate is classified `refused` — the verdict
   was evaluated — is not a successful tool result and does not prevent later
   requests.
+  Unreadable or malformed run manifests refuse evidence collection with their
+  path and actual cause. Evidence directory and entry-read failures also name
+  the affected path instead of silently excluding runs; only a missing
+  evidence directory or manifest counts as absent.
 - **Matrix refusals:** a completed matrix that fails its verdict returns a
   `refused` failure with its complete cell results, evidence requirement and
   summary. `probierz_run_matrix` does not terminate the MCP server when a

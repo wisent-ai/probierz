@@ -101,13 +101,29 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
 }
 
 pub(crate) fn manifests_below(root: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
-    if !root.exists() {
-        return Ok(());
-    }
-    let entries = fs::read_dir(root).map_err(|error| error.to_string())?;
+    let entries = match fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(format!(
+                "run evidence directory {} cannot be read: {error}",
+                root.display()
+            ))
+        }
+    };
     for entry in entries {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let kind = entry.file_type().map_err(|error| error.to_string())?;
+        let entry = entry.map_err(|error| {
+            format!(
+                "run evidence directory {} entry cannot be read: {error}",
+                root.display()
+            )
+        })?;
+        let kind = entry.file_type().map_err(|error| {
+            format!(
+                "run evidence entry {} type cannot be read: {error}",
+                entry.path().display()
+            )
+        })?;
         if kind.is_dir() {
             manifests_below(&entry.path(), found)?;
         } else if kind.is_file() && entry.file_name() == "run-manifest.json" {
