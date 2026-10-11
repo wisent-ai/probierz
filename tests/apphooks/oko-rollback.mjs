@@ -73,12 +73,12 @@ try {
     ...process.env, PROBIERZ_RUN_ID: runId, PROBIERZ_ARTIFACTS: evidence,
     PROBIERZ_JOURNEYS: 'writer-update',
   });
+  const after = await observe('/auth/v1/admin/users');
   assert.ok(seeded.status !== null && seeded.status !== version.status, 'seed must be refused');
   const diagnostic = `${seeded.stdout}\n${seeded.stderr}`;
   assert.ok(diagnostic.includes(organization.body.message), 'retain the real dependency cause');
   assert.ok(diagnostic.includes('rollback could not confirm removal'), 'report unsuccessful rollback');
   assert.match(diagnostic, /organization [a-f\d-]+:/, 'name the isolated organization coordinate');
-  const after = await observe('/auth/v1/admin/users');
   assert.ok(after.ok);
   assert.deepEqual(after.body.users, before.body.users,
     'account rollback must still run after the organization rollback fails');
