@@ -147,36 +147,48 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
             "stateFile": path,
             "env": { "OKO_E2E_EMAIL": scoped.get("OKO_E2E_EMAIL").expect("scoped") }
         })),
-        Err(error) => {
-            // Every rollback is best effort, matching Promise.allSettled in the former hook.
+        Err(mut error) => {
+            let mut rollback_errors = Vec::new();
             let channel = source
                 .get("OKO_E2E_SLACK_CHANNEL")
                 .map(String::as_str)
                 .unwrap_or_default();
             if let Some(reply_ts) = reply_ts {
-                let _ = slack(
+                if let Err(failure) = slack(
                     source,
                     SLACK_USER,
                     "chat.delete",
                     json!({ "channel": channel, "ts": reply_ts }),
-                );
+                ) {
+                    rollback_errors.push(format!("Slack reply {reply_ts} in {channel}: {failure}"));
+                }
             }
             if let Some(parent_ts) = parent_ts {
-                let _ = slack(
+                if let Err(failure) = slack(
                     source,
                     SLACK_BOT,
                     "chat.delete",
                     json!({ "channel": channel, "ts": parent_ts }),
-                );
+                ) {
+                    rollback_errors.push(format!("Slack thread {parent_ts} in {channel}: {failure}"));
+                }
             }
-            let _ = delete_organization(&scoped, &org_id);
-            let _ = supabase(
+            if let Err(failure) = delete_organization(&scoped, &org_id) {
+                rollback_errors.push(format!("organization {org_id}: {failure}"));
+            }
+            if let Err(failure) = supabase(
                 &scoped,
                 &format!("/auth/v1/admin/users/{account_id}"),
                 "DELETE",
                 None,
                 None,
-            );
+            ) {
+                rollback_errors.push(format!("account {account_id}: {failure}"));
+            }
+            if !rollback_errors.is_empty() {
+                error.detail.push_str("; rollback could not confirm removal: ");
+                error.detail.push_str(&rollback_errors.join("; "));
+            }
             Err(error)
         }
     }
