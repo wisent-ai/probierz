@@ -99,7 +99,9 @@ pub fn author_spec(
                 "rounds": round,
             }));
         }
-        previous = fs::read_to_string(&staged).ok();
+        // The next round is briefed with this draft; one that cannot be read
+        // back fails authoring with its cause instead of briefing blind.
+        previous = Some(fs::read_to_string(&staged)?);
         failures = run["failures"]
             .as_array()
             .into_iter()
