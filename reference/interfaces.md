@@ -21,6 +21,17 @@ Every way into Probierz, and what each one is allowed to do.
   already been written, so the failure never claims that nothing ran.
   `probierz secrets scan` likewise prints its report and then refuses with the
   directory and number of findings instead of ending the process.
+  Real signed verification is exercised by
+  `node tests/mcp/receipt-verification.mjs`. Supply `PROBIERZ`,
+  `PROBIERZ_TEST_SOURCE_REVISION`, `PROBIERZ_TEST_RELEASE_EVIDENCE`,
+  `PROBIERZ_TEST_SIGNED_RECEIPT` from a real product run, and
+  `PROBIERZ_TEST_RECEIPT_PUBLIC_KEY` as its trusted public key file.
+  The journey verifies the genuine receipt, refuses a modified test-owned
+  copy with signature and payload-hash causes, then requires ping and valid
+  verification from the same server. Original receipt and key bytes remain
+  unchanged. Release provenance, requests, replies and process results are
+  retained under `probierz-rs/target/real-tests/mcp-receipt/`.
+  This journey does not qualify receipt creation or publication.
 - **Gate refusals:** failed `probierz gate evaluate`, `probierz gate enforce`
   and `probierz gate prepush` return the complete verdict, including every error,
   blocking reason and pending-green activation state, without terminating the
