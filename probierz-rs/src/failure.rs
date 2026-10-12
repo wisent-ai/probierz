@@ -108,16 +108,23 @@ impl Failure {
         self
     }
 
-    /// This failure after taking back the temporary file its attempt wrote:
-    /// one already gone is no failure, one that stays is named with its
-    /// cause in the detail, so a refused write never leaves a file unsaid.
+    /// This failure after taking back the temporary file or directory its
+    /// attempt wrote: one already gone is no failure, one that stays is named
+    /// with its cause in the detail, so a refused attempt never leaves it unsaid.
     pub fn discarding(mut self, temporary: &std::path::Path) -> Self {
-        if let Err(left) = std::fs::remove_file(temporary) {
-            if left.kind() != std::io::ErrorKind::NotFound {
-                self.detail = format!("{}; {} is left behind: {left}", self.detail, temporary.display());
-            }
+        if let Some(left) = left_behind(temporary) {
+            self.detail = format!("{}; {left}", self.detail);
         }
         self
+    }
+
+    /// Take back a temporary after its attempt succeeded: one already gone
+    /// is no failure, one that stays is a refusal at `point` naming it.
+    pub fn discard(point: &str, temporary: &std::path::Path) -> Result<(), Self> {
+        match left_behind(temporary) {
+            Some(left) => Err(Self::config(point, left)),
+            None => Ok(()),
+        }
     }
 
     pub fn invalid(point: impl Into<String>, detail: impl Into<String>) -> Self {
@@ -147,6 +154,22 @@ impl Failure {
             Some(status) => status,
             None => self.code.exit_code(),
         }
+    }
+}
+
+/// Remove a temporary file or directory; the sentence of one that stays, or
+/// nothing when it is gone (already gone included).
+fn left_behind(temporary: &std::path::Path) -> Option<String> {
+    let removed = if temporary.is_dir() {
+        std::fs::remove_dir_all(temporary)
+    } else {
+        std::fs::remove_file(temporary)
+    };
+    match removed {
+        Err(left) if left.kind() != std::io::ErrorKind::NotFound => {
+            Some(format!("{} is left behind: {left}", temporary.display()))
+        }
+        _ => None,
     }
 }
 

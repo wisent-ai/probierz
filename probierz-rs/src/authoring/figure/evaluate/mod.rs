@@ -57,10 +57,11 @@ pub fn evaluate_figure(
 
     let work = work_directory()?;
     let evaluated = evaluate_in(&work, &pair, &rubric, &router, &destination, tex_preamble);
-    let _ = fs::remove_dir_all(&work);
-
-    let value = evaluated?;
-    write_report(&destination.report, &value)?;
+    // The report is kept before the working directory is taken back, so a
+    // directory that stays is a refusal naming it without losing the verdict.
+    let value = evaluated.map_err(|error| error.discarding(&work))?;
+    write_report(&destination.report, &value).map_err(|error| error.discarding(&work))?;
+    Failure::discard("figure.evaluate", &work)?;
     Ok(value)
 }
 
