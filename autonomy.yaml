@@ -16,3 +16,9 @@ cases: 5
 pursuitBudgetUsd: "5"
 # How many lost cases of one suite a cycle hands to pursuits.
 pursuitsPerProduct: 1
+# Without Trends and Competitors on the machine: a directory of <topic>.json
+# files, each holding what those products would have answered for its topic
+# (trend, observations, candidates), relative to this file. With it the cycle
+# scouts exactly those topics and neither watches, ingests nor asks Trends for
+# a list; a path that is not a directory is refused by name.
+# evidenceDir: evidence
