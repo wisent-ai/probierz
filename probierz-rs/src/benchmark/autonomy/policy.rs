@@ -16,7 +16,7 @@ pub(super) const POLICY_FILE: &str = "autonomy.yaml";
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-pub(super) struct Policy {
+pub(in crate::benchmark::autonomy) struct Policy {
     pub schema_version: u32,
     /// The GitHub owner new products' repositories are created under.
     pub owner: String,
@@ -32,6 +32,12 @@ pub(super) struct Policy {
     pub pursuit_budget_usd: String,
     /// How many lost cases of one suite a cycle hands to pursuits.
     pub pursuits_per_product: usize,
+    /// Without Trends and Competitors: a directory of `<topic>.json` files,
+    /// each holding what they would have answered for its topic (trend,
+    /// observations, candidates); the cycle then scouts those topics and
+    /// neither watches, ingests nor asks Trends for a list.
+    #[serde(default)]
+    pub evidence_dir: Option<PathBuf>,
 }
 
 /// The policy, the file it was read from and the SHA-256 of its bytes, which
@@ -52,7 +58,7 @@ pub(super) fn load(
             ),
         )
     })?;
-    let policy: Policy = serde_yaml::from_str(&text).map_err(|error| {
+    let mut policy: Policy = serde_yaml::from_str(&text).map_err(|error| {
         Failure::config(
             POINT,
             format!("{} is not a policy: {error}", file.display()),
@@ -86,6 +92,24 @@ pub(super) fn load(
                 policy.pursuit_budget_usd
             ),
         ));
+    }
+    if let Some(directory) = &policy.evidence_dir {
+        let resolved = if directory.is_absolute() {
+            directory.clone()
+        } else {
+            harness.join(directory)
+        };
+        if !resolved.is_dir() {
+            return Err(Failure::config(
+                POINT,
+                format!(
+                    "{}: evidenceDir {} is not a directory of <topic>.json evidence files",
+                    file.display(),
+                    resolved.display()
+                ),
+            ));
+        }
+        policy.evidence_dir = Some(resolved);
     }
     let digest = hex::encode(Sha256::digest(text.as_bytes()));
     Ok((file, policy, digest))
@@ -122,7 +146,10 @@ pub(super) fn adopted_this_week(ledger: &Path) -> Result<usize, Failure> {
 }
 
 /// Add one adoption to the ledger the weekly limit is counted from.
-pub(super) fn append(ledger: &Path, entry: &serde_json::Value) -> std::io::Result<()> {
+pub(in crate::benchmark::autonomy) fn append(
+    ledger: &Path,
+    entry: &serde_json::Value,
+) -> std::io::Result<()> {
     use std::io::Write;
     let mut file = std::fs::OpenOptions::new()
         .create(true)

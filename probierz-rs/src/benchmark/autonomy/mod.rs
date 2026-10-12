@@ -11,12 +11,13 @@
 //! adoptions ledger beside it records, for every product the loop created,
 //! the policy's SHA-256 and the model's verdict it was created on.
 
+mod cycle;
 mod feedback;
 mod model;
 mod policy;
 mod steps;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use serde_json::{json, Value as Json};
@@ -25,7 +26,9 @@ use super::record::catalog;
 use super::scout::identity;
 use crate::failure::{now_iso, print_json, Answer, Failure};
 use crate::stado::{shell_quote, STADO_BIN};
-use policy::{adopted_this_week, append};
+use cycle::topics::{evidence_topics, topic_names, watch};
+use cycle::work::{measure, scout_one};
+use policy::adopted_this_week;
 use sha2::Digest as _;
 
 const POINT: &str = "benchmark.autonomy";
@@ -41,193 +44,6 @@ fn watched_ok(report: &Json) -> usize {
     })
 }
 
-/// The source kinds Trends asks by query, read from the sources it already
-/// has: a new topic gets one source of each, asked with its first term.
-fn query_kinds(harness: &Path) -> Vec<String> {
-    let listed = steps::run(Path::new(TRENDS), &steps::command("source list"), harness);
-    let mut kinds: Vec<String> = listed["answer"]["sources"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|source| source["query"].is_string())
-        .filter_map(|source| source["kind"].as_str())
-        .map(str::to_string)
-        .collect();
-    kinds.sort();
-    kinds.dedup();
-    kinds
-}
-
-/// A Trends topic, with one source of every query kind Trends uses, for each
-/// catalog product Trends does not watch yet; the terms are the model's.
-fn watch(
-    harness: &Path,
-    products: &[Json],
-    policy: &policy::Policy,
-    present: &[String],
-) -> Vec<Json> {
-    let trends = Path::new(TRENDS);
-    let kinds = query_kinds(harness);
-    let mut added = Vec::new();
-    for product in products {
-        let id = product["id"].as_str().unwrap_or_default();
-        if !identity(id) || present.iter().any(|name| name == id) {
-            continue;
-        }
-        let terms = match model::terms(harness, product, policy.rounds) {
-            Ok(terms) => terms,
-            Err(failure) => {
-                added.push(json!({"product": id, "refusal": failure.detail}));
-                continue;
-            }
-        };
-        let mut topic = steps::command("topic add");
-        topic.push(id.to_string());
-        for term in &terms {
-            topic.push("--term".to_string());
-            topic.push(term.clone());
-        }
-        let made = steps::run(trends, &topic, harness);
-        let mut sources = Vec::new();
-        for kind in &kinds {
-            let source = format!("{id}-{kind}");
-            let mut add = steps::command("source add");
-            add.extend(steps::args(&[
-                source.as_str(),
-                "--kind",
-                kind.as_str(),
-                "--query",
-                terms[0].as_str(),
-            ]));
-            sources.push(steps::run(trends, &add, harness));
-        }
-        added.push(json!({"product": id, "terms": terms, "topic": made, "sources": sources}));
-    }
-    added
-}
-
-/// Scout one topic, have the model judge the brief, and adopt it when the
-/// verdict accepts it.
-fn scout_one(
-    harness: &Path,
-    me: &Path,
-    policy: &policy::Policy,
-    authority: &Json,
-    ledger: &Path,
-    topic: &str,
-) -> Json {
-    let observations = policy.observations.to_string();
-    let rounds = policy.rounds.to_string();
-    let scout = steps::run(
-        me,
-        &steps::args(&[
-            "benchmark",
-            "scout",
-            topic,
-            "--owner",
-            policy.owner.as_str(),
-            "--observations",
-            observations.as_str(),
-            "--rounds",
-            rounds.as_str(),
-        ]),
-        harness,
-    );
-    let Some(brief_file) = scout["answer"]["brief"].as_str().map(PathBuf::from) else {
-        return json!({"topic": topic, "scout": scout});
-    };
-    let brief: Option<Json> = std::fs::read_to_string(&brief_file)
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok());
-    let Some(brief) = brief else {
-        return json!({"topic": topic, "scout": scout, "skipped": "the brief scout wrote cannot be read"});
-    };
-    let verdict = match model::judge(harness, &brief, policy.rounds) {
-        Ok(verdict) => verdict,
-        Err(failure) => {
-            return json!({"topic": topic, "scout": scout, "judge": {"refusal": failure.detail}})
-        }
-    };
-    if verdict["accept"] != true {
-        return json!({"topic": topic, "scout": scout, "judge": verdict});
-    }
-    let cases = policy.cases.to_string();
-    let brief_path = brief_file.to_string_lossy().to_string();
-    let adopt = steps::run(
-        me,
-        &steps::args(&[
-            "benchmark",
-            "adopt",
-            brief_path.as_str(),
-            "--allow-create",
-            "--cases",
-            cases.as_str(),
-            "--rounds",
-            rounds.as_str(),
-        ]),
-        harness,
-    );
-    let mut ledger_refusal = Json::Null;
-    if steps::ok(&adopt) {
-        let entry = json!({
-            "at": now_iso(),
-            "product": adopt["answer"]["product"],
-            "brief": brief_path,
-            "authority": authority,
-            "verdict": verdict,
-        });
-        if let Err(error) = append(ledger, &entry) {
-            ledger_refusal = json!(format!("{}: {error}", ledger.display()));
-        }
-    }
-    json!({"topic": topic, "scout": scout, "judge": verdict, "adopt": adopt, "ledger": ledger_refusal})
-}
-
-/// Run one suite, bring the roadmap in line with it, and hand the newest
-/// losses to pursuits within the policy's budget.
-fn measure(harness: &Path, me: &Path, policy: &policy::Policy, app: &str, suite: &str) -> Json {
-    let run = steps::run(
-        me,
-        &steps::args(&["benchmark", "run", app, "--suite", suite]),
-        harness,
-    );
-    let roadmap = steps::run(
-        me,
-        &steps::args(&["benchmark", "roadmap", app, "--suite", suite]),
-        harness,
-    );
-    let standing = steps::run(
-        me,
-        &steps::args(&["benchmark", "standing", app, "--suite", suite]),
-        harness,
-    );
-    let pursued: Vec<Json> = standing["answer"]["losses"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|loss| loss["case"].as_str())
-        .take(policy.pursuits_per_product)
-        .map(|case| {
-            steps::run(
-                me,
-                &steps::args(&[
-                    "benchmark",
-                    "pursue",
-                    app,
-                    "--suite",
-                    suite,
-                    "--case",
-                    case,
-                    "--budget-usd",
-                    policy.pursuit_budget_usd.as_str(),
-                ]),
-                harness,
-            )
-        })
-        .collect();
-    json!({"app": app, "suite": suite, "run": run, "roadmap": roadmap, "standing": standing, "pursued": pursued})
-}
-
 pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     let (file, policy, digest) = policy::load(harness, policy_file)?;
     let authority = json!({"policy": file.to_string_lossy(), "sha256": digest});
@@ -239,32 +55,39 @@ pub(crate) fn cycle(harness: &Path, policy_file: Option<&Path>) -> Answer {
     let trends = Path::new(TRENDS);
 
     let products = catalog::products()?;
-    let mut listed = steps::run(trends, &steps::command("topic list"), harness);
-    // A Trends that has no state yet is given one, read from its own error code.
-    let missing = serde_json::from_str::<Json>(listed["refusal"].as_str().unwrap_or_default())
-        .is_ok_and(|refusal| refusal["error"]["code"] == "state_missing");
-    if missing {
-        steps::run(trends, &steps::args(&["init"]), harness);
-        listed = steps::run(trends, &steps::command("topic list"), harness);
-    }
-    let present: Vec<String> = listed["answer"]["topics"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|topic| topic["name"].as_str())
-        .map(str::to_string)
-        .collect();
-    let watched = watch(harness, &products, &policy, &present);
-    let ingested = steps::run(trends, &steps::args(&["ingest"]), harness);
-
-    let relisted = steps::run(trends, &steps::command("topic list"), harness);
+    // Without Trends and Competitors the policy's evidence directory is the
+    // list of topics, one file each; nothing is watched or ingested.
+    let (listed, watched, ingested, topics) = match &policy.evidence_dir {
+        Some(directory) => {
+            let topics = evidence_topics(directory)?;
+            let listed = json!({"evidenceDir": directory.to_string_lossy(), "topics": topics});
+            (
+                listed,
+                Vec::new(),
+                json!({"skipped": "the policy names an evidence directory"}),
+                topics,
+            )
+        }
+        None => {
+            let mut listed = steps::run(trends, &steps::command("topic list"), harness);
+            // A Trends that has no state yet is given one, read from its own error code.
+            let missing =
+                serde_json::from_str::<Json>(listed["refusal"].as_str().unwrap_or_default())
+                    .is_ok_and(|refusal| refusal["error"]["code"] == "state_missing");
+            if missing {
+                steps::run(trends, &steps::args(&["init"]), harness);
+                listed = steps::run(trends, &steps::command("topic list"), harness);
+            }
+            let present: Vec<String> = topic_names(&listed["answer"]);
+            let watched = watch(harness, &products, &policy, &present);
+            let ingested = steps::run(trends, &steps::args(&["ingest"]), harness);
+            let relisted = steps::run(trends, &steps::command("topic list"), harness);
+            let topics = topic_names(&relisted["answer"]);
+            (listed, watched, ingested, topics)
+        }
+    };
     let mut scouted = Vec::new();
-    for topic in relisted["answer"]["topics"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|topic| topic["name"].as_str())
-    {
+    for topic in &topics {
         if adopted_this_week(&ledger)? >= policy.products_per_week {
             scouted.push(json!({
                 "topic": topic,

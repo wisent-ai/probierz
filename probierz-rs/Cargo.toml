@@ -20,6 +20,10 @@ name = "benchmark_cycle"
 path = "../tests/benchmark/cycle.rs"
 
 [[test]]
+name = "benchmark_evidence"
+path = "../tests/benchmark/evidence.rs"
+
+[[test]]
 name = "gate_group"
 path = "../tests/gate/group.rs"
 

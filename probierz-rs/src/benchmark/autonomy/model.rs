@@ -65,7 +65,11 @@ fn parsed(content: &str) -> Result<Json, String> {
 }
 
 /// The model's verdict on one scouted brief: `accept` and its reasons.
-pub(super) fn judge(harness: &Path, brief: &Json, rounds: u32) -> Result<Json, Failure> {
+pub(in crate::benchmark::autonomy) fn judge(
+    harness: &Path,
+    brief: &Json,
+    rounds: u32,
+) -> Result<Json, Failure> {
     let view = json!({
         "trend": {
             "verdict": brief["trend"]["verdict"],
@@ -81,9 +85,9 @@ pub(super) fn judge(harness: &Path, brief: &Json, rounds: u32) -> Result<Json, F
         "evidence": brief["creation"]["evidence_refs"],
     });
     let question = format!(
-        "Decide whether we build this product.\n\n{RULES}\n\nThe brief:\n{}\n\nAnswer one JSON document: {{\"accept\": true or false, \"reasons\": [one sentence per rule you checked]}}.",
-        serde_json::to_string_pretty(&view).unwrap_or_default()
-    );
+    "Decide whether we build this product.\n\n{RULES}\n\nThe brief:\n{}\n\nAnswer one JSON document: {{\"accept\": true or false, \"reasons\": [one sentence per rule you checked]}}.",
+    serde_json::to_string_pretty(&view).unwrap_or_default()
+);
     let (verdict, rounds_taken) = ask(harness, rounds, "submit_verdict", &question, |content| {
         let answer = parsed(content)?;
         let accept = answer["accept"]
@@ -105,13 +109,17 @@ pub(super) fn judge(harness: &Path, brief: &Json, rounds: u32) -> Result<Json, F
 }
 
 /// The words Trends matches to watch the market one of our products serves.
-pub(super) fn terms(harness: &Path, product: &Json, rounds: u32) -> Result<Vec<String>, Failure> {
+pub(in crate::benchmark::autonomy) fn terms(
+    harness: &Path,
+    product: &Json,
+    rounds: u32,
+) -> Result<Vec<String>, Failure> {
     let question = format!(
-        "Our product {} ({}): {}\n\nName the short phrases people put in the titles of posts and repositories about the market this product serves: what its users and its rivals talk about, not the product's own name. Answer one JSON document: {{\"terms\": [two to six phrases]}}.",
-        product["name"].as_str().unwrap_or_default(),
-        product["id"].as_str().unwrap_or_default(),
-        product["description"].as_str().unwrap_or_default()
-    );
+    "Our product {} ({}): {}\n\nName the short phrases people put in the titles of posts and repositories about the market this product serves: what its users and its rivals talk about, not the product's own name. Answer one JSON document: {{\"terms\": [two to six phrases]}}.",
+    product["name"].as_str().unwrap_or_default(),
+    product["id"].as_str().unwrap_or_default(),
+    product["description"].as_str().unwrap_or_default()
+);
     let (terms, _) = ask(harness, rounds, "submit_terms", &question, |content| {
         let answer = parsed(content)?;
         let terms: Vec<String> = answer["terms"]

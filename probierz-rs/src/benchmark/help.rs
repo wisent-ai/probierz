@@ -56,7 +56,12 @@ which products those observations show, normalises them with `competitors
 discover`, and asks for the product to build, the candidates it must beat
 and its suite. Every product, rival and gap cites an observation id it was
 given, or the draft is sent back. The brief lands once under
-test-results/.scout/<topic>/ with the Stado creation request. `adopt` acts on
+test-results/.scout/<topic>/ with the Stado creation request. On a machine
+without Trends and Competitors, `--evidence <file>` names one JSON file
+holding what they would have answered for the topic: `trend` (topic,
+verdict, evidence, min_evidence, recent, baseline), `observations` and
+`candidates`; a part that is missing, a trend of another topic, or a file
+that cannot be read is refused by name. `adopt` acts on
 a brief: `stado product create` makes the private repository, its checkout
 and a preview catalog record, the catalog names the rivals and the benchmark,
 and Probierz declares the manifest and drafts the suite.
@@ -70,5 +75,9 @@ has the model judge each brief and adopts the accepted ones, runs every suite
 the catalog names, writes the roadmap, hands the newest losses to pursuits
 within the policy's budget, and turns every open Probierz incident into a
 roadmap item of the product its envelope names, withdrawn once it is
-resolved. Every step is recorded under test-results/.autonomy/. `schedule`
-has Stado run the cycle on a cron, pinned to one host.";
+resolved. With `evidenceDir` in the policy (a directory of <topic>.json
+evidence files, relative to the harness), the cycle scouts those topics with
+`--evidence` and neither watches, ingests nor lists through Trends; a path
+that is not a directory is refused when the policy is read. Every step is
+recorded under test-results/.autonomy/. `schedule` has Stado run the cycle on
+a cron, pinned to one host.";

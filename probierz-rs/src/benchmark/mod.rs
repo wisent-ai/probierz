@@ -137,6 +137,10 @@ pub enum BenchmarkCommand {
         /// Drafts allowed per question before the command refuses.
         #[arg(long)]
         rounds: u32,
+        /// Without Trends and Competitors: one JSON file holding what they
+        /// would have answered for the topic — trend, observations, candidates.
+        #[arg(long)]
+        evidence: Option<std::path::PathBuf>,
     },
     /// Create the scouted product through Stado and start its benchmark.
     Adopt {
@@ -230,7 +234,15 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
             owner,
             observations,
             rounds,
-        } => scout::scout(harness, &topic, &owner, observations, rounds),
+            evidence,
+        } => scout::scout(
+            harness,
+            &topic,
+            &owner,
+            observations,
+            rounds,
+            evidence.as_deref(),
+        ),
         BenchmarkCommand::Adopt {
             brief,
             allow_create,

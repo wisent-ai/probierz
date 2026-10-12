@@ -6,7 +6,10 @@
 //! observations show serving the topic, normalises them through
 //! competitors-cli, and asks for an opportunity: the product we would build,
 //! the rivals it has to beat among those candidates, and the suite that
-//! measures it. Every rival and every claim cites an observation; a draft
+//! measures it. On a machine without Trends and Competitors, `--evidence`
+//! names one JSON file holding what they would have answered (trend,
+//! observations, candidates), read by [`named::Named`] and interpreted no
+//! further. Every rival and every claim cites an observation; a draft
 //! that cites anything else is sent back. The brief is written once under
 //! `test-results/.scout/<topic>/` and holds the Stado creation request.
 //!
@@ -18,6 +21,7 @@
 mod adopt;
 mod brief;
 mod evidence;
+pub(crate) mod named;
 
 use std::path::Path;
 
@@ -96,7 +100,9 @@ pub(crate) fn scout(
     owner: &str,
     observations: usize,
     rounds: u32,
+    evidence_file: Option<&Path>,
 ) -> Answer {
+    let named = evidence_file.map(named::Named::read).transpose()?;
     if !identity(topic) || !identity(owner) {
         return Err(Failure::invalid(
             POINT,
@@ -109,7 +115,10 @@ pub(crate) fn scout(
             "--observations and --rounds must be at least 1",
         ));
     }
-    let trend = evidence::trend(topic)?;
+    let trend = match &named {
+        Some(named) => named.trend(topic)?,
+        None => evidence::trend(topic)?,
+    };
     if !buildable(&trend) {
         print_json(&json!({"topic": topic, "trend": trend}))?;
         return Err(Failure::new(
@@ -121,7 +130,10 @@ pub(crate) fn scout(
             ),
         ));
     }
-    let seen = evidence::observations(topic, observations)?;
+    let seen = match &named {
+        Some(named) => named.observations(observations)?,
+        None => evidence::observations(topic, observations)?,
+    };
     let (records, extracted) = until_read(
         harness,
         rounds,
@@ -134,10 +146,17 @@ pub(crate) fn scout(
     std::fs::create_dir_all(&directory)?;
     let stamp = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
     let brief_id = format!("scout-{topic}-{stamp}");
-    let candidates = evidence::candidates(
-        &records,
-        &directory.join(format!("{brief_id}.records.json")),
-    )?;
+    let records_file = directory.join(format!("{brief_id}.records.json"));
+    let candidates = match &named {
+        Some(named) => {
+            std::fs::write(
+                &records_file,
+                serde_json::to_string_pretty(&json!({"records": records}))? + "\n",
+            )?;
+            named.candidates()?
+        }
+        None => evidence::candidates(&records, &records_file)?,
+    };
     let ours = catalog::products()?;
     let (opportunity, decided) = until_read(
         harness,
