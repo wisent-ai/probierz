@@ -64,8 +64,9 @@ pub fn create(options: Options) -> Answer {
         .output();
     // A failed export takes its partial GIF back; one that stays is named in
     // the refusal, never left unannounced beside the output.
-    let refused =
-        |reason: String| invalid(format!("README GIF export failed: {reason}")).discarding(&temporary);
+    let refused = |reason: String| {
+        invalid(format!("README GIF export failed: {reason}")).discarding(&temporary)
+    };
     let result = match result {
         Ok(result) => result,
         Err(error) => return Err(refused(error.to_string())),

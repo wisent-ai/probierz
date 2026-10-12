@@ -70,7 +70,8 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
         std::process::id(),
         nonce(label)
     ))?;
-    fs::write(&list, source_file_list(root)?).map_err(|error| Failure::from(error).discarding(&list))?;
+    fs::write(&list, source_file_list(root)?)
+        .map_err(|error| Failure::from(error).discarding(&list))?;
     fs::set_permissions(&list, fs::Permissions::from_mode(0o600))
         .map_err(|error| Failure::from(error).discarding(&list))?;
     let args = vec![
@@ -82,12 +83,10 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
     ];
     let output = sh("tar", &args, Some(root));
     if output.status != Some(0) {
-        return Err(local_failure(
-            "stado.pack",
-            &format!("Packing {label} failed"),
-            &output,
-        )
-        .discarding(&list));
+        return Err(
+            local_failure("stado.pack", &format!("Packing {label} failed"), &output)
+                .discarding(&list),
+        );
     }
     Failure::discard("stado.pack", &list)
 }
