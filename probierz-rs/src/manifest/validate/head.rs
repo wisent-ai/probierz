@@ -37,40 +37,54 @@ pub fn validate(document: &Value, file: &Path) -> Answer {
             file,
             "productId is required and must be stable for onboarding-first-use",
         )?;
+        // The retention periods are a schema: every field `Retention` names
+        // is required; that each is positive is checked for every manifest
+        // with the other policies.
         let retain = document
             .get("artifacts")
-            .and_then(|artifacts| map_of(artifacts, "retain"));
-        for name in ["pullRequestDays", "nightlyDays", "adhocDays"] {
-            let days = retain
-                .and_then(|map| map.get(Value::from(name)))
-                .and_then(Value::as_f64);
-            require(days.map(|value| value > 0.0).unwrap_or(false), file,
-                &format!("artifacts.retain.{name} is required and must be positive for onboarding-first-use"))?;
-        }
-        let redact: Vec<String> = document
-            .get("artifacts")
-            .and_then(|artifacts| sequence_of(artifacts, "redact"))
-            .map(|list| {
-                list.iter()
-                    .filter_map(|item| item.as_str().map(str::to_string))
-                    .collect()
-            })
-            .unwrap_or_default();
-        require(
-            !redact.is_empty(),
-            file,
-            "artifacts.redact must contain redaction keys for onboarding-first-use",
-        )?;
-        for name in ["TOKEN", "SECRET", "PASSWORD", "KEY", "COOKIE", "AUTH"] {
-            require(
-                redact.iter().any(|entry| entry == name),
+            .and_then(|artifacts| artifacts.get("retain"));
+        match retain.cloned().map(serde_yaml::from_value::<Retention>) {
+            Some(Ok(_)) => {}
+            Some(Err(error)) => require(
+                false,
                 file,
-                &format!("artifacts.redact must include {name} for onboarding-first-use"),
-            )?;
+                &format!("artifacts.retain is incomplete for onboarding-first-use: {error}"),
+            )?,
+            None => require(
+                false,
+                file,
+                "artifacts.retain is required for onboarding-first-use",
+            )?,
         }
+        require(
+            document
+                .get("artifacts")
+                .and_then(|artifacts| sequence_of(artifacts, "redact"))
+                .is_some_and(|list| !list.is_empty()),
+            file,
+            "artifacts.redact must name what onboarding-first-use records may not publish",
+        )?;
     }
-    validate_repositories_and_surfaces(file, repositories.expect("checked"), surfaces, journeys)?;
+    let redaction = Redaction::of_document(document);
+    validate_repositories_and_surfaces(
+        file,
+        repositories.expect("checked"),
+        surfaces,
+        journeys,
+        &redaction,
+    )?;
     validate_journeys(document, file, surfaces, journeys)?;
     validate_policies(surfaces, document, file, journeys)?;
     Ok(())
+}
+
+/// The retention periods a first-use manifest must state, in days; read
+/// only to require that every one is there.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct Retention {
+    pull_request_days: f64,
+    nightly_days: f64,
+    adhoc_days: f64,
 }

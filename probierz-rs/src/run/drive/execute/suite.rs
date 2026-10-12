@@ -12,7 +12,7 @@ pub(crate) struct RunOptions {
 pub(crate) fn drain_run_stream<R: Read>(
     mut stream: R,
     path: &Path,
-    secrets: &[(String, String)],
+    redaction: &manifest::Redaction,
     run_started: DateTime<Utc>,
 ) -> (String, Option<u64>) {
     let mut tail = String::new();
@@ -28,7 +28,7 @@ pub(crate) fn drain_run_stream<R: Read>(
                 (Utc::now().timestamp_millis() - run_started.timestamp_millis()).max(0) as u64,
             );
         }
-        let safe = redact_text(&String::from_utf8_lossy(&buffer[..count]), secrets);
+        let safe = redaction.text(&String::from_utf8_lossy(&buffer[..count]));
         tail.push_str(&safe);
         let _ = append_secure(path, stamped(&safe).as_bytes());
     }
@@ -99,7 +99,7 @@ pub(crate) fn execute_suite(
     harness: &Path,
     script: &str,
     env: &BTreeMap<String, String>,
-    secrets: Vec<(String, String)>,
+    redaction: manifest::Redaction,
     stdout_path: &Path,
     stderr_path: &Path,
     target_name: &str,
@@ -137,12 +137,12 @@ pub(crate) fn execute_suite(
     let child_err = child.stderr.take().expect("piped stderr");
     let out_path = stdout_path.to_path_buf();
     let err_path = stderr_path.to_path_buf();
-    let out_secrets = secrets.clone();
-    let err_secrets = secrets;
+    let out_redaction = redaction.clone();
+    let err_redaction = redaction.clone();
     let out_thread =
-        thread::spawn(move || drain_run_stream(child_out, &out_path, &out_secrets, run_started));
+        thread::spawn(move || drain_run_stream(child_out, &out_path, &out_redaction, run_started));
     let err_thread =
-        thread::spawn(move || drain_run_stream(child_err, &err_path, &err_secrets, run_started));
+        thread::spawn(move || drain_run_stream(child_err, &err_path, &err_redaction, run_started));
 
     let started = Instant::now();
     let process_name = {
@@ -199,7 +199,8 @@ pub(crate) fn execute_suite(
         .as_object_mut()
         .expect("object")
         .insert("file".into(), json!(performance_path));
-    let diagnostics = collect_platform_diagnostics(target_name, env, artifacts, started_at);
+    let diagnostics =
+        collect_platform_diagnostics(target_name, env, artifacts, started_at, &redaction);
     Ok((
         status.code().unwrap_or(-1),
         safe_out,

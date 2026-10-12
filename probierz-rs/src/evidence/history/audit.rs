@@ -29,41 +29,6 @@ pub(crate) fn files_below(root: &Path, reject_symlinks: bool) -> Result<Vec<Path
     Ok(files)
 }
 
-pub(crate) fn sensitive_key(key: &str) -> bool {
-    let key = key.to_ascii_lowercase();
-    [
-        "auth",
-        "cookie",
-        "credential",
-        "email",
-        "key",
-        "otp",
-        "password",
-        "pii",
-        "secret",
-        "session",
-        "token",
-    ]
-    .iter()
-    .any(|word| key.contains(word))
-}
-
-pub(crate) fn redact(value: &Value, key: &str) -> Value {
-    if sensitive_key(key) {
-        return json!("[REDACTED]");
-    }
-    match value {
-        Value::Array(items) => Value::Array(items.iter().map(|item| redact(item, "")).collect()),
-        Value::Object(object) => Value::Object(
-            object
-                .iter()
-                .map(|(name, item)| (name.clone(), redact(item, name)))
-                .collect(),
-        ),
-        _ => value.clone(),
-    }
-}
-
 pub(crate) fn stable(value: &Value) -> Value {
     match value {
         Value::Array(items) => Value::Array(items.iter().map(stable).collect()),
@@ -133,7 +98,7 @@ pub(crate) fn audit_access(
             "workflow": std::env::var("GITHUB_WORKFLOW").ok(),
             "job": std::env::var("GITHUB_JOB").ok(),
         },
-        "details": redact(&details, ""),
+        "details": crate::manifest::Redaction::of_app(harness, app_id)?.value(&details, ""),
     });
     let checksum = sha256_bytes(serde_json::to_string(&stable(&payload))?.as_bytes());
     let mut record = payload.as_object().cloned().unwrap_or_default();

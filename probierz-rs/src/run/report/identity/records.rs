@@ -44,31 +44,17 @@ pub(crate) fn artifact_hashes(directory: &Path, manifest_path: &Path) -> Result<
     }
     Ok(Value::Array(values))
 }
-pub(crate) fn redacted_environment(values: &BTreeMap<String, String>) -> Value {
-    Value::Object(
-        values
-            .iter()
-            .map(|(name, value)| {
-                let public = if sensitive_key(name) {
-                    format!("[REDACTED:{name}]")
-                } else {
-                    value.clone()
-                };
-                (name.clone(), Value::String(public))
-            })
-            .collect(),
-    )
-}
-pub(crate) fn run_conditions(record: bool, values: &BTreeMap<String, String>) -> Value {
+/// The conditions a run records: whether it records, and every condition
+/// with each value its redaction hides replaced by its name.
+pub(crate) fn run_conditions(
+    record: bool,
+    values: &BTreeMap<String, String>,
+    redaction: &manifest::Redaction,
+) -> Value {
     let mut conditions = Map::new();
     conditions.insert("record".into(), Value::Bool(record));
-    for (name, value) in values {
-        let public = if sensitive_key(name) {
-            format!("[REDACTED:{name}]")
-        } else {
-            value.clone()
-        };
-        conditions.insert(name.clone(), Value::String(public));
+    if let Value::Object(named) = redaction.environment(values) {
+        conditions.extend(named);
     }
     Value::Object(conditions)
 }
@@ -78,46 +64,6 @@ pub(crate) fn node_arch() -> &'static str {
         "x86_64" => "x64",
         architecture => architecture,
     }
-}
-pub(crate) fn secret_values(values: &BTreeMap<String, String>) -> Vec<(String, String)> {
-    values
-        .iter()
-        .filter(|(name, value)| sensitive_key(name) && value.len() >= 4)
-        .map(|(name, value)| (name.clone(), value.clone()))
-        .collect()
-}
-pub(crate) fn redact_text(value: &str, secrets: &[(String, String)]) -> String {
-    let mut safe = value.to_string();
-    for (name, secret) in secrets {
-        safe = safe.replace(secret, &format!("[REDACTED:{name}]"));
-    }
-    // `NAME=value`, `NAME: value` and `"name": "value"` whose name the one
-    // secret-name declaration (`sensitive_key`) marks: the value is replaced.
-    let assignment = Regex::new(
-        r"(?P<whole>\b(?P<name>[A-Za-z][A-Za-z0-9_]*)(?P<separator>\s*[=:]\s*)[^\s,;]+)",
-    )
-    .expect("regex");
-    safe = assignment
-        .replace_all(&safe, |found: &regex::Captures<'_>| {
-            match sensitive_key(&found["name"]) {
-                true => format!("{}{}[REDACTED]", &found["name"], &found["separator"]),
-                false => found["whole"].to_string(),
-            }
-        })
-        .into_owned();
-    let field =
-        Regex::new(r#"(?P<whole>"(?P<name>[^"]*)"(?P<separator>\s*:\s*)"[^"]*")"#).expect("regex");
-    field
-        .replace_all(&safe, |found: &regex::Captures<'_>| {
-            match sensitive_key(&found["name"]) {
-                true => format!(
-                    "\"{}\"{}\"[REDACTED]\"",
-                    &found["name"], &found["separator"]
-                ),
-                false => found["whole"].to_string(),
-            }
-        })
-        .into_owned()
 }
 pub(crate) fn stamped(value: &str) -> String {
     let stamp = now_iso();

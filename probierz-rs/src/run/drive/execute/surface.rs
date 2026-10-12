@@ -21,6 +21,12 @@ pub(crate) fn run_surface(
         "probierz",
     );
     let (app, surface) = declared_surface(harness, &app_id, name, &mut opts)?;
+    // What this run hides: the product's declared redaction, or every named
+    // value when no manifest describes it.
+    let redaction = match &app {
+        Some(declaration) => manifest::Redaction::declared(declaration),
+        None => manifest::Redaction::undeclared(),
+    };
     let configured_spec = opts.spec.clone().or_else(|| {
         surface
             .as_ref()
@@ -39,9 +45,11 @@ pub(crate) fn run_surface(
         .join(segment(Some(name), "target"))
         .join(&started_at[..10])
         .join(&run_id);
-    for child in ["media", "frames", "diagnostics"] {
-        fs::create_dir_all(artifacts.join(child))?;
-    }
+    // The run's artifact layout: media it captured, frames cut from them,
+    // and the diagnostics written about it.
+    fs::create_dir_all(artifacts.join("media"))?;
+    fs::create_dir_all(artifacts.join("frames"))?;
+    fs::create_dir_all(artifacts.join("diagnostics"))?;
     let report_path = artifacts.join("report.json");
     let manifest_path = artifacts.join("run-manifest.json");
     let stdout_path = artifacts.join("stdout.log");
@@ -82,7 +90,7 @@ pub(crate) fn run_surface(
             "runner",
         )
     };
-    let conditions = run_conditions(record, &opts.env);
+    let conditions = run_conditions(record, &opts.env, &redaction);
     let mut base = json!({"runId":run_id,"startedAt":started_at,"appId":app_id,"kind":kind,"target":name,"tool":config.tool,"pkg":config.pkg,"script":config.script,"artifactsDir":artifacts,"reportPath":report_path,"manifestPath":manifest_path,"stdoutPath":stdout_path,"stderrPath":stderr_path,"conditions":conditions});
     let app_manifest=app.as_ref().map(|declaration|json!({"file":declaration.file,"owner":declaration.document.get("owner").and_then(serde_yaml::Value::as_str).unwrap_or(""),"journeys":journeys})).unwrap_or(Value::Null);
     let host_name = capture_text("hostname", &[], None);
@@ -94,6 +102,7 @@ pub(crate) fn run_surface(
         &manifest_path,
         &json!({"schemaVersion":2,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":configured_spec.clone().map(Value::String).unwrap_or(Value::Null),"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":text(&platform.stdout).trim(),"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
     )?;
+    update_json(&manifest_path, &json!({ "redaction": redaction.record() }))?;
     if !opts.force {
         let pf = preflight(name, &opts.env)?;
         if !pf.get("ready").and_then(Value::as_bool).unwrap_or(false) {
@@ -151,7 +160,7 @@ pub(crate) fn run_surface(
     let lifecycle = app
         .as_ref()
         .and_then(|declaration| declaration.document.get("data"));
-    let secrets = secret_values(&opts.env);
+    let secrets = redaction.clone().with_values(&opts.env);
     let mut seed = run_data_command(
         harness,
         lifecycle.and_then(|value| value.get("seed")),
@@ -172,7 +181,7 @@ pub(crate) fn run_surface(
                 opts.env.insert(name.clone(), value.clone());
                 env.insert(name.clone(), value);
             }
-            let updated_conditions = run_conditions(record, &opts.env);
+            let updated_conditions = run_conditions(record, &opts.env, &redaction);
             base.as_object_mut()
                 .expect("object")
                 .insert("conditions".into(), updated_conditions.clone());
@@ -180,7 +189,7 @@ pub(crate) fn run_surface(
             public_seed
                 .as_object_mut()
                 .expect("seed object")
-                .insert("env".into(), redacted_environment(&seeded_values));
+                .insert("env".into(), redaction.environment(&seeded_values));
             update_json(
                 &manifest_path,
                 &json!({ "conditions": updated_conditions, "seed": public_seed }),
@@ -232,7 +241,7 @@ pub(crate) fn run_surface(
         harness,
         config.script,
         &env,
-        secret_values(&opts.env),
+        redaction.clone().with_values(&opts.env),
         &stdout_path,
         &stderr_path,
         name,
@@ -248,7 +257,7 @@ pub(crate) fn run_surface(
             harness,
             lifecycle.and_then(|value| value.get("cleanup")),
             &env,
-            &secret_values(&opts.env),
+            &redaction.clone().with_values(&opts.env),
             &stdout_path,
             &stderr_path,
         )

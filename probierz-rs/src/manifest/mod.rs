@@ -18,8 +18,10 @@ pub(crate) use crate::failure::{Answer, Code, Failure};
 
 mod load;
 mod records;
+mod redaction;
 mod validate;
 
 pub use load::*;
 pub use records::*;
+pub use redaction::Redaction;
 pub use validate::*;

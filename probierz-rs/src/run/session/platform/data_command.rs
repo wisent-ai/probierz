@@ -5,7 +5,7 @@ pub(crate) fn run_data_command(
     harness: &Path,
     config: Option<&serde_yaml::Value>,
     env: &BTreeMap<String, String>,
-    secrets: &[(String, String)],
+    redaction: &manifest::Redaction,
     stdout: &Path,
     stderr: &Path,
 ) -> Value {
@@ -37,8 +37,8 @@ pub(crate) fn run_data_command(
         .map(|cwd| normalize_path(&harness.join(cwd)))
         .unwrap_or_else(|| harness.to_path_buf());
     let execution = capture(command, &args, Some(&cwd), Some(env));
-    let safe_out = redact_text(&text(&execution.stdout), secrets);
-    let safe_err = redact_text(&text(&execution.stderr), secrets);
+    let safe_out = redaction.text(&text(&execution.stdout));
+    let safe_err = redaction.text(&text(&execution.stderr));
     let mut failures = Vec::new();
     if !safe_out.is_empty() {
         if let Err(error) = append_secure(stdout, stamped(&safe_out).as_bytes()) {
@@ -59,7 +59,7 @@ pub(crate) fn run_data_command(
     if let Some(error) = execution.error {
         failures.push(format!(
             "capture data command {command}: {}",
-            redact_text(&error, secrets)
+            redaction.text(&error)
         ));
     }
     match execution.status {

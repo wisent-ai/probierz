@@ -1,20 +1,9 @@
 use crate::manifest::*;
-/// Keys that must never carry a value in a manifest: they belong in
-/// `secretRefs`, which resolves through the vault instead.
-pub(crate) const SENSITIVE: [&str; 10] = [
-    "auth",
-    "cookie",
-    "credential",
-    "email",
-    "key",
-    "otp",
-    "password",
-    "pii",
-    "secret",
-    "session",
+pub(crate) const PUBLICATION_ARTIFACT_KINDS: &[&str] = &[
+    ArtifactKind::Screenshot.name(),
+    ArtifactKind::Recording.name(),
+    ArtifactKind::Trace.name(),
 ];
-
-pub(crate) const PUBLICATION_ARTIFACT_KINDS: [&str; 3] = ["screenshot", "recording", "trace"];
 
 /// The targets whose driver can record a screen. A journey that claims a
 /// recording on a driver that cannot make one is refused.
@@ -31,7 +20,7 @@ pub fn target_supports_artifact_kind(target: &str, kind: &str) -> bool {
     if !PUBLICATION_ARTIFACT_KINDS.contains(&kind) {
         return false;
     }
-    kind != "recording" || RECORDING_TARGETS.contains(&target)
+    kind != ArtifactKind::Recording.name() || RECORDING_TARGETS.contains(&target)
 }
 
 /// One validated manifest, with the file it was read from.
@@ -55,11 +44,6 @@ pub struct AppSummary {
 
 pub fn apps_root(harness_root: &Path) -> PathBuf {
     harness_root.join("apps")
-}
-
-pub(crate) fn sensitive(key: &str) -> bool {
-    let lowered = key.to_ascii_lowercase();
-    SENSITIVE.iter().any(|needle| lowered.contains(needle))
 }
 
 pub(crate) fn is_uuid(value: &str) -> bool {
@@ -119,4 +103,22 @@ pub(crate) fn key_names(mapping: &serde_yaml::Mapping) -> Vec<String> {
         .keys()
         .filter_map(|key| key.as_str().map(str::to_string))
         .collect()
+}
+
+/// A kind of artifact a journey may publish.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ArtifactKind {
+    Screenshot,
+    Recording,
+    Trace,
+}
+
+impl ArtifactKind {
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            ArtifactKind::Screenshot => "screenshot",
+            ArtifactKind::Recording => "recording",
+            ArtifactKind::Trace => "trace",
+        }
+    }
 }

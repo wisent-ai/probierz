@@ -190,3 +190,26 @@ credentials, personal data, production identifiers, or sensitive URLs.
 `PROBIERZ_FFMPEG_BIN` may select an explicit `ffmpeg` executable. Probierz does
 not create static product banners; those belong to `wisent-asset-generator`.
 
+## What a run hides
+
+A product's manifest is the only thing that decides what its runs hide. A
+name is hidden when it contains, ignoring case, one of the names
+`artifacts.redact` declares, or when it is one of the manifest's
+`secretRefs`. Every record Probierz writes reads that one declaration: the
+run manifest's `conditions` and seed environment (`[REDACTED:<NAME>]`), the
+run's stdout and stderr logs and data-command output (each covered value, and
+every `NAME=value`, `NAME: value` and `"name": "value"` whose name is
+covered), platform diagnostics, the timeline and diagnostics `probierz
+analyze` writes, the query values and following path segments of trace URLs,
+matrix cell environments, and the details of every access audit. A run
+records the names it hid as `redaction` in `run-manifest.json`, so a report
+written later hides the same names.
+
+A run no manifest describes declares nothing, so every named value it would
+publish is hidden, and its run manifest records `redaction: null`. A manifest
+condition, journey-override key or matrix dimension whose name the manifest's
+own redaction covers is refused: its value belongs in `secretRefs`. The
+journey `tests/redaction/journey.rs` drives `probierz analyze` over a run that
+declared `token` and over one that declared nothing, and reads the timeline
+each wrote.
+

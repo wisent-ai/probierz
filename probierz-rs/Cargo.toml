@@ -51,6 +51,10 @@ path = "../tests/overview/scan.rs"
 name = "first_use_stado"
 path = "../tests/first-use/stado.rs"
 
+[[test]]
+name = "redaction_journey"
+path = "../tests/redaction/journey.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }

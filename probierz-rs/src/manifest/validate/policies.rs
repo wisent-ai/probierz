@@ -8,6 +8,7 @@ pub(crate) fn validate_policies(
     file: &Path,
     journeys: &serde_yaml::Mapping,
 ) -> Answer {
+    let redaction = Redaction::of_document(document);
     if let Some(seo) = document.get("seo") {
         require(seo.as_mapping().is_some(), file, "seo must be an object")?;
         require(
@@ -70,9 +71,14 @@ pub(crate) fn validate_policies(
         }
     }
 
-    for hook_name in ["seed", "cleanup"] {
-        let hook = document.get("data").and_then(|data| data.get(hook_name));
-        let Some(hook) = hook else { continue };
+    // Every entry under `data` is a lifecycle hook the run may call.
+    for (hook_name, hook) in document
+        .get("data")
+        .and_then(Value::as_mapping)
+        .into_iter()
+        .flatten()
+        .filter_map(|(name, hook)| Some((name.as_str()?, hook)))
+    {
         let command = string_of(hook, "command").filter(|value| !value.is_empty());
         let capability = string_of(hook, "capability").filter(|value| !value.is_empty());
         require(
@@ -133,7 +139,7 @@ pub(crate) fn validate_policies(
                     &format!("matrix.{profile_name} target {target} has no surface"),
                 )?;
             }
-            validate_dimensions(profile, file, &format!("matrix.{profile_name}"))?;
+            validate_dimensions(profile, file, &format!("matrix.{profile_name}"), &redaction)?;
             if let Some(overrides) = profile.get("surfaces") {
                 require(
                     overrides.is_mapping(),
@@ -153,7 +159,7 @@ pub(crate) fn validate_policies(
                         file,
                         &format!("{path} must be an object"),
                     )?;
-                    validate_dimensions(declaration, file, &path)?;
+                    validate_dimensions(declaration, file, &path, &redaction)?;
                 }
             }
             // The evidence floor is the profile's own statement; none is assumed.
@@ -163,12 +169,17 @@ pub(crate) fn validate_policies(
                 file,
                 &format!("matrix.{profile_name}.minimumCellEvidence must be stated as E2 or E3"),
             )?;
-            let encryption = string_of(profile, "artifactEncryption").unwrap_or("optional");
-            require(
-                matches!(encryption, "optional" | "required"),
-                file,
-                &format!("matrix.{profile_name}.artifactEncryption must be optional or required"),
-            )?;
+            if let Some(encryption) = profile.get("artifactEncryption") {
+                if let Err(error) = serde_yaml::from_value::<Encryption>(encryption.clone()) {
+                    require(
+                        false,
+                        file,
+                        &format!(
+                            "matrix.{profile_name}.artifactEncryption must be optional or required: {error}"
+                        ),
+                    )?;
+                }
+            }
             let remove_plaintext = profile.get("removePlaintextAfterProtection");
             require(
                 remove_plaintext.is_none() || remove_plaintext.and_then(Value::as_bool).is_some(),
@@ -196,22 +207,26 @@ pub(crate) fn validate_policies(
         }
     }
 
-    for policy_name in ["pullRequestPolicy", "releasePolicy"] {
-        let Some(policy) = document.get(policy_name) else {
-            continue;
-        };
+    // A gate policy is every top-level declaration named `<gate>Policy`; its
+    // flags are the booleans `GateFlags` names.
+    for (policy_name, policy) in document
+        .as_mapping()
+        .into_iter()
+        .flatten()
+        .filter_map(|(name, policy)| Some((name.as_str()?, policy)))
+        .filter(|(name, _)| name.ends_with("Policy"))
+    {
         let evidence = string_of(policy, "minimumEvidence").unwrap_or("E3");
         require(
             matches!(evidence, "E2" | "E3"),
             file,
             &format!("{policy_name}.minimumEvidence must be E2 or E3"),
         )?;
-        for flag in ["requireProtectedArtifacts", "requireSecretScan"] {
-            let value = policy.get(flag);
+        if let Err(error) = serde_yaml::from_value::<GateFlags>(policy.clone()) {
             require(
-                value.is_none() || value.and_then(Value::as_bool).is_some(),
+                false,
                 file,
-                &format!("{policy_name}.{flag} must be boolean"),
+                &format!("{policy_name} flags must be boolean: {error}"),
             )?;
         }
         for target in sequence_of(policy, "requiredTargets").unwrap_or(&Vec::new()) {
@@ -245,7 +260,12 @@ pub(crate) fn validate_policies(
     Ok(())
 }
 
-fn validate_dimensions(declaration: &Value, file: &Path, path: &str) -> Answer {
+fn validate_dimensions(
+    declaration: &Value,
+    file: &Path,
+    path: &str,
+    redaction: &Redaction,
+) -> Answer {
     let Some(dimensions) = declaration.get("dimensions") else {
         return Ok(());
     };
@@ -263,7 +283,7 @@ fn validate_dimensions(declaration: &Value, file: &Path, path: &str) -> Answer {
         let name = name.as_str().expect("checked");
         let field = format!("{path}.dimensions.{name}");
         require(
-            !sensitive(name),
+            !redaction.covers(name),
             file,
             &format!("{field} must use secretRefs"),
         )?;
@@ -282,4 +302,23 @@ fn validate_dimensions(declaration: &Value, file: &Path, path: &str) -> Answer {
         )?;
     }
     Ok(())
+}
+
+/// What a matrix profile states about protecting its artifacts.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+enum Encryption {
+    Optional,
+    Required,
+}
+
+/// The boolean flags a gate policy may state; read only to require that
+/// each one stated is a boolean.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct GateFlags {
+    require_protected_artifacts: Option<bool>,
+    require_secret_scan: Option<bool>,
 }

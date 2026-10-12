@@ -23,6 +23,7 @@ pub(crate) fn build_timeline(
     media: &[Value],
     artifacts: &Path,
     started: Option<&str>,
+    redaction: &manifest::Redaction,
 ) -> Value {
     let mut diagnostics = Vec::new();
     let fallback = parse_iso(started, &now_iso());
@@ -31,11 +32,13 @@ pub(crate) fn build_timeline(
         &artifacts.join("stdout.log"),
         "stdout",
         &mut diagnostics,
+        redaction,
     ));
     events.extend(log_events(
         &artifacts.join("stderr.log"),
         "stderr",
         &mut diagnostics,
+        redaction,
     ));
     let mut cursor = DateTime::parse_from_rfc3339(&fallback)
         .map(|date| date.timestamp_millis())
@@ -77,9 +80,9 @@ pub(crate) fn build_timeline(
         events.push(json!({ "at": at, "type": if kind == "screenshot" { "screenshot" } else { kind }, "source": summary.get("tool").cloned().unwrap_or(Value::Null), "artifact": file, "missing": item.get("missing").and_then(Value::as_bool).unwrap_or(false) }));
         if kind == "trace" && file.exists() {
             if item.get("contentType").and_then(Value::as_str) == Some("application/json") {
-                events.extend(json_trace_events(&file, &at, &mut diagnostics));
+                events.extend(json_trace_events(&file, &at, &mut diagnostics, redaction));
             } else {
-                events.extend(trace_events(&file, &at, &mut diagnostics));
+                events.extend(trace_events(&file, &at, &mut diagnostics, redaction));
             }
         }
     }
@@ -129,7 +132,12 @@ pub(crate) fn error_line(value: &str) -> bool {
     Regex::new(r"(?i)\b(?:crash(?:ed)?|fatal|panic|uncaught|unhandled|segmentation fault|assertion failed)\b").expect("regex").is_match(value)
 }
 
-pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts: &Path) -> Value {
+pub(crate) fn summarize_diagnostics(
+    report: &Value,
+    timeline: &Value,
+    artifacts: &Path,
+    redaction: &manifest::Redaction,
+) -> Value {
     let assertions: Vec<f64> = report
         .get("tests")
         .and_then(Value::as_array)
@@ -164,7 +172,7 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
             crashes.push(json!({
                 "at": event["at"],
                 "source": event["source"],
-                "message": safe_message(message)
+                "message": safe_message(message, redaction)
             }));
         }
     }
@@ -198,7 +206,9 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
                 match fs::read_to_string(&path) {
                     Ok(content) => {
                         for line in content.lines().filter(|line| error_line(line)) {
-                            crashes.push(json!({ "source": path, "message": safe_message(line) }));
+                            crashes.push(
+                                json!({ "source": path, "message": safe_message(line, redaction) }),
+                            );
                         }
                     }
                     Err(error) => crashes.push(json!({
@@ -226,7 +236,7 @@ pub(crate) fn summarize_diagnostics(report: &Value, timeline: &Value, artifacts:
             Some(message) => console_errors.push(json!({
                 "at": event["at"],
                 "severity": event["severity"],
-                "message": safe_message(message)
+                "message": safe_message(message, redaction)
             })),
             None => console_errors.push(json!({
                 "at": event["at"],

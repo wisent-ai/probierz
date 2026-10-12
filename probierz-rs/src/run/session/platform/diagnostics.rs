@@ -5,6 +5,7 @@ pub(crate) fn collect_platform_diagnostics(
     env: &BTreeMap<String, String>,
     artifacts: &Path,
     started: &str,
+    redaction: &manifest::Redaction,
 ) -> Value {
     let directory = artifacts.join("diagnostics");
     if let Err(error) = fs::create_dir_all(&directory) {
@@ -113,8 +114,8 @@ pub(crate) fn collect_platform_diagnostics(
             return json!({ "supported": false, "file": null });
         };
     let result = capture(command, &args, None, None);
-    let output = redact_diagnostic(&text(&result.stdout));
-    let error = redact_diagnostic(&text(&result.stderr));
+    let output = redact_diagnostic(&text(&result.stdout), redaction);
+    let error = redact_diagnostic(&text(&result.stderr), redaction);
     if let Err(write_error) = write_secure_text(&file, &output) {
         return json!({
             "supported": true,
@@ -137,7 +138,7 @@ pub(crate) fn collect_platform_diagnostics(
     } else {
         let mut causes = Vec::new();
         if let Some(capture_error) = &result.error {
-            causes.push(redact_diagnostic(capture_error));
+            causes.push(redact_diagnostic(capture_error, redaction));
         }
         if !error.trim().is_empty() {
             causes.push(error.clone());

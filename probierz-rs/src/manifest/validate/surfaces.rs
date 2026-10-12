@@ -1,11 +1,14 @@
 use crate::manifest::*;
 
-/// The repositories a manifest maps and the surfaces it declares.
+/// The repositories a manifest maps and the surfaces it declares. A plain
+/// value a surface states may not sit under a name the manifest's own
+/// redaction hides: that value belongs in `secretRefs`.
 pub(crate) fn validate_repositories_and_surfaces(
     file: &Path,
     repositories: &[Value],
     surfaces: &serde_yaml::Mapping,
     journeys: &serde_yaml::Mapping,
+    redaction: &Redaction,
 ) -> Answer {
     for repository in repositories {
         let root = string_of(repository, "root").unwrap_or_default();
@@ -108,7 +111,7 @@ pub(crate) fn validate_repositories_and_surfaces(
             for (key, value) in when.expect("checked") {
                 let name = key.as_str().unwrap_or_default();
                 require(
-                    !sensitive(name),
+                    !redaction.covers(name),
                     file,
                     &format!("surface {target} journey override {name} must not be sensitive"),
                 )?;
@@ -131,7 +134,7 @@ pub(crate) fn validate_repositories_and_surfaces(
         if let Some(conditions) = map_of(surface, "conditions") {
             for name in key_names(conditions) {
                 require(
-                    !sensitive(&name),
+                    !redaction.covers(&name),
                     file,
                     &format!("secret condition {name} must use secretRefs"),
                 )?;

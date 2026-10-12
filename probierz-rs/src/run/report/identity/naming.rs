@@ -1,23 +1,5 @@
 use crate::run::*;
 use crate::run::{DateTime, Utc};
-pub(crate) fn sensitive_key(name: &str) -> bool {
-    [
-        "auth",
-        "cookie",
-        "credential",
-        "email",
-        "gmail",
-        "key",
-        "otp",
-        "password",
-        "pii",
-        "secret",
-        "session",
-        "token",
-    ]
-    .iter()
-    .any(|part| name.to_ascii_lowercase().contains(part))
-}
 pub(crate) fn segment(value: Option<&str>, fallback: &str) -> String {
     let source = value.unwrap_or(fallback).trim();
     let mut result = String::new();

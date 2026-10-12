@@ -80,7 +80,9 @@ pub(crate) fn parse_iso(value: Option<&str>, fallback: &str) -> String {
         .unwrap_or_else(|| fallback.to_string())
 }
 
-pub(crate) fn safe_message(value: &str) -> String {
+/// `value` as a report may show it: bearer tokens and addresses replaced by
+/// their shape, and every value the run's redaction covers replaced.
+pub(crate) fn safe_message(value: &str, redaction: &manifest::Redaction) -> String {
     let mut result = Regex::new(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")
         .expect("regex")
         .replace_all(value, "Bearer [REDACTED]")
@@ -89,22 +91,21 @@ pub(crate) fn safe_message(value: &str) -> String {
         .expect("regex")
         .replace_all(&result, "[EMAIL]")
         .into_owned();
-    Regex::new(r"(?i)((?:auth|cookie|credential|key|otp|password|secret|session|token)[A-Z0-9_.-]*\s*[=:]\s*)[^\s,;]+").expect("regex").replace_all(&result, "$1[REDACTED]").into_owned()
+    redaction.text(&result)
 }
 
-pub(crate) fn safe_url(value: &str) -> String {
+/// `value` as a report may show it: credentials and fragments dropped, every
+/// query value replaced, and a path segment hidden when it is an address, a
+/// token-shaped word, or follows a segment the run's redaction covers.
+pub(crate) fn safe_url(value: &str, redaction: &manifest::Redaction) -> String {
     if let Ok(mut url) = Url::parse(value) {
         let _ = url.set_username("");
         let _ = url.set_password(None);
         url.set_fragment(None);
-        let sensitive = Regex::new(
-            r"(?i)(auth|code|cookie|credential|email|key|otp|password|secret|session|token)",
-        )
-        .expect("regex");
         let source: Vec<(String, String)> = url
             .query_pairs()
             .map(|(name, _)| {
-                let replacement = if sensitive.is_match(&name) {
+                let replacement = if redaction.covers(&name) {
                     "[REDACTED]"
                 } else {
                     "[VALUE]"
@@ -128,7 +129,7 @@ pub(crate) fn safe_url(value: &str) -> String {
                     && decoded
                         .bytes()
                         .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-'))
-                || (sensitive.is_match(&previous) && !decoded.is_empty())
+                || (redaction.covers(&previous) && !decoded.is_empty())
             {
                 safe.push("%5BREDACTED%5D".into());
             } else {

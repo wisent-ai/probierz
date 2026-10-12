@@ -4,7 +4,11 @@ pub(crate) fn trace_events(
     file: &Path,
     fallback: &str,
     diagnostics: &mut Vec<Value>,
+    redaction: &manifest::Redaction,
 ) -> Vec<Value> {
+    // Every message and address below is shown as the run's redaction allows.
+    let safe_message = |text: &str| safe_message(text, redaction);
+    let safe_url = |url: &str| safe_url(url, redaction);
     let parsed = (|| -> Result<Vec<Value>, String> {
         let entries = zip_entries(file)?;
         let traces: Vec<Value> = entries
@@ -96,7 +100,9 @@ pub(crate) fn json_trace_events(
     file: &Path,
     fallback: &str,
     diagnostics: &mut Vec<Value>,
+    redaction: &manifest::Redaction,
 ) -> Vec<Value> {
+    let safe_message = |text: &str| safe_message(text, redaction);
     let result = (|| -> Result<Value, String> {
         let document: Value =
             serde_json::from_slice(&fs::read(file).map_err(|error| error.to_string())?)
@@ -126,7 +132,13 @@ pub(crate) fn json_trace_events(
 /// The timestamped lines of one run log. A log the run did not write has no
 /// events; one that exists and cannot be read is a diagnostic naming it, so
 /// the timeline does not look like a run that printed nothing.
-pub(crate) fn log_events(file: &Path, source: &str, diagnostics: &mut Vec<Value>) -> Vec<Value> {
+pub(crate) fn log_events(
+    file: &Path,
+    source: &str,
+    diagnostics: &mut Vec<Value>,
+    redaction: &manifest::Redaction,
+) -> Vec<Value> {
+    let safe_message = |text: &str| safe_message(text, redaction);
     let content = match fs::read_to_string(file) {
         Ok(content) => content,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Vec::new(),

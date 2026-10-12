@@ -93,16 +93,21 @@ pub(crate) fn analyze_run(
             .ok()
             .and_then(|bytes| serde_json::from_slice(&bytes).ok())
             .unwrap_or_else(|| json!({}));
+        // The timeline hides what the run hid: the redaction it recorded.
+        let redaction = manifest::Redaction::recorded(&manifest);
         let built = build_timeline(
             &report,
             &summary,
             &media,
             artifacts,
             manifest.get("startedAt").and_then(Value::as_str),
+            &redaction,
         );
         let path = artifacts.join("timeline.json");
         write_json(&path, &built)?;
-        diagnostics = Some(summarize_diagnostics(&report, &built, artifacts));
+        diagnostics = Some(summarize_diagnostics(
+            &report, &built, artifacts, &redaction,
+        ));
         timeline_path = Some(path);
         timeline = Some(built);
     }

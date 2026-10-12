@@ -31,10 +31,10 @@ pub(crate) fn report_identity(path: &Path, run_id: &str, started: SystemTime) ->
     }
 }
 
-pub(crate) fn redact_diagnostic(value: &str) -> String {
+pub(crate) fn redact_diagnostic(value: &str, redaction: &manifest::Redaction) -> String {
     Regex::new(r"([?&][^=\s&]+)=([^&\s]+)")
         .expect("regex")
-        .replace_all(&safe_message(value), "$1=[VALUE]")
+        .replace_all(&safe_message(value, redaction), "$1=[VALUE]")
         .into_owned()
 }
 

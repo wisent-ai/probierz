@@ -139,9 +139,10 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             },
         )?;
         let mut public = cell.clone();
+        let redaction = crate::manifest::Redaction::of_app(harness, Some(app_id))?;
         if let Some(map) = public.get_mut("env").and_then(Value::as_object_mut) {
             for (name, value) in map.iter_mut() {
-                if sensitive_key(name) {
+                if redaction.covers(name) {
                     *value = json!("[REDACTED]");
                 }
             }
