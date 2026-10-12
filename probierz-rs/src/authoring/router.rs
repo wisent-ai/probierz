@@ -34,6 +34,11 @@ pub(crate) fn loopback(host: &str) -> bool {
         || host.starts_with("127.")
 }
 
+/// The scheme a router URL may use anywhere, and the one it may use only to
+/// reach this machine.
+const SECURE_SCHEME: &str = "https";
+const LOOPBACK_SCHEME: &str = "http";
+
 pub(crate) fn stado_model_router_url(raw: Option<&str>) -> Result<String, String> {
     let configured = raw.unwrap_or_default().trim();
     if configured.is_empty() {
@@ -63,7 +68,7 @@ pub(crate) fn stado_model_router_url(raw: Option<&str>) -> Result<String, String
     } else {
         authority.split(':').next().unwrap_or_default().to_string()
     };
-    if scheme != "https" && !(scheme == "http" && loopback(&host)) {
+    if scheme != SECURE_SCHEME && !(scheme == LOOPBACK_SCHEME && loopback(&host)) {
         return Err("STADO_MODEL_ROUTER_URL must use HTTPS or loopback HTTP".to_string());
     }
     Ok(configured.trim_end_matches('/').to_string())
@@ -104,6 +109,22 @@ pub(crate) struct RouterReply {
     pub(crate) usage: JsonValue,
 }
 
+/// Remove a temporary this module wrote; the sentence saying it stays on
+/// disk when it cannot be removed.
+fn discard(path: &std::path::Path) -> Option<String> {
+    fs::remove_file(path)
+        .err()
+        .map(|error| format!("{} is left behind: {error}", path.display()))
+}
+
+/// `cause`, with the half-written `file` taken back, or said to stay.
+fn abandoned(file: &std::path::Path, cause: impl std::fmt::Display) -> String {
+    match discard(file) {
+        Some(left) => format!("{cause}; {left}"),
+        None => cause.to_string(),
+    }
+}
+
 pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -114,10 +135,10 @@ pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> 
     let mut handle = File::create(&file).map_err(|error| error.to_string())?;
     handle
         .set_permissions(fs::Permissions::from_mode(0o600))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| abandoned(&file, error))?;
     handle
         .write_all(content)
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| abandoned(&file, error))?;
     Ok(file)
 }
 
@@ -155,7 +176,8 @@ pub(crate) fn post_router(
         headers.push_str(&format!("x-agent-id: {agent_id}\nx-agent-timestamp: {timestamp}\nx-agent-signature: {signature}\n"));
     }
     let header_file = temp_file("router-headers", headers.as_bytes())?;
-    let body_file = temp_file("router-body", body.as_bytes())?;
+    let body_file = temp_file("router-body", body.as_bytes())
+        .map_err(|error| abandoned(&header_file, error))?;
     let output = Command::new("curl")
         .args(["--silent", "--show-error", "--header"])
         .arg(format!("@{}", header_file.display()))
@@ -167,8 +189,18 @@ pub(crate) fn post_router(
             &format!("{url}/v1/chat/completions"),
         ])
         .output();
-    let _ = fs::remove_file(&header_file);
-    let _ = fs::remove_file(&body_file);
+    // The header file carries the router's bearer token: one left on disk is
+    // refused by name, never dropped behind a successful answer.
+    let left: Vec<String> = [header_file.as_path(), body_file.as_path()]
+        .into_iter()
+        .filter_map(discard)
+        .collect();
+    if !left.is_empty() {
+        return Err(format!(
+            "model router request temporaries: {}",
+            left.join("; ")
+        ));
+    }
     let output = output.map_err(|error| format!("model router request failed: {error}"))?;
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
