@@ -32,6 +32,8 @@ pub(crate) struct Sandbox {
     pub root: PathBuf,
     pub home: PathBuf,
     path: std::ffi::OsString,
+    /// The values the new user states, by the names `firstUse.inputs` declares.
+    inputs: Vec<(String, std::ffi::OsString)>,
 }
 
 impl Sandbox {
@@ -57,7 +59,24 @@ impl Sandbox {
                 format!("the run's PATH cannot be formed: {error}"),
             )
         })?;
-        Ok(Self { root, home, path })
+        let mut inputs = Vec::new();
+        for name in &declared.inputs {
+            let value = std::env::var_os(name).ok_or_else(|| {
+                Failure::invalid(
+                    "first-use.inputs",
+                    format!(
+                        "{name} is not set: firstUse.inputs declares it as a value the new user states (the product's own install instructions ask for it); give it in the run's environment"
+                    ),
+                )
+            })?;
+            inputs.push((name.clone(), value));
+        }
+        Ok(Self {
+            root,
+            home,
+            path,
+            inputs,
+        })
     }
 
     /// Run `argv` as the new user, keeping both streams under `name`.
@@ -76,6 +95,9 @@ impl Sandbox {
             .env("TMPDIR", self.root.join("tmp"));
         for (variable, directory) in HOME_DIRECTORIES {
             command.env(variable, self.home.join(directory));
+        }
+        for (name, value) in &self.inputs {
+            command.env(name, value);
         }
         let output = crate::wait::output(&mut command).map_err(|error| {
             Failure::new(

@@ -1,0 +1,14 @@
+# Stado's first use as a new user meets it: the CLI journey Stado ships
+# (onboarding_first_use.json), installed the way Stado's quick start says
+# (install-stado.sh at the repository root, with the control origin and the
+# exact release the user states), importing the user's own registry-v2 export.
+definition: ~/Documents/CodingProjects/Wisent/stado/stado-rs/src/onboarding_first_use.json
+install:
+- [bash, ~/Documents/CodingProjects/Wisent/stado/install-stado.sh]
+inputs: [STADO_API_URL, STADO_RELEASE_VERSION]
+path: [.stado/bin]
+fixtures:
+  PATH: ~/Documents/CodingProjects/Wisent/stado/tests/service_directory/registry.json
+progress:
+  file: .stado/onboarding.json
+  fact: /evidence/registry_configuration_accepted

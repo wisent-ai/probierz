@@ -52,6 +52,7 @@ apps/weles/*
 !apps/stado/
 apps/stado/*
 !apps/stado/probierz.yaml
+!apps/stado/first-use.yaml
 !apps/skarbiec-desktop/
 apps/skarbiec-desktop/*
 !apps/skarbiec-desktop/probierz.yaml

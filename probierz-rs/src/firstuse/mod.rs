@@ -1,7 +1,7 @@
 //! A product's first-use journey, run the way a new user meets it.
 //!
-//! `probierz run first-use/<app_id>` reads the product manifest's `firstUse:`
-//! section (`declare`), gives the run a clean home of its own (`play`),
+//! `probierz run first-use/<app_id>` reads the app's `first-use.yaml` beside
+//! its manifest (`declare`), gives the run a clean home of its own (`play`),
 //! installs the product from its public install instructions, walks the
 //! screens of its first-use definition in the order a user meets them
 //! (`walk`), runs the command each screen shows with the user's own data, and
