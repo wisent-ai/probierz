@@ -8,8 +8,17 @@ impl TemporaryPlaintext {
 }
 
 impl Drop for TemporaryPlaintext {
+    // The copy is decrypted evidence; one that stays on disk is said. A copy
+    // already moved into place is gone, which is not a failure.
     fn drop(&mut self) {
-        let _ = fs::remove_file(&self.0);
+        if let Err(error) = fs::remove_file(&self.0) {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                eprintln!(
+                    "probierz: the decrypted evidence copy {} is left behind: {error}",
+                    self.0.display()
+                );
+            }
+        }
     }
 }
 
