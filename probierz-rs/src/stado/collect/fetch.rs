@@ -42,7 +42,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
     let payload: Value = match serde_json::from_str(&output.stdout) {
         Ok(value) => value,
         Err(_) => {
-            let _ = fs::remove_dir_all(&staging);
+            discard_staging(&staging);
             return Err(remote_failure(
                 "stado.download",
                 "The queue returned invalid artifact metadata",
@@ -67,7 +67,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
                 "probierz-remote-artifacts {}",
                 json!({ "jobId": job_id, "error": upstream })
             );
-            let _ = fs::remove_dir_all(&staging);
+            discard_staging(&staging);
             return Ok(Retained {
                 results_dir: None,
                 manifest: None,
@@ -76,7 +76,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
                 artifact_error: upstream,
             });
         }
-        let _ = fs::remove_dir_all(&staging);
+        discard_staging(&staging);
         return Err(remote_failure(
             "stado.download",
             "Downloading the worker's retained artifacts failed",
@@ -89,7 +89,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         .cloned()
         .unwrap_or_default();
     if artifacts.is_empty() {
-        let _ = fs::remove_dir_all(&staging);
+        discard_staging(&staging);
         return Ok(Retained {
             results_dir: None,
             manifest: None,
@@ -121,7 +121,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
             Some(harness),
         );
         if listed.status != Some(0) {
-            let _ = fs::remove_dir_all(&staging);
+            discard_staging(&staging);
             return Err(local_failure(
                 "stado.download",
                 "Listing the retained evidence archive failed",
@@ -137,7 +137,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         for entry in &entries {
             let normalized = entry.strip_prefix("./").unwrap_or(entry);
             if normalized != "test-results" && !normalized.starts_with("test-results/") {
-                let _ = fs::remove_dir_all(&staging);
+                discard_staging(&staging);
                 return Err(Failure::config(
                     "stado.download",
                     format!("Remote evidence contains an unsafe retained path: {entry}"),
@@ -228,4 +228,17 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         author_receipt_file,
         artifact_error: None,
     })
+}
+
+/// The staging holds downloaded worker evidence; one that stays beside the
+/// job is said, never dropped.
+fn discard_staging(staging: &Path) {
+    if let Err(error) = fs::remove_dir_all(staging) {
+        if error.kind() != std::io::ErrorKind::NotFound {
+            eprintln!(
+                "probierz: the evidence staging {} is left behind: {error}",
+                staging.display()
+            );
+        }
+    }
 }
