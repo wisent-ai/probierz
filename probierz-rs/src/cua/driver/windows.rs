@@ -54,10 +54,6 @@ impl Driver {
         Ok(())
     }
 
-    pub fn quit_app(&self, pid: u32) {
-        let _ = Command::new("kill").arg(pid.to_string()).status();
-    }
-
     pub(crate) fn element_request(
         &self,
         pid: u32,
