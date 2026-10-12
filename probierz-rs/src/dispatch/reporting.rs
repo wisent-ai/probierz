@@ -59,6 +59,19 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::Check { target } => run::check(&target),
         ReportingCommand::Setup { target, args } => run::setup(harness, &target, &args),
         ReportingCommand::Run { target, args } => {
+            // A product's first-use journey is played, not an npm target; it
+            // takes nothing but the product its target names.
+            if let Some(app_id) = target.strip_prefix(crate::firstuse::TARGET_PREFIX) {
+                if let Some(extra) = args.first() {
+                    return Err(crate::failure::Failure::invalid(
+                        "first-use.run",
+                        format!(
+                            "probierz run {target} takes no further arguments; {extra:?} was given"
+                        ),
+                    ));
+                }
+                return crate::firstuse::run(harness, app_id);
+            }
             let answer = run::run(harness, &target, &args);
             if answer.is_ok() {
                 adoption::record_passing_quality_evidence_written();

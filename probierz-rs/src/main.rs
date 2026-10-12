@@ -33,6 +33,10 @@ mod benchmark;
 mod gate;
 // PortRuns: execution, analysis, and matrix
 mod run;
+// A product's first-use journey, played as a new user: `probierz run first-use/<app>`
+mod firstuse;
+// The one way Probierz waits for a child process, announced as Stado declares
+mod wait;
 // PortEvidence: durable evidence, signing, publication, and retention
 mod evidence;
 // PortStado: remote Stado bridge

@@ -1,0 +1,17 @@
+{
+  "why": "The lines Stado's wait mechanism (stado-rs, module stado::wait) prints on standard error around every wait, as Stado declares them: a start line before the wait begins, then an end line or a failure line carrying the same id. A line opens with its key, its fields are separated by the separator, and every field after the first is key, the key separator and the value; Stado replaces the separator character and line ends inside a value, so a value never holds them. The id is the waiting process's pid and the wait's number in it, joined by idJoin, so one id pairs one start with its end inside one process while waits interleave. A start with no end or failure under its id, whose process is alive, is a wait still open; its duration is now minus since.",
+  "startKey": "czekam",
+  "endKey": "koniec czekania",
+  "failureKey": "blad czekania",
+  "separator": "; ",
+  "keySeparator": ": ",
+  "idJoin": "-",
+  "fields": {
+    "where": "gdzie",
+    "kind": "rodzaj",
+    "since": "od",
+    "id": "id",
+    "took": "trwalo",
+    "cause": "przyczyna"
+  }
+}
