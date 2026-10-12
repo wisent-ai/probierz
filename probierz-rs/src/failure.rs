@@ -108,6 +108,18 @@ impl Failure {
         self
     }
 
+    /// This failure after taking back the temporary file its attempt wrote:
+    /// one already gone is no failure, one that stays is named with its
+    /// cause in the detail, so a refused write never leaves a file unsaid.
+    pub fn discarding(mut self, temporary: &std::path::Path) -> Self {
+        if let Err(left) = std::fs::remove_file(temporary) {
+            if left.kind() != std::io::ErrorKind::NotFound {
+                self.detail = format!("{}; {} is left behind: {left}", self.detail, temporary.display());
+            }
+        }
+        self
+    }
+
     pub fn invalid(point: impl Into<String>, detail: impl Into<String>) -> Self {
         Self::new(point, Code::Invalid, detail)
     }

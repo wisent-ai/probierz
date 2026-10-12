@@ -211,8 +211,7 @@ pub(crate) fn protect_run(
         Ok(())
     })();
     if let Err(error) = writing {
-        let _ = fs::remove_file(&temporary);
-        return Err(error);
+        return Err(error.discarding(&temporary));
     }
     let protected = json!({
         "file": destination.to_string_lossy(),
