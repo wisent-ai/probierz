@@ -68,7 +68,7 @@ pub fn author_spec(
                 &failures,
             )
         };
-        let _ = fs::remove_file(&staged);
+        Failure::discard("author-spec", &staged)?;
         let drafted = match draft_structured_artifact(
             harness,
             app_id,
@@ -120,7 +120,7 @@ pub fn author_spec(
             .map(str::to_string)
             .collect();
     }
-    let _ = fs::remove_file(&staged);
+    Failure::discard("author-spec", &staged)?;
     Ok(
         json!({ "ok": false, "reason": format!("authoring did not converge in {rounds} rounds"), "lastFailures": failures }),
     )
