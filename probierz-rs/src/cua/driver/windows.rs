@@ -119,7 +119,17 @@ impl Driver {
         let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
         fs::create_dir_all(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
         let daemon_log = parent.join("probierz-daemon.log");
-        let _ = fs::remove_file(&daemon_log);
+        // The launch is diagnosed from this log; one left by an earlier daemon
+        // would be read as this launch's answer, so a log that stays refuses.
+        match fs::remove_file(&daemon_log) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                return Err(format!(
+                    "the previous CuaDriver daemon log {} could not be cleared: {error}",
+                    daemon_log.display()
+                ));
+            }
+            _ => {}
+        }
 
         let launched = run_to_exit(
             Command::new("/usr/bin/open")
