@@ -232,11 +232,10 @@ pub(crate) fn artifact_root(job: &Arc<Mutex<Job>>) -> Result<PathBuf, String> {
 pub(crate) fn terminate_tree(pid: u32) {
     #[cfg(windows)]
     {
-        let _ = Command::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+        let mut kill = Command::new("taskkill");
+        kill.args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null());
+        say_unkilled(&pid.to_string(), stado_wait::output(&mut kill));
     }
     #[cfg(unix)]
     {
@@ -278,11 +277,22 @@ pub(crate) fn terminate_tree(pid: u32) {
         descendants(pid, &processes, &mut tree);
         let ids = tree.iter().map(u32::to_string).collect::<Vec<_>>();
         // One KILL to the whole tree; no TERM-then-pause escalation.
-        let _ = Command::new("/bin/kill")
-            .arg("-KILL")
-            .args(&ids)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+        let mut kill = Command::new("/bin/kill");
+        kill.arg("-KILL").args(&ids).stdout(Stdio::null());
+        say_unkilled(&ids.join(" "), stado_wait::output(&mut kill));
+    }
+}
+
+/// A job reported cancelled whose processes survive keeps holding what it
+/// ran on, so a kill that did not end them all is said with its cause.
+fn say_unkilled(ids: &str, killed: std::io::Result<std::process::Output>) {
+    match killed {
+        Ok(output) if output.status.success() => {}
+        Ok(output) => eprintln!(
+            "probierz: killing the job's processes {ids} answered {} ({}); some may keep running",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ),
+        Err(error) => eprintln!("probierz: the job's processes {ids} could not be killed: {error}"),
     }
 }
