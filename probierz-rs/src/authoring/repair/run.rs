@@ -88,13 +88,13 @@ pub fn repair_failed_run(
             }
             let drafted = draft_structured_artifact(harness, app_id, None, &brief, "submit_probierz_repair", "Submit one JSON repair decision with verdict, reason, explanation, patch, and spec.")?;
             let decision: JsonValue = serde_json::from_str(&drafted.content)
-                .map_err(|_| "Brama repair worker returned a non-JSON decision".to_string())?;
+                .map_err(|error| format!("the repair worker at the model router returned a decision that is not JSON: {error}"))?;
             let verdict = decision
                 .get("verdict")
                 .and_then(JsonValue::as_str)
                 .unwrap_or_default();
             if !matches!(verdict, "product_patch" | "spec_fix" | "not_auto_fixable") {
-                return Err("Brama repair worker returned an invalid verdict".to_string());
+                return Err(format!("the repair worker at the model router returned a verdict it may not give: {verdict:?}"));
             }
             if decision.get("reason").and_then(JsonValue::as_str).is_none()
                 || decision
@@ -102,7 +102,10 @@ pub fn repair_failed_run(
                     .and_then(JsonValue::as_str)
                     .is_none()
             {
-                return Err("Brama repair worker omitted its reason or explanation".to_string());
+                return Err(
+                    "the repair worker at the model router omitted its reason or explanation"
+                        .to_string(),
+                );
             }
             let mut recorded = decision.clone();
             if let Some(object) = recorded.as_object_mut() {

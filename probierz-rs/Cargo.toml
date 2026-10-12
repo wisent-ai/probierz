@@ -36,6 +36,10 @@ name = "history_journey"
 path = "../tests/history/journey.rs"
 
 [[test]]
+name = "repair_model_service"
+path = "../tests/repair/model_service.rs"
+
+[[test]]
 name = "secrets_group"
 path = "../tests/secrets/group.rs"
 
