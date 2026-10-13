@@ -130,14 +130,26 @@ pub(crate) fn repair_source_run(
         };
         return Err(repair_failure(None, "not_found", false, detail, message));
     };
-    let run_id = run
-        .get("runId")
-        .and_then(JsonValue::as_str)
-        .unwrap_or_default();
-    let status = run
-        .get("status")
-        .and_then(JsonValue::as_str)
-        .unwrap_or("unknown");
+    // A run record without its id or status cannot be repaired against; it
+    // was read as run "" with status "unknown".
+    let Some(run_id) = run.get("runId").and_then(JsonValue::as_str) else {
+        return Err(repair_failure(
+            None,
+            "config",
+            false,
+            format!("the recorded run of {app_id} names no runId: {run}"),
+            format!("A recorded run of {app_id} has no run id, so it cannot be repaired against."),
+        ));
+    };
+    let Some(status) = run.get("status").and_then(JsonValue::as_str) else {
+        return Err(repair_failure(
+            Some(run_id),
+            "config",
+            false,
+            format!("run {run_id} records no status"),
+            format!("Run {run_id} records no status; only failed runs are repairable."),
+        ));
+    };
     if status != "failed" {
         return Err(repair_failure(
             Some(run_id),

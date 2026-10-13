@@ -194,25 +194,52 @@ pub(crate) fn verify_repaired_spec(
         .arg("PROBIERZ_RUN_KIND=repair")
         .env("PROBIERZ_REPAIR_SUPPRESS", "1")
         .output();
-    let exit_code = output.ok().and_then(|value| value.status.code());
-    let latest = crate::status::run_history_value(harness, app_id, Some(target), None, 1)
-        .ok()
-        .and_then(|history| {
+    // Each way this verification can end without a verdict is named: the run
+    // did not start, its history could not be read, it recorded no run, or the
+    // run states no status. Each read as status "unknown" and not passed,
+    // which looked like a run that failed.
+    let (exit_code, started) = match &output {
+        Ok(value) => (value.status.code(), None),
+        Err(error) => (
+            None,
+            Some(format!("the verification run did not start: {error}")),
+        ),
+    };
+    let latest =
+        crate::status::run_history_value(harness, app_id, Some(target), None, 1).map(|history| {
             history
                 .get("runs")
                 .and_then(JsonValue::as_array)
                 .and_then(|runs| runs.first())
                 .cloned()
         });
-    let status = latest
+    let (run, unread) = match latest {
+        Ok(Some(run)) => (Some(run), None),
+        Ok(None) => (
+            None,
+            Some(format!("no {target} run of {app_id} is recorded")),
+        ),
+        Err(error) => (
+            None,
+            Some(format!(
+                "the run history of {app_id} cannot be read: {error}"
+            )),
+        ),
+    };
+    let status = run
         .as_ref()
         .and_then(|run| run.get("status"))
-        .and_then(JsonValue::as_str)
-        .unwrap_or("unknown");
+        .and_then(JsonValue::as_str);
+    let error = match (started, unread, &run, status) {
+        (Some(cause), _, _, _) | (None, Some(cause), _, _) => Some(cause),
+        (None, None, Some(run), None) => Some(format!("the newest run states no status: {run}")),
+        _ => None,
+    };
     json!({
-        "passed": status == "passed",
+        "passed": status == Some("passed"),
         "exitCode": exit_code,
-        "runId": latest.as_ref().and_then(|run| run.get("runId")).cloned().unwrap_or(JsonValue::Null),
-        "status": status
+        "runId": run.as_ref().and_then(|run| run.get("runId")).cloned(),
+        "status": status,
+        "error": error,
     })
 }
