@@ -62,7 +62,7 @@ pub(crate) fn fleet_health() -> Value {
                 Code::Unavailable => "infra_down",
                 Code::Invalid => "unknown",
                 Code::Prerequisite => "config",
-                Code::Refused => "unknown",
+                Code::Refused => "refused",
                 Code::Unknown => "unknown",
             };
             let action = match failure.point.as_str() {
