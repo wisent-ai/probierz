@@ -56,7 +56,13 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             GateCommand::Deactivate { args } => gate::deactivate(harness, &args),
         },
         // PortRuns: execution, analysis, and matrix
-        ReportingCommand::Check { target } => run::check(&target),
+        ReportingCommand::Check { target } => {
+            match target.strip_prefix(crate::suites::TARGET_PREFIX) {
+                // A checkout's own suites are read from its release manifest.
+                Some(repo) => crate::suites::check(harness, Path::new(repo)),
+                None => run::check(&target),
+            }
+        }
         ReportingCommand::Setup { target, args } => run::setup(harness, &target, &args),
         ReportingCommand::Run { target, args } => {
             // A product's first-use journey is played, not an npm target; it
@@ -71,6 +77,9 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
                     ));
                 }
                 return crate::firstuse::run(harness, app_id);
+            }
+            if let Some(repo) = target.strip_prefix(crate::suites::TARGET_PREFIX) {
+                return crate::suites::run(harness, Path::new(repo), &args);
             }
             let answer = run::run(harness, &target, &args);
             if answer.is_ok() {

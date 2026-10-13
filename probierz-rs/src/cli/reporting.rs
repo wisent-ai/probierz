@@ -92,7 +92,8 @@ pub enum ReportingCommand {
         command: GateCommand,
     },
     // PortRuns: execution, analysis, and matrix
-    /// Is the target toolchain ready?
+    /// Is the target toolchain ready? `suites/<checkout>` lists the test
+    /// suites a checkout's release manifest declares and its newest kept run.
     Check { target: String },
     /// Install the browser or driver layers Probierz owns.
     #[command(after_help = crate::run::RUN_FLAGS_HELP)]
@@ -102,6 +103,8 @@ pub enum ReportingCommand {
         args: Vec<String>,
     },
     /// Execute a target, capture its artifacts, and analyze its report.
+    /// `suites/<checkout> [<gate>…]` runs a checkout's own declared test
+    /// suites and keeps the run under test-results/.suites/<product>.
     #[command(after_help = crate::run::RUN_FLAGS_HELP)]
     Run {
         target: String,
