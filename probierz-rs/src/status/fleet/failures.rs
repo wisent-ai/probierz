@@ -201,24 +201,23 @@ pub(crate) fn render_failures(report: &Value) -> String {
         lines.push("  (none)".to_string());
     }
     for envelope in newest {
-        let detail = string(envelope.get("detail"))
-            .map(|detail| format!("  {}", detail.trim()))
-            .unwrap_or_default();
+        // An envelope without a detail adds nothing after its fields.
+        let detail = match string(envelope.get("detail")) {
+            Some(detail) => format!("  {}", detail.trim()),
+            None => String::new(),
+        };
+        // Each field the envelope carries, or the field named as missing: a
+        // dash or "undefined" read as a time, service or code of that name.
+        let field = |name: &str| match string(envelope.get(name)) {
+            Some(value) => value.to_string(),
+            None => format!("(no {name})"),
+        };
         lines.push(format!(
             "  {}  {}  {}  {}{}",
-            string(envelope.get("received_at")).unwrap_or("-"),
-            envelope
-                .get("service")
-                .and_then(Value::as_str)
-                .unwrap_or("undefined"),
-            envelope
-                .get("error_code")
-                .and_then(Value::as_str)
-                .unwrap_or("undefined"),
-            envelope
-                .get("failure_point")
-                .and_then(Value::as_str)
-                .unwrap_or("undefined"),
+            field("received_at"),
+            field("service"),
+            field("error_code"),
+            field("failure_point"),
             detail,
         ));
     }
