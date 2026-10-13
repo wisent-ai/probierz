@@ -41,7 +41,7 @@ pub(crate) fn result_projection(run: Option<&Value>) -> Value {
         "status": value_or(run.get("status"), Value::Null),
         "startedAt": value_or(run.get("startedAt"), Value::Null),
         "completedAt": value_or(run.get("completedAt"), Value::Null),
-        "durationMs": value_or(run.get("durationMs"), json!(0)),
+        "durationMs": value_or(run.get("durationMs"), Value::Null),
         "evidence": value_or(run.get("evidence"), Value::Null),
         "artifacts": artifact_projection(run),
     })
@@ -59,15 +59,19 @@ pub(crate) fn device_key(run: &Value) -> String {
     format!("{name}:{runtime}")
 }
 
+/// The version a run is grouped under: its build's digest, else its
+/// harness's; a run that recorded neither is grouped under that statement.
 pub(crate) fn version_key(run: &Value) -> String {
-    run.get("build")
+    match run
+        .get("build")
         .and_then(|value| string(value.get("sha256")))
         .or_else(|| {
             run.get("harness")
                 .and_then(|value| string(value.get("sha256")))
-        })
-        .unwrap_or("unknown")
-        .to_string()
+        }) {
+        Some(digest) => digest.to_string(),
+        None => "no build or harness digest recorded".to_string(),
+    }
 }
 
 pub(crate) fn dashboard_value(

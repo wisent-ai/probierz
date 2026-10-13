@@ -34,7 +34,7 @@ pub(crate) fn test_history(runs: &[Value]) -> Vec<Value> {
                 "runId": value_or(run.get("runId"), Value::Null),
                 "at": value_or(run.get("startedAt"), Value::Null),
                 "status": value_or(test.get("status"), Value::Null),
-                "durationMs": value_or(test.get("durationMs"), json!(0)),
+                "durationMs": value_or(test.get("durationMs"), Value::Null),
             }));
         }
     }

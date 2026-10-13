@@ -135,13 +135,15 @@ pub(crate) fn finish_remote(result: Value) -> Answer {
 }
 
 pub(crate) fn remote_result_answer(result: &Value) -> Answer {
-    let state = result
-        .get("state")
-        .and_then(Value::as_str)
-        .unwrap_or("unknown");
+    let Some(state) = result.get("state").and_then(Value::as_str) else {
+        return Err(Failure::config(
+            "stado.remote",
+            format!("the remote run answered without a state: {result}"),
+        ));
+    };
     let queued = state == "queued"
         && result.get("submitted").and_then(Value::as_bool) == Some(true)
-        && result.get("failure").map(Value::is_null).unwrap_or(true);
+        && matches!(result.get("failure"), None | Some(Value::Null));
     if state == "completed" || queued {
         return Ok(());
     }
@@ -149,20 +151,28 @@ pub(crate) fn remote_result_answer(result: &Value) -> Answer {
         .get("cancellationFailure")
         .filter(|value| !value.is_null())
         .or_else(|| result.get("failure"));
-    let point = failure
+    // A failure that names no point is the remote run's own, reported at
+    // the point that read it.
+    let point = match failure
         .and_then(|value| value.get("failurePoint"))
         .and_then(Value::as_str)
-        .unwrap_or("stado.remote");
-    let message = failure
+    {
+        Some(point) => point,
+        None => "stado.remote",
+    };
+    let message = match failure
         .and_then(|value| value.get("message"))
         .and_then(Value::as_str)
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("Remote run ended as \"{state}\"."));
-    let retryable = failure
+    {
+        Some(message) => message.to_string(),
+        None => format!("Remote run ended as \"{state}\" and gave no failure message."),
+    };
+    // Only a failure that says it is retryable is reported as one.
+    if failure
         .and_then(|value| value.get("retryable"))
         .and_then(Value::as_bool)
-        .unwrap_or(false);
-    if retryable {
+        == Some(true)
+    {
         Err(Failure::unavailable(point, message))
     } else {
         Err(Failure::config(point, message))
