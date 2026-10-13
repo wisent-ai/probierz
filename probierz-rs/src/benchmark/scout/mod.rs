@@ -121,12 +121,16 @@ pub(crate) fn scout(
     };
     if !buildable(&trend) {
         print_json(&json!({"topic": topic, "trend": trend}))?;
+        let verdict = match trend["verdict"].as_str() {
+            Some(verdict) => verdict,
+            None => "a verdict it did not state",
+        };
         return Err(Failure::new(
             POINT,
             Code::Refused,
             format!(
                 "Trends reads topic {topic} as {}: {} observations against a floor of {}, {} recent against {} before; a product is scouted on a topic with enough evidence that is not falling. `trends ingest` adds evidence",
-                trend["verdict"].as_str().unwrap_or("unknown"), trend["evidence"], trend["min_evidence"], trend["recent"], trend["baseline"]
+                verdict, trend["evidence"], trend["min_evidence"], trend["recent"], trend["baseline"]
             ),
         ));
     }
