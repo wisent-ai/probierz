@@ -23,10 +23,15 @@ pub(crate) fn repair_brief(
         .get("repositories")
         .and_then(YamlValue::as_sequence)
         .and_then(|values| values.first());
-    let root = repository
+    // Fields the spec or the run left out are named as such in the brief; a
+    // repair told "unknown" or nothing reads it as a value it can act on.
+    let root = match repository
         .and_then(|value| value.get("root"))
         .and_then(YamlValue::as_str)
-        .unwrap_or("unknown");
+    {
+        Some(root) => root,
+        None => "not declared in the spec",
+    };
     let mappings = repository
         .and_then(|value| value.get("mappings"))
         .and_then(YamlValue::as_sequence)
@@ -103,17 +108,25 @@ pub(crate) fn repair_brief(
         format!("Repository: {root}"),
         format!(
             "Run: {}",
-            run.get("runId")
-                .and_then(JsonValue::as_str)
-                .unwrap_or_default()
+            match run.get("runId").and_then(JsonValue::as_str) {
+                Some(id) => id,
+                None => "not recorded",
+            }
         ),
         format!(
             "Target: {}",
-            run.get("target")
-                .and_then(JsonValue::as_str)
-                .unwrap_or_default()
+            match run.get("target").and_then(JsonValue::as_str) {
+                Some(target) => target,
+                None => "not recorded",
+            }
         ),
-        format!("Journey: {}", journey.unwrap_or("unknown")),
+        format!(
+            "Journey: {}",
+            match journey {
+                Some(journey) => journey,
+                None => "not recorded",
+            }
+        ),
         format!(
             "Last green run: {}",
             match green {

@@ -219,7 +219,7 @@ pub(crate) fn run_authored_spec(
         .collect::<Vec<_>>();
     Ok(json!({
         "passed": value.get("passed").and_then(JsonValue::as_bool).unwrap_or_else(|| value.get("status").and_then(JsonValue::as_str) == Some("passed")),
-        "status": value.get("status").and_then(JsonValue::as_str).unwrap_or("unknown"),
+        "status": value.get("status").and_then(JsonValue::as_str),
         "runId": value.get("runId").cloned().unwrap_or(JsonValue::Null),
         "failures": failures,
     }))
