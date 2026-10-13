@@ -108,7 +108,9 @@ pub fn receipt(
         "artifactPolicy": {
             "retain": document.pointer("/artifacts/retain").cloned().unwrap_or_else(|| json!({})),
             "redact": redact_policy,
-            "pii": document.pointer("/artifacts/pii").cloned().unwrap_or_else(|| json!("unknown")),
+            // A manifest that declares no PII classification is signed as
+            // declaring none (null), not as one nobody chose.
+            "pii": document.pointer("/artifacts/pii"),
         },
         "secretScans": scans, "issuedAt": now_iso(),
         "policy": { "minimumEvidence": minimum, "requiredJourneys": required },

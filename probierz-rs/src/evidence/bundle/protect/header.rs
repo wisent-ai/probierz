@@ -99,7 +99,8 @@ pub(super) fn bundle_header(inputs: HeaderInputs<'_>) -> Result<Value, Failure> 
         "createdAt": now_iso(),
         "expiresAt": expires_at(started, days)?,
         "retentionDays": days.map(js_number),
-        "pii": document.pointer("/artifacts/pii").cloned().unwrap_or_else(|| json!("unknown")),
+        // An undeclared PII classification stays null.
+        "pii": document.pointer("/artifacts/pii"),
         "nonce": BASE64.encode(nonce),
         "keyFingerprintSha256": sha256_bytes(key),
         "contentIndexSha256": index_hash,
