@@ -28,7 +28,7 @@ use clap::Subcommand;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::failure::Answer;
+use crate::failure::{Answer, Failure};
 
 pub const HELP: &str = "\
 The register answers three questions: what was claimed, what the claim was
@@ -156,18 +156,22 @@ pub fn register_file(harness: &Path) -> PathBuf {
     harness.join(REGISTER_DIRECTORY).join(REGISTER_FILE)
 }
 
-/// Who is recording. The evidence model already attributes audit records to
-/// `PROBIERZ_ACTOR`, `GITHUB_ACTOR` or `USER`, so the register attributes them
-/// the same way rather than inventing a second answer.
-pub(crate) fn actor() -> String {
+/// Who is recording, from `PROBIERZ_ACTOR`, `GITHUB_ACTOR` or `USER` in that
+/// order: the incident register and the evidence audit attribute records the
+/// same way. A process that carries none of them is refused rather than
+/// recorded as an actor nobody is.
+pub(crate) fn actor() -> Result<String, Failure> {
     for name in ["PROBIERZ_ACTOR", "GITHUB_ACTOR", "USER"] {
         if let Ok(value) = std::env::var(name) {
             if !value.trim().is_empty() {
-                return value;
+                return Ok(value);
             }
         }
     }
-    "unknown".to_string()
+    Err(Failure::config(
+        "records.actor",
+        "no actor to attribute this record to: PROBIERZ_ACTOR, GITHUB_ACTOR and USER are all unset or empty",
+    ))
 }
 
 pub(crate) fn now() -> String {

@@ -78,10 +78,7 @@ pub(crate) fn audit_access(
     }
     let at = now_iso();
     let event_id = random_uuid();
-    let actor = std::env::var("PROBIERZ_ACTOR")
-        .or_else(|_| std::env::var("GITHUB_ACTOR"))
-        .or_else(|_| std::env::var("USER"))
-        .unwrap_or_else(|_| "unknown".to_string());
+    let actor = crate::incidents::actor()?;
     let payload = json!({
         "schemaVersion": 1,
         "kind": "probierz-access-audit",

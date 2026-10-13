@@ -97,7 +97,7 @@ pub(super) fn record_envelope(
         "schema": INCIDENT_SCHEMA,
         "incident_id": identity(&recorded_at, claim, &envelope),
         "recorded_at": recorded_at,
-        "actor": actor(),
+        "actor": actor()?,
         "claim": claim,
         "run_id": run_id,
         "envelope": envelope,
@@ -240,7 +240,7 @@ pub(super) fn resolve_entry(
         "schema": RESOLUTION_SCHEMA,
         "incident_id": id,
         "resolved_at": now(),
-        "actor": actor(),
+        "actor": actor()?,
         "note": note,
         "run_id": run_id,
     });
@@ -269,7 +269,7 @@ pub fn reopen(harness: &Path, id: &str, note: &str, json_output: bool) -> Answer
         "schema": REOPENING_SCHEMA,
         "incident_id": id,
         "reopened_at": now(),
-        "actor": actor(),
+        "actor": actor()?,
         "note": note,
     });
     append(harness, &entry)?;
