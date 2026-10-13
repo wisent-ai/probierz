@@ -226,7 +226,30 @@ pub fn intake_serve(bind: &str) -> Answer {
     let listener = TcpListener::bind(address).map_err(|error| {
         Failure::unavailable("intake.listen", format!("could not bind {bind}: {error}"))
     })?;
-    eprintln!("probierz intake: listening on http://{host}:{port}/v1/failures");
+    // Clients find the intake where it actually listens: the address the
+    // service declaration bound is written beside the token, so no client
+    // carries a port of its own.
+    let listening = listener.local_addr().map_err(|error| {
+        Failure::unavailable(
+            "intake.listen",
+            format!("the bound {bind} has no local address: {error}"),
+        )
+    })?;
+    let url = format!("http://{listening}");
+    let url_file = home_dir().join(".probierz").join("intake-url");
+    std::fs::write(&url_file, &url).map_err(|error| {
+        Failure::config(
+            "intake.address",
+            format!(
+                "{} could not be written, so no client can find this intake: {error}",
+                url_file.display()
+            ),
+        )
+    })?;
+    eprintln!(
+        "probierz intake: listening on {url}/v1/failures (address in {})",
+        url_file.display()
+    );
     for connection in listener.incoming() {
         match connection {
             Ok(stream) => {
