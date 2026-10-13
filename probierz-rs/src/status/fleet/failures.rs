@@ -95,8 +95,16 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     // not silently hide the separator.
     let mut grouped: Vec<(String, usize)> = Vec::new();
     for envelope in &envelopes {
-        let service = string(envelope.get("service")).unwrap_or("unknown");
-        let code = string(envelope.get("error_code")).unwrap_or("unknown");
+        // An envelope without its service or code is grouped under that
+        // statement; "unknown" read like a service and a code of their own.
+        let service = match string(envelope.get("service")) {
+            Some(service) => service,
+            None => "service not reported",
+        };
+        let code = match string(envelope.get("error_code")) {
+            Some(code) => code,
+            None => "code not reported",
+        };
         let key = format!("{service}\0{code}");
         if let Some((_, count)) = grouped.iter_mut().find(|entry| entry.0 == key) {
             *count += 1;
