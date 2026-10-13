@@ -177,10 +177,10 @@ pub(crate) fn app_source_identity(harness: &Path, app_id: &str) -> Result<Value,
                 .and_then(Value::as_str)
                 .is_none_or(|value| !is_sha256(value))
             {
-                let name = repository
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .unwrap_or("?");
+                let name = match repository.get("name").and_then(Value::as_str) {
+                    Some(name) => name,
+                    None => "(the entry declares no name)",
+                };
                 return Err(Failure::config(
                     "run.source",
                     format!(

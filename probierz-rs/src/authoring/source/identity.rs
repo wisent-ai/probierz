@@ -105,10 +105,10 @@ pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue
     {
         for repository in repositories {
             if !valid_sha256(repository.get("worktreeSha256").and_then(JsonValue::as_str)) {
-                let name = repository
-                    .get("name")
-                    .and_then(JsonValue::as_str)
-                    .unwrap_or("?");
+                let name = match repository.get("name").and_then(JsonValue::as_str) {
+                    Some(name) => name,
+                    None => "(the entry declares no name)",
+                };
                 return Err(Failure::config(
                     "run.source",
                     format!(
