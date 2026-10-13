@@ -196,11 +196,14 @@ pub(crate) fn run_authored_spec(
     }
     let output = command.output()?;
     if output.stdout.is_empty() {
+        // The run printed no result, so there is no status to report: the
+        // exit and stderr say why.
         return Ok(json!({
             "passed": false,
-            "status": "unknown",
+            "status": JsonValue::Null,
             "runId": JsonValue::Null,
-            "failures": [String::from_utf8_lossy(&output.stderr)],
+            "exitCode": output.status.code(),
+            "failures": [format!("the run printed no result ({}): {}", output.status, String::from_utf8_lossy(&output.stderr))],
         }));
     }
     let value: JsonValue = serde_json::from_slice(&output.stdout)?;

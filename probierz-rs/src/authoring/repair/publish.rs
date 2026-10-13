@@ -179,13 +179,12 @@ pub(crate) fn verify_repaired_spec(
     let executable = match std::env::current_exe() {
         Ok(value) => value,
         Err(error) => {
-            return json!({ "passed": false, "exitCode": JsonValue::Null, "runId": JsonValue::Null, "status": "unknown", "error": error.to_string() })
+            return json!({ "passed": false, "exitCode": JsonValue::Null, "runId": JsonValue::Null, "status": JsonValue::Null, "error": format!("the verification run could not find this probierz executable: {error}") })
         }
     };
-    let target = run
-        .get("target")
-        .and_then(JsonValue::as_str)
-        .unwrap_or_default();
+    let Some(target) = run.get("target").and_then(JsonValue::as_str) else {
+        return json!({ "passed": false, "exitCode": JsonValue::Null, "runId": JsonValue::Null, "status": JsonValue::Null, "error": format!("the run being repaired names no target to verify against: {run}") });
+    };
     let output = Command::new(executable)
         .args(["--harness"])
         .arg(harness)
