@@ -53,8 +53,29 @@ fn launchd(predecessor: &str) {
     if printed.is_none() && !plist.exists() {
         return;
     }
+    let loaded = printed.is_some();
     let pid = printed.and_then(|output| running_pid(&String::from_utf8_lossy(&output.stdout)));
-    let _ = stado_wait::output(Command::new("/bin/launchctl").arg("bootout").arg(&target));
+    // A loaded predecessor launchd refused to boot out stays serving: said
+    // with launchd's own words, never followed by "retired". One that is not
+    // loaded leaves only its plist to remove.
+    let booted = loaded
+        .then(|| stado_wait::output(Command::new("/bin/launchctl").arg("bootout").arg(&target)));
+    match &booted {
+        None => {}
+        Some(Ok(output)) if output.status.success() => {}
+        Some(Ok(output)) => {
+            eprintln!(
+                "probierz intake: launchctl bootout {target} ended {}: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+            return;
+        }
+        Some(Err(error)) => {
+            eprintln!("probierz intake: launchctl bootout {target} could not run: {error}");
+            return;
+        }
+    }
     if let Some(pid) = pid {
         await_exit(pid);
     }
