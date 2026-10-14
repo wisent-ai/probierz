@@ -107,7 +107,7 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
         Some(current) => current,
         None => default_config(&args.app_id),
     };
-    let activated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+    let activated_at = crate::failure::now_iso();
     let receipt_fingerprint = property(&evaluation, "evidence")
         .and_then(|value| property(value, "receipt"))
         .and_then(|value| string_property(value, "fingerprint"))
