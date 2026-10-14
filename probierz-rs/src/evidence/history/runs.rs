@@ -59,10 +59,10 @@ pub(crate) fn run_record(manifest_path: &Path) -> Result<Option<Value>, Failure>
     record.insert("build".into(), stated("build"));
     record.insert(
         "journeys".into(),
-        source
-            .pointer("/appManifest/journeys")
-            .cloned()
-            .unwrap_or_else(|| json!([])),
+        match source.pointer("/appManifest/journeys") {
+            Some(journeys) => journeys.clone(),
+            None => Value::Null,
+        },
     );
     record.insert(
         "failureClass".into(),
@@ -76,24 +76,12 @@ pub(crate) fn run_record(manifest_path: &Path) -> Result<Option<Value>, Failure>
         "device".into(),
         source.get("device").cloned().unwrap_or(Value::Null),
     );
-    record.insert(
-        "conditions".into(),
-        source
-            .get("conditions")
-            .cloned()
-            .unwrap_or_else(|| json!({})),
-    );
+    record.insert("conditions".into(), stated("conditions"));
     record.insert(
         "evidence".into(),
         source.get("evidence").cloned().unwrap_or(Value::Null),
     );
-    record.insert(
-        "artifacts".into(),
-        source
-            .get("artifacts")
-            .cloned()
-            .unwrap_or_else(|| json!([])),
-    );
+    record.insert("artifacts".into(), stated("artifacts"));
     record.insert(
         "protection".into(),
         source.get("protection").cloned().unwrap_or(Value::Null),
