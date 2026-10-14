@@ -36,20 +36,13 @@ pub(crate) fn figure_geometry(png: &Path) -> Result<JsonValue, String> {
     // `magick -trim -format "%w %h %X %Y"` answers four integers; an answer
     // it does not is refused quoting it. Read as the whole canvas at offset
     // zero it made every figure's content touch every edge.
-    let pieces: Vec<&str> = trimmed.split_whitespace().collect();
-    let field = |position: usize, name: &str| -> Result<i64, String> {
-        pieces
-            .get(position)
+    let mut fields = trimmed.split_whitespace();
+    let mut next = |name: &str| -> Result<i64, String> {
+        fields
+            .next()
             .map(|value| value.trim_start_matches('+'))
             .and_then(|value| value.parse::<i64>().ok())
             .ok_or_else(|| format!("magick -trim answered {trimmed:?}, which states no {name}"))
-    };
-    let mut positions = pieces.iter().enumerate().map(|(position, _)| position);
-    let mut next = |name: &str| {
-        positions
-            .next()
-            .ok_or_else(|| format!("magick -trim answered {trimmed:?}, which states no {name}"))
-            .and_then(|position| field(position, name))
     };
     let content_width = next("content width")?;
     let content_height = next("content height")?;
