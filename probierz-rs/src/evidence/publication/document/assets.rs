@@ -36,13 +36,11 @@ pub(crate) fn publication_assets(
                 ),
             )
         })?;
-        let kind = media
-            .get("artifactKind")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        require(
-            matches!(kind, "screenshot" | "recording" | "trace"),
-            format!("assets.{index} has unsupported artifact kind {kind}"),
+        // The kind the receipt signed, allowed by the journey policy (whose
+        // kinds the manifest validates) and supported by the run's driver.
+        let kind = require_string(
+            media.get("artifactKind"),
+            &format!("assets.{index} signed evidence states no artifact kind"),
         )?;
         require(
             policy
@@ -51,19 +49,10 @@ pub(crate) fn publication_assets(
                 .is_some_and(|kinds| kinds.iter().any(|value| value.as_str() == Some(kind))),
             format!("assets.{index} kind {kind} is not allowed by the journey policy"),
         )?;
+        let target = require_string(run.get("target"), "the signed run states no target")?;
         require(
-            manifest::target_supports_artifact_kind(
-                run.get("target")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default(),
-                kind,
-            ),
-            format!(
-                "driver {} does not support {kind}",
-                run.get("target")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-            ),
+            manifest::target_supports_artifact_kind(target, kind),
+            format!("driver {target} does not support {kind}"),
         )?;
         require(
             registration
@@ -119,7 +108,7 @@ pub(crate) fn publication_assets(
         let asset = json!({
             "attemptId": attempt_id, "screenId": policy.get("screenId").cloned().unwrap_or(Value::Null), "kind": kind,
             "storageUrl": storage, "contentSha256": content,
-            "bytes": media.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
+            "bytes": media.get("bytes").and_then(Value::as_f64).map(js_number),
             "evidenceLevel": evidence, "redactionStatus": redaction, "capturedAt": captured_text, "verifiedAt": verified_text,
         });
         let mut with_id = Map::new();
