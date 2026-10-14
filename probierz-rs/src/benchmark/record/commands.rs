@@ -186,9 +186,16 @@ pub(crate) fn compare(harness: &Path, app_id: &str, baseline: &str, candidate: &
             ),
         ));
     }
-    let empty = serde_json::Map::new();
-    let earlier = before["summary"].as_object().unwrap_or(&empty);
-    let later = after["summary"].as_object().unwrap_or(&empty);
+    let summary = |run: &Json, name: &str| {
+        run["summary"].as_object().ok_or_else(|| {
+            Failure::invalid(
+                "benchmark.compare",
+                format!("run {name} records no summary of its contenders"),
+            )
+        })
+    };
+    let earlier = summary(&before, baseline)?;
+    let later = summary(&after, candidate)?;
     let ratio = |field: &str, left: &Json, right: &Json| match (
         left[field].as_f64(),
         right[field].as_f64(),
@@ -201,8 +208,11 @@ pub(crate) fn compare(harness: &Path, app_id: &str, baseline: &str, candidate: &
         if let Some(base) = earlier.get(id) {
             contenders.push(json!({
                 "contender": id,
-                "passRatePoints": (measured["passRate"].as_f64().unwrap_or(0.0)
-                    - base["passRate"].as_f64().unwrap_or(0.0)) * 100.0,
+                // The change in pass rate, as a fraction; null when either
+                // run stated none for this contender.
+                "passRateChange": measured["passRate"].as_f64()
+                    .zip(base["passRate"].as_f64())
+                    .map(|(next, previous)| next - previous),
                 "p50Ratio": ratio("p50Ms", base, measured),
                 "p95Ratio": ratio("p95Ms", base, measured),
                 "baseline": base,
