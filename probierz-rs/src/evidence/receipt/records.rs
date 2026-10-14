@@ -74,11 +74,11 @@ pub(crate) fn signed_protection(protection: Option<&Value>) -> Value {
         return Value::Null;
     };
     json!({
-        "bytes": value.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
+        "bytes": value.get("bytes").and_then(Value::as_f64).map(js_number),
         "sha256": value.get("sha256").cloned().unwrap_or(Value::Null),
         "contentIndexSha256": value.get("contentIndexSha256").cloned().unwrap_or(Value::Null),
         "keyFingerprintSha256": value.get("keyFingerprintSha256").cloned().unwrap_or(Value::Null),
-        "plaintextRemoved": value.get("plaintextRemoved").and_then(Value::as_bool).unwrap_or(false),
+        "plaintextRemoved": value.get("plaintextRemoved").and_then(Value::as_bool),
         "secretScan": value.get("secretScan").cloned().unwrap_or(Value::Null),
     })
 }
