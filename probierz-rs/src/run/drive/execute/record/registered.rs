@@ -99,59 +99,9 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
     }
     let mut analysis = Value::Null;
     if opts.analyze {
-        match analyze_run(
-            Path::new(
-                result
-                    .get("reportPath")
-                    .and_then(Value::as_str)
-                    .unwrap_or(""),
-            ),
-            Some(Path::new(
-                result
-                    .get("artifactsDir")
-                    .and_then(Value::as_str)
-                    .unwrap_or(""),
-            )),
-            result.get("tool").and_then(Value::as_str),
-            opts.frames,
-            result.get("runId").and_then(Value::as_str),
-        ) {
-            Ok(value) => {
-                analysis = value;
-                result = complete_run(result, Some(&analysis), None)?;
-            }
-            Err(error) => {
-                analysis = json!({"error": error.detail});
-                result = complete_run(result, None, Some(&error.detail))?;
-            }
-        }
+        (analysis, result) = analyze_and_complete(result, opts.frames)?;
     }
-    let authoring = result
-        .get("spec")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .contains(".author-staging-");
-    let repair = if !result
-        .get("passed")
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-        && !authoring
-        && !opts.no_repair
-        && std::env::var_os("PROBIERZ_REPAIR_SUPPRESS").is_none()
-    {
-        crate::authoring::repair_failed_run(
-            harness,
-            result
-                .get("appId")
-                .and_then(Value::as_str)
-                .unwrap_or("probierz"),
-            result.get("runId").and_then(Value::as_str),
-            1,
-            false,
-        )?
-    } else {
-        Value::Null
-    };
+    let repair = repair_after_run(harness, &result, opts.no_repair)?;
     let mut output = result.clone();
     output
         .as_object_mut()
@@ -174,4 +124,35 @@ pub fn run(harness: &Path, name: &str, args: &[String]) -> Answer {
         ));
     }
     Ok(())
+}
+
+/// The automatic repair of a finished run: none for a run that passed, a run
+/// an authoring session is staging, a caller that passed `--no-repair`, or
+/// while `PROBIERZ_REPAIR_SUPPRESS` is set. A failed run that recorded no
+/// `appId` answers that refusal rather than repairing another application.
+pub(crate) fn repair_after_run(
+    harness: &Path,
+    completed: &Value,
+    no_repair: bool,
+) -> Result<Value, Failure> {
+    let passed = completed.get("passed").and_then(Value::as_bool) == Some(true);
+    let authoring = completed
+        .get("spec")
+        .and_then(Value::as_str)
+        .is_some_and(|spec| spec.contains(".author-staging-"));
+    if passed || authoring || no_repair || std::env::var_os("PROBIERZ_REPAIR_SUPPRESS").is_some() {
+        return Ok(Value::Null);
+    }
+    let Some(app_id) = completed.get("appId").and_then(Value::as_str) else {
+        return Ok(json!({
+            "error": "the run recorded no appId, so no application's repair was attempted"
+        }));
+    };
+    crate::authoring::repair_failed_run(
+        harness,
+        app_id,
+        completed.get("runId").and_then(Value::as_str),
+        1,
+        false,
+    )
 }

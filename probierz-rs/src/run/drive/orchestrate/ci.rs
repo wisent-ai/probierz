@@ -83,48 +83,12 @@ pub(crate) fn orchestrate(
             }));
             continue;
         }
-        let analyzed = analyze_run(
-            Path::new(run.get("reportPath").and_then(Value::as_str).unwrap_or("")),
-            Some(Path::new(
-                run.get("artifactsDir")
-                    .and_then(Value::as_str)
-                    .unwrap_or(""),
-            )),
-            run.get("tool").and_then(Value::as_str),
-            opts.frames,
-            run.get("runId").and_then(Value::as_str),
-        );
-        let (analysis, completed) = match analyzed {
-            Ok(analysis) => {
-                let complete = complete_run(run, Some(&analysis), None)?;
-                (analysis, complete)
-            }
-            Err(error) => {
-                let analysis = json!({ "error": error.detail });
-                let complete = complete_run(run, None, Some(&error.detail))?;
-                (analysis, complete)
-            }
-        };
+        let (analysis, completed) = analyze_and_complete(run, opts.frames)?;
         let passed = completed
             .get("passed")
             .and_then(Value::as_bool)
             .unwrap_or(false);
-        let repair =
-            if !passed && !opts.no_repair && std::env::var_os("PROBIERZ_REPAIR_SUPPRESS").is_none()
-            {
-                crate::authoring::repair_failed_run(
-                    harness,
-                    completed
-                        .get("appId")
-                        .and_then(Value::as_str)
-                        .unwrap_or("probierz"),
-                    completed.get("runId").and_then(Value::as_str),
-                    1,
-                    false,
-                )?
-            } else {
-                Value::Null
-            };
+        let repair = repair_after_run(harness, &completed, opts.no_repair)?;
         results.push(json!({
             "target": target,
             "runId": completed["runId"],

@@ -158,3 +158,36 @@ pub(crate) fn complete_run(
     object.insert("evidence".into(), evidence);
     Ok(run)
 }
+
+/// A finished run analysed and completed: its report is read from the
+/// `reportPath` the run recorded and its capture from `artifactsDir`. A run
+/// that recorded no report path completes with that refusal as its analysis
+/// error, never with a report read from an empty path. Answers the analysis
+/// (or its error) and the completed run.
+pub(crate) fn analyze_and_complete(
+    run: Value,
+    frames: Option<f64>,
+) -> Result<(Value, Value), Failure> {
+    let analyzed = match run.get("reportPath").and_then(Value::as_str) {
+        Some(report) => crate::run::analyze_run(
+            Path::new(report),
+            run.get("artifactsDir")
+                .and_then(Value::as_str)
+                .map(Path::new),
+            run.get("tool").and_then(Value::as_str),
+            frames,
+            run.get("runId").and_then(Value::as_str),
+        ),
+        None => Err(fail("run.analyze", "the run recorded no reportPath")),
+    };
+    match analyzed {
+        Ok(analysis) => {
+            let completed = complete_run(run, Some(&analysis), None)?;
+            Ok((analysis, completed))
+        }
+        Err(error) => {
+            let completed = complete_run(run, None, Some(&error.detail))?;
+            Ok((json!({ "error": error.detail }), completed))
+        }
+    }
+}

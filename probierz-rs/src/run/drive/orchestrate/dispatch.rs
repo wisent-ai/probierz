@@ -181,28 +181,8 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             continue;
         }
 
-        let analyzed = analyze_run(
-            Path::new(run.get("reportPath").and_then(Value::as_str).unwrap_or("")),
-            Some(Path::new(
-                run.get("artifactsDir")
-                    .and_then(Value::as_str)
-                    .unwrap_or(""),
-            )),
-            run.get("tool").and_then(Value::as_str),
-            plan.get("frames").and_then(Value::as_f64),
-            run.get("runId").and_then(Value::as_str),
-        );
-        let (analysis, completed) = match analyzed {
-            Ok(analysis) => {
-                let complete = complete_run(run, Some(&analysis), None)?;
-                (analysis, complete)
-            }
-            Err(error) => {
-                let analysis = json!({ "error": error.detail });
-                let complete = complete_run(run, None, Some(&error.detail))?;
-                (analysis, complete)
-            }
-        };
+        let (analysis, completed) =
+            analyze_and_complete(run, plan.get("frames").and_then(Value::as_f64))?;
         let (artifact, protection_error) = protect(&completed);
         let passed = completed
             .get("passed")
