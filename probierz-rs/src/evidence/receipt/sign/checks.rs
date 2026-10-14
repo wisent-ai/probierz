@@ -120,13 +120,14 @@ pub(super) fn check_runs(
     errors: &mut Vec<String>,
 ) {
     for run in normalized {
-        let run_id = run.get("runId").and_then(Value::as_str).unwrap_or_default();
-        let status = run
-            .get("status")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        if status != "passed" {
-            errors.push(format!("{run_id}: status {status}"));
+        let Some(run_id) = run.get("runId").and_then(Value::as_str) else {
+            errors.push(format!("a run states no runId: {run}"));
+            continue;
+        };
+        match run.get("status").and_then(Value::as_str) {
+            Some("passed") => {}
+            Some(status) => errors.push(format!("{run_id}: status {status}")),
+            None => errors.push(format!("{run_id}: states no status")),
         }
         if run.pointer("/harness/sha256").and_then(Value::as_str) != Some(expected_harness)
             || run
