@@ -133,16 +133,29 @@ pub(super) fn adopted_this_week(ledger: &Path) -> Result<usize, Failure> {
             ))
         }
     };
-    Ok(text
-        .lines()
-        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-        .filter(|entry| {
-            entry["at"]
-                .as_str()
-                .and_then(|at| chrono::DateTime::parse_from_rfc3339(at).ok())
-                .is_some_and(|at| at >= since)
-        })
-        .count())
+    // Every entry states when it was adopted; one that does not, or is not
+    // JSON, is refused: left uncounted, the weekly limit could be exceeded.
+    let mut adopted = Vec::new();
+    for line in text.lines() {
+        let at = serde_json::from_str::<serde_json::Value>(line)
+            .ok()
+            .and_then(|entry| {
+                entry["at"]
+                    .as_str()
+                    .and_then(|at| chrono::DateTime::parse_from_rfc3339(at).ok())
+            })
+            .ok_or_else(|| {
+                Failure::config(
+                    POINT,
+                    format!(
+                        "the adoption ledger {} holds an entry without an RFC 3339 time, so the weekly limit cannot be counted: {line}",
+                        ledger.display()
+                    ),
+                )
+            })?;
+        adopted.push(at);
+    }
+    Ok(adopted.into_iter().filter(|at| *at >= since).count())
 }
 
 /// Add one adoption to the ledger the weekly limit is counted from.

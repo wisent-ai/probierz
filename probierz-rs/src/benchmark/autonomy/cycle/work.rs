@@ -46,11 +46,11 @@ pub(in crate::benchmark::autonomy) fn scout_one(
     let Some(brief_file) = scout["answer"]["brief"].as_str().map(PathBuf::from) else {
         return json!({"topic": topic, "scout": scout});
     };
-    let brief: Option<Json> = std::fs::read_to_string(&brief_file)
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok());
-    let Some(brief) = brief else {
-        return json!({"topic": topic, "scout": scout, "skipped": "the brief scout wrote cannot be read"});
+    let brief = match crate::json_file::required(&brief_file) {
+        Ok(brief) => brief,
+        Err(failure) => {
+            return json!({"topic": topic, "scout": scout, "skipped": format!("the brief scout wrote cannot be read: {}", failure.detail)})
+        }
     };
     let verdict = match model::judge(harness, &brief, policy.rounds) {
         Ok(verdict) => verdict,
