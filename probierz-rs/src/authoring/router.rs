@@ -215,3 +215,56 @@ pub(crate) fn post_router(
         .map_err(|_| "model router returned an invalid HTTP status".to_string())?;
     Ok((status, payload.to_string()))
 }
+
+/// The model router's refusal: its `error.message` when it names one, else
+/// the whole body it answered, so the cause is never replaced by a guess.
+pub(crate) fn router_refusal(status: u16, payload: &JsonValue, raw: &str) -> String {
+    match payload
+        .pointer("/error/message")
+        .and_then(JsonValue::as_str)
+    {
+        Some(message) => format!("model router HTTP {status}: {message}"),
+        None => format!("model router HTTP {status}: {}", raw.trim()),
+    }
+}
+
+/// The arguments of the one `tool_name` call in the router's answer. An
+/// answer with no such call, several, or arguments that are not a JSON
+/// object is refused naming what it held; prose is never searched for an
+/// object in its place.
+pub(crate) fn tool_call_arguments(
+    payload: &JsonValue,
+    tool_name: &str,
+) -> Result<JsonValue, String> {
+    let calls: Vec<&JsonValue> = payload
+        .pointer("/choices/0/message/tool_calls")
+        .and_then(JsonValue::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|call| {
+            call.get("type").and_then(JsonValue::as_str) == Some("function")
+                && call.pointer("/function/name").and_then(JsonValue::as_str) == Some(tool_name)
+        })
+        .collect();
+    let [call] = calls.as_slice() else {
+        return Err(format!(
+            "the model router answered {} {tool_name} tool calls where exactly one is required: {payload}",
+            calls.len()
+        ));
+    };
+    let arguments = call
+        .pointer("/function/arguments")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| {
+            format!("the model router's {tool_name} call carries no arguments: {call}")
+        })?;
+    match serde_json::from_str::<JsonValue>(arguments) {
+        Ok(object @ JsonValue::Object(_)) => Ok(object),
+        Ok(other) => Err(format!(
+            "the model router's {tool_name} arguments are not an object: {other}"
+        )),
+        Err(error) => Err(format!(
+            "the model router's {tool_name} arguments are not JSON ({error}): {arguments}"
+        )),
+    }
+}

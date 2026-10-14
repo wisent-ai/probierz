@@ -55,42 +55,16 @@ pub(crate) fn draft_structured_artifact(
         }}}]
     }).to_string();
     let (status, raw) = post_router(&url, &token, &agent_id, &agent_secret, &body)?;
-    let payload: JsonValue = serde_json::from_str(&raw)
-        .map_err(|_| format!("Stado model router returned non-JSON ({status})"))?;
+    let payload: JsonValue = serde_json::from_str(&raw).map_err(|error| {
+        format!(
+            "Stado model router returned non-JSON ({status}, {error}): {}",
+            raw.trim()
+        )
+    })?;
     if !(200..300).contains(&status) {
-        let detail = payload
-            .pointer("/error/message")
-            .and_then(JsonValue::as_str)
-            .unwrap_or("request failed")
-            .chars()
-            .take(500)
-            .collect::<String>();
-        return Err(format!(
-            "Stado model router request failed ({status}): {detail}"
-        ));
+        return Err(router_refusal(status, &payload, &raw));
     }
-    let calls: Vec<&JsonValue> = payload
-        .pointer("/choices/0/message/tool_calls")
-        .and_then(JsonValue::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|call| {
-            call.get("type").and_then(JsonValue::as_str) == Some("function")
-                && call.pointer("/function/name").and_then(JsonValue::as_str) == Some(tool_name)
-        })
-        .collect();
-    if calls.len() != 1 {
-        return Err(format!(
-            "Stado model router response must contain exactly one {tool_name} tool call"
-        ));
-    }
-    let args: JsonValue = serde_json::from_str(
-        calls[0]
-            .pointer("/function/arguments")
-            .and_then(JsonValue::as_str)
-            .unwrap_or_default(),
-    )
-    .map_err(|_| format!("Stado model router returned invalid {tool_name} arguments"))?;
+    let args = tool_call_arguments(&payload, tool_name)?;
     let content = args
         .get("content")
         .and_then(JsonValue::as_str)

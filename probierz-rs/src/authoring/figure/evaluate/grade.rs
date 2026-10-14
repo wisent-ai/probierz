@@ -67,13 +67,7 @@ pub(crate) fn grade_figure(
     if !ROUTER_OK.contains(&status) {
         return Err(Failure::unavailable(
             "figure-evaluate.model",
-            format!(
-                "model router HTTP {status}: {}",
-                payload
-                    .pointer("/error/message")
-                    .and_then(JsonValue::as_str)
-                    .unwrap_or("request failed")
-            ),
+            router_refusal(status, &payload, &raw),
         ));
     }
 
@@ -119,7 +113,7 @@ fn request_body(
         "model": router.model,
         "messages": [
             { "role": "system", "content": format!(
-                "You are the release evaluator for scientific figures.\n{}\nCall {TOOL} exactly once. If the tool is unavailable, return only its arguments object as raw JSON.",
+                "You are the release evaluator for scientific figures.\n{}\nCall {TOOL} exactly once.",
                 instructions.join("\n")
             ) },
             { "role": "user", "content": [
@@ -142,54 +136,10 @@ fn data_url(file: &Path) -> Result<String, Failure> {
     ))
 }
 
-/// The evaluation object: the model's single tool call, or the raw JSON
-/// object it returned when the tool was unavailable to it.
+/// The evaluation object: the arguments of the model's single tool call.
 fn evaluation_from(payload: &JsonValue) -> Result<JsonValue, Failure> {
-    let message = payload.pointer("/choices/0/message").ok_or_else(|| {
-        Failure::config(
-            "figure-evaluate.model",
-            "model router returned no figure evaluation",
-        )
-    })?;
-    let calls: Vec<&JsonValue> = message
-        .get("tool_calls")
-        .and_then(JsonValue::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|call| call.pointer("/function/name").and_then(JsonValue::as_str) == Some(TOOL))
-        .collect();
-    if calls.len() > 1 {
-        return Err(Failure::config(
-            "figure-evaluate.model",
-            format!(
-                "model router returned {} {TOOL} calls; exactly one is required",
-                calls.len()
-            ),
-        ));
-    }
-    let raw = match calls.first() {
-        Some(call) => call
-            .pointer("/function/arguments")
-            .and_then(JsonValue::as_str)
-            .unwrap_or_default()
-            .to_string(),
-        None => message
-            .get("content")
-            .and_then(JsonValue::as_str)
-            .unwrap_or_default()
-            .to_string(),
-    };
-
-    // Models sometimes wrap the object in prose; take the object.
-    let start = raw.find('{').unwrap_or(0);
-    let end = raw.rfind('}').map(|index| index + 1).unwrap_or(raw.len());
-    let mut evaluation: JsonValue = serde_json::from_str(raw.get(start..end).unwrap_or_default())
-        .map_err(|_| {
-        Failure::config(
-            "figure-evaluate.model",
-            "model router returned an unparseable figure evaluation",
-        )
-    })?;
+    let evaluation = tool_call_arguments(payload, TOOL)
+        .map_err(|detail| Failure::config("figure-evaluate.model", detail))?;
 
     if evaluation
         .get("summary")
@@ -202,16 +152,6 @@ fn evaluation_from(payload: &JsonValue) -> Result<JsonValue, Failure> {
             "figure-evaluate.model",
             "figure model summary is required",
         ));
-    }
-    // The tool declares fidelityLosses; accept the snake_case spelling
-    // a model may answer with and report the declared one.
-    if let Some(value) = evaluation
-        .as_object_mut()
-        .and_then(|object| object.remove("fidelity_losses"))
-    {
-        if let Some(object) = evaluation.as_object_mut() {
-            object.insert("fidelityLosses".to_string(), value);
-        }
     }
     Ok(evaluation)
 }
