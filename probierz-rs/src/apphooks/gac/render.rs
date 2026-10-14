@@ -218,24 +218,22 @@ pub(crate) fn gac_root(
     harness: &Path,
     environment: &BTreeMap<String, String>,
 ) -> Result<PathBuf, Failure> {
-    let configured = environment
+    // GAC_ROOT, else the first repository the app's manifest declares, read
+    // through manifest::primary_root; a manifest that cannot be loaded is
+    // refused with its cause, never read as one that declares nothing.
+    let configured = match environment
         .get("GAC_ROOT")
         .filter(|value| !value.trim().is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            crate::manifest::load(harness, "game-asset-creator").ok().and_then(|manifest| {
-                manifest.document.get("repositories")
-                    .and_then(serde_yaml::Value::as_sequence)
-                    .and_then(|repositories| repositories.first())
-                    .and_then(|repository| repository.get("root"))
-                    .and_then(serde_yaml::Value::as_str)
-                    .map(PathBuf::from)
-            })
-        })
-        .ok_or_else(|| Failure::config(
-            "apphook.gac.visual-eval",
-            "GAC_ROOT is required: set it to the game_asset_creator repository or declare that repository first in apps/game-asset-creator/probierz.yaml",
-        ))?;
+    {
+        Some(root) => PathBuf::from(root),
+        None => {
+            let manifest = crate::manifest::load(harness, "game-asset-creator")?;
+            crate::manifest::primary_root(&manifest).ok_or_else(|| Failure::config(
+                "apphook.gac.visual-eval",
+                "GAC_ROOT is required: set it to the game_asset_creator repository or declare that repository first in apps/game-asset-creator/probierz.yaml",
+            ))?
+        }
+    };
     if !configured.is_dir() {
         return Err(Failure::new(
             "apphook.gac.visual-eval",

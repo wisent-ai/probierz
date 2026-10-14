@@ -7,7 +7,12 @@ pub(crate) fn figure_prerequisites(
     model: Option<&str>,
     router_url: Option<&str>,
 ) -> Result<(String, String), String> {
-    let loaded = app_id.and_then(|id| manifest::load(harness, id).ok());
+    // A named app's manifest states its figure settings; one that cannot be
+    // loaded is refused with its cause, never read as stating nothing.
+    let loaded = app_id
+        .map(|id| manifest::load(harness, id))
+        .transpose()
+        .map_err(|failure| failure.detail)?;
     let selected_model = selected_setting(
         loaded.as_ref(),
         target,
