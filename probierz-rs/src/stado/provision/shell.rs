@@ -189,33 +189,45 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
             &output,
         ));
     }
+    // Stado decides whether a host is GUI-ready (`gui-ready yes|no`, from its
+    // console, declared session, accessibility grant, driver and socket);
+    // this preflight takes that answer instead of deciding again from the
+    // rows with its own list of console owners. A status without the row is
+    // refused quoting what Stado printed.
     let mut fields = BTreeMap::new();
     for line in output.stdout.lines() {
         let parts: Vec<&str> = line.trim().split('\t').collect();
-        if parts.len() >= 3 {
-            fields.insert(parts[1], parts[2..].join("\t"));
+        if let [_, name, value @ ..] = parts.as_slice() {
+            if !value.is_empty() {
+                fields.insert(*name, value.join("\t"));
+            }
         }
     }
-    let console = fields
-        .get("console")
-        .map(String::as_str)
-        .unwrap_or("unknown");
-    let accessibility = fields
-        .get("accessibility")
-        .map(String::as_str)
-        .unwrap_or("unknown");
-    let ready = !matches!(console, "" | "root" | "loginwindow" | "unknown")
-        && fields.get("accessibility-user").map(String::as_str) == Some(console)
-        && fields.get("automated-session-declared").map(String::as_str) == Some("yes")
-        && fields.get("cua-driver-app").map(String::as_str) == Some("present")
-        && accessibility == "granted";
-    if !ready {
-        return Err(Failure::config(
+    let rows = || {
+        fields
+            .iter()
+            .map(|(name, value)| format!("{name}={value}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    match fields.get("gui-ready").map(String::as_str) {
+        Some("yes") => Ok(()),
+        Some(_) => Err(Failure::config(
             "stado.preflight",
-            format!("The selected host \"{}\" is not ready for desktop:cua: it needs an active macOS console session and a granted CuaDriver.", selected.host),
-        ));
+            format!(
+                "The selected host \"{}\" is not ready for desktop:cua; Stado reports {}",
+                selected.host,
+                rows()
+            ),
+        )),
+        None => Err(Failure::unavailable(
+            "stado.preflight",
+            format!(
+                "stado host gui-automation status {registry_target} printed no gui-ready row; it printed {}",
+                rows()
+            ),
+        )),
     }
-    Ok(())
 }
 
 pub(crate) fn state_uri(kind: &str) -> String {
