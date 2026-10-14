@@ -125,6 +125,12 @@ An `onboarding-first-use` journey carries an immutable `journeyId`,
 verified redaction is mandatory. The application manifest also supplies the
 central `productId`.
 
+Evidence levels rank by the number they carry: `E<n>` is above every level
+with a smaller `n`, wherever a gate, status report, receipt or publication
+compares them. A run that states no level ranks below any minimum, and a
+publication policy that states no `minimumEvidence`, or one that is not an
+`E<n>` level, is refused rather than compared.
+
 The same manifest makes retention and redaction explicit with positive
 `artifacts.retain.pullRequestDays`, `nightlyDays`, and `adhocDays`, plus a
 non-empty `artifacts.redact` key list. A run is retained under the field its
