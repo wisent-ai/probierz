@@ -72,6 +72,45 @@ fn a_private_key_block_is_refused_and_named() {
     std::fs::remove_dir_all(&root).expect("remove the directory");
 }
 
+/// The scan reads credential formats, not the words a line holds: an
+/// assignment to a name such as `password` is the manifest's redaction to
+/// hide, and a key block under an algorithm label is still a key block.
+#[test]
+fn a_named_assignment_passes_and_a_labelled_key_block_is_refused() {
+    let assignment = directory(
+        "assignment",
+        "settings.env",
+        "password = correct-horse-battery-staple\n",
+    );
+    let (output, document) = scan(&assignment);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert_eq!(document["passed"], Value::Bool(true), "{document}");
+    std::fs::remove_dir_all(&assignment).expect("remove the directory");
+    let block = format!(
+        "-----BEGIN RSA {KEY_KIND}-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\n-----END RSA {KEY_KIND}-----\n"
+    );
+    let root = directory("rsa", "id_rsa", &block);
+    let (output, document) = scan(&root);
+    assert!(
+        !output.status.success(),
+        "an RSA key block passed: {document}"
+    );
+    assert!(
+        text(&output.stderr).contains("found"),
+        "the refusal does not say what the scan found: {}",
+        text(&output.stderr)
+    );
+    assert!(
+        document["findings"]
+            .as_array()
+            .is_some_and(|findings| findings
+                .iter()
+                .any(|finding| finding["file"] == "id_rsa" && finding["rule"] == "private-key")),
+        "{document}"
+    );
+    std::fs::remove_dir_all(&root).expect("remove the directory");
+}
+
 #[test]
 fn the_leaf_needs_a_directory_and_the_retired_spelling_is_unknown() {
     let missing = probierz(&["secrets", "scan"]);

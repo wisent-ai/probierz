@@ -79,39 +79,6 @@ pub fn audit(
     }))
 }
 
-pub(crate) fn acceptable_secret(value: &str) -> bool {
-    let environment_reference = ["env.", "source.", "process.env."].iter().any(|prefix| {
-        let Some(name) = value.strip_prefix(prefix) else {
-            return false;
-        };
-        let mut bytes = name.bytes();
-        bytes
-            .next()
-            .is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
-            && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-    });
-    let uppercase_reference = value.len() >= 2
-        && value
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_uppercase())
-        && value
-            .bytes()
-            .skip(1)
-            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_');
-    let placeholder = value
-        .strip_prefix('<')
-        .and_then(|text| text.strip_suffix('>'))
-        .is_some_and(|inside| !inside.is_empty() && !inside.contains('>'));
-    value.is_empty()
-        || value == "[REDACTED]"
-        || value.starts_with("vault:")
-        || value.starts_with("${")
-        || environment_reference
-        || uppercase_reference
-        || placeholder
-}
-
 pub(crate) fn is_binary(file: &Path) -> Result<bool, Failure> {
     let mut input = File::open(file)?;
     let mut sample = [0u8; 8192];
@@ -128,14 +95,28 @@ pub fn scan_secrets(root: &Path) -> Result<Value, Failure> {
             format!("secret scan root is not a directory: {display_root}"),
         ));
     }
+    // The formats a credential is issued in, each read from its own grammar:
+    // a PEM private-key armor line, an AWS access key id, a GitHub or Slack
+    // token prefix, and a three-part JWT. Which names hold secrets is the
+    // manifest's redaction (`manifest::Redaction`), applied wherever a run
+    // writes; it is not guessed here from words a line contains.
     let rules = [
-        ("private-key", Regex::new(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----").map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 0usize),
-        ("aws-access-key", Regex::new(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b").map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 0),
-        ("github-token", Regex::new(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b").map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 0),
-        ("slack-token", Regex::new(r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b").map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 0),
-        ("jwt", Regex::new(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b").map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 0),
-        ("assigned-secret", Regex::new(r#"(?i)(?:token|secret|password|api[_-]?key|authorization|cookie)["']?\s*[:=]\s*["']?([A-Za-z0-9+/_=.:-]{8,})"#).map_err(|e| Failure::config("evidence.secret_scan", e.to_string()))?, 1),
-    ];
+        ("private-key", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+        ("aws-access-key", r"\bA[KS]IA[A-Z0-9]{16}\b"),
+        ("github-token", r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+        ("slack-token", r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b"),
+        (
+            "jwt",
+            r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b",
+        ),
+    ]
+    .into_iter()
+    .map(|(rule, pattern)| {
+        Regex::new(pattern)
+            .map(|regex| (rule, regex))
+            .map_err(|error| Failure::config("evidence.secret_scan", error.to_string()))
+    })
+    .collect::<Result<Vec<_>, _>>()?;
     let mut findings = Vec::new();
     let mut scanned_files = 0usize;
     let mut skipped_binary = 0usize;
@@ -171,38 +152,21 @@ pub fn scan_secrets(root: &Path) -> Result<Value, Failure> {
             }
             line_number += 1;
             let line = String::from_utf8_lossy(&line_bytes);
-            for (rule, regex, capture) in &rules {
-                for matched in regex.captures_iter(&line) {
-                    let Some(full) = matched.get(0) else { continue };
-                    let value = matched
-                        .get(*capture)
-                        .map(|part| part.as_str())
-                        .unwrap_or_default();
-                    if acceptable_secret(value) {
-                        continue;
-                    }
-                    let column = line[..full.start()].encode_utf16().count() + 1;
+            for (rule, regex) in &rules {
+                for matched in regex.find_iter(&line) {
+                    // Every format above starts with an ASCII character, so
+                    // the UTF-16 units up to and including the match's first
+                    // byte are its one-based column.
+                    let column = line[..=matched.start()].encode_utf16().count();
                     findings.push(json!({
                         "rule": rule,
                         "file": relative,
                         "line": line_number,
                         "column": column,
-                        "fingerprintSha256": sha256_bytes(value.as_bytes()),
+                        "fingerprintSha256": sha256_bytes(matched.as_str().as_bytes()),
                     }));
-                    if findings.len() >= 1000 {
-                        break;
-                    }
-                }
-                if findings.len() >= 1000 {
-                    break;
                 }
             }
-            if findings.len() >= 1000 {
-                break;
-            }
-        }
-        if findings.len() >= 1000 {
-            break;
         }
     }
     Ok(json!({
@@ -216,18 +180,6 @@ pub fn scan_secrets(root: &Path) -> Result<Value, Failure> {
         "passed": findings.is_empty(),
         "findings": findings,
     }))
-}
-
-pub fn secret_scan(root: Option<&Path>) -> Answer {
-    let root = root.ok_or_else(|| {
-        Failure::invalid("evidence.secret_scan", "secrets scan needs a directory")
-    })?;
-    let result = scan_secrets(root)?;
-    print_json(&result)?;
-    if result.get("passed").and_then(Value::as_bool) != Some(true) {
-        std::process::exit(1);
-    }
-    Ok(())
 }
 
 pub(crate) fn assert_no_secrets(root: &Path) -> Result<Value, Failure> {
