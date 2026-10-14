@@ -114,8 +114,8 @@ pub fn repair_failed_run(
             if verdict == "not_auto_fixable" {
                 let result = json!({
                     "ok": false, "sourceRunId": run_id, "verdict": verdict,
-                    "reason": decision.get("reason").and_then(JsonValue::as_str).unwrap_or("repair refused"),
-                    "explanation": decision.get("explanation").and_then(JsonValue::as_str).unwrap_or(""),
+                    "reason": decision.get("reason").cloned(),
+                    "explanation": decision.get("explanation").cloned(),
                     "repairDir": repair_dir.to_string_lossy()
                 });
                 write_pretty_json(&result_path, &result).map_err(|error| error.to_string())?;
@@ -125,7 +125,7 @@ pub fn repair_failed_run(
                 let patch = decision
                     .get("patch")
                     .and_then(JsonValue::as_str)
-                    .unwrap_or_default();
+                    .ok_or_else(|| "the product_patch decision carries no patch".to_string())?;
                 patch_paths(patch)?;
                 fs::write(repair_dir.join(format!("round-{round}.patch")), patch)
                     .map_err(|error| error.to_string())?;
