@@ -26,7 +26,10 @@ pub(crate) fn draft_structured_artifact(
     if description.trim().is_empty() {
         return Err("model-router artifact description is required".to_string());
     }
-    let loaded = manifest::load(harness, app_id).ok();
+    // The app's manifest states its router settings per target. An app whose
+    // manifest is still being authored has none; one that exists and cannot
+    // be loaded is refused with its cause, never read as stating nothing.
+    let loaded = manifest::load_if_declared(harness, app_id).map_err(|failure| failure.detail)?;
     let url = stado_model_router_url(
         selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_URL", None).as_deref(),
     )?;

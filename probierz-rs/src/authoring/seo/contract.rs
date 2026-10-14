@@ -8,7 +8,9 @@ pub(crate) fn seo_prerequisites(
     secondary: Option<&str>,
     router_url: Option<&str>,
 ) -> Result<(String, String, String), String> {
-    let loaded = manifest::load(harness, app_id).ok();
+    // The app's manifest states its SEO settings; one that cannot be loaded
+    // is refused with its cause, never read as a manifest stating nothing.
+    let loaded = Some(manifest::load(harness, app_id).map_err(|failure| failure.detail)?);
     let primary = required_setting(
         selected_setting(
             loaded.as_ref(),

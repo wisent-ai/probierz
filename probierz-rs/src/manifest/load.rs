@@ -33,6 +33,19 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
     })
 }
 
+/// The app's manifest, or `None` when the app has none yet (its manifest is
+/// being authored). A manifest that exists and cannot be read or judged is
+/// refused with its cause, never read as one that is not there.
+pub fn load_if_declared(harness_root: &Path, app_id: &str) -> Result<Option<Manifest>, Failure> {
+    let file = apps_root(harness_root)
+        .join(app_id.trim())
+        .join("probierz.yaml");
+    if valid_id(app_id.trim()) && !file.exists() {
+        return Ok(None);
+    }
+    load(harness_root, app_id).map(Some)
+}
+
 /// A manifest names checkouts and executables under the operator's home as
 /// `~/...`, so the file carries no account name and reads the same for every
 /// operator. Every string that starts with `~/` is read under the home
