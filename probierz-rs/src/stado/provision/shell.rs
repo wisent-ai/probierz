@@ -102,15 +102,12 @@ pub(crate) fn remote_failure(point: &str, action: &str, output: &ProcessOutput) 
         "error": output.error,
     });
     eprintln!("probierz-process-failure {diagnostic}");
-    let exit = output
-        .status
-        .map(|code| code.to_string())
-        .unwrap_or_else(|| "none".to_string());
     let text = process_text(output);
     Failure::unavailable(
         point,
         format!(
-            "{action}: {STADO_BIN} exit {exit}{}",
+            "{action}: {STADO_BIN} {}{}",
+            output.ended(),
             if text.is_empty() {
                 String::new()
             } else {
@@ -121,15 +118,12 @@ pub(crate) fn remote_failure(point: &str, action: &str, output: &ProcessOutput) 
 }
 
 pub(crate) fn local_failure(point: &str, action: &str, output: &ProcessOutput) -> Failure {
-    let exit = output
-        .status
-        .map(|code| code.to_string())
-        .unwrap_or_else(|| "none".to_string());
     let text = process_text(output);
     Failure::config(
         point,
         format!(
-            "{action}: tar exit {exit}{}",
+            "{action}: tar {}{}",
+            output.ended(),
             if text.is_empty() {
                 String::new()
             } else {

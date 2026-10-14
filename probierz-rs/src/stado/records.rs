@@ -209,6 +209,19 @@ pub(crate) struct ProcessOutput {
     pub(crate) error: Option<String>,
 }
 
+impl ProcessOutput {
+    /// How the process ended, in the words of `failure::ended`: its exit
+    /// code, the signal that ended it, or the error that kept it from running.
+    pub(crate) fn ended(&self) -> String {
+        match (self.status, self.signal, &self.error) {
+            (Some(code), _, _) => format!("exited {code}"),
+            (None, Some(signal), _) => format!("ended by signal {signal}"),
+            (None, None, Some(error)) => format!("did not run: {error}"),
+            (None, None, None) => "ended with neither an exit code nor a signal".to_string(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Packed {
     pub(crate) file: PathBuf,

@@ -162,7 +162,7 @@ pub(crate) fn dashboard_value(
                 });
                 surfaces.push(json!({
                     "target": target,
-                    "status": relevant.first().and_then(|run| run.get("status")).and_then(Value::as_str).unwrap_or("missing"),
+                    "status": relevant.first().and_then(|run| run.get("status")),
                     "latest": result_projection(relevant.first().copied()),
                     "devices": projected_devices,
                 }));
@@ -172,18 +172,20 @@ pub(crate) fn dashboard_value(
                     .unwrap_or("")
                     .cmp(string(right.get("target")).unwrap_or(""))
             });
+            // A surface no run states a status for leaves the journey
+            // incomplete: it is neither passed nor failed.
             let statuses = surfaces
                 .iter()
-                .filter_map(|surface| surface.get("status").and_then(Value::as_str))
+                .map(|surface| surface.get("status").and_then(Value::as_str))
                 .collect::<Vec<_>>();
-            let status = if !statuses.is_empty() && statuses.iter().all(|value| *value == "passed")
-            {
-                "passed"
-            } else if statuses.contains(&"failed") {
-                "failed"
-            } else {
-                "incomplete"
-            };
+            let status =
+                if !statuses.is_empty() && statuses.iter().all(|value| *value == Some("passed")) {
+                    "passed"
+                } else if statuses.contains(&Some("failed")) {
+                    "failed"
+                } else {
+                    "incomplete"
+                };
             journeys.push(json!({
                 "journey": journey_id,
                 "owner": value_or(journey.get("owner"), Value::Null),
