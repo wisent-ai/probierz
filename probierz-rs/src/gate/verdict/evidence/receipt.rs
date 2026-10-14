@@ -76,7 +76,7 @@ pub(crate) fn release_receipt(
         errors.push("receipt verdict is not passed".to_string());
     }
     let signed_runs = value_array(property(&verified, "runs"));
-    let document = serde_json::to_value(&app.document)?;
+    let document = app.json()?;
     for run in runs {
         let signed = signed_runs.iter().find(|candidate| {
             string_property(candidate, "runId").as_deref() == Some(run.run_id.as_str())

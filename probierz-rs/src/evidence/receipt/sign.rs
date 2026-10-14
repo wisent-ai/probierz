@@ -62,7 +62,7 @@ pub fn receipt(
         )
     })?;
     let loaded = manifest::load(harness, app_id)?;
-    let document = yaml_json(&loaded.document)?;
+    let document = loaded.json()?;
     let source_runs = run_ids
         .iter()
         .map(|run_id| get_run(harness, app_id, run_id))

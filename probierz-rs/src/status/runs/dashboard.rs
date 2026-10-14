@@ -2,16 +2,12 @@
 
 use crate::status::*;
 
-pub(crate) fn yaml_json(value: &serde_yaml::Value) -> Result<Value, Failure> {
-    serde_json::to_value(value).map_err(|error| Failure::config("manifest.read", error.to_string()))
-}
-
 pub(crate) fn manifest_object(
     harness: &Path,
     app_id: &str,
 ) -> Result<(manifest::Manifest, Value), Failure> {
     let loaded = manifest::load(harness, app_id)?;
-    let document = yaml_json(&loaded.document)?;
+    let document = loaded.json()?;
     Ok((loaded, document))
 }
 

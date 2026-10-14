@@ -33,6 +33,16 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
     })
 }
 
+impl Manifest {
+    /// The manifest as JSON, the shape evidence, status and the gate read
+    /// it in; a document that has no JSON form is refused naming its file.
+    pub fn json(&self) -> Result<serde_json::Value, Failure> {
+        serde_json::to_value(&self.document).map_err(|error| {
+            Failure::config("manifest.json", format!("{}: {error}", self.file.display()))
+        })
+    }
+}
+
 /// The app's manifest, or `None` when the app has none yet (its manifest is
 /// being authored). A manifest that exists and cannot be read or judged is
 /// refused with its cause, never read as one that is not there.

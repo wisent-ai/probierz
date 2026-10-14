@@ -105,7 +105,7 @@ pub fn fleet_retention(
     let days = match app_id {
         Some(app) => {
             let application = manifest::load(harness, app)?;
-            retention_days(&yaml_json(&application.document)?, DEFAULT_KIND)?
+            retention_days(&application.json()?, DEFAULT_KIND)?
         }
         None => None,
     };

@@ -57,11 +57,6 @@ pub(crate) fn absolute(path: &Path) -> Result<PathBuf, Failure> {
     Ok(normalized)
 }
 
-pub(crate) fn yaml_json(value: &serde_yaml::Value) -> Result<Value, Failure> {
-    Ok(serde_json::to_value(value)
-        .map_err(|error| Failure::config("evidence.manifest", error.to_string()))?)
-}
-
 pub(crate) fn json_file(path: &Path) -> Result<Value, Failure> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }

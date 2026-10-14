@@ -81,7 +81,7 @@ pub(crate) fn protect_run(
         ));
     }
     let app = manifest::load(harness, app_id)?;
-    let document = yaml_json(&app.document)?;
+    let document = app.json()?;
     let retention_kind = kind
         .or_else(|| run.get("kind").and_then(Value::as_str))
         .ok_or_else(|| {

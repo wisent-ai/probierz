@@ -10,7 +10,7 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
         None => Utc::now(),
     };
     let app = manifest::load(harness, app_id)?;
-    let document = yaml_json(&app.document)?;
+    let document = app.json()?;
     let mut items = Vec::new();
     for file in manifests_below(&harness.join("test-results").join(app_id))? {
         let run = json_file(&file)?;

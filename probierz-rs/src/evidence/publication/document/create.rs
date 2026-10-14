@@ -69,14 +69,19 @@ pub(crate) fn create_publication(
             .is_some_and(|media| !media.is_empty()),
         format!("attempt {attempt_id} has no signed evidence artifacts"),
     )?;
-    let app = manifest::load(
-        harness,
-        verification
-            .get("appId")
-            .and_then(Value::as_str)
-            .unwrap_or_default(),
-    )?;
-    let document = yaml_json(&app.document)?;
+    // The receipt's app is loaded and compared against its current source; a
+    // verification naming no app is refused, never read as app "".
+    let verified_app = verification
+        .get("appId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            Failure::invalid(
+                "evidence.publication",
+                "publication rejected: the receipt verification names no appId",
+            )
+        })?;
+    let app = manifest::load(harness, verified_app)?;
+    let document = app.json()?;
     require(
         document.get("productId").and_then(Value::as_str) == Some(product),
         "app manifest and receipt productId differ",
@@ -109,17 +114,6 @@ pub(crate) fn create_publication(
             "publication rejected: journey has no publication policy",
         )
     })?;
-    // The receipt's app is compared against its current source; a
-    // verification naming no app is refused, never compared as app "".
-    let verified_app = verification
-        .get("appId")
-        .and_then(Value::as_str)
-        .ok_or_else(|| {
-            Failure::invalid(
-                "evidence.publication",
-                "publication rejected: the receipt verification names no appId",
-            )
-        })?;
     let current = crate::authoring::app_source_identity(harness, verified_app, None)?;
     require(
         current.pointer("/app/sha256").and_then(Value::as_str) == Some(expected_source),
