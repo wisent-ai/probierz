@@ -6,7 +6,7 @@ pub(crate) fn percentile(mut values: Vec<f64>, fraction: f64) -> Option<f64> {
     if values.is_empty() {
         return None;
     }
-    values.sort_by(|left, right| left.partial_cmp(right).unwrap_or(Ordering::Equal));
+    values.sort_by(f64::total_cmp);
     let index = ((values.len() as f64 * fraction).ceil() as usize).saturating_sub(1);
     values.get(index.min(values.len() - 1)).copied()
 }

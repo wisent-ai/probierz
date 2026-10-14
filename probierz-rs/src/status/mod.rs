@@ -11,7 +11,6 @@
 //! application's status, the fleet overview, the stored failures, and the
 //! intake that stores them.
 
-use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
