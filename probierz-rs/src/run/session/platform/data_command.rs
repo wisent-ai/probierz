@@ -14,10 +14,13 @@ pub(crate) fn run_data_command(
     };
     let args = match config.get("args") {
         Some(value) => match value.as_sequence() {
-            Some(values) => values
-                .iter()
-                .map(|value| yaml_string(value).unwrap_or_default())
-                .collect::<Vec<_>>(),
+            Some(values) => match values.iter().map(yaml_string).collect::<Option<Vec<_>>>() {
+                Some(args) => args,
+                // Passed as '' it ran the command with an argument nobody wrote.
+                None => {
+                    return json!({ "ok": false, "error": "a data command argument is not a scalar value" })
+                }
+            },
             None => return json!({ "ok": false, "error": "invalid data command configuration" }),
         },
         None => Vec::new(),
