@@ -264,10 +264,10 @@ fn canonical_base_url(base_url: &str) -> Result<url::Url, Failure> {
 }
 
 fn read_document(path: &Path, what: &str) -> Result<JsonValue, Failure> {
-    serde_json::from_slice(&fs::read(path)?).map_err(|error| {
+    crate::json_file::required(path).map_err(|error| {
         Failure::config(
             "seo-evaluate",
-            format!("cannot read {what} {}: {error}", path.display()),
+            format!("cannot read {what}: {}", error.detail),
         )
     })
 }

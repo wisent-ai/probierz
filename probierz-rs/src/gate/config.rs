@@ -100,13 +100,19 @@ pub(crate) fn default_config(app_id: &str) -> Value {
 }
 
 pub(crate) fn gate_status_value(harness: &Path, app_id: &str) -> Result<Value, Failure> {
-    let app = manifest::load(harness, app_id)?;
-    let file = config_file(&app);
-    let exists = file.exists();
-    let mut config = if exists {
-        serde_json::from_str::<Value>(&fs::read_to_string(&file)?)?
-    } else {
-        default_config(app_id)
+    gate_config(&manifest::load(harness, app_id)?, app_id)
+}
+
+/// The gate config beside `app`'s manifest with its file and whether it
+/// exists; an absent file is the default config. Gate commands and the status
+/// report both read it here.
+pub(crate) fn gate_config(app: &manifest::Manifest, app_id: &str) -> Result<Value, Failure> {
+    let file = config_file(app);
+    let recorded = crate::json_file::read(&file)?;
+    let exists = recorded.is_some();
+    let mut config = match recorded {
+        Some(config) => config,
+        None => default_config(app_id),
     };
     let map = config.as_object_mut().ok_or_else(|| {
         Failure::config(

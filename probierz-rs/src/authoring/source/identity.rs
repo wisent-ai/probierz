@@ -69,11 +69,8 @@ pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue
         return Ok(None);
     };
     let file = PathBuf::from(file);
-    let parsed: JsonValue =
-        serde_json::from_slice(&fs::read(&file).map_err(|error| {
-            Failure::config("run.source", format!("{}: {error}", file.display()))
-        })?)
-        .map_err(|error| Failure::config("run.source", format!("{}: {error}", file.display())))?;
+    let parsed = crate::json_file::required(&file)
+        .map_err(|error| Failure::config("run.source", error.detail))?;
     if parsed.get("schemaVersion").and_then(JsonValue::as_u64) != Some(1) {
         return Err(Failure::config(
             "run.source",

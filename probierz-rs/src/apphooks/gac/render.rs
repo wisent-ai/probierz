@@ -56,9 +56,7 @@ pub(crate) fn load_gac_config(
     path: &Path,
     environment: &BTreeMap<String, String>,
 ) -> Result<Value, Failure> {
-    let mut value: Value = serde_json::from_slice(&fs::read(path).map_err(|error| {
-        Failure::config("apphook.gac.config", format!("{}: {error}", path.display()))
-    })?)?;
+    let mut value = crate::json_file::required(path)?;
     let binary = environment
         .get("SKARBIEC_BIN")
         .map(String::as_str)

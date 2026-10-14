@@ -103,10 +103,9 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
     }
     let app = manifest::load(harness, &args.app_id)?;
     let file = config_file(&app);
-    let mut current = if file.exists() {
-        serde_json::from_str::<Value>(&fs::read_to_string(&file)?)?
-    } else {
-        default_config(&args.app_id)
+    let mut current = match crate::json_file::read(&file)? {
+        Some(current) => current,
+        None => default_config(&args.app_id),
     };
     let activated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
     let receipt_fingerprint = property(&evaluation, "evidence")
@@ -249,13 +248,12 @@ pub fn deactivate(harness: &Path, args: &DeactivateArgs) -> Answer {
     }
     let app = manifest::load(harness, &args.app_id)?;
     let file = config_file(&app);
-    if !file.exists() {
+    let Some(mut current) = crate::json_file::read(&file)? else {
         return print_json(&object([
             ("file", Value::String(file.to_string_lossy().into_owned())),
             ("deactivated", Value::Bool(false)),
         ]));
-    }
-    let mut current = serde_json::from_str::<Value>(&fs::read_to_string(&file)?)?;
+    };
     let removed = current
         .get_mut("modes")
         .and_then(Value::as_object_mut)

@@ -104,9 +104,7 @@ pub(crate) fn json_trace_events(
 ) -> Vec<Value> {
     let safe_message = |text: &str| safe_message(text, redaction);
     let result = (|| -> Result<Value, String> {
-        let document: Value =
-            serde_json::from_slice(&fs::read(file).map_err(|error| error.to_string())?)
-                .map_err(|error| error.to_string())?;
+        let document = crate::json_file::required(file).map_err(|error| error.detail)?;
         if document.get("schemaVersion").and_then(Value::as_u64) != Some(1)
             || !document
                 .get("kind")
