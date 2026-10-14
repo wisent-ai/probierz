@@ -294,9 +294,13 @@ pub(crate) fn run_surface(
             )
         })?;
     }
-    let (exit_code, out, err, performance, platform) = suite?;
+    let (exit_status, out, err, performance, platform) = suite?;
+    // A runner ended by a signal has no exit code: the record carries the
+    // signal instead, never a -1 standing in for the code.
+    let exit_code = exit_status.code();
+    let signal = std::os::unix::process::ExitStatusExt::signal(&exit_status);
     let validation = validation.expect("successful suite has report validation");
-    let passed = exit_code == 0
+    let passed = exit_status.success()
         && validation.get("ok").and_then(Value::as_bool) == Some(true)
         && cleanup.get("ok").and_then(Value::as_bool) == Some(true);
     // A failed cleanup is observed harness work. An absent or invalid report
@@ -307,10 +311,10 @@ pub(crate) fn run_surface(
         Value::Null
     };
     let mut result = base.as_object().expect("object").clone();
-    result.extend(json!({"ready":true,"command":command_text,"spec":spec,"exitCode":exit_code,"signal":null,"canceled":false,"passed":passed,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"stdoutTail":out,"stderrTail":err,"cleanup":cleanup,"cleanupError":if cleanup.get("ok").and_then(Value::as_bool)==Some(true){Value::Null}else{cleanup.get("error").cloned().unwrap_or(Value::Null)},"performance":performance,"platformDiagnostics":platform,"failureOrigin":origin}).as_object().expect("object").clone());
+    result.extend(json!({"ready":true,"command":command_text,"spec":spec,"exitCode":exit_code,"signal":signal,"canceled":false,"passed":passed,"durationMs":Utc::now().timestamp_millis()-started_date.timestamp_millis(),"reportValidation":validation,"stdoutTail":out,"stderrTail":err,"cleanup":cleanup,"cleanupError":if cleanup.get("ok").and_then(Value::as_bool)==Some(true){Value::Null}else{json!(cleanup.get("error"))},"performance":performance,"platformDiagnostics":platform,"failureOrigin":origin}).as_object().expect("object").clone());
     update_json(
         &manifest_path,
-        &json!({"status":if passed{"executed"}else{"failed"},"completedAt":now_iso(),"exitCode":exit_code,"signal":null,"canceled":false,"durationMs":result.get("durationMs"),"reportValidation":validation,"cleanup":cleanup,"cleanupError":result.get("cleanupError"),"performance":performance,"platformDiagnostics":platform,"failureOrigin":result.get("failureOrigin"),"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
+        &json!({"status":if passed{"executed"}else{"failed"},"completedAt":now_iso(),"exitCode":exit_code,"signal":signal,"canceled":false,"durationMs":result.get("durationMs"),"reportValidation":validation,"cleanup":cleanup,"cleanupError":result.get("cleanupError"),"performance":performance,"platformDiagnostics":platform,"failureOrigin":result.get("failureOrigin"),"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
     )?;
     Ok(Value::Object(result))
 }

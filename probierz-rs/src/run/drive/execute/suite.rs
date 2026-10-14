@@ -105,7 +105,7 @@ pub(crate) fn execute_suite(
     target_name: &str,
     started_at: &str,
     artifacts: &Path,
-) -> Result<(i32, String, String, Value, Value), Failure> {
+) -> Result<(std::process::ExitStatus, String, String, Value, Value), Failure> {
     let run_started = DateTime::parse_from_rfc3339(started_at)
         .map(|date| date.with_timezone(&Utc))
         .map_err(|error| {
@@ -201,11 +201,5 @@ pub(crate) fn execute_suite(
         .insert("file".into(), json!(performance_path));
     let diagnostics =
         collect_platform_diagnostics(target_name, env, artifacts, started_at, &redaction);
-    Ok((
-        status.code().unwrap_or(-1),
-        safe_out,
-        safe_err,
-        public,
-        diagnostics,
-    ))
+    Ok((status, safe_out, safe_err, public, diagnostics))
 }
