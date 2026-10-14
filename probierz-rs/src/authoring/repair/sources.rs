@@ -265,30 +265,21 @@ pub(crate) fn repair_evidence(run: &JsonValue) -> Result<JsonValue, Failure> {
         })
         .into_iter()
         .flatten()
+        // Every failure reaches the repair whole: no count, length or
+        // placeholder title nobody declared cuts or invents its evidence.
         .filter_map(|failure| {
             let detail = failure
                 .get("error")
                 .or_else(|| failure.get("message"))
                 .or_else(|| failure.get("detail"))
                 .and_then(JsonValue::as_str)
-                .unwrap_or_default()
-                .chars()
-                .take(1200)
-                .collect::<String>();
-            if detail.is_empty() {
-                return None;
-            }
+                .filter(|detail| !detail.is_empty())?;
             let title = failure
                 .get("title")
                 .or_else(|| failure.get("test"))
-                .and_then(JsonValue::as_str)
-                .unwrap_or("failure")
-                .chars()
-                .take(200)
-                .collect::<String>();
+                .and_then(JsonValue::as_str);
             Some(json!({ "title": title, "detail": detail }))
         })
-        .take(8)
         .collect::<Vec<_>>();
     Ok(
         json!({ "failures": failures, "analysis": analysis.as_ref().and_then(|value| value.get("summary")) }),
