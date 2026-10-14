@@ -83,11 +83,19 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         )
         .discarding(&staging));
     }
-    let artifacts = payload
+    // An answer without its list is not one that retained nothing.
+    let Some(artifacts) = payload
         .pointer("/result/artifacts")
         .and_then(Value::as_array)
         .cloned()
-        .unwrap_or_default();
+    else {
+        return Err(remote_failure(
+            "stado.download",
+            "Downloading the worker's retained artifacts answered without an artifact list",
+            &output,
+        )
+        .discarding(&staging));
+    };
     if artifacts.is_empty() {
         Failure::discard("stado.download", &staging)?;
         return Ok(Retained {
