@@ -222,18 +222,28 @@ pub(crate) fn read_state(source: &BTreeMap<String, String>) -> Result<(PathBuf, 
             format!("Oko seed state not found: {}", path.display()),
         )
     })?;
-    let expected = source
-        .get("PROBIERZ_RUN_ID")
-        .map(String::as_str)
-        .unwrap_or_default();
-    if state.get("runId").and_then(Value::as_str) != Some(expected) {
-        return Err(Failure::config(
+    // Without the run's id the state cannot be matched to it: an empty id
+    // matched a state that recorded an empty one.
+    let expected = source.get("PROBIERZ_RUN_ID").ok_or_else(|| {
+        Failure::config(
             "apphook.oko.state",
-            format!(
-                "Oko seed state belongs to {}, not {expected}",
-                state.get("runId").and_then(Value::as_str).unwrap_or("")
-            ),
-        ));
+            "PROBIERZ_RUN_ID is not set, so the Oko seed state cannot be matched to this run",
+        )
+    })?;
+    match state.get("runId").and_then(Value::as_str) {
+        Some(owner) if owner == expected => {}
+        Some(owner) => {
+            return Err(Failure::config(
+                "apphook.oko.state",
+                format!("Oko seed state belongs to {owner}, not {expected}"),
+            ))
+        }
+        None => {
+            return Err(Failure::config(
+                "apphook.oko.state",
+                format!("Oko seed state {} states no runId", path.display()),
+            ))
+        }
     }
     Ok((path, state))
 }
