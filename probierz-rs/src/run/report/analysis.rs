@@ -21,10 +21,14 @@ pub(crate) fn analyze_run(
         if report_run != Some(expected) {
             return Err(fail(
                 "run.analyze",
-                format!(
-                    "report run ID mismatch: expected {expected}, got {}",
-                    report_run.unwrap_or("missing")
-                ),
+                match report_run {
+                    Some(found) => {
+                        format!("report run ID mismatch: expected {expected}, got {found}")
+                    }
+                    None => format!(
+                        "report run ID mismatch: expected {expected}, the report states none"
+                    ),
+                },
             ));
         }
     }
