@@ -35,7 +35,7 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         } => {
             let result =
                 authoring::repair_failed_run(harness, &app_id, run_id.as_deref(), rounds, dry_run)?;
-            authoring::print_result("repair", result)
+            authoring::print_result("repair", "/ok", result)
         }
         InspectCommand::Evaluate { command } => evaluate(harness, command),
         // ReadmeGif
@@ -95,7 +95,7 @@ fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
                 agent_id.as_deref(),
                 secret,
             )?;
-            authoring::print_result("evaluate.figure", result)
+            authoring::print_result("evaluate.figure", "/verdict/pass", result)
         }
         EvaluateCommand::Seo {
             app_id,
@@ -146,7 +146,7 @@ fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
                     .as_deref()
                     .filter(|value| !value.trim().is_empty()),
             )?;
-            authoring::print_result("evaluate.seo", result)
+            authoring::print_result("evaluate.seo", "/pass", result)
         }
     }
 }
@@ -179,7 +179,7 @@ fn author(harness: &Path, command: AuthorCommand) -> Answer {
                 rounds,
                 dry_run,
             )?;
-            authoring::print_result("author.spec", result)
+            authoring::print_result("author.spec", "/ok", result)
         }
         AuthorCommand::Manifest {
             app_id,
@@ -204,7 +204,7 @@ fn author(harness: &Path, command: AuthorCommand) -> Answer {
                 dry_run,
                 with_specs,
             )?;
-            authoring::print_result("author.manifest", result)
+            authoring::print_result("author.manifest", "/ok", result)
         }
     }
 }
