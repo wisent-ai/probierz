@@ -22,17 +22,6 @@ pub(crate) struct Run {
     pub(crate) analysis_path: Option<String>,
 }
 
-pub(crate) fn normalized_status(document: &Value) -> String {
-    match string_property(document, "status").as_deref() {
-        Some("passed") | Some("executed") => "passed".to_string(),
-        Some("blocked") => "blocked".to_string(),
-        Some("canceled") => "canceled".to_string(),
-        Some("failed") => "failed".to_string(),
-        _ if truthy(property(document, "completedAt")) => "failed".to_string(),
-        _ => "incomplete".to_string(),
-    }
-}
-
 pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
     // Only a missing manifest is no run; one that cannot be read or parsed
     // is evidence the gate could not weigh, said with its cause.
@@ -68,7 +57,7 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
         kind: string_property(&document, "kind").unwrap_or_else(|| "adhoc".to_string()),
         target,
         spec: property(&document, "spec").cloned().unwrap_or(Value::Null),
-        status: normalized_status(&document),
+        status: crate::evidence::normalized_status(&document),
         started_at: property(&document, "startedAt")
             .cloned()
             .unwrap_or(Value::Null),
@@ -100,42 +89,9 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
     }))
 }
 
-pub(crate) fn manifests_below(root: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
-    let entries = match fs::read_dir(root) {
-        Ok(entries) => entries,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => {
-            return Err(format!(
-                "run evidence directory {} cannot be read: {error}",
-                root.display()
-            ))
-        }
-    };
-    for entry in entries {
-        let entry = entry.map_err(|error| {
-            format!(
-                "run evidence directory {} entry cannot be read: {error}",
-                root.display()
-            )
-        })?;
-        let kind = entry.file_type().map_err(|error| {
-            format!(
-                "run evidence entry {} type cannot be read: {error}",
-                entry.path().display()
-            )
-        })?;
-        if kind.is_dir() {
-            manifests_below(&entry.path(), found)?;
-        } else if kind.is_file() && entry.file_name() == "run-manifest.json" {
-            found.push(entry.path());
-        }
-    }
-    Ok(())
-}
-
 pub(crate) fn all_runs(harness: &Path, app_id: &str) -> Result<Vec<Run>, String> {
-    let mut files = Vec::new();
-    manifests_below(&harness.join("test-results").join(app_id), &mut files)?;
+    let files = crate::evidence::manifests_below(&harness.join("test-results").join(app_id))
+        .map_err(|failure| failure.to_string())?;
     let mut runs = Vec::new();
     for file in files {
         if let Some(run) = run_from_file(&file)? {

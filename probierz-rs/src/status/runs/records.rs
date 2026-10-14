@@ -1,4 +1,4 @@
-//! Run records: the manifests below a root, their failure class, and the projections status reports print. The record one run manifest becomes is `crate::evidence::run_record`.
+//! Run records: their failure class and the projections status reports print. The manifests below a root and the record one manifest becomes are `crate::evidence::manifests_below` and `crate::evidence::run_record`.
 
 use crate::status::*;
 
@@ -46,26 +46,6 @@ pub(crate) fn said(value: Option<&Value>, name: &str) -> String {
         Some(Value::Bool(flag)) => flag.to_string(),
         _ => format!("(no {name})"),
     }
-}
-
-pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
-    if !root.exists() {
-        return Ok(Vec::new());
-    }
-    let mut files = Vec::new();
-    let mut pending = vec![root.to_path_buf()];
-    while let Some(directory) = pending.pop() {
-        for entry in fs::read_dir(directory)? {
-            let entry = entry?;
-            let kind = entry.file_type()?;
-            if kind.is_dir() {
-                pending.push(entry.path());
-            } else if kind.is_file() && entry.file_name() == "run-manifest.json" {
-                files.push(entry.path());
-            }
-        }
-    }
-    Ok(files)
 }
 
 /// Projects recorded ownership for status, history and evidence consumers.

@@ -70,16 +70,29 @@ pub(crate) fn json_file(path: &Path) -> Result<Value, Failure> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
+/// Every run manifest below `root`. A directory that is not there holds
+/// none, the root included; one that cannot be read, or an entry whose type
+/// cannot be, is the failure naming it, never a run left out of the walk.
 pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
-    if !root.exists() {
-        return Ok(Vec::new());
-    }
+    let unreadable = |path: &Path, error: std::io::Error| {
+        Failure::config(
+            "evidence.runs",
+            format!("run evidence {} cannot be read: {error}", path.display()),
+        )
+    };
     let mut pending = vec![root.to_path_buf()];
     let mut found = Vec::new();
     while let Some(directory) = pending.pop() {
-        for entry in fs::read_dir(directory)? {
-            let entry = entry?;
-            let kind = entry.file_type()?;
+        let entries = match fs::read_dir(&directory) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(unreadable(&directory, error)),
+        };
+        for entry in entries {
+            let entry = entry.map_err(|error| unreadable(&directory, error))?;
+            let kind = entry
+                .file_type()
+                .map_err(|error| unreadable(&entry.path(), error))?;
             if kind.is_dir() {
                 pending.push(entry.path());
             } else if kind.is_file() && entry.file_name() == "run-manifest.json" {

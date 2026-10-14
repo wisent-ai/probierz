@@ -192,7 +192,7 @@ pub(crate) fn run_history_value(
     if let Some(target) = target {
         root.push(target.replace(':', "-"));
     }
-    let mut runs = manifests_below(&root)?
+    let mut runs = crate::evidence::manifests_below(&root)?
         .iter()
         .filter_map(|path| crate::evidence::run_record(path).transpose())
         .collect::<Result<Vec<_>, _>>()?
