@@ -56,7 +56,7 @@ pub(crate) fn invoke_seo_model(
         request["max_tokens"] = json!(budget);
     }
     let body = request.to_string();
-    let request_sha = hex::encode(Sha256::digest(body.as_bytes()));
+    let request_sha = crate::evidence::sha256_bytes(body.as_bytes());
     let (status, raw) = post_router(url, token, agent_id, agent_secret, &body)
         .map_err(|detail| Failure::unavailable("seo-evaluate.model", detail))?;
     let payload: JsonValue = serde_json::from_str(&raw).map_err(|error| {
@@ -90,10 +90,10 @@ pub(crate) fn invoke_seo_model(
     }
     Ok(json!({
         "modelRequested": model,
-        "responseSha256": hex::encode(Sha256::digest(raw.as_bytes())),
+        "responseSha256": crate::evidence::sha256_bytes(raw.as_bytes()),
         "modelReturned": payload.get("model").cloned().unwrap_or(JsonValue::Null),
         "requestSha256": request_sha,
-        "rubricSha256": hex::encode(Sha256::digest(json!({ "dimensions": policy["dimensions"], "instructions": policy["modelInstructions"] }).to_string().as_bytes())),
+        "rubricSha256": crate::evidence::sha256_bytes(json!({ "dimensions": policy["dimensions"], "instructions": policy["modelInstructions"] }).to_string().as_bytes()),
         "usage": payload.get("usage").cloned().unwrap_or(JsonValue::Null),
         "evaluation": evaluation
     }))
@@ -156,9 +156,9 @@ pub(crate) fn sign_seo_payload(payload: &JsonValue, key: &[u8]) -> Result<JsonVa
         .map_err(|error| Failure::config("seo-evaluate.sign", error.to_string()))?;
     Ok(json!({
         "algorithm": "Ed25519",
-        "payloadSha256": hex::encode(Sha256::digest(canonical.as_bytes())),
+        "payloadSha256": crate::evidence::sha256_bytes(canonical.as_bytes()),
         "signature": base64::engine::general_purpose::STANDARD.encode(signature.to_bytes()),
         "publicKeyPem": public.to_public_key_pem(LineEnding::LF).map_err(|error| Failure::config("seo-evaluate.sign", error.to_string()))?,
-        "publicKeyFingerprintSha256": hex::encode(Sha256::digest(der.as_bytes()))
+        "publicKeyFingerprintSha256": crate::evidence::sha256_bytes(der.as_bytes())
     }))
 }
