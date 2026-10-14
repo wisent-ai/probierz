@@ -32,6 +32,10 @@ name = "author_group"
 path = "../tests/author/group.rs"
 
 [[test]]
+name = "benchmark_author_group"
+path = "../tests/benchmark/author_group.rs"
+
+[[test]]
 name = "evaluate_group"
 path = "../tests/evaluate/group.rs"
 

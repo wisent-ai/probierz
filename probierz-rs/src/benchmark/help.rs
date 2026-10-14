@@ -13,8 +13,8 @@ records who passed, how fast, and at what cost.
   probierz benchmark rivals <app>
   probierz benchmark roadmap <app> --suite <id>
   probierz benchmark pursue <app> --suite <id> --case <id> --budget-usd <USD>
-  probierz benchmark author-suite <app> --suite <id> --cases N --rounds N
-  probierz benchmark author <app> --contender <id> --suite <id> [--ours] --rounds N
+  probierz benchmark author suite <app> --suite <id> --cases N --rounds N
+  probierz benchmark author contender <app> --contender <id> --suite <id> [--ours] --rounds N
   probierz benchmark scout <topic> --owner <github-owner> --observations N --rounds N
   probierz benchmark adopt <brief.json> --allow-create --cases N --rounds N
   probierz benchmark cycle [--policy <autonomy.yaml>]
@@ -32,10 +32,10 @@ that measure them. `rivals` refuses while a named rival has no contender or a
 named suite is not declared. `roadmap` writes one catalog roadmap item per
 case the newest run lost, and withdraws the item once ours wins that case.
 
-Nothing in a benchmark is written by hand for one product. `author-suite`
+Nothing in a benchmark is written by hand for one product. `author suite`
 drafts a suite from the catalog record of the product and its rivals through
 the Stado model router, judges it and declares it; an existing suite file is
-never overwritten. `author` drafts the driver of our contender (--ours) or of
+never overwritten. `author contender` drafts the driver of our contender (--ours) or of
 a rival the catalog names, places it under benchmark/contenders/<id>/ or
 benchmark/rivals/<id>/ in the product's tree, declares it, and verifies it
 with a recorded run of that contender alone, redrafting while an attempt

@@ -87,31 +87,11 @@ pub enum BenchmarkCommand {
         #[arg(long)]
         suite: String,
     },
-    /// Draft, judge, write and declare a suite for this product and its rivals.
-    AuthorSuite {
-        app_id: String,
-        #[arg(long)]
-        suite: String,
-        /// How many cases the suite holds.
-        #[arg(long)]
-        cases: usize,
-        /// Drafts allowed before the command refuses.
-        #[arg(long)]
-        rounds: u32,
-    },
-    /// Draft, place, declare and verify one contender's driver.
+    /// Draft, judge and declare what a benchmark is made of: a suite, or one
+    /// contender's driver.
     Author {
-        app_id: String,
-        #[arg(long)]
-        contender: String,
-        #[arg(long)]
-        suite: String,
-        /// The contender is our own product rather than a catalog rival.
-        #[arg(long)]
-        ours: bool,
-        /// Drafts allowed before the command refuses.
-        #[arg(long)]
-        rounds: u32,
+        #[command(subcommand)]
+        command: AuthorCommand,
     },
     /// Hand one lost case to a Jeden pursuit, then decide it with a new run.
     Pursue {
@@ -185,6 +165,37 @@ pub enum BenchmarkCommand {
     },
 }
 
+/// What `benchmark author` drafts.
+#[derive(Debug, Subcommand)]
+pub enum AuthorCommand {
+    /// Draft, judge, write and declare a suite for this product and its rivals.
+    Suite {
+        app_id: String,
+        #[arg(long)]
+        suite: String,
+        /// How many cases the suite holds.
+        #[arg(long)]
+        cases: usize,
+        /// Drafts allowed before the command refuses.
+        #[arg(long)]
+        rounds: u32,
+    },
+    /// Draft, place, declare and verify one contender's driver.
+    Contender {
+        app_id: String,
+        #[arg(long)]
+        contender: String,
+        #[arg(long)]
+        suite: String,
+        /// The contender is our own product rather than a catalog rival.
+        #[arg(long)]
+        ours: bool,
+        /// Drafts allowed before the command refuses.
+        #[arg(long)]
+        rounds: u32,
+    },
+}
+
 pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
     match command {
         BenchmarkCommand::Suites { app_id } => commands::suites(harness, &app_id),
@@ -210,18 +221,24 @@ pub fn dispatch(harness: &Path, command: BenchmarkCommand) -> Answer {
         }
         BenchmarkCommand::Rivals { app_id } => catalog::rivals(harness, &app_id),
         BenchmarkCommand::Roadmap { app_id, suite } => catalog::roadmap(harness, &app_id, &suite),
-        BenchmarkCommand::AuthorSuite {
-            app_id,
-            suite,
-            cases,
-            rounds,
+        BenchmarkCommand::Author {
+            command:
+                AuthorCommand::Suite {
+                    app_id,
+                    suite,
+                    cases,
+                    rounds,
+                },
         } => author::suite(harness, &app_id, &suite, cases, rounds),
         BenchmarkCommand::Author {
-            app_id,
-            contender,
-            suite,
-            ours,
-            rounds,
+            command:
+                AuthorCommand::Contender {
+                    app_id,
+                    contender,
+                    suite,
+                    ours,
+                    rounds,
+                },
         } => author::contender(harness, &app_id, &contender, &suite, ours, rounds),
         BenchmarkCommand::Pursue {
             app_id,

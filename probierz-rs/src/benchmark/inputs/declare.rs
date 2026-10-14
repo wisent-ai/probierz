@@ -147,7 +147,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
         refuse(
             manifest,
             format!(
-                "declares no benchmark; probierz benchmark author-suite {} --suite <id> starts one",
+                "declares no benchmark; probierz benchmark author suite {} --suite <id> starts one",
                 manifest.app_id
             ),
         )
@@ -157,13 +157,13 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
     if section.suites.is_empty() {
         return Err(refuse(
             manifest,
-            format!("benchmark.suites declares no suite; probierz benchmark author-suite {} --suite <id> drafts one", manifest.app_id),
+            format!("benchmark.suites declares no suite; probierz benchmark author suite {} --suite <id> drafts one", manifest.app_id),
         ));
     }
     if section.contenders.is_empty() {
         return Err(refuse(
             manifest,
-            format!("benchmark.contenders declares no contender; probierz benchmark author {} --contender <id> --ours --suite <id> drafts ours", manifest.app_id),
+            format!("benchmark.contenders declares no contender; probierz benchmark author contender {} --contender <id> --ours --suite <id> drafts ours", manifest.app_id),
         ));
     }
     let suites = section

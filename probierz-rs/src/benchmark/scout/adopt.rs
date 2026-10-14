@@ -136,6 +136,6 @@ pub(crate) fn adopt(
         "manifest": manifest.file,
         "catalog": {"status": record["status"], "rivals": record["rivals"], "benchmark": record["benchmark"]},
         "suite": suite,
-        "next": format!("probierz benchmark author {id} --contender <id> --ours --suite {suite_id}, then one per rival, then probierz benchmark run {id} --suite {suite_id}"),
+        "next": format!("probierz benchmark author contender {id} --contender <id> --ours --suite {suite_id}, then one per rival, then probierz benchmark run {id} --suite {suite_id}"),
     }))
 }

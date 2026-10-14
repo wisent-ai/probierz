@@ -12,7 +12,7 @@
 //! redrafted only when it fails, so `author` is also how a driver a rival's
 //! new release broke is repaired.
 //!
-//! `author-suite` drafts a suite from the catalog record of the product and
+//! `author suite` drafts a suite from the catalog record of the product and
 //! its rivals, judges it with the suite loader, writes it once and declares
 //! it.
 
@@ -137,7 +137,7 @@ pub(crate) fn contender(
             return Err(Failure::new(
                 "benchmark.author",
                 Code::Prerequisite,
-                format!("no contender is ours yet, so no rival can be measured; probierz benchmark author {app_id} --contender <id> --ours --suite {suite_id} drafts ours first"),
+                format!("no contender is ours yet, so no rival can be measured; probierz benchmark author contender {app_id} --contender <id> --ours --suite {suite_id} drafts ours first"),
             ))
         }
         _ => {}

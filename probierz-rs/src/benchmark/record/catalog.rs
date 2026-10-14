@@ -147,7 +147,7 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
     }
     for rival in rivals.iter().filter(|rival| rival["measured"] == false) {
         gaps.push(format!(
-            "rival {} has no contender in {}; probierz benchmark author {app_id} --contender {} --suite <id> drafts and verifies one",
+            "rival {} has no contender in {}; probierz benchmark author contender {app_id} --contender {} --suite <id> drafts and verifies one",
             rival["id"],
             manifest.file.display(),
             rival["id"].as_str().unwrap_or_default()
@@ -155,7 +155,7 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
     }
     for suite in suites.iter().filter(|suite| suite["declared"] == false) {
         gaps.push(format!(
-            "suite {} is named by the catalog but not declared in {}; probierz benchmark author-suite {app_id} --suite {} drafts one",
+            "suite {} is named by the catalog but not declared in {}; probierz benchmark author suite {app_id} --suite {} drafts one",
             suite["id"],
             manifest.file.display(),
             suite["id"].as_str().unwrap_or_default()

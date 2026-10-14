@@ -91,7 +91,7 @@ pub(crate) fn suite_file(manifest: &Manifest, suite_id: &str) -> Result<PathBuf,
             Failure::invalid(
                 "benchmark.author",
                 format!(
-                    "{} declares no suite {suite_id}; probierz benchmark author-suite {} --suite {suite_id} drafts one",
+                    "{} declares no suite {suite_id}; probierz benchmark author suite {} --suite {suite_id} drafts one",
                     manifest.file.display(),
                     manifest.app_id
                 ),
