@@ -1,30 +1,4 @@
 use crate::gate::*;
-pub(crate) fn canonical(value: &Value) -> String {
-    match value {
-        Value::Array(values) => format!(
-            "[{}]",
-            values.iter().map(canonical).collect::<Vec<_>>().join(",")
-        ),
-        Value::Object(map) => {
-            let mut keys: Vec<&String> = map.keys().collect();
-            keys.sort();
-            let members = keys
-                .into_iter()
-                .map(|key| {
-                    format!(
-                        "{}:{}",
-                        serde_json::to_string(key).unwrap_or_default(),
-                        canonical(&map[key])
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(",");
-            format!("{{{members}}}")
-        }
-        primitive => serde_json::to_string(primitive).unwrap_or_else(|_| "null".to_string()),
-    }
-}
-
 pub(crate) fn js_display(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),

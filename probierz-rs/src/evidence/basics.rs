@@ -14,6 +14,10 @@ pub(crate) fn sha256_file(file: &Path) -> Result<String, Failure> {
     Ok(hex::encode(digest.finalize()))
 }
 
+/// Canonical JSON: object keys sorted at every depth, compact. Signed
+/// receipts, publications and the gate's receipt comparison all encode
+/// through this; Value's Display is serde_json's compact encoding and has
+/// no failure to answer with a made-up text.
 pub(crate) fn canonical(value: &Value) -> String {
     match value {
         Value::Array(items) => {
@@ -25,15 +29,12 @@ pub(crate) fn canonical(value: &Value) -> String {
             keys.sort();
             let body = keys
                 .into_iter()
-                .map(|key| {
-                    let encoded = serde_json::to_string(key).unwrap_or_else(|_| "\"\"".to_string());
-                    format!("{encoded}:{}", canonical(&object[key]))
-                })
+                .map(|key| format!("{}:{}", Value::from(key.as_str()), canonical(&object[key])))
                 .collect::<Vec<_>>()
                 .join(",");
             format!("{{{body}}}")
         }
-        _ => serde_json::to_string(value).unwrap_or_else(|_| "null".to_string()),
+        primitive => primitive.to_string(),
     }
 }
 

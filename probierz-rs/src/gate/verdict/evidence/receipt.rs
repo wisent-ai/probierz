@@ -63,8 +63,8 @@ pub(crate) fn release_receipt(
     if !js_strict_optional_string(property(&verified, "expectedSourceSha"), expected_source) {
         errors.push("receipt app source SHA-256 does not match".to_string());
     }
-    if canonical(property(&verified, "builds").unwrap_or(&Value::Null))
-        != canonical(&Value::Object(builds.clone()))
+    if property(&verified, "builds").map(crate::evidence::canonical)
+        != Some(crate::evidence::canonical(&Value::Object(builds.clone())))
     {
         errors.push("receipt build identities do not match".to_string());
     }
@@ -92,7 +92,7 @@ pub(crate) fn release_receipt(
                     continue;
                 }
             };
-        if signed.map(canonical) != Some(canonical(&local)) {
+        if signed.map(crate::evidence::canonical) != Some(crate::evidence::canonical(&local)) {
             errors.push(format!(
                 "{}: local policy evidence differs from the signed receipt",
                 run.run_id
