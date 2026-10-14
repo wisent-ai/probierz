@@ -164,10 +164,17 @@ pub(crate) fn repair_source_run(
                 format!("Run {run_id} is an infrastructure failure; repair the host or toolchain instead of product code."),
             ));
         }
-        other => {
+        Some(other) => {
             return Err(repair_failure(
                 Some(run_id), "config", false,
-                format!("run {run_id} carries no product failure class ({})", other.unwrap_or("none")),
+                format!("run {run_id} carries no product failure class ({other})"),
+                format!("Run {run_id} is not classified as a product failure; only product failures are repaired in product code."),
+            ));
+        }
+        None => {
+            return Err(repair_failure(
+                Some(run_id), "config", false,
+                format!("run {run_id} states no failure class"),
                 format!("Run {run_id} is not classified as a product failure; only product failures are repaired in product code."),
             ));
         }
