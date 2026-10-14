@@ -121,10 +121,10 @@ pub(crate) fn prepush_value(
     }
     let mut history = all_runs(harness, &resolved_app)
         .map_err(|detail| Failure::config("gate.prepush", detail))?;
-    history.sort_by(|left, right| {
-        js_display(Some(&right.started_at)).cmp(&js_display(Some(&left.started_at)))
-    });
-    history.truncate(1000);
+    // Newest first by the start each run states (a run stating none last),
+    // and every run kept: the gate looks for each journey's newest passing
+    // run, which no cap nobody stated may cut off.
+    history.sort_by(|left, right| right.started_at.as_str().cmp(&left.started_at.as_str()));
     let mut run_ids = Vec::new();
     for journey in &journeys {
         if let Some(run) = history

@@ -206,16 +206,15 @@ pub(crate) fn run_history_value(
             })
         })
         .collect::<Vec<_>>();
+    // Newest first by the start each run states; a run that states none
+    // sorts last, never as the text "undefined" ahead of every dated run.
     runs.sort_by(|left, right| {
-        let left = left
-            .get("startedAt")
-            .map(Value::to_string)
-            .unwrap_or_else(|| "undefined".to_string());
-        let right = right
-            .get("startedAt")
-            .map(Value::to_string)
-            .unwrap_or_else(|| "undefined".to_string());
-        right.cmp(&left)
+        let started = |run: &Value| {
+            run.get("startedAt")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        };
+        started(right).cmp(&started(left))
     });
     runs.truncate(limit.max(1));
     let count_status = |wanted: &str| {
