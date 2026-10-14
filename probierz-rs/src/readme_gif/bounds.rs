@@ -64,13 +64,7 @@ pub(crate) fn output_file(file: &Path) -> Result<PathBuf, Failure> {
     Ok(resolved)
 }
 
-pub(crate) fn json_number(value: f64) -> Value {
-    if value.fract() == 0.0 && value <= u64::MAX as f64 {
-        Value::Number((value as u64).into())
-    } else {
-        Value::Number(Number::from_f64(value).expect("validated finite number"))
-    }
-}
+pub(crate) use crate::run::number as json_number;
 
 /// The ffmpeg graph: the stated frame rate and width, when stated, then a
 /// palette made from the clip itself.

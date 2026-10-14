@@ -6,19 +6,7 @@ pub(crate) fn now() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
-pub(crate) fn json_number(value: f64) -> Value {
-    if value.is_finite()
-        && value.fract() == 0.0
-        && value >= i64::MIN as f64
-        && value <= i64::MAX as f64
-    {
-        Value::Number(Number::from(value as i64))
-    } else {
-        Number::from_f64(value)
-            .map(Value::Number)
-            .unwrap_or(Value::Null)
-    }
-}
+pub(crate) use crate::run::number as json_number;
 
 pub(crate) fn number(value: Option<&Value>) -> f64 {
     match value {

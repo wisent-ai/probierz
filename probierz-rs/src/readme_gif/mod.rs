@@ -10,7 +10,7 @@ pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::Command;
 
 pub(crate) use serde::Serialize;
-pub(crate) use serde_json::{Number, Value};
+pub(crate) use serde_json::Value;
 
 pub(crate) use crate::failure::{print_json, write_private, Answer, Failure};
 

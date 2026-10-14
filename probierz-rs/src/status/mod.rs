@@ -23,7 +23,7 @@ use std::thread;
 use base64::Engine;
 use chrono::{SecondsFormat, Utc};
 use rand_core::RngCore;
-use serde_json::{json, Number, Value};
+use serde_json::{json, Value};
 
 use crate::failure::{print_json, Answer, Code, Failure};
 use crate::manifest;
