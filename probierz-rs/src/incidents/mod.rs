@@ -174,11 +174,7 @@ pub(crate) fn actor() -> Result<String, Failure> {
     ))
 }
 
-pub(crate) fn now() -> String {
-    chrono::Utc::now()
-        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-        .to_string()
-}
+pub(crate) use crate::failure::now_iso as now;
 
 /// A short, stable name for one incident: the stamp it was recorded at, the
 /// claim, and the envelope it carries. Two incidents recorded in the same

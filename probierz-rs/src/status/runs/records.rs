@@ -2,9 +2,7 @@
 
 use crate::status::*;
 
-pub(crate) fn now() -> String {
-    Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
-}
+pub(crate) use crate::failure::now_iso as now;
 
 pub(crate) use crate::run::number as json_number;
 
