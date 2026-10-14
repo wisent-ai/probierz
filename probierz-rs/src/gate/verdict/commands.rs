@@ -50,11 +50,18 @@ pub fn enforce(harness: &Path, args: &GateArgs) -> Answer {
         let mut evaluation = evaluate_value(harness, args)?;
         let passed =
             truthy(property(&evaluation, "verdict").and_then(|value| property(value, "passed")));
+        // Every evaluation writes its verdict's error list; one without it
+        // is refused rather than audited as an enforcement with no errors.
         let error_count = property(&evaluation, "verdict")
             .and_then(|value| property(value, "errors"))
             .and_then(Value::as_array)
             .map(Vec::len)
-            .unwrap_or(0);
+            .ok_or_else(|| {
+                Failure::config(
+                    "gate.enforce",
+                    "the evaluation's verdict states no error list",
+                )
+            })?;
         audit_access(
             harness,
             "gate.enforce",
