@@ -110,14 +110,23 @@ pub(crate) fn slack(
     action: &str,
     mut payload: Value,
 ) -> Result<Value, Failure> {
-    let base = source
-        .get("STADO_INTEGRATION_API_URL")
-        .map(|value| value.trim_end_matches('/'))
-        .unwrap_or_default();
-    let token = source
-        .get("PROBIERZ_STADO_INTEGRATION_TOKEN")
-        .cloned()
-        .unwrap_or_default();
+    // The integration origin and bearer are the run's; without either the
+    // call went to '/api/…' or carried 'Bearer ' and failed as a refusal.
+    let required = |name: &str| {
+        source
+            .get(name)
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                Failure::config(
+                    "apphook.oko.slack",
+                    format!(
+                        "{name} is not set, so wisent-integrations slack/{action} cannot be called"
+                    ),
+                )
+            })
+    };
+    let base = required("STADO_INTEGRATION_API_URL")?.trim_end_matches('/');
+    let token = required("PROBIERZ_STADO_INTEGRATION_TOKEN")?;
     payload["identity"] = json!(identity);
     let envelope = request_json(
         "POST",
