@@ -69,7 +69,14 @@ pub(crate) fn execute_job(job: Arc<Mutex<Job>>, mut args: Map<String, Value>) {
             return;
         }
     };
-    let mut command = Command::new(probierz_binary());
+    let binary = match probierz_binary() {
+        Ok(binary) => binary,
+        Err(error) => {
+            finish_job_error(&job, error);
+            return;
+        }
+    };
+    let mut command = Command::new(binary);
     command
         .arg("--harness")
         .arg(harness_root())

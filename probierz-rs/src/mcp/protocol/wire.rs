@@ -8,8 +8,12 @@ pub(crate) fn send(value: &Value) {
 
 /// This binary, for the one tool that runs as a child process: an
 /// asynchronous run, whose process tree is cancelled as a whole.
-pub(crate) fn probierz_binary() -> PathBuf {
-    std::env::current_exe().unwrap_or_else(|_| PathBuf::from("probierz"))
+/// The executable serving this MCP process, so a job runs the same build.
+/// One that cannot be found is the refusal naming why, never a `probierz`
+/// looked up on PATH, which could be another build.
+pub(crate) fn probierz_binary() -> Result<PathBuf, String> {
+    std::env::current_exe()
+        .map_err(|error| format!("cannot find this probierz executable to run the job: {error}"))
 }
 
 pub(crate) fn non_empty<'a>(value: Option<&'a Value>, name: &str) -> Result<&'a str, String> {
