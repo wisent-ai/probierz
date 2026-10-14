@@ -118,15 +118,10 @@ pub(crate) fn build_timeline(
     json!({ "schemaVersion": 1, "runId": report.pointer("/probierz/runId").cloned().unwrap_or(Value::Null), "artifactsDir": artifacts, "generatedAt": now_iso(), "counts": counts, "diagnostics": diagnostics, "events": events })
 }
 
-pub(crate) fn percentile(mut values: Vec<f64>, fraction: f64) -> Value {
-    if values.is_empty() {
-        return Value::Null;
-    }
-    values.sort_by(|left, right| left.total_cmp(right));
-    let index = ((values.len() as f64 * fraction).ceil() as usize)
-        .saturating_sub(1)
-        .min(values.len() - 1);
-    number(values[index])
+/// The `fraction` percentile of `values` as a JSON number, null for none:
+/// the one percentile is `status::percentile`, encoded here as `number`.
+pub(crate) fn percentile(values: Vec<f64>, fraction: f64) -> Value {
+    json!(crate::status::percentile(values, fraction).map(number))
 }
 pub(crate) fn error_line(value: &str) -> bool {
     Regex::new(r"(?i)\b(?:crash(?:ed)?|fatal|panic|uncaught|unhandled|segmentation fault|assertion failed)\b").expect("regex").is_match(value)
