@@ -1,12 +1,14 @@
 use crate::gate::*;
+/// A JSON value as gate messages and comparisons print it; a value the
+/// document does not hold is "(not stated)", never JavaScript's "undefined".
 pub(crate) fn js_display(value: Option<&Value>) -> String {
     match value {
-        None => "undefined".to_string(),
+        None => "(not stated)".to_string(),
         Some(Value::Null) => "null".to_string(),
         Some(Value::String(text)) => text.clone(),
         Some(Value::Bool(flag)) => flag.to_string(),
         Some(Value::Number(number)) => number.to_string(),
-        Some(other) => serde_json::to_string(other).unwrap_or_default(),
+        Some(other) => other.to_string(),
     }
 }
 

@@ -67,13 +67,10 @@ pub(crate) fn restore_bundle(
     if header.get("algorithm").and_then(Value::as_str) != Some("AES-256-GCM") {
         return Err(Failure::invalid(
             "evidence.restore",
-            format!(
-                "unsupported evidence algorithm: {}",
-                header
-                    .get("algorithm")
-                    .and_then(Value::as_str)
-                    .unwrap_or("undefined")
-            ),
+            match header.get("algorithm").and_then(Value::as_str) {
+                Some(algorithm) => format!("unsupported evidence algorithm: {algorithm}"),
+                None => "the evidence header names no algorithm".to_string(),
+            },
         ));
     }
     if header.get("keyFingerprintSha256").and_then(Value::as_str) != Some(&sha256_bytes(&key)) {

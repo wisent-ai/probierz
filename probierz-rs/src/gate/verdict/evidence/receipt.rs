@@ -49,10 +49,13 @@ pub(crate) fn release_receipt(
         ));
     }
     if !js_strict_optional_string(property(&verified, "release"), args.release.as_deref()) {
+        let requested = match args.release.as_deref() {
+            Some(release) => format!("the requested release {release}"),
+            None => "no release, as none was requested".to_string(),
+        };
         errors.push(format!(
-            "receipt release {} does not match {}",
+            "receipt release {} does not match {requested}",
             js_display(property(&verified, "release")),
-            args.release.as_deref().unwrap_or("undefined")
         ));
     }
     if string_property(&verified, "expectedHarnessSha").as_deref()
