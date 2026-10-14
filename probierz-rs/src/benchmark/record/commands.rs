@@ -48,11 +48,7 @@ pub(crate) fn source(contender: &Contender) -> Json {
         return Json::Null;
     };
     let git = |args: &[&str]| {
-        Command::new("git")
-            .arg("-C")
-            .arg(directory)
-            .args(args)
-            .output()
+        stado_wait::output(Command::new("git").arg("-C").arg(directory).args(args))
             .ok()
             .filter(|output| output.status.success())
             .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())

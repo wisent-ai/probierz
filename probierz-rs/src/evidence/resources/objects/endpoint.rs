@@ -97,25 +97,23 @@ fn object_api_url() -> Result<String, Failure> {
 /// already holds for this product. It is read through Stado by the role its
 /// item plays, so no item is named.
 fn token_from_vault() -> Result<String, Failure> {
-    let output = std::process::Command::new(crate::stado::STADO_BIN)
-        .args([
-            "credentials",
-            "get",
-            "--role",
-            OBJECT_API_ROLE,
-            "--field",
-            OBJECT_API_FIELD,
-        ])
-        .output()
-        .map_err(|error| {
-            Failure::config(
-                "objects.config",
-                format!(
-                    "cannot run {} to read role {OBJECT_API_ROLE}: {error}",
-                    crate::stado::STADO_BIN
-                ),
-            )
-        })?;
+    let output = stado_wait::output(std::process::Command::new(crate::stado::STADO_BIN).args([
+        "credentials",
+        "get",
+        "--role",
+        OBJECT_API_ROLE,
+        "--field",
+        OBJECT_API_FIELD,
+    ]))
+    .map_err(|error| {
+        Failure::config(
+            "objects.config",
+            format!(
+                "cannot run {} to read role {OBJECT_API_ROLE}: {error}",
+                crate::stado::STADO_BIN
+            ),
+        )
+    })?;
     if !output.status.success() {
         return Err(Failure::config(
             "objects.config",

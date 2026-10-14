@@ -19,14 +19,15 @@ impl Driver {
     }
 
     pub fn call(&self, tool: &str, arguments: Value) -> Result<Value, String> {
-        let output = Command::new(&self.binary)
-            .arg("call")
-            .arg(tool)
-            .arg(arguments.to_string())
-            .arg("--socket")
-            .arg(&self.socket)
-            .output()
-            .map_err(|error| format!("cua-driver {tool} failed: {error}"))?;
+        let output = stado_wait::output(
+            Command::new(&self.binary)
+                .arg("call")
+                .arg(tool)
+                .arg(arguments.to_string())
+                .arg("--socket")
+                .arg(&self.socket),
+        )
+        .map_err(|error| format!("cua-driver {tool} failed: {error}"))?;
         if !output.status.success() {
             let detail = output_detail(&output);
             return Err(format!("cua-driver {tool} failed: {detail}"));

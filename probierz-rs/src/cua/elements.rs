@@ -112,7 +112,9 @@ pub(crate) fn output_detail(output: &Output) -> String {
 }
 
 /// Runs `command` to its own exit and captures both streams; no deadline and
-/// no poll (cli.md rule 8). `output()` drains both pipes while it waits.
+/// no poll (cli.md rule 8). It waits through `stado_wait::output`, the one
+/// wait every Probierz process run goes through, so the wait says on stderr
+/// what it waits on and since when, and both pipes drain while it waits.
 pub(crate) fn run_to_exit(command: &mut Command) -> Result<Output, String> {
-    command.output().map_err(|error| error.to_string())
+    stado_wait::output(command).map_err(|error| error.to_string())
 }

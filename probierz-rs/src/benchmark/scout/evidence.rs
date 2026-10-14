@@ -17,7 +17,7 @@ const COMPETITORS_BIN: &str = "competitors";
 /// Run one command, answer its JSON stdout, or say who refused and why.
 fn answer(command: &mut Command, owner: &str) -> Result<Json, Failure> {
     let described = format!("{command:?}");
-    let output = command.output().map_err(|error| {
+    let output = stado_wait::output(command).map_err(|error| {
         Failure::new(
             POINT,
             Code::Prerequisite,

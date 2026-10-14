@@ -81,15 +81,13 @@ pub(crate) fn execute_job(job: Arc<Mutex<Job>>, mut args: Map<String, Value>) {
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    let mut child = match command.spawn() {
+    let child = match command.spawn() {
         Ok(child) => child,
         Err(error) => {
             finish_job_error(&job, format!("cannot run probierz: {error}"));
             return;
         }
     };
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
     let pid = child.id();
     {
         let Ok(mut job) = job.lock() else {
@@ -101,22 +99,13 @@ pub(crate) fn execute_job(job: Arc<Mutex<Job>>, mut args: Map<String, Value>) {
             terminate_tree(pid);
         }
     }
-    let stdout_reader = thread::spawn(move || read_pipe(stdout));
-    let stderr_reader = thread::spawn(move || read_pipe(stderr));
     // The run ends when the process exits; a cancel kills it by pid, so no
-    // poll is needed to stay cancellable (cli.md rule 8).
-    let status = child.wait().map_err(|error| error.to_string());
-    let stdout = stdout_reader.join().unwrap_or_default();
-    let stderr = stderr_reader.join().unwrap_or_default();
-    finish_job(&job, status, stdout, stderr);
-}
-
-pub(crate) fn read_pipe(pipe: Option<impl Read>) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    if let Some(mut pipe) = pipe {
-        let _ = pipe.read_to_end(&mut bytes);
+    // poll is needed to stay cancellable (cli.md rule 8). The wait is said
+    // on stderr at both ends, as every Probierz wait on a child is.
+    match stado_wait::child_output(child, format!("probierz job runner pid {pid}")) {
+        Ok(output) => finish_job(&job, Ok(output.status), output.stdout, output.stderr),
+        Err(error) => finish_job(&job, Err(error.to_string()), Vec::new(), Vec::new()),
     }
-    bytes
 }
 
 pub(crate) fn finish_job(
@@ -242,10 +231,7 @@ pub(crate) fn terminate_tree(pid: u32) {
         // Without the process table only `pid` itself is known, and its
         // children keep running after the kill; that is said, not assumed away.
         let mut processes: HashMap<u32, Vec<u32>> = HashMap::new();
-        match Command::new("/bin/ps")
-            .args(["-axo", "pid=,ppid="])
-            .output()
-        {
+        match stado_wait::output(Command::new("/bin/ps").args(["-axo", "pid=,ppid="])) {
             Ok(output) if output.status.success() => {
                 for line in String::from_utf8_lossy(&output.stdout).lines() {
                     let mut columns = line.split_whitespace();

@@ -175,15 +175,19 @@ pub(crate) fn standing(run: &Json) -> Json {
             .filter(|(_, value)| Some(key(value)) == best)
             .map(|(id, _)| *id)
             .collect();
-        let verdict = match (winners.iter().any(|id| **id == ours), winners.len()) {
+        let held = winners.iter().any(|id| **id == ours);
+        let verdict = match (held, winners.len()) {
             (true, 1) => "won",
             (true, _) => "tied",
             (false, _) if !by_contender.contains_key(&ours) => "absent",
             (false, _) => "lost",
         };
+        // `held`: our contender is among the case's best, alone or tied — the
+        // structure a reader acts on, so none re-reads the verdict's word.
         let entry = json!({
             "case": case,
             "verdict": verdict,
+            "held": held,
             "winners": winners,
             "contenders": by_contender,
         });

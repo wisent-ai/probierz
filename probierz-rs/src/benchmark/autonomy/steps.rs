@@ -22,11 +22,11 @@ pub(in crate::benchmark::autonomy) fn command(path: &str) -> Vec<String> {
 /// Run one command in the cycle's harness and answer its record: the
 /// arguments, the exit status, the JSON it printed and its refusal.
 pub(in crate::benchmark::autonomy) fn run(program: &Path, args: &[String], harness: &Path) -> Json {
-    match Command::new(program)
-        .args(args)
-        .env("PROBIERZ_HARNESS_DIR", harness)
-        .output()
-    {
+    match stado_wait::output(
+        Command::new(program)
+            .args(args)
+            .env("PROBIERZ_HARNESS_DIR", harness),
+    ) {
         Err(error) => json!({
             "program": program.to_string_lossy(),
             "args": args,

@@ -25,7 +25,8 @@ pub(crate) fn process_with_input(
             .write_all(input.as_bytes())
             .map_err(|error| error.to_string())?;
     }
-    child.wait_with_output().map_err(|error| error.to_string())
+    let what = format!("{} in {}", program.to_string_lossy(), cwd.display());
+    stado_wait::child_output(child, what).map_err(|error| error.to_string())
 }
 
 pub(crate) fn checked_process(
@@ -185,14 +186,15 @@ pub(crate) fn verify_repaired_spec(
     let Some(target) = run.get("target").and_then(JsonValue::as_str) else {
         return json!({ "passed": false, "exitCode": JsonValue::Null, "runId": JsonValue::Null, "status": JsonValue::Null, "error": format!("the run being repaired names no target to verify against: {run}") });
     };
-    let output = Command::new(executable)
-        .args(["--harness"])
-        .arg(harness)
-        .args(["run", target, "--app", app_id, "--spec"])
-        .arg(candidate)
-        .arg("PROBIERZ_RUN_KIND=repair")
-        .env("PROBIERZ_REPAIR_SUPPRESS", "1")
-        .output();
+    let output = stado_wait::output(
+        Command::new(executable)
+            .args(["--harness"])
+            .arg(harness)
+            .args(["run", target, "--app", app_id, "--spec"])
+            .arg(candidate)
+            .arg("PROBIERZ_RUN_KIND=repair")
+            .env("PROBIERZ_REPAIR_SUPPRESS", "1"),
+    );
     // Each way this verification can end without a verdict is named: the run
     // did not start, its history could not be read, it recorded no run, or the
     // run states no status. Each read as status "unknown" and not passed,

@@ -1,11 +1,7 @@
 use crate::gate::*;
 pub(crate) fn git(repo: &Path, args: &[&str]) -> Option<String> {
-    let output = ProcessCommand::new("git")
-        .arg("-C")
-        .arg(repo)
-        .args(args)
-        .output()
-        .ok()?;
+    let output =
+        stado_wait::output(ProcessCommand::new("git").arg("-C").arg(repo).args(args)).ok()?;
     if !output.status.success() {
         return None;
     }

@@ -98,7 +98,7 @@ pub(crate) fn prepush_value(
             .stdin(Stdio::null())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
-        let status = command.status()?;
+        let status = stado_wait::status(&mut command)?;
         if !status.success() {
             return Ok(object([
                 ("ok", Value::Bool(false)),

@@ -33,7 +33,7 @@ pub(crate) fn product_id(manifest: &Manifest) -> String {
 /// Run one Stado command and answer its stdout, or say what it refused.
 pub(crate) fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
     let described = format!("{command:?}");
-    let output = command.output().map_err(|error| {
+    let output = stado_wait::output(command).map_err(|error| {
         Failure::new(
             "benchmark.catalog",
             Code::Prerequisite,

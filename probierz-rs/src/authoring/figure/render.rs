@@ -124,7 +124,7 @@ pub(crate) fn figure_process(
     if let Some(cwd) = cwd {
         command.current_dir(cwd);
     }
-    let output = command.output().map_err(|error| {
+    let output = stado_wait::output(&mut command).map_err(|error| {
         if error.kind() == std::io::ErrorKind::NotFound {
             format!("{program} is required for figure evaluation")
         } else {

@@ -3,12 +3,8 @@
 use crate::status::*;
 
 pub(crate) fn git(root: &str, arguments: &[&str]) -> Option<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(arguments)
-        .output()
-        .ok()?;
+    let output =
+        stado_wait::output(Command::new("git").arg("-C").arg(root).args(arguments)).ok()?;
     if !output.status.success() {
         return None;
     }

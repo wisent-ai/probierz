@@ -178,17 +178,18 @@ pub(crate) fn post_router(
     let header_file = temp_file("router-headers", headers.as_bytes())?;
     let body_file = temp_file("router-body", body.as_bytes())
         .map_err(|error| abandoned(&header_file, error))?;
-    let output = Command::new("curl")
-        .args(["--silent", "--show-error", "--header"])
-        .arg(format!("@{}", header_file.display()))
-        .args(["--data-binary"])
-        .arg(format!("@{}", body_file.display()))
-        .args([
-            "--write-out",
-            "\n%{http_code}",
-            &format!("{url}/v1/chat/completions"),
-        ])
-        .output();
+    let output = stado_wait::output(
+        Command::new("curl")
+            .args(["--silent", "--show-error", "--header"])
+            .arg(format!("@{}", header_file.display()))
+            .args(["--data-binary"])
+            .arg(format!("@{}", body_file.display()))
+            .args([
+                "--write-out",
+                "\n%{http_code}",
+                &format!("{url}/v1/chat/completions"),
+            ]),
+    );
     // The header file carries the router's bearer token: one left on disk is
     // refused by name, never dropped behind a successful answer.
     let left: Vec<String> = [header_file.as_path(), body_file.as_path()]

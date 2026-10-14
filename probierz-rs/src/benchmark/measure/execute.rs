@@ -158,7 +158,14 @@ pub(crate) fn attempt(
     let mut stdin = child.stdin.take().expect("stdin was piped");
     let written = stdin.write_all(serde_json::to_vec(&task)?.as_slice());
     drop(stdin);
-    let output = child.wait_with_output()?;
+    let output = stado_wait::child_output(
+        child,
+        format!(
+            "contender {} ({})",
+            contender.id,
+            contender.program.display()
+        ),
+    )?;
     let duration_ms = started.elapsed().as_millis() as u64;
     let ended = ended(&output.status);
     if let Err(error) = written {

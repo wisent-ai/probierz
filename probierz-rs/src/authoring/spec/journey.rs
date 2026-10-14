@@ -194,7 +194,7 @@ pub(crate) fn run_authored_spec(
         };
         command.arg(format!("{name}={value}"));
     }
-    let output = command.output()?;
+    let output = stado_wait::output(&mut command)?;
     if output.stdout.is_empty() {
         // The run printed no result, so there is no status to report: the
         // exit and stderr say why.

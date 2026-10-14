@@ -10,10 +10,8 @@ pub(crate) fn resolve_skarbiec(value: &mut Value, binary: &str) -> Result<(), Fa
                     format!("invalid Skarbiec reference: {text}"),
                 )
             })?;
-            let output = Command::new(binary)
-                .args(["get", item])
-                .output()
-                .map_err(|error| {
+            let output =
+                stado_wait::output(Command::new(binary).args(["get", item])).map_err(|error| {
                     Failure::new(
                         "apphook.gac.skarbiec",
                         Code::Prerequisite,
@@ -132,7 +130,7 @@ try {
     for script in scripts {
         command.arg(encode(script.as_bytes()));
     }
-    let output = command.output().map_err(|error| {
+    let output = stado_wait::output(&mut command).map_err(|error| {
         Failure::new(
             "apphook.gac.blender",
             Code::Prerequisite,

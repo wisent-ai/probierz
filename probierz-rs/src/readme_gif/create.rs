@@ -54,14 +54,15 @@ pub fn create(options: Options) -> Answer {
     if let Some(duration_seconds) = duration_seconds {
         command.arg("-t").arg(duration_seconds.to_string());
     }
-    let result = command
-        .arg("-i")
-        .arg(&input)
-        .arg("-filter_complex")
-        .arg(filter_graph(frames_per_second, width))
-        .args(["-map", "[v]", "-loop", "0", "-y"])
-        .arg(&temporary)
-        .output();
+    let result = stado_wait::output(
+        command
+            .arg("-i")
+            .arg(&input)
+            .arg("-filter_complex")
+            .arg(filter_graph(frames_per_second, width))
+            .args(["-map", "[v]", "-loop", "0", "-y"])
+            .arg(&temporary),
+    );
     // A failed export takes its partial GIF back; one that stays is named in
     // the refusal, never left unannounced beside the output.
     let refused = |reason: String| {

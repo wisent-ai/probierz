@@ -80,7 +80,10 @@ pub(crate) fn pursue(
         .ok_or_else(|| {
             Failure::invalid(
                 POINT,
-                format!("run {run_id} does not lose case {case_id} (its verdict is {}); nothing to pursue", verdict(&standing, case_id)),
+                match case_entry(&standing, case_id) {
+                    Some(entry) => format!("run {run_id} does not lose case {case_id} (its verdict is {}); nothing to pursue", entry["verdict"]),
+                    None => format!("run {run_id} does not lose case {case_id}: no contender ran it; nothing to pursue"),
+                },
             )
         })?;
     let checkout = commands::source(&ours)["repository"]
@@ -136,8 +139,13 @@ pub(crate) fn pursue(
     }
     let (run, run_file) = commands::recorded_run(harness, app_id, suite_id, &[], None)?;
     let after = assess::standing(&run);
-    let decided = verdict(&after, case_id);
-    let accepted = decided == "won" || decided == "tied";
+    let (decided, accepted) = match case_entry(&after, case_id) {
+        Some(entry) => (
+            entry["verdict"].clone(),
+            entry["held"].as_bool() == Some(true),
+        ),
+        None => (json!("absent"), false),
+    };
     let roadmap = catalog::roadmap_of(harness, app_id, suite_id)?;
     let answer = json!({
         "appId": app_id,
@@ -167,16 +175,14 @@ pub(crate) fn pursue(
     ))
 }
 
-/// The verdict a standing gives one case, or `absent` when no contender ran it.
-fn verdict(standing: &Json, case_id: &str) -> String {
+/// The standing's entry for one case; none when no contender ran it, which
+/// the outcome records as `absent`.
+fn case_entry<'a>(standing: &'a Json, case_id: &str) -> Option<&'a Json> {
     standing["cases"]
         .as_array()
         .into_iter()
         .flatten()
         .find(|entry| entry["case"] == case_id)
-        .and_then(|entry| entry["verdict"].as_str())
-        .unwrap_or("absent")
-        .to_string()
 }
 
 /// The finish line Jeden is given: what the case asks, who beat us and by how
@@ -242,13 +248,14 @@ fn identifier(text: &str) -> String {
 /// Submit the request to Jeden and read its response document. A request
 /// Jeden already finished answers its stored response.
 fn jeden(request: &Path) -> Result<Json, Failure> {
-    let output = Command::new(JEDEN_BIN)
-        .arg("pursue")
-        .arg("--request-file")
-        .arg(request)
-        .args(["--allow-write", "--allow-command", "--json"])
-        .output()
-        .map_err(|error| {
+    let output = stado_wait::output(
+        Command::new(JEDEN_BIN)
+            .arg("pursue")
+            .arg("--request-file")
+            .arg(request)
+            .args(["--allow-write", "--allow-command", "--json"]),
+    )
+    .map_err(|error| {
             Failure::new(
                 POINT,
                 Code::Prerequisite,

@@ -99,7 +99,7 @@ impl Sandbox {
         for (name, value) in &self.inputs {
             command.env(name, value);
         }
-        let output = crate::wait::output(&mut command).map_err(|error| {
+        let output = stado_wait::output(&mut command).map_err(|error| {
             Failure::new(
                 "first-use.step",
                 crate::failure::Code::Prerequisite,

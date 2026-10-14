@@ -73,9 +73,7 @@ pub fn host_inventory() -> Vec<Host> {
 /// Stado knows it, and this file names no machine. A registry that cannot be
 /// read is said on standard error and leaves only the placement selectors.
 fn registry_hosts() -> Vec<Host> {
-    let answer = std::process::Command::new("stado")
-        .args(["registry", "pull"])
-        .output();
+    let answer = stado_wait::output(std::process::Command::new("stado").args(["registry", "pull"]));
     let document = match answer {
         Ok(output) if output.status.success() => {
             serde_json::from_slice::<serde_json::Value>(&output.stdout)

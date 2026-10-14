@@ -37,8 +37,6 @@ mod run;
 mod firstuse;
 // A product checkout's own declared test suites, run and kept: `probierz run suites/<checkout>`
 mod suites;
-// The one way Probierz waits for a child process, announced as Stado declares
-mod wait;
 // PortEvidence: durable evidence, signing, publication, and retention
 mod evidence;
 // PortStado: remote Stado bridge

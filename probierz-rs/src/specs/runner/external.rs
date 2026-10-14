@@ -69,12 +69,13 @@ program that writes the canonical report"
         artifacts: &Path,
         env: &BTreeMap<String, String>,
     ) -> Result<(), String> {
-        let output = Command::new(&self.program)
-            .args(&self.args)
-            .current_dir(artifacts)
-            .envs(env)
-            .output()
-            .map_err(|error| format!("{} could not start: {error}", self.program.display()))?;
+        let output = stado_wait::output(
+            Command::new(&self.program)
+                .args(&self.args)
+                .current_dir(artifacts)
+                .envs(env),
+        )
+        .map_err(|error| format!("{} could not start: {error}", self.program.display()))?;
         if output.status.success() {
             return Ok(());
         }

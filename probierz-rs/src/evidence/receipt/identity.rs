@@ -4,11 +4,7 @@ use serde_json::json;
 mod keys;
 pub(crate) use keys::*;
 pub(crate) fn git_output(root: &Path, args: &[&str]) -> Result<std::process::Output, Failure> {
-    Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(args)
-        .output()
+    stado_wait::output(Command::new("git").arg("-C").arg(root).args(args))
         .map_err(|error| Failure::config("run.source", error.to_string()))
 }
 

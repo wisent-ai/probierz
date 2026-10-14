@@ -10,7 +10,7 @@ pub(crate) fn command_output(
     if let Some(directory) = cwd {
         command.current_dir(directory);
     }
-    command.output()
+    stado_wait::output(&mut command)
 }
 
 pub(crate) fn git_paths(root: &Path, others_only: bool) -> Result<Vec<String>, Failure> {
@@ -20,8 +20,7 @@ pub(crate) fn git_paths(root: &Path, others_only: bool) -> Result<Vec<String>, F
         command.arg("--cached");
     }
     command.args(["--others", "--exclude-standard", "-z"]);
-    let listed = command
-        .output()
+    let listed = stado_wait::output(&mut command)
         .map_err(|error| source_git_failure(root, error.to_string()))?;
     if !listed.status.success() {
         let reason = String::from_utf8_lossy(&listed.stderr).trim().to_string();

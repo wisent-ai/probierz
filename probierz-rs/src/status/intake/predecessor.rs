@@ -47,20 +47,14 @@ fn launchd(predecessor: &str) {
     let plist = crate::run::home_dir()
         .join("Library/LaunchAgents")
         .join(format!("{predecessor}.plist"));
-    let printed = Command::new("/bin/launchctl")
-        .arg("print")
-        .arg(&target)
-        .output()
+    let printed = stado_wait::output(Command::new("/bin/launchctl").arg("print").arg(&target))
         .ok()
         .filter(|output| output.status.success());
     if printed.is_none() && !plist.exists() {
         return;
     }
     let pid = printed.and_then(|output| running_pid(&String::from_utf8_lossy(&output.stdout)));
-    let _ = Command::new("/bin/launchctl")
-        .arg("bootout")
-        .arg(&target)
-        .output();
+    let _ = stado_wait::output(Command::new("/bin/launchctl").arg("bootout").arg(&target));
     if let Some(pid) = pid {
         await_exit(pid);
     }
