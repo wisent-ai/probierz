@@ -50,15 +50,9 @@ pub fn repair_failed_run(
     }
     let attempted = (|| -> Result<JsonValue, String> {
         let loaded = manifest::load(harness, app_id).map_err(|error| error.to_string())?;
-        let repo_root = loaded
-            .document
-            .get("repositories")
-            .and_then(YamlValue::as_sequence)
-            .and_then(|values| values.first())
-            .and_then(|value| value.get("root"))
-            .and_then(YamlValue::as_str)
-            .map(PathBuf::from)
-            .ok_or_else(|| "product repository is not a git checkout: missing".to_string())?;
+        let repo_root = manifest::primary_root(&loaded).ok_or_else(|| {
+            format!("app {app_id}'s manifest declares no primary repository root")
+        })?;
         if !repo_root.join(".git").exists() {
             return Err(format!(
                 "product repository is not a git checkout: {}",
