@@ -22,7 +22,10 @@ pub(crate) fn write_new_json(path: &Path, value: &Value, mode_600: bool) -> Resu
     Ok(())
 }
 
-pub(crate) fn segment(value: &str, fallback: &str) -> String {
+/// `value` as one path segment, every run of other characters one dash. A
+/// value with nothing left is refused naming `what` it should have said; it
+/// is never filed under a made-up name.
+pub(crate) fn segment(value: &str, what: &str) -> Result<String, Failure> {
     let mut clean = String::new();
     let mut replacing = false;
     for character in value.trim().chars() {
@@ -35,10 +38,12 @@ pub(crate) fn segment(value: &str, fallback: &str) -> String {
         }
     }
     if clean.is_empty() {
-        fallback.to_string()
-    } else {
-        clean
+        return Err(Failure::invalid(
+            "evidence.path",
+            format!("no {what} to file the evidence under: {value:?}"),
+        ));
     }
+    Ok(clean)
 }
 
 pub(crate) fn policy_conditions(run: &Value, document: &Value) -> Value {

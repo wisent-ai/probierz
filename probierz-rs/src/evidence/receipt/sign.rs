@@ -125,8 +125,8 @@ pub fn receipt(
     let file = harness
         .join("test-results")
         .join("receipts")
-        .join(segment(app_id, "unknown"))
-        .join(segment(release, "unknown"))
+        .join(segment(app_id, "app id")?)
+        .join(segment(release, "release")?)
         .join(format!("{receipt_id}.json"));
     write_new_json(&file, &receipt_value, true)?;
     let result = json!({ "file": file.to_string_lossy(), "receiptId": receipt_id, "receipt": receipt_value });

@@ -243,22 +243,22 @@ pub(crate) fn create_publication(
     let file = harness
         .join("test-results")
         .join("publications")
-        .join(segment(product, "unknown"))
+        .join(segment(product, "product")?)
         .join(segment(
             verification
                 .get("release")
                 .and_then(Value::as_str)
                 .unwrap_or_default(),
-            "unknown",
-        ))
+            "release",
+        )?)
         .join(segment(
             identity
                 .get("journeyVersionId")
                 .and_then(Value::as_str)
                 .unwrap_or_default(),
-            "unknown",
-        ))
-        .join(segment(attempt_id, "unknown"))
+            "journey version id",
+        )?)
+        .join(segment(attempt_id, "attempt id")?)
         .join(format!("{manifest_id}.json"));
     let serialized = format!("{}\n", serde_json::to_string_pretty(&publication)?);
     let reused = if file.exists() {
