@@ -263,18 +263,11 @@ pub(crate) fn summarize_diagnostics(
 }
 
 /// The run's process performance, `null` when the run recorded none, or the
-/// reason `performance.json` could not be read or parsed - which used to read
-/// as "no performance recorded".
+/// reason `performance.json` could not be read or parsed.
 fn performance_summary(path: &Path) -> Value {
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Value::Null,
-        Err(error) => {
-            return json!({ "error": format!("{} cannot be read: {error}", path.display()) })
-        }
-    };
-    match serde_json::from_slice::<Value>(&bytes) {
-        Ok(value) => json!({
+    match crate::json_file::read(path) {
+        Ok(None) => Value::Null,
+        Ok(Some(value)) => json!({
             "firstOutputMs": value["firstOutputMs"],
             "peakRssKb": value["peakRssKb"],
             "averageCpuPercent": value["averageCpuPercent"],
@@ -282,6 +275,6 @@ fn performance_summary(path: &Path) -> Value {
             "appPeakRssKb": value["appPeakRssKb"],
             "appAverageCpuPercent": value["appAverageCpuPercent"]
         }),
-        Err(error) => json!({ "error": format!("{} is not JSON: {error}", path.display()) }),
+        Err(error) => json!({ "error": error.detail }),
     }
 }
