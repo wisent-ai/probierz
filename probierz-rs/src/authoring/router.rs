@@ -168,7 +168,7 @@ pub(crate) fn post_router(
             .map_err(|error| error.to_string())?
             .as_secs()
             .to_string();
-        let digest = hex::encode(Sha256::digest(body.as_bytes()));
+        let digest = crate::evidence::sha256_bytes(body.as_bytes());
         let signature = hmac_sha256(
             agent_secret.as_bytes(),
             format!("{agent_id}:{timestamp}:{digest}").as_bytes(),

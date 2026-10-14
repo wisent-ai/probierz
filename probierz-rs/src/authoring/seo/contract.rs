@@ -131,7 +131,7 @@ pub(crate) fn seo_fetch(url: &str, user_agent: &str) -> Result<JsonValue, Failur
         .collect();
     Ok(json!({
         "requestedUrl": url, "finalUrl": final_url, "status": status,
-        "headers": headers, "bodySha256": hex::encode(Sha256::digest(body.as_bytes())),
+        "headers": headers, "bodySha256": crate::evidence::sha256_bytes(body.as_bytes()),
         "title": title, "description": description, "robots": robots, "canonical": canonical,
         "h1": h1, "html": body.chars().take(200_000).collect::<String>()
     }))
