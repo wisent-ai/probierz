@@ -28,6 +28,9 @@ and observed exit status together; stderr does not replace the capture cause.
 `exitCode` is null when no numeric exit code was observed, including signal
 termination; the diagnostic retains that observed termination separately rather
 than inventing a negative exit code.
+The run itself follows the same rule: its result and `run-manifest.json` record
+the suite runner's `exitCode`, or `exitCode: null` with the `signal` that ended
+it, and a run passes only when the runner exited successfully.
 
 Native ScreenCaptureKit failures retain the recorder's complete UTF-8 stderr in
 `probierz.captureErrors`, including an initial cause followed by later output.
