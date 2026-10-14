@@ -1,5 +1,6 @@
 //! Operator status of one application against a base ref, and its text rendering.
 
+use crate::gate::evidence_rank;
 use crate::status::*;
 
 /// The ref a repository is measured against when the caller names none: the

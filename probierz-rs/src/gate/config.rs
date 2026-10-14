@@ -150,14 +150,11 @@ pub(crate) fn yaml_bool(value: Option<&Yaml>) -> bool {
     value.and_then(Yaml::as_bool).unwrap_or(false)
 }
 
+/// An evidence level's rank is the number its name carries (`E<n>`); a name
+/// that is not `E` followed by a number is not an evidence level. Every gate,
+/// status, receipt and publication comparison reads ranks here.
 pub(crate) fn evidence_rank(level: &str) -> Option<i32> {
-    match level {
-        "E0" => Some(0),
-        "E1" => Some(1),
-        "E2" => Some(2),
-        "E3" => Some(3),
-        _ => None,
-    }
+    level.strip_prefix('E')?.parse::<u8>().ok().map(i32::from)
 }
 
 pub(crate) fn property<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {

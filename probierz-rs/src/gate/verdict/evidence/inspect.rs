@@ -75,7 +75,7 @@ fn inspect_run(
     {
         errors.push(format!("{}: exact build hash is missing", run.run_id));
     }
-    if evidence_rank(evidence_level(run)).unwrap_or(-1) < required_rank {
+    if evidence_rank(evidence_level(run)) < Some(required_rank) {
         errors.push(format!(
             "{}: {} is below {}",
             run.run_id,

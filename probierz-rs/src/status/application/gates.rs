@@ -61,13 +61,3 @@ pub(crate) fn evidence_level(run: &Value) -> &'static str {
         "E2"
     }
 }
-
-pub(crate) fn evidence_rank(level: &str) -> i32 {
-    match level {
-        "E0" => 0,
-        "E1" => 1,
-        "E2" => 2,
-        "E3" => 3,
-        _ => -1,
-    }
-}

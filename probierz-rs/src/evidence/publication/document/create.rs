@@ -167,23 +167,26 @@ pub(crate) fn create_publication(
         .get("evidenceLevel")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    let score = |value: &str| match value {
-        "E0" => Some(0),
-        "E1" => Some(1),
-        "E2" => Some(2),
-        "E3" => Some(3),
-        _ => None,
-    };
     require(
-        score(evidence).is_some(),
+        crate::gate::evidence_rank(evidence).is_some(),
         format!("unsupported evidence level {evidence}"),
     )?;
     let minimum = policy
         .get("minimumEvidence")
         .and_then(Value::as_str)
-        .unwrap_or_default();
+        .ok_or_else(|| {
+            Failure::invalid(
+                "evidence.publication",
+                "publication rejected: the journey's publication policy states no minimumEvidence",
+            )
+        })?;
+    let required = crate::gate::evidence_rank(minimum);
     require(
-        score(evidence).unwrap_or(-1) >= score(minimum).unwrap_or(99),
+        required.is_some(),
+        format!("unsupported minimum evidence level {minimum}"),
+    )?;
+    require(
+        crate::gate::evidence_rank(evidence) >= required,
         format!("{evidence} is below {minimum}"),
     )?;
     let signed_media: HashMap<&str, &Value> = run

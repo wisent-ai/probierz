@@ -110,18 +110,6 @@ pub(super) fn check_artifacts(
     Ok(scans)
 }
 
-fn levels(name: &str) -> i32 {
-    match name {
-        "E0" => 0,
-        "E1" => 1,
-        "E2" => 2,
-        "E3" => 3,
-        "E4" => 4,
-        "E5" => 5,
-        _ => -1,
-    }
-}
-
 /// Verifies each run's status, harness and source identities, build hash, artifact
 /// hashes and evidence level against what the receipt expects.
 pub(super) fn check_runs(
@@ -202,7 +190,7 @@ pub(super) fn check_runs(
             .get("evidenceLevel")
             .and_then(Value::as_str)
             .unwrap_or_default();
-        if levels(level) < levels(minimum) {
+        if crate::gate::evidence_rank(level) < crate::gate::evidence_rank(minimum) {
             errors.push(format!("{run_id}: {level} is below {minimum}"));
         }
     }
