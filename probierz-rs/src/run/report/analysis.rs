@@ -4,7 +4,7 @@ pub(crate) fn analyze_run(
     report_path: &Path,
     artifacts_dir: Option<&Path>,
     tool: Option<&str>,
-    frames: f64,
+    frames: Option<f64>,
     expected_run: Option<&str>,
 ) -> Result<Value, Failure> {
     let report = crate::json_file::read(report_path)?.ok_or_else(|| {
@@ -59,10 +59,13 @@ pub(crate) fn analyze_run(
             entry.insert("missing".into(), Value::Bool(true));
         }
         if kind == "video" {
-            let extraction_requested = frames > 0.0;
+            // Frames are extracted only when a positive count was stated; a
+            // plan or command that states none asks for none.
+            let extraction = frames.filter(|count| count.is_normal() && count.is_sign_positive());
+            let extraction_requested = extraction.is_some();
             match probe_video(&path) {
                 Ok(meta) => {
-                    if extraction_requested {
+                    if let Some(frames) = extraction {
                         let artifacts = artifacts_dir.ok_or_else(|| {
                             fail(
                                 "run.analyze",
@@ -87,12 +90,15 @@ pub(crate) fn analyze_run(
     let mut timeline_path = None;
     let mut diagnostics = None;
     if let Some(artifacts) = artifacts_dir {
-        let manifest: Value = fs::read(artifacts.join("run-manifest.json"))
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-            .unwrap_or_else(|| json!({}));
-        // The timeline hides what the run hid: the redaction it recorded.
-        let redaction = manifest::Redaction::recorded(&manifest);
+        // The timeline hides what the run hid: the redaction it recorded. A
+        // manifest that cannot be read or parsed is refused naming it; read as
+        // an empty one it recorded no redaction and the timeline hid nothing.
+        let recorded = crate::json_file::read(&artifacts.join("run-manifest.json"))?;
+        let manifest = match &recorded {
+            Some(recorded) => recorded,
+            None => &Value::Null,
+        };
+        let redaction = manifest::Redaction::recorded(manifest);
         let built = build_timeline(
             &report,
             &summary,

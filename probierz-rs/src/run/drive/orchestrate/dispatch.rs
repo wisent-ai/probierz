@@ -178,7 +178,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
                     .unwrap_or(""),
             )),
             run.get("tool").and_then(Value::as_str),
-            plan.get("frames").and_then(Value::as_f64).unwrap_or(0.0),
+            plan.get("frames").and_then(Value::as_f64),
             run.get("runId").and_then(Value::as_str),
         );
         let (analysis, completed) = match analyzed {

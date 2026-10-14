@@ -115,7 +115,7 @@ pub(crate) struct RunArgs {
     pub(crate) no_repair: bool,
     pub(crate) app_id: Option<String>,
     pub(crate) spec: Option<String>,
-    pub(crate) frames: f64,
+    pub(crate) frames: Option<f64>,
     pub(crate) tool: Option<String>,
 }
 
@@ -157,7 +157,7 @@ pub(crate) fn parse_run_args(args: &[String], allow_positionals: bool) -> Result
             "--no-analyze" => opts.analyze = false,
             "--frames" => {
                 let value = value_after(args, index, arg)?;
-                opts.frames = parse_non_negative(arg, &value)?;
+                opts.frames = Some(parse_non_negative(arg, &value)?);
                 index += 1;
             }
             "--spec" => {
