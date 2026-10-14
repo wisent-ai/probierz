@@ -164,7 +164,7 @@ pub(crate) fn write_report(report: &Path, value: &JsonValue) -> Result<(), Failu
 fn render_record(file: &Path, geometry: &JsonValue) -> Result<JsonValue, Failure> {
     Ok(json!({
         "path": file.to_string_lossy(),
-        "sha256": hex::encode(Sha256::digest(fs::read(file)?)),
+        "sha256": crate::evidence::sha256_file(file)?,
         "width": geometry["width"],
         "height": geometry["height"],
         "aspectRatio": geometry["aspectRatio"],
@@ -177,7 +177,7 @@ fn render_record(file: &Path, geometry: &JsonValue) -> Result<JsonValue, Failure
 fn figure_input(file: &Path) -> Result<JsonValue, Failure> {
     Ok(json!({
         "path": file.to_string_lossy(),
-        "sha256": hex::encode(Sha256::digest(fs::read(file)?)),
+        "sha256": crate::evidence::sha256_file(file)?,
         "type": file.extension().and_then(OsStr::to_str).unwrap_or_default()
     }))
 }

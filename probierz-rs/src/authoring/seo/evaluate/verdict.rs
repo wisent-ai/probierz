@@ -227,18 +227,18 @@ fn payload(
     Ok(json!({
         "schemaVersion": REPORT_SCHEMA_VERSION, "kind": REPORT_KIND,
         "appId": app_id, "mode": contract.mode,
-        "issuedAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "issuedAt": crate::failure::now_iso(),
         "sourceIdentity": app_source_identity(harness, app_id, None)?,
         "contract": {
             "policy": {
                 "file": contract.policy_path.to_string_lossy(),
                 "name": contract.policy["name"],
-                "sha256": hex::encode(Sha256::digest(fs::read(&contract.policy_path)?))
+                "sha256": crate::evidence::sha256_file(&contract.policy_path)?
             },
             "brief": {
                 "file": contract.brief_path.to_string_lossy(),
                 "product": contract.brief["product"],
-                "sha256": hex::encode(Sha256::digest(fs::read(&contract.brief_path)?))
+                "sha256": crate::evidence::sha256_file(&contract.brief_path)?
             },
             "baseUrl": contract.canonical.as_str(),
             "routes": crawled.route_contracts
