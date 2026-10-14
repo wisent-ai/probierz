@@ -85,9 +85,20 @@ pub(crate) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec
             .into_iter()
             .flatten()
         {
-            let Some(root) = repository.get("root").and_then(Value::as_str) else {
-                continue;
-            };
+            // Skipped, its changed files mapped to no journey and the merge
+            // was judged on none of them.
+            let root = repository
+                .get("root")
+                .and_then(Value::as_str)
+                .ok_or_else(|| {
+                    Failure::config(
+                        "status.affected",
+                        format!(
+                            "app {} declares a repository without root: {repository}",
+                            app.app_id
+                        ),
+                    )
+                })?;
             let root_path = Path::new(root);
             for file in files {
                 let Ok(relative) = file.strip_prefix(root_path) else {
