@@ -144,18 +144,36 @@ pub fn app_source_identity(
         .get("repositories")
         .and_then(YamlValue::as_sequence)
         .ok_or_else(|| Failure::config("run.source", "manifest repositories are required"))?;
-    let mut repository_values = Vec::with_capacity(repositories.len());
-    for (index, repository) in repositories.iter().enumerate() {
-        let declared = repository
-            .get("root")
-            .and_then(YamlValue::as_str)
-            .unwrap_or_default();
-        let root = if index == 0 {
-            primary_root.unwrap_or_else(|| Path::new(declared))
-        } else {
-            Path::new(declared)
-        };
-        let name = root.file_name().and_then(OsStr::to_str).unwrap_or_default();
+    // Every declared repository is hashed at its root; an entry naming none
+    // is refused, never hashed as the working directory.
+    let mut roots = repositories
+        .iter()
+        .enumerate()
+        .map(|(index, repository)| {
+            repository
+                .get("root")
+                .and_then(YamlValue::as_str)
+                .map(Path::new)
+                .ok_or_else(|| {
+                    Failure::config(
+                        "run.source",
+                        format!("app {app_id}'s manifest repository {index} declares no root"),
+                    )
+                })
+        })
+        .collect::<Result<Vec<&Path>, Failure>>()?;
+    // A given primary root stands in for the first declared repository.
+    if let (Some(primary), Some(first)) = (primary_root, roots.first_mut()) {
+        *first = primary;
+    }
+    let mut repository_values = Vec::with_capacity(roots.len());
+    for (index, root) in roots.into_iter().enumerate() {
+        let name = root.file_name().and_then(OsStr::to_str).ok_or_else(|| {
+            Failure::config(
+                "run.source",
+                format!("repository root {} has no directory name", root.display()),
+            )
+        })?;
         repository_values.push(repository_identity(root, name, Some(index), false, false)?);
     }
     let concise: Vec<JsonValue> = repository_values

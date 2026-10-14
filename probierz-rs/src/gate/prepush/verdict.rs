@@ -146,7 +146,7 @@ pub(crate) fn prepush_value(
             ("reason", Value::String("no passing runs recorded for the affected journeys; run `probierz ci <base>` (or re-run with --ci) before pushing".to_string())),
         ]));
     }
-    let identity = crate::evidence::app_source_identity_value(harness, &resolved_app)?;
+    let identity = crate::authoring::app_source_identity(harness, &resolved_app, None)?;
     let gate_args = GateArgs {
         app_id: resolved_app.clone(),
         mode: "pull-request".to_string(),

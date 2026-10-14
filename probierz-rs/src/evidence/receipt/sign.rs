@@ -71,7 +71,7 @@ pub fn receipt(
         .iter()
         .map(|run| signed_receipt_run(run, &document))
         .collect::<Result<Vec<_>, _>>()?;
-    let current = app_source_identity(harness, app_id)?;
+    let current = crate::authoring::app_source_identity(harness, app_id, None)?;
     let mut errors = Vec::<String>::new();
     if current.pointer("/harness/sha256").and_then(Value::as_str) != Some(expected_harness) {
         errors.push(

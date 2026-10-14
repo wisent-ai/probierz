@@ -109,13 +109,18 @@ pub(crate) fn create_publication(
             "publication rejected: journey has no publication policy",
         )
     })?;
-    let current = app_source_identity(
-        harness,
-        verification
-            .get("appId")
-            .and_then(Value::as_str)
-            .unwrap_or_default(),
-    )?;
+    // The receipt's app is compared against its current source; a
+    // verification naming no app is refused, never compared as app "".
+    let verified_app = verification
+        .get("appId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            Failure::invalid(
+                "evidence.publication",
+                "publication rejected: the receipt verification names no appId",
+            )
+        })?;
+    let current = crate::authoring::app_source_identity(harness, verified_app, None)?;
     require(
         current.pointer("/app/sha256").and_then(Value::as_str) == Some(expected_source),
         "receipt source is stale relative to the current product source",

@@ -65,7 +65,7 @@ pub(crate) fn run_surface(
         .as_ref()
         .map(|value| manifest::surface_journeys(value, &opts.env))
         .unwrap_or_default();
-    let submitted = submitted_source_identity(Some(&app_id))?;
+    let submitted = crate::authoring::submitted_source_identity(&app_id)?;
     let (source, harness_identity, origin) = if let Some(submitted) = submitted {
         (
             submitted.pointer("/app").cloned().unwrap_or(Value::Null),
@@ -77,7 +77,7 @@ pub(crate) fn run_surface(
         )
     } else {
         let source = if app.is_some() {
-            app_source_identity(harness, &app_id)?
+            crate::authoring::app_source_identity(harness, &app_id, None)?
                 .get("app")
                 .cloned()
                 .unwrap_or(Value::Null)
@@ -86,7 +86,7 @@ pub(crate) fn run_surface(
         };
         (
             source,
-            repository_identity(harness, "probierz", None, true, true)?,
+            crate::authoring::repository_identity(harness, "probierz", None, true, true)?,
             "runner",
         )
     };
