@@ -143,11 +143,14 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
                 )
                 .discarding(&staging));
             }
-            let _ = safe_child(
+            // The path is only checked here; a refusal removes the staging
+            // like every other refusal of this collection.
+            safe_child(
                 harness,
                 normalized,
                 "Remote evidence contains an unsafe retained path",
-            )?;
+            )
+            .map_err(|failure| failure.discarding(&staging))?;
         }
     }
     let destination = collection_directory(&job_dir)?;
