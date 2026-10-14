@@ -189,6 +189,9 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
     let declaration = manifest::load(harness, app_id)?;
     let policy = matrix_policy(&declaration, profile)?;
     let cells = planned_cells(&declaration, profile)?;
+    // What the profile declares, and only that: an undeclared frame count or
+    // protection policy is null in the plan, never a made-up 0, "optional"
+    // or false.
     let frames = policy
         .get("frames")
         .and_then(serde_yaml::Value::as_f64)
@@ -197,19 +200,18 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
                 .get("frames")
                 .and_then(serde_yaml::Value::as_u64)
                 .map(|value| value as f64)
-        })
-        .unwrap_or(0.0);
+        });
     Ok(json!({
         "schemaVersion": 1,
         "appId": app_id,
-        "owner": declaration.document.get("owner").and_then(serde_yaml::Value::as_str).unwrap_or(""),
+        "owner": declaration.owner()?,
         "profile": profile,
         "record": policy.get("record").and_then(serde_yaml::Value::as_bool) != Some(false),
-        "frames": number(frames),
+        "frames": frames.map(number),
         "maximumParallel": policy.get("maximumParallel").and_then(serde_yaml::Value::as_u64),
         "minimumCellEvidence": policy.get("minimumCellEvidence").and_then(serde_yaml::Value::as_str),
-        "artifactEncryption": policy.get("artifactEncryption").and_then(serde_yaml::Value::as_str).unwrap_or("optional"),
-        "removePlaintextAfterProtection": policy.get("removePlaintextAfterProtection").and_then(serde_yaml::Value::as_bool).unwrap_or(false),
+        "artifactEncryption": policy.get("artifactEncryption").and_then(serde_yaml::Value::as_str),
+        "removePlaintextAfterProtection": policy.get("removePlaintextAfterProtection").and_then(serde_yaml::Value::as_bool),
         "release": policy.get("release").and_then(serde_yaml::Value::as_str),
         "cells": cells,
     }))

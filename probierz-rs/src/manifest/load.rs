@@ -41,6 +41,19 @@ impl Manifest {
             Failure::config("manifest.json", format!("{}: {error}", self.file.display()))
         })
     }
+
+    /// The owner validation requires every manifest to name; a document that
+    /// names none is refused naming its file, never read as owner "".
+    pub fn owner(&self) -> Result<&str, Failure> {
+        string_of(&self.document, "owner")
+            .filter(|owner| !owner.is_empty())
+            .ok_or_else(|| {
+                Failure::config(
+                    "manifest.owner",
+                    format!("{} names no owner", self.file.display()),
+                )
+            })
+    }
 }
 
 /// The app's manifest, or `None` when the app has none yet (its manifest is
@@ -114,9 +127,7 @@ pub fn list(harness_root: &Path) -> Result<Vec<AppSummary>, Failure> {
         let manifest = load(harness_root, &name)?;
         summaries.push(AppSummary {
             app_id: manifest.app_id.clone(),
-            owner: string_of(&manifest.document, "owner")
-                .unwrap_or_default()
-                .to_string(),
+            owner: manifest.owner()?.to_string(),
             file: manifest.file.to_string_lossy().into_owned(),
             targets: sorted_keys(&manifest.document, "surfaces"),
             journeys: sorted_keys(&manifest.document, "journeys"),

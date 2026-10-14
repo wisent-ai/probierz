@@ -92,7 +92,14 @@ pub(crate) fn run_surface(
     };
     let conditions = run_conditions(record, &opts.env, &redaction);
     let mut base = json!({"runId":run_id,"startedAt":started_at,"appId":app_id,"kind":kind,"target":name,"tool":config.tool,"pkg":config.pkg,"script":config.script,"artifactsDir":artifacts,"reportPath":report_path,"manifestPath":manifest_path,"stdoutPath":stdout_path,"stderrPath":stderr_path,"conditions":conditions});
-    let app_manifest=app.as_ref().map(|declaration|json!({"file":declaration.file,"owner":declaration.document.get("owner").and_then(serde_yaml::Value::as_str).unwrap_or(""),"journeys":journeys})).unwrap_or(Value::Null);
+    // The manifest's owner, which validation requires; read through
+    // Manifest::owner, never recorded as an empty owner.
+    let app_manifest = match app.as_ref() {
+        Some(declaration) => {
+            json!({"file": declaration.file, "owner": declaration.owner()?, "journeys": journeys})
+        }
+        None => Value::Null,
+    };
     let host_name = capture_text("hostname", &[], None);
     let release = capture_text("uname", &["-r"], None);
     let node = capture_text("node", &["--version"], None);
