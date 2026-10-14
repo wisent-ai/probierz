@@ -150,17 +150,6 @@ pub(crate) fn yaml_bool(value: Option<&Yaml>) -> bool {
     value.and_then(Yaml::as_bool).unwrap_or(false)
 }
 
-pub(crate) fn yaml_js_string(value: &Yaml) -> String {
-    match value {
-        Yaml::Null => "null".to_string(),
-        Yaml::Bool(flag) => flag.to_string(),
-        Yaml::Number(number) => number.to_string(),
-        Yaml::String(text) => text.clone(),
-        other => serde_json::to_string(&serde_json::to_value(other).unwrap_or(Value::Null))
-            .unwrap_or_default(),
-    }
-}
-
 pub(crate) fn evidence_rank(level: &str) -> Option<i32> {
     match level {
         "E0" => Some(0),

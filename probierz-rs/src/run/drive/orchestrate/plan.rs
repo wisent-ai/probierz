@@ -44,41 +44,69 @@ pub(crate) fn cell_id(target: &str, env: &BTreeMap<String, String>) -> String {
     hex::encode(Sha256::digest(stable.to_string().as_bytes()))[..16].into()
 }
 
-pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result<Value, Failure> {
-    let declaration = manifest::load(harness, app_id)?;
-    let policy = declaration
+/// The `matrix.<profile>` policy a product declares.
+pub(crate) fn matrix_policy<'a>(
+    declaration: &'a manifest::Manifest,
+    profile: &str,
+) -> Result<&'a serde_yaml::Value, Failure> {
+    declaration
         .document
         .get("matrix")
         .and_then(|matrix| matrix.get(profile))
         .ok_or_else(|| {
             fail(
                 "run.matrix",
-                format!("app {app_id} has no {profile} matrix"),
+                format!("app {} has no {profile} matrix", declaration.app_id),
             )
-        })?;
+        })
+}
+
+/// The names a matrix field lists. A field that is not a list of names is
+/// refused naming it.
+fn listed_names(field: &serde_yaml::Value, what: &str) -> Result<Vec<String>, Failure> {
+    field
+        .as_sequence()
+        .ok_or_else(|| fail("run.matrix", format!("{what} is not a list")))?
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| fail("run.matrix", format!("{what} holds {value:?}, not a name")))
+        })
+        .collect()
+}
+
+/// The cells one matrix profile expands to: the one expansion a matrix run
+/// plans and the release gate requires, so both name each cell by the same
+/// cellId, target and axes. A profile without `targets` covers every
+/// surface; one without `dimensions` has a single cell per target.
+pub(crate) fn planned_cells(
+    declaration: &manifest::Manifest,
+    profile: &str,
+) -> Result<Vec<Value>, Failure> {
+    let policy = matrix_policy(declaration, profile)?;
     let surfaces = declaration
         .document
         .get("surfaces")
         .and_then(serde_yaml::Value::as_mapping)
         .ok_or_else(|| Failure::config("run.matrix", "surfaces missing"))?;
-    let mut targets: Vec<String> = policy
-        .get("targets")
-        .and_then(serde_yaml::Value::as_sequence)
-        .map(|values| {
-            values
-                .iter()
-                .filter_map(serde_yaml::Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_else(|| {
-            surfaces
-                .keys()
-                .filter_map(serde_yaml::Value::as_str)
-                .map(str::to_string)
-                .collect()
-        });
+    let mut targets: Vec<String> = match policy.get("targets") {
+        Some(listed) => listed_names(listed, &format!("matrix {profile} targets"))?,
+        None => surfaces
+            .keys()
+            .filter_map(serde_yaml::Value::as_str)
+            .map(str::to_string)
+            .collect(),
+    };
     targets.sort();
+    let mapping = |field: Option<&serde_yaml::Value>, what: String| match field {
+        None => Ok(serde_yaml::Mapping::new()),
+        Some(field) => field
+            .as_mapping()
+            .cloned()
+            .ok_or_else(|| fail("run.matrix", format!("{what} is not a mapping"))),
+    };
     let mut cells = Vec::new();
     for name in targets {
         let surface = surfaces
@@ -89,19 +117,17 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
                     format!("matrix {profile} references unknown target: {name}"),
                 )
             })?;
-        let mut dimensions = policy
-            .get("dimensions")
-            .and_then(serde_yaml::Value::as_mapping)
-            .cloned()
-            .unwrap_or_default();
-        if let Some(specific) = policy
-            .get("surfaces")
-            .and_then(|surfaces| surfaces.get(&name))
-            .and_then(|surface| surface.get("dimensions"))
-            .and_then(serde_yaml::Value::as_mapping)
-        {
-            dimensions.extend(specific.clone());
-        }
+        let mut dimensions = mapping(
+            policy.get("dimensions"),
+            format!("matrix {profile} dimensions"),
+        )?;
+        dimensions.extend(mapping(
+            policy
+                .get("surfaces")
+                .and_then(|surfaces| surfaces.get(&name))
+                .and_then(|surface| surface.get("dimensions")),
+            format!("matrix {profile} surface {name} dimensions"),
+        )?);
         let expanded =
             matrix_expand(Some(&serde_yaml::Value::Mapping(dimensions))).map_err(|detail| {
                 fail(
@@ -156,6 +182,13 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
             ));
         }
     }
+    Ok(cells)
+}
+
+pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result<Value, Failure> {
+    let declaration = manifest::load(harness, app_id)?;
+    let policy = matrix_policy(&declaration, profile)?;
+    let cells = planned_cells(&declaration, profile)?;
     let frames = policy
         .get("frames")
         .and_then(serde_yaml::Value::as_f64)
