@@ -79,17 +79,14 @@ program that writes the canonical report"
         if output.status.success() {
             return Ok(());
         }
-        let detail = String::from_utf8_lossy(&output.stderr);
-        let detail = if detail.trim().is_empty() {
-            String::from_utf8_lossy(&output.stdout).to_string()
-        } else {
-            detail.to_string()
-        };
+        // The status as the process ended (a signal included) and both
+        // streams, never an exit code it did not return.
         Err(format!(
-            "{} exited {}: {}",
+            "{} ended {}; stderr: {}; stdout: {}",
             self.program.display(),
-            output.status.code().unwrap_or(-1),
-            detail.trim()
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim(),
+            String::from_utf8_lossy(&output.stdout).trim()
         ))
     }
 }
