@@ -5,26 +5,29 @@ pub(crate) fn response_json(response: ureq::Response) -> Result<Value, Failure> 
     let text = response
         .into_string()
         .map_err(|error| Failure::unavailable("apphook.http", error.to_string()))?;
-    let body = if text.is_empty() {
-        Value::Null
-    } else {
-        serde_json::from_str(&text).unwrap_or_else(|_| json!({ "message": text }))
+    // A success is read as JSON, an empty body as null; a body that is not
+    // JSON is refused, never read as a message.
+    let body = || -> Result<Value, Failure> {
+        if text.is_empty() {
+            return Ok(Value::Null);
+        }
+        serde_json::from_str(&text).map_err(|error| {
+            Failure::unavailable(
+                "apphook.http",
+                format!("HTTP {status} answered a body that is not JSON ({error}): {text}"),
+            )
+        })
     };
     if (200..300).contains(&status) {
-        Ok(body)
+        body()
     } else {
-        // A plain message where the service gives one; a structured error
-        // (wisent-integrations answers `{"error": {"code": …}}`) whole, so its
-        // code and the provider's reason reach the run report.
-        let detail = body
-            .get("message")
-            .and_then(Value::as_str)
-            .or_else(|| body.get("error").and_then(Value::as_str))
-            .or_else(|| body.pointer("/error/message").and_then(Value::as_str))
-            .or_else(|| body.get("hint").and_then(Value::as_str))
-            .map(str::to_string)
-            .or_else(|| body.get("error").map(Value::to_string))
-            .unwrap_or_else(|| "request failed".to_string());
+        // The refusal as the service sent it: a structured error (wisent-
+        // integrations answers `{"error": {"code": …}}`) keeps its code and
+        // the provider's reason; an empty body is said as empty.
+        let detail = match text.trim() {
+            "" => "the response body is empty",
+            said => said,
+        };
         Err(Failure::new(
             "apphook.http",
             Code::Refused,
