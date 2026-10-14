@@ -162,16 +162,6 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     })
 }
 
-/// A field of the failures report as printed: its text or count, or the
-/// field named as missing, never a zero or an empty word in its place.
-fn said(value: Option<&Value>, name: &str) -> String {
-    match value {
-        Some(Value::String(text)) => text.clone(),
-        Some(Value::Number(number)) => number.to_string(),
-        _ => format!("(no {name})"),
-    }
-}
-
 pub(crate) fn render_failures(report: &Value) -> String {
     let mut lines = vec![
         format!(

@@ -36,6 +36,18 @@ pub(crate) fn string(value: Option<&Value>) -> Option<&str> {
         .filter(|value| !value.is_empty())
 }
 
+/// A report field as printed: its text, count or yes/no, or the field named
+/// as missing — never a zero, an empty word or a no in its place. Every text
+/// renderer of a status report prints its fields through this.
+pub(crate) fn said(value: Option<&Value>, name: &str) -> String {
+    match value {
+        Some(Value::String(text)) if !text.is_empty() => text.clone(),
+        Some(Value::Number(number)) => number.to_string(),
+        Some(Value::Bool(flag)) => flag.to_string(),
+        _ => format!("(no {name})"),
+    }
+}
+
 pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     if !root.exists() {
         return Ok(Vec::new());

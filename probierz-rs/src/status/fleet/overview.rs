@@ -46,7 +46,8 @@ pub(crate) fn object_message(action: &str, code: &str) -> String {
         "not_found" => format!("{action}: the objects dependency has no such object. Check the identifier; retrying will not help."),
         _ => format!("{action}: the objects dependency failed in a way probierz does not recognise. See the detail on the line above."),
     };
-    if matches!(code, "infra_down" | "timeout" | "rate_limit") {
+    let (_, retryable, _) = code_meaning(code);
+    if retryable {
         format!("{blame} Local runs are unaffected — `probierz run <target>` still works without the stado queue.")
     } else {
         blame
@@ -130,10 +131,10 @@ pub(crate) fn overview_value(
             .and_then(Value::as_str);
         apps.push(json!({
             "appId": app_id,
-            "journeys": status.get("journeys").and_then(Value::as_array).map(Vec::len).unwrap_or(0),
-            "untested": status.get("untested").and_then(Value::as_array).map(Vec::len).unwrap_or(0),
+            "journeys": status.get("journeys").and_then(Value::as_array).map(Vec::len),
+            "untested": status.get("untested").and_then(Value::as_array).map(Vec::len),
             "affectedJourneys": value_or(status.get("affectedJourneys"), json!([])),
-            "eligible": value_or(status.pointer("/mergeEligibility/eligible"), Value::Bool(false)),
+            "eligible": value_or(status.pointer("/mergeEligibility/eligible"), Value::Null),
             "blockingReasons": value_or(status.pointer("/mergeEligibility/blockingReasons"), json!([])),
             "violations": if include_violations {
                 match root {
@@ -151,10 +152,7 @@ pub(crate) fn overview_value(
 pub(crate) fn render_overview(report: &Value) -> String {
     let mut lines = vec![format!(
         "overview {}",
-        report
-            .get("generatedAt")
-            .and_then(Value::as_str)
-            .unwrap_or("")
+        said(report.get("generatedAt"), "generation time")
     )];
     for app in report
         .get("apps")
@@ -169,7 +167,7 @@ pub(crate) fn render_overview(report: &Value) -> String {
                 } else {
                     format!(
                         " | violations: {}",
-                        value.get("violations").and_then(Value::as_u64).unwrap_or(0)
+                        said(value.get("violations"), "violation count")
                     )
                 }
             }
@@ -177,20 +175,19 @@ pub(crate) fn render_overview(report: &Value) -> String {
         };
         lines.push(format!(
             "  {}: journeys {} (untested {}) | eligible: {}{}",
-            app.get("appId").and_then(Value::as_str).unwrap_or(""),
-            app.get("journeys").and_then(Value::as_u64).unwrap_or(0),
-            app.get("untested").and_then(Value::as_u64).unwrap_or(0),
-            app.get("eligible")
-                .and_then(Value::as_bool)
-                .unwrap_or(false),
+            said(app.get("appId"), "app id"),
+            said(app.get("journeys"), "journey count"),
+            said(app.get("untested"), "untested count"),
+            said(app.get("eligible"), "eligibility"),
             violation,
         ));
+        // Every blocking reason is shown: a reason left out is one the
+        // operator cannot act on.
         for reason in app
             .get("blockingReasons")
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
-            .take(3)
             .filter_map(Value::as_str)
         {
             lines.push(format!("    - {reason}"));
