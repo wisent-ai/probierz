@@ -150,12 +150,11 @@ pub(crate) fn signed_media(run: &Value) -> Result<Vec<Value>, Failure> {
         let Ok(relative) = path.strip_prefix(&root_abs) else {
             continue;
         };
-        let kind = match media.get("kind").and_then(Value::as_str) {
-            Some("video") => Some("recording"),
-            Some("screenshot") => Some("screenshot"),
-            Some("trace") => Some("trace"),
-            _ => None,
-        };
+        let kind = media
+            .get("kind")
+            .and_then(Value::as_str)
+            .and_then(crate::manifest::ArtifactKind::of_report_media)
+            .map(crate::manifest::ArtifactKind::name);
         if let Some(kind) = kind {
             typed.insert(
                 relative.to_string_lossy().replace('\\', "/"),

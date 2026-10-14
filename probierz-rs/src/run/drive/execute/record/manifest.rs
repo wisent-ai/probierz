@@ -55,27 +55,35 @@ pub(crate) fn complete_run(
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
+    // The analysis's executed and failed check counts as it states them; a
+    // count it does not state is never read as zero checks or zero failures.
+    let checks = |field: &str| {
+        analysis
+            .and_then(|value| value.get(field))
+            .and_then(Value::as_u64)
+    };
+    let (total, failed) = (checks("total"), checks("failed"));
+    let failed_any = failed.and_then(std::num::NonZeroU64::new);
     let valid = analysis_error.is_none()
         && analysis.is_some_and(|value| {
             value.get("runId").and_then(Value::as_str) == Some(&run_id)
-                && js_number(value.get("total")) > 0.0
-                && js_number(value.get("failed")) == 0.0
+                && total.and_then(std::num::NonZeroU64::new).is_some()
+                && failed.is_some()
+                && failed_any.is_none()
         })
         && capture_errors.is_empty()
         && missing.is_empty()
         && crashes.is_empty();
-    let kinds: BTreeSet<&str> = media
-        .iter()
-        .filter_map(|item| item.get("kind").and_then(Value::as_str))
-        .collect();
-    let required = run
-        .pointer("/conditions/record")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
+    let required = run.pointer("/conditions/record").and_then(Value::as_bool) == Some(true);
+    // A capture is media whose kind is an artifact kind: the one mapping the
+    // receipt signs media by.
     let present = !required
-        || ["video", "trace", "screenshot"]
-            .iter()
-            .any(|kind| kinds.contains(kind));
+        || media.iter().any(|item| {
+            item.get("kind")
+                .and_then(Value::as_str)
+                .and_then(crate::manifest::ArtifactKind::of_report_media)
+                .is_some()
+        });
     let mut errors: Vec<Value> = analysis_error
         .map(|error| vec![json!(error)])
         .unwrap_or_default();
@@ -87,24 +95,20 @@ pub(crate) fn complete_run(
     {
         errors.push(json!("analysis run ID mismatch"));
     }
-    if analysis_error.is_none()
-        && analysis
-            .map(|value| js_number(value.get("total")) <= 0.0)
-            .unwrap_or(true)
-    {
-        errors.push(json!("zero executed checks"));
-    }
-    if analysis_error.is_none()
-        && analysis
-            .map(|value| js_number(value.get("failed")) > 0.0)
-            .unwrap_or(false)
-    {
-        errors.push(json!(format!(
-            "{} failed checks",
-            analysis
-                .map(|value| js_number(value.get("failed")))
-                .unwrap_or(0.0)
-        )));
+    if analysis_error.is_none() {
+        match total {
+            None => errors.push(json!("the analysis states no executed-check total")),
+            Some(total) if std::num::NonZeroU64::new(total).is_none() => {
+                errors.push(json!("zero executed checks"))
+            }
+            Some(_) => {}
+        }
+        if failed.is_none() {
+            errors.push(json!("the analysis states no failed-check count"));
+        }
+        if let Some(failed) = failed_any {
+            errors.push(json!(format!("{failed} failed checks")));
+        }
     }
     errors.extend(capture_errors.clone());
     errors.extend(missing.iter().map(|item| {
@@ -135,7 +139,7 @@ pub(crate) fn complete_run(
     // Product evidence must belong to this run before it can outrank cleanup.
     let product_failed = analysis.is_some_and(|value| {
         value.get("runId").and_then(Value::as_str) == Some(&run_id)
-            && (js_number(value.get("failed")) > 0.0 || !crashes.is_empty())
+            && (failed_any.is_some() || !crashes.is_empty())
     });
     let origin = match run.get("failureOrigin").and_then(Value::as_str) {
         _ if passed => Value::Null,

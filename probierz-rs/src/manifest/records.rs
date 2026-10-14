@@ -121,4 +121,23 @@ impl ArtifactKind {
             ArtifactKind::Trace => "trace",
         }
     }
+
+    /// The artifact kind a report's media `kind` is: a report's video is a
+    /// recording, and every other kind is the artifact kind of that name, or
+    /// none. Receipts sign, and runs count as captures, only media this names.
+    pub(crate) fn of_report_media(kind: &str) -> Option<ArtifactKind> {
+        if kind == REPORT_VIDEO {
+            return Some(ArtifactKind::Recording);
+        }
+        [
+            ArtifactKind::Screenshot,
+            ArtifactKind::Recording,
+            ArtifactKind::Trace,
+        ]
+        .into_iter()
+        .find(|artifact| artifact.name() == kind)
+    }
 }
+
+/// The media kind a run's report gives its screen recording.
+pub(crate) const REPORT_VIDEO: &str = "video";
