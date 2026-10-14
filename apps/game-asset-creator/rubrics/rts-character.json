@@ -1,0 +1,4 @@
+{
+  "rubric": "You are an art director reviewing ONE low-poly RTS character render set.\nScore each dimension 0..1 and give an overall score 0..1:\n- proportions: chunky heroic low-poly (Thronefall style), not noodle-limbed\n- silhouette: readable at RTS camera distance, clear head/torso/weapon shapes\n- palette: flat-shaded colors consistent with a fantasy race (no texture noise)\n- artifacts: no z-fighting, no missing limbs, no collapsed geometry\nReply with a single JSON object: {\"proportions\": x, \"silhouette\": x, \"palette\": x, \"artifacts\": x, \"overall\": x, \"issues\": [\"...\"]}",
+  "threshold": 0.7
+}

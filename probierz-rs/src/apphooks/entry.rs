@@ -52,8 +52,10 @@ Capabilities (named by an application manifest):
     --models <DIR>                    Directory containing the GLBs to grade
     --out <DIR>                       Directory that receives renders and report
     --config <FILE>                   Pipeline configuration to read
-    --rubric <NAME>                   Built-in rubric name or literal rubric
-    --threshold <N>                   Score below which the evaluation fails
+    --rubric <NAME>                   Rubric declared in apps/game-asset-creator/
+                                      rubrics/<NAME>.json (or PROBIERZ_EVAL_RUBRIC)
+    --threshold <N>                   Overall score an asset must reach; the
+                                      rubric's declared threshold when omitted
 
 Environment:
   GAC_ROOT                            game_asset_creator repository; defaults to

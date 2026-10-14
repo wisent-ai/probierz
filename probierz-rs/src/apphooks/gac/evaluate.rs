@@ -25,16 +25,68 @@ pub(crate) fn gac_visual_eval(
         .config
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("pipeline.config.json"));
+    // The rubric is the product's declaration, not text held here:
+    // apps/game-asset-creator/rubrics/<name>.json states the rubric and the
+    // overall score an asset must reach; --threshold overrides that score for
+    // one run. A run naming no rubric, a name that is not one file name, a
+    // name declared nowhere and a declaration without its text or score are
+    // refused by name.
+    let point = "apphook.gac.visual-eval";
     let rubric_name = options
         .rubric
         .or_else(|| environment.get("PROBIERZ_EVAL_RUBRIC").cloned())
-        .unwrap_or_else(|| "rts-character".into());
-    let threshold = options
-        .threshold
-        .as_deref()
-        .unwrap_or("0.7")
-        .parse::<f64>()
-        .map_err(|_| Failure::invalid("apphook.gac.visual-eval", "--threshold needs a number"))?;
+        .ok_or_else(|| {
+            Failure::invalid(
+                point,
+                "visual-eval needs --rubric <name> or PROBIERZ_EVAL_RUBRIC",
+            )
+        })?;
+    if Path::new(&rubric_name)
+        .file_name()
+        .and_then(|name| name.to_str())
+        != Some(rubric_name.as_str())
+    {
+        return Err(Failure::invalid(
+            point,
+            format!("rubric name {rubric_name:?} is not one file name"),
+        ));
+    }
+    let declaration_path = harness
+        .join("apps/game-asset-creator/rubrics")
+        .join(format!("{rubric_name}.json"));
+    let declaration = crate::json_file::read(&declaration_path)?.ok_or_else(|| {
+        Failure::config(
+            point,
+            format!(
+                "rubric {rubric_name} is declared nowhere: {} does not exist",
+                declaration_path.display()
+            ),
+        )
+    })?;
+    let rubric = declaration
+        .get("rubric")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            Failure::config(
+                point,
+                format!("{} states no rubric text", declaration_path.display()),
+            )
+        })?
+        .to_string();
+    let threshold = match options.threshold.as_deref() {
+        Some(stated) => stated
+            .parse::<f64>()
+            .map_err(|_| Failure::invalid(point, "--threshold needs a number"))?,
+        None => declaration
+            .get("threshold")
+            .and_then(Value::as_f64)
+            .ok_or_else(|| {
+                Failure::config(
+                    point,
+                    format!("{} states no threshold", declaration_path.display()),
+                )
+            })?,
+    };
     let config = load_gac_config(&config_path, environment)?;
     let brama = config.pointer("/models/brama").and_then(Value::as_object);
     let url = brama
@@ -73,11 +125,7 @@ pub(crate) fn gac_visual_eval(
         ));
     }
     fs::create_dir_all(&output)?;
-    let rubric = if rubric_name == "rts-character" {
-        "You are an art director reviewing ONE low-poly RTS character render set.\nScore each dimension 0..1 and give an overall score 0..1:\n- proportions: chunky heroic low-poly (Thronefall style), not noodle-limbed\n- silhouette: readable at RTS camera distance, clear head/torso/weapon shapes\n- palette: flat-shaded colors consistent with a fantasy race (no texture noise)\n- artifacts: no z-fighting, no missing limbs, no collapsed geometry\nReply with a single JSON object: {\"proportions\": x, \"silhouette\": x, \"palette\": x, \"artifacts\": x, \"overall\": x, \"issues\": [\"...\"]}"
-    } else {
-        rubric_name.as_str()
-    };
+    let rubric = rubric.as_str();
     let angles = [
         ("front", "(0, 0, 0)"),
         ("side", "(0, 0, 1.5708)"),
