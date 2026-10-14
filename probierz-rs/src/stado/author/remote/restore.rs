@@ -20,25 +20,24 @@ pub(crate) fn restore_remote_authoring(
         "stado.download",
         format!("Job {job_id} returned an authored spec, but this checkout has no source-bound submission receipt."),
     ))?;
-    let app_id = submission
-        .get("appId")
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    let journey = submission
-        .get("journey")
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    let area = submission.get("area").and_then(Value::as_str).unwrap_or("");
-    let target = submission
-        .get("target")
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    let product_root = PathBuf::from(
+    // Each coordinate is the submission's own; one it does not state is
+    // refused naming it, not compared and joined into paths as ''.
+    let stated = |field: &str| {
         submission
-            .get("productRoot")
+            .get(field)
             .and_then(Value::as_str)
-            .unwrap_or(""),
-    );
+            .ok_or_else(|| {
+                Failure::config(
+                    "stado.download",
+                    format!("Job {job_id}'s submission receipt states no {field}"),
+                )
+            })
+    };
+    let app_id = stated("appId")?;
+    let journey = stated("journey")?;
+    let area = stated("area")?;
+    let target = stated("target")?;
+    let product_root = PathBuf::from(stated("productRoot")?);
     let test_directory = submission
         .get("testDirectory")
         .and_then(Value::as_str)
