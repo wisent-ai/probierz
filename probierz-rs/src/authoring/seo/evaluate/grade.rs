@@ -52,22 +52,48 @@ pub(crate) fn grade_with_models(
     }
 
     let names = contract.model_dimension_names();
-    let score_delta = names
+    // The two graders' scores for every model-graded dimension, and the
+    // widest gap between them; no gap when the contract grades no dimension
+    // by model.
+    let pairs = names
         .iter()
         .map(|name| {
-            (dimension_score(&primary_grade, name) - dimension_score(&secondary_grade, name)).abs()
+            Ok((
+                dimension_score(&primary_grade, name)?,
+                dimension_score(&secondary_grade, name)?,
+            ))
         })
-        .fold(0.0_f64, f64::max);
+        .collect::<Result<Vec<(f64, f64)>, Failure>>()?;
+    let score_delta = pairs
+        .iter()
+        .map(|(primary, secondary)| (primary - secondary).abs())
+        .reduce(f64::max);
     let primary_codes = blocking_codes(&primary_grade);
     let secondary_codes = blocking_codes(&secondary_grade);
     let blocker_mismatch = primary_codes != secondary_codes;
 
-    let delta = contract
-        .policy
-        .pointer("/model/adjudicationDelta")
-        .and_then(JsonValue::as_f64)
-        .unwrap_or_default();
-    let divergence_required = score_delta > delta || blocker_mismatch;
+    // A policy that states no `model.adjudicationDelta` asks for an
+    // adjudicator on any disagreement at all; one that states something
+    // other than a number is refused.
+    let delta = match contract.policy.pointer("/model/adjudicationDelta") {
+        None | Some(JsonValue::Null) => None,
+        Some(stated) => Some(stated.as_f64().ok_or_else(|| {
+            Failure::config(
+                "seo-evaluate",
+                format!(
+                    "invalid SEO contract: model.adjudicationDelta must be a number, not {stated}"
+                ),
+            )
+        })?),
+    };
+    let scores_diverge = match (score_delta, delta) {
+        (Some(apart), Some(delta)) => apart > delta,
+        (Some(_), None) => pairs
+            .iter()
+            .any(|(primary, secondary)| primary != secondary),
+        (None, _) => false,
+    };
+    let divergence_required = scores_diverge || blocker_mismatch;
 
     let adjudicator_grade = if divergence_required {
         Some(adjudicate(
@@ -89,7 +115,7 @@ pub(crate) fn grade_with_models(
         &primary_grade,
         &secondary_grade,
         adjudicator_grade.as_ref(),
-    );
+    )?;
     let model_blockers =
         agreed_blockers(&primary_grade, &secondary_codes, adjudicator_grade.as_ref());
     let model_recommendations =
@@ -102,7 +128,7 @@ pub(crate) fn grade_with_models(
             "recommendations": model_recommendations,
             "divergence": {
                 "required": divergence_required,
-                "scoreDelta": round_score(score_delta),
+                "scoreDelta": score_delta.map(round_score),
                 "blockerMismatch": blocker_mismatch
             },
             "graders": {
@@ -169,10 +195,20 @@ fn adjudicate(
     )
 }
 
-fn dimension_score(grade: &JsonValue, name: &str) -> f64 {
+/// One grader's score for one dimension; a grader that stated none is
+/// refused naming the model and the dimension, never scored zero.
+fn dimension_score(grade: &JsonValue, name: &str) -> Result<f64, Failure> {
     grade["evaluation"]["dimensions"][name]["score"]
         .as_f64()
-        .unwrap_or(0.0)
+        .ok_or_else(|| {
+            Failure::config(
+                "seo-evaluate.model",
+                format!(
+                    "SEO grader {} stated no score for dimension {name}",
+                    grade["modelRequested"]
+                ),
+            )
+        })
 }
 
 fn blocking_codes(grade: &JsonValue) -> BTreeSet<String> {
@@ -192,17 +228,19 @@ fn merge_dimensions(
     primary_grade: &JsonValue,
     secondary_grade: &JsonValue,
     adjudicator_grade: Option<&JsonValue>,
-) -> Map<String, JsonValue> {
+) -> Result<Map<String, JsonValue>, Failure> {
     let mut dimensions = Map::new();
     for name in names {
         let graders: Vec<&JsonValue> = [primary_grade, secondary_grade]
             .into_iter()
             .chain(adjudicator_grade)
             .collect();
-        let score = adjudicator_grade.map_or_else(
-            || dimension_score(primary_grade, name).min(dimension_score(secondary_grade, name)),
-            |grade| dimension_score(grade, name),
-        );
+        let score = match adjudicator_grade {
+            Some(grade) => dimension_score(grade, name)?,
+            None => {
+                dimension_score(primary_grade, name)?.min(dimension_score(secondary_grade, name)?)
+            }
+        };
         let mut seen = BTreeSet::new();
         let issues: Vec<String> = graders
             .iter()
@@ -231,7 +269,7 @@ fn merge_dimensions(
             }),
         );
     }
-    dimensions
+    Ok(dimensions)
 }
 
 /// The adjudicator's blocking issues when it ran; otherwise only the

@@ -38,7 +38,12 @@ pub(crate) fn write_report(
     );
 
     let (dimensions, quality) = merged_dimensions(contract, crawled, graded, &mut blockers)?;
-    let required_quality = contract.policy["qualityMinimum"].as_f64().unwrap_or(0.0);
+    let required_quality = contract.policy["qualityMinimum"].as_f64().ok_or_else(|| {
+        Failure::config(
+            "seo-evaluate",
+            "invalid SEO contract: qualityMinimum must be a number",
+        )
+    })?;
     if quality < required_quality {
         blockers.push(json!({
             "code": "quality_below_minimum",
@@ -108,12 +113,22 @@ fn merged_dimensions(
         let source = rule["source"].as_str().unwrap_or_default();
         let deterministic_value = &crawled.deterministic["dimensions"][name];
         let model_value = &graded.model_evaluation["dimensions"][name];
-        let deterministic_score = deterministic_value["score"].as_f64().unwrap_or(0.0);
-        let model_score = model_value["score"].as_f64().unwrap_or(0.0);
+        // A dimension is scored only from what its contract and its graders
+        // stated: a weight, minimum or score that is not there is refused by
+        // name, never counted as nothing.
+        let stated = |value: &JsonValue, what: &str| {
+            value.as_f64().ok_or_else(|| {
+                Failure::config(
+                    "seo-evaluate",
+                    format!("SEO dimension {name}: {what} is not a number: {value}"),
+                )
+            })
+        };
         let score = match source {
-            "deterministic" => deterministic_score,
-            "model" => model_score,
-            "hybrid" => deterministic_score.min(model_score),
+            "deterministic" => stated(&deterministic_value["score"], "the crawl's score")?,
+            "model" => stated(&model_value["score"], "the model's score")?,
+            "hybrid" => stated(&deterministic_value["score"], "the crawl's score")?
+                .min(stated(&model_value["score"], "the model's score")?),
             _ => {
                 return Err(Failure::config(
                     "seo-evaluate",
@@ -123,8 +138,8 @@ fn merged_dimensions(
                 ))
             }
         };
-        let weight = rule["weight"].as_f64().unwrap_or(0.0);
-        let minimum = rule["minimum"].as_f64().unwrap_or(0.0);
+        let weight = stated(&rule["weight"], "the contract's weight")?;
+        let minimum = stated(&rule["minimum"], "the contract's minimum")?;
         quality += score * weight;
         if score < minimum {
             blockers.push(json!({
