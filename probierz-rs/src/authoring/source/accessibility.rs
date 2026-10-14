@@ -14,7 +14,13 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
     let mut prefixes = BTreeSet::new();
     let mut scanned_files = 0usize;
     for repository in &repositories {
-        let root = PathBuf::from(yaml_string(repository, "root").unwrap_or_default());
+        // Read as '', the audit scanned whatever directory it ran in.
+        let root = PathBuf::from(yaml_string(repository, "root").ok_or_else(|| {
+            Failure::config(
+                "authoring.accessibility",
+                format!("app {app_id} declares a repository without root"),
+            )
+        })?);
         for file in files_below(&root, ".swift")? {
             scanned_files += 1;
             let content = fs::read_to_string(&file)?;
