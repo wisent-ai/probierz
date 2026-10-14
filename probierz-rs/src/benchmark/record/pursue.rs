@@ -70,7 +70,17 @@ pub(crate) fn pursue(
             )
         })?;
     let standing = commands::standing_of(harness, app_id, suite_id)?;
-    let run_id = standing["runId"].as_str().unwrap_or_default().to_string();
+    // The pursuit request is keyed by the run it answers; read as '', two
+    // runs' pursuits of one case shared a request.
+    let run_id = standing["runId"]
+        .as_str()
+        .map(str::to_string)
+        .ok_or_else(|| {
+            Failure::invalid(
+                POINT,
+                format!("the {suite_id} standing of {app_id} states no runId"),
+            )
+        })?;
     let loss = standing["losses"]
         .as_array()
         .into_iter()
