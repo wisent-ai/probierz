@@ -18,12 +18,9 @@ impl Driver {
             .ok_or_else(|| format!("window {window_id} not found for pid {pid}"))?;
         let bounds = window
             .get("bounds")
-            .ok_or_else(|| format!("window {window_id} not found for pid {pid}"))?;
-        Ok(Bounds {
-            x: number(bounds, "x"),
-            y: number(bounds, "y"),
-            width: number(bounds, "width"),
-            height: number(bounds, "height"),
+            .ok_or_else(|| format!("window {window_id} of pid {pid} states no bounds"))?;
+        crate::cua::bounds(bounds).ok_or_else(|| {
+            format!("window {window_id} of pid {pid} states incomplete bounds: {bounds}")
         })
     }
 
@@ -95,9 +92,12 @@ impl Driver {
                 .get("title")
                 .and_then(Value::as_str)
                 .is_some_and(|title| !title.is_empty());
-            right_titled
-                .cmp(&left_titled)
-                .then_with(|| window_area(right).total_cmp(&window_area(left)))
+            right_titled.cmp(&left_titled).then_with(|| {
+                match (window_area(right), window_area(left)) {
+                    (Some(right), Some(left)) => right.total_cmp(&left),
+                    (right, left) => right.is_some().cmp(&left.is_some()),
+                }
+            })
         });
         Ok(candidates.into_iter().next())
     }

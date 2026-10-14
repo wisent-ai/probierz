@@ -75,31 +75,26 @@ pub fn element_value(element: &Value) -> &str {
         .unwrap_or_default()
 }
 
-pub fn element_frame(element: &Value) -> Option<Bounds> {
-    let frame = element.get("frame")?;
+/// The geometry a frame or bounds object states: x, y and its width and
+/// height (`w`/`h` or `width`/`height`). `None` when any is missing: a zero
+/// in its place sent clicks to the screen's corner or a window's edge.
+pub(crate) fn bounds(frame: &Value) -> Option<Bounds> {
+    let read = |key: &str| frame.get(key).and_then(Value::as_f64);
     Some(Bounds {
-        x: number(frame, "x"),
-        y: number(frame, "y"),
-        width: frame
-            .get("w")
-            .and_then(Value::as_f64)
-            .unwrap_or_else(|| number(frame, "width")),
-        height: frame
-            .get("h")
-            .and_then(Value::as_f64)
-            .unwrap_or_else(|| number(frame, "height")),
+        x: read("x")?,
+        y: read("y")?,
+        width: read("w").or_else(|| read("width"))?,
+        height: read("h").or_else(|| read("height"))?,
     })
 }
 
-pub(crate) fn number(value: &Value, key: &str) -> f64 {
-    value.get(key).and_then(Value::as_f64).unwrap_or(0.0)
+pub fn element_frame(element: &Value) -> Option<Bounds> {
+    bounds(element.get("frame")?)
 }
 
-pub(crate) fn window_area(window: &Value) -> f64 {
-    window
-        .get("bounds")
-        .map(|bounds| number(bounds, "width") * number(bounds, "height"))
-        .unwrap_or(0.0)
+pub(crate) fn window_area(window: &Value) -> Option<f64> {
+    let bounds = bounds(window.get("bounds")?)?;
+    Some(bounds.width * bounds.height)
 }
 
 pub(crate) fn output_detail(output: &Output) -> String {
