@@ -85,7 +85,7 @@ Accepted arguments (parsed by the shared execution parser):
   --force               Run even when the resource this target locks is held
   --no-analyze          Skip report analysis and print the raw run
   --no-repair           Do not offer an authored repair for a failed run
-  --frames <N>          Frames per second to extract from a recording
+  --frames <N>          Frames to extract, spread across each recording; none unless given
   --files <PATH>...     Changed files that select what runs (affected, ci)"
     };
 }
