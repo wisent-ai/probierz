@@ -139,7 +139,7 @@ fn inspect_run(
             } else if !file.exists() {
                 errors.push(format!("{}: artifact is missing: {relative}", run.run_id));
             } else {
-                match sha256_file(&file) {
+                match crate::evidence::sha256_file(&file) {
                     Ok(actual)
                         if Some(actual.as_str())
                             != string_property(artifact, "sha256").as_deref() =>
@@ -189,7 +189,7 @@ fn inspect_run(
                 run.run_id
             ));
         } else if let Some(file) = protected_file {
-            match sha256_file(Path::new(&file)) {
+            match crate::evidence::sha256_file(Path::new(&file)) {
                 Ok(hash) => {
                     bundle_hashes.insert(run.run_id.clone(), hash.clone());
                     if string_property(&run.protection, "sha256").as_deref() != Some(hash.as_str())

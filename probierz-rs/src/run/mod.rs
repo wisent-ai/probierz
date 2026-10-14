@@ -17,7 +17,7 @@
 // and a part sees the items of every other part exactly as it did when this
 // was one file.
 pub(crate) use std::collections::{BTreeMap, BTreeSet, HashMap};
-pub(crate) use std::fs::{self, File, OpenOptions};
+pub(crate) use std::fs::{self, OpenOptions};
 pub(crate) use std::io::{BufRead, BufReader, Read, Write};
 pub(crate) use std::os::unix::fs::PermissionsExt;
 pub(crate) use std::path::{Component, Path, PathBuf};

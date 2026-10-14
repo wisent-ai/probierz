@@ -93,32 +93,6 @@ pub(crate) fn set_mode(path: &Path, mode: u32) -> std::io::Result<()> {
     fs::set_permissions(path, permissions)
 }
 
-pub(crate) fn sha256(bytes: &[u8]) -> String {
-    hex::encode(Sha256::digest(bytes))
-}
-
-pub(crate) fn sha256_file(path: &Path) -> Result<String, Failure> {
-    let mut file = fs::File::open(path)?;
-    let mut digest = Sha256::new();
-    let mut buffer = [0u8; 64 * 1024];
-    loop {
-        let read = file.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        digest.update(&buffer[..read]);
-    }
-    Ok(hex::encode(digest.finalize()))
-}
-
-pub(crate) fn is_sha256(value: &str) -> bool {
-    value.len() == 64
-        && value
-            .as_bytes()
-            .iter()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-}
-
 pub(crate) fn path_text(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }

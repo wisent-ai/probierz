@@ -5,17 +5,12 @@ pub(crate) fn sha256_bytes(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
 }
 
+/// The SHA-256 of one file's bytes, streamed; every file hash in Probierz
+/// (artifacts, bundles, adopted sources, builds) is read through this.
 pub(crate) fn sha256_file(file: &Path) -> Result<String, Failure> {
     let mut input = File::open(file)?;
     let mut digest = Sha256::new();
-    let mut buffer = [0u8; 128 * 1024];
-    loop {
-        let count = input.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        digest.update(&buffer[..count]);
-    }
+    std::io::copy(&mut input, &mut digest)?;
     Ok(hex::encode(digest.finalize()))
 }
 

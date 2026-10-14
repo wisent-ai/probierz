@@ -135,7 +135,7 @@ pub(crate) fn validate_index_records(
         let valid_source = source
             .get("sourceKey")
             .and_then(Value::as_str)
-            .is_some_and(is_sha256)
+            .is_some_and(crate::evidence::is_sha256)
             && source.get("sourceRoot").is_some_and(Value::is_string)
             && source.get("files").is_some_and(Value::is_array);
         if !valid_source {
@@ -152,7 +152,7 @@ pub(crate) fn validate_index_records(
                 && retained
                     .get("sha256")
                     .and_then(Value::as_str)
-                    .is_some_and(is_sha256)
+                    .is_some_and(crate::evidence::is_sha256)
                 && retained.get("mode").and_then(Value::as_u64).is_some();
             if !valid_file {
                 return Err(fail(
@@ -210,7 +210,7 @@ pub(crate) fn current_file(file: &Path) -> Result<CurrentFile, Failure> {
         return Ok(CurrentFile::Unsupported);
     }
     Ok(CurrentFile::Regular {
-        sha256: sha256_file(file)?,
+        sha256: crate::evidence::sha256_file(file)?,
         mode: metadata_mode(&metadata),
     })
 }

@@ -123,20 +123,6 @@ pub(crate) fn evidence_level(run: &Run) -> &'static str {
     }
 }
 
-pub(crate) fn sha256_file(file: &Path) -> Result<String, String> {
-    let mut input = File::open(file).map_err(|error| error.to_string())?;
-    let mut hash = Sha256::new();
-    let mut buffer = [0_u8; 64 * 1024];
-    loop {
-        let read = input.read(&mut buffer).map_err(|error| error.to_string())?;
-        if read == 0 {
-            break;
-        }
-        hash.update(&buffer[..read]);
-    }
-    Ok(hex::encode(hash.finalize()))
-}
-
 pub(crate) fn normalize_absolute(path: &Path) -> PathBuf {
     let absolute = if path.is_absolute() {
         path.to_path_buf()

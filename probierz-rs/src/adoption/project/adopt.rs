@@ -17,7 +17,7 @@ pub fn adopt_project(
     let definitions = source_definitions(&source)?;
     let mut index = read_index(&destination)?;
     let source_root_text = path_text(&source);
-    let source_key = sha256(source_root_text.as_bytes());
+    let source_key = crate::evidence::sha256_bytes(source_root_text.as_bytes());
     let existing_source = index
         .sources
         .iter()

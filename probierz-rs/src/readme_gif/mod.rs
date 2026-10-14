@@ -5,14 +5,12 @@
 //! `use crate::readme_gif::*;`, so the list below is the module's single
 //! import list.
 
-pub(crate) use std::fs::{self, File};
-pub(crate) use std::io::Read;
+pub(crate) use std::fs;
 pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::Command;
 
 pub(crate) use serde::Serialize;
 pub(crate) use serde_json::{Number, Value};
-pub(crate) use sha2::{Digest, Sha256};
 
 pub(crate) use crate::failure::{print_json, write_private, Answer, Failure};
 

@@ -42,9 +42,3 @@ pub(crate) fn unique_run_id(started: DateTime<Utc>) -> String {
             .replace([':', '.'], "-")
     )
 }
-pub(crate) fn sha256_file(file: &Path) -> Result<String, Failure> {
-    let mut source = File::open(file)?;
-    let mut hash = Sha256::new();
-    std::io::copy(&mut source, &mut hash).map_err(Failure::from)?;
-    Ok(hex::encode(hash.finalize()))
-}

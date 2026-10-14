@@ -64,20 +64,6 @@ pub(crate) fn output_file(file: &Path) -> Result<PathBuf, Failure> {
     Ok(resolved)
 }
 
-pub(crate) fn sha256(file: &Path) -> Result<String, Failure> {
-    let mut input = File::open(file)?;
-    let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 64 * 1024];
-    loop {
-        let read = input.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        digest.update(&buffer[..read]);
-    }
-    Ok(hex::encode(digest.finalize()))
-}
-
 pub(crate) fn json_number(value: f64) -> Value {
     if value.fract() == 0.0 && value <= u64::MAX as f64 {
         Value::Number((value as u64).into())

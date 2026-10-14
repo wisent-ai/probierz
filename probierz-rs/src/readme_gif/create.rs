@@ -23,7 +23,7 @@ pub fn create(options: Options) -> Answer {
     {
         return Err(invalid("framesPerSecond and width must be integers"));
     }
-    let source_sha256 = sha256(&input)?;
+    let source_sha256 = crate::evidence::sha256_file(&input)?;
 
     let output_directory = output.parent().unwrap_or_else(|| Path::new("."));
     fs::create_dir_all(output_directory)?;
@@ -92,7 +92,7 @@ pub fn create(options: Options) -> Answer {
         fs::remove_file(&output)?;
     }
     fs::rename(&temporary, &output)?;
-    let gif_sha256 = sha256(&output)?;
+    let gif_sha256 = crate::evidence::sha256_file(&output)?;
     let render = Render {
         start_seconds: json_number(start_seconds),
         duration_seconds: duration_seconds.map_or(Value::Null, json_number),

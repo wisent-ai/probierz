@@ -40,7 +40,19 @@ pub(crate) fn artifact_hashes(directory: &Path, manifest_path: &Path) -> Result<
         .into_iter()
         .filter(|file| file != manifest_path)
     {
-        values.push(json!({ "file": slash(file.strip_prefix(directory).unwrap_or(&file)), "sha256": sha256_file(&file)?, "bytes": fs::metadata(file)?.len() }));
+        // walk lists files below the run's directory; one outside it is
+        // refused, never recorded under its absolute path.
+        let relative = file.strip_prefix(directory).map_err(|error| {
+            Failure::config(
+                "run.artifacts",
+                format!(
+                    "{} is not under {}: {error}",
+                    file.display(),
+                    directory.display()
+                ),
+            )
+        })?;
+        values.push(json!({ "file": slash(relative), "sha256": crate::evidence::sha256_file(&file)?, "bytes": fs::metadata(&file)?.len() }));
     }
     Ok(Value::Array(values))
 }

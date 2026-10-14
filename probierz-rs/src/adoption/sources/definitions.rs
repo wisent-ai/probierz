@@ -148,7 +148,7 @@ pub(crate) fn source_definitions(source_root: &Path) -> Result<Definitions, Fail
 
     for file in &mut gathered {
         file.bytes = fs::read(&file.source)?;
-        file.sha256 = sha256(&file.bytes);
+        file.sha256 = crate::evidence::sha256_bytes(&file.bytes);
     }
     let mut identity = Sha256::new();
     for file in &gathered {

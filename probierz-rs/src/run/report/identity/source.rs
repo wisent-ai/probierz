@@ -26,7 +26,7 @@ pub(crate) fn build_identity(
     };
     let path = normalize_path(&resolved);
     let sha = if path.is_file() {
-        Some(sha256_file(&path)?)
+        Some(crate::evidence::sha256_file(&path)?)
     } else if path.is_dir() {
         let mut hash = Sha256::new();
         for file in walk(&path, true) {

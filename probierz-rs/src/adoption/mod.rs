@@ -16,7 +16,7 @@
 pub(crate) use std::collections::{BTreeSet, HashMap};
 pub(crate) use std::ffi::OsStr;
 pub(crate) use std::fs::{self, OpenOptions};
-pub(crate) use std::io::{Read, Write};
+pub(crate) use std::io::Write;
 pub(crate) use std::path::{Component, Path, PathBuf};
 pub(crate) use std::time::{SystemTime, UNIX_EPOCH};
 

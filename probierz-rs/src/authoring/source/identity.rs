@@ -64,15 +64,6 @@ pub(crate) fn repository_identity(
     Ok(JsonValue::Object(identity))
 }
 
-pub(crate) fn valid_sha256(value: Option<&str>) -> bool {
-    value.is_some_and(|text| {
-        text.len() == 64
-            && text
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    })
-}
-
 pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue>, Failure> {
     let Some(file) = std::env::var_os("PROBIERZ_SOURCE_IDENTITY") else {
         return Ok(None);
@@ -89,11 +80,11 @@ pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue
             format!("{}: schemaVersion must be 1", file.display()),
         ));
     }
-    if !valid_sha256(
-        parsed
-            .pointer("/harness/worktreeSha256")
-            .and_then(JsonValue::as_str),
-    ) {
+    if !parsed
+        .pointer("/harness/worktreeSha256")
+        .and_then(JsonValue::as_str)
+        .is_some_and(crate::evidence::is_sha256)
+    {
         return Err(Failure::config(
             "run.source",
             format!("{}: harness worktreeSha256 is missing", file.display()),
@@ -104,7 +95,11 @@ pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue
         .and_then(JsonValue::as_array)
     {
         for repository in repositories {
-            if !valid_sha256(repository.get("worktreeSha256").and_then(JsonValue::as_str)) {
+            if !repository
+                .get("worktreeSha256")
+                .and_then(JsonValue::as_str)
+                .is_some_and(crate::evidence::is_sha256)
+            {
                 let name = match repository.get("name").and_then(JsonValue::as_str) {
                     Some(name) => name,
                     None => "(the entry declares no name)",
