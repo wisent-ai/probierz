@@ -155,13 +155,23 @@ pub(super) fn opportunity(
     )
 }
 
+/// An opportunity [`opportunity_of`] accepted: the product id, suite and
+/// rivals exactly as they were judged, beside the answer that proposed them,
+/// so the brief declares what was checked and not the untrimmed draft.
+pub(super) struct Opportunity {
+    pub id: String,
+    pub suite: String,
+    pub rivals: Vec<String>,
+    pub answer: Json,
+}
+
 /// The opportunity an answer proposes, judged against what it was given.
 pub(super) fn opportunity_of(
     content: &str,
     candidates: &[Json],
     seen: &[Json],
     ours: &[Json],
-) -> Result<Json, String> {
+) -> Result<Opportunity, String> {
     let answer = parsed(content)?;
     let text = |value: &Json| {
         value
@@ -217,7 +227,12 @@ pub(super) fn opportunity_of(
         return Err("rivals names a candidate twice".to_string());
     }
     cited(&answer["observations"], seen, "the gap")?;
-    Ok(answer)
+    Ok(Opportunity {
+        id,
+        suite,
+        rivals,
+        answer,
+    })
 }
 
 /// What a scout saw before it decided.
@@ -232,15 +247,15 @@ pub(super) struct Scouted<'a> {
 
 /// The brief: the evidence, the decision, the catalog rivals and benchmark
 /// it declares, and the Stado creation request that adopts it.
-pub(super) fn document(scouted: &Scouted, opportunity: &Json, drafts: Json) -> Json {
-    let product = &opportunity["product"];
-    let id = product["id"].as_str().unwrap_or_default();
-    let rivals: Vec<Json> = opportunity["rivals"].as_array().into_iter().flatten().filter_map(|rival| {
-        let candidate = scouted.candidates.iter().find(|candidate| rival_id(candidate) == rival.as_str().unwrap_or_default())?;
+pub(super) fn document(scouted: &Scouted, opportunity: &Opportunity, drafts: Json) -> Json {
+    let product = &opportunity.answer["product"];
+    let id = opportunity.id.as_str();
+    let rivals: Vec<Json> = opportunity.rivals.iter().filter_map(|rival| {
+        let candidate = scouted.candidates.iter().find(|candidate| rival_id(candidate) == *rival)?;
         let evidence = &candidate["evidence"][0];
         Some(json!({"id": rival_id(candidate), "name": candidate["name"], "url": evidence["url"], "evidence": evidence["evidenceUrl"]}))
     }).collect();
-    let cited: BTreeSet<&str> = opportunity["observations"]
+    let cited: BTreeSet<&str> = opportunity.answer["observations"]
         .as_array()
         .into_iter()
         .flatten()
@@ -264,15 +279,15 @@ pub(super) fn document(scouted: &Scouted, opportunity: &Json, drafts: Json) -> J
         "trend": scouted.trend,
         "observations": scouted.seen,
         "candidates": scouted.candidates,
-        "gap": opportunity["gap"],
+        "gap": opportunity.answer["gap"],
         "rivals": rivals,
-        "benchmark": {"app": id, "suites": [opportunity["suite"]]},
+        "benchmark": {"app": id, "suites": [opportunity.suite]},
         "creation": {
             "schema_version": 1,
             "request_id": scouted.id,
             "initiative_id": format!("scout-{}", scouted.topic),
             "product": {"id": id, "name": product["name"], "description": product["description"], "family": "wisent", "visibility": "private"},
-            "repositories": [{"surface": opportunity["surface"], "repository": format!("{}/{id}", scouted.owner)}],
+            "repositories": [{"surface": opportunity.answer["surface"], "repository": format!("{}/{id}", scouted.owner)}],
             "evidence_refs": evidence_refs,
         },
         "drafts": drafts,
