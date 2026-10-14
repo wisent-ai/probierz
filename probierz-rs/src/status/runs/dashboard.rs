@@ -21,7 +21,7 @@ pub(crate) fn artifact_projection(run: &Value) -> Value {
                 json!({
                     "file": value_or(artifact.get("file"), Value::Null),
                     "sha256": value_or(artifact.get("sha256"), Value::Null),
-                    "bytes": json_number(number(artifact.get("bytes"))),
+                    "bytes": artifact.get("bytes").and_then(Value::as_f64).map(json_number),
                 })
             })
             .collect(),
