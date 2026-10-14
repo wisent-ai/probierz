@@ -83,7 +83,7 @@ pub(crate) fn trace_events(
                     .and_then(Value::as_str)
                     .unwrap_or("log")
             };
-            events.push(json!({ "at": at_for(first_nonzero(row.get("time"), row.get("monotonicTime"))), "type": "console", "source": source, "severity": severity, "message": safe_message(message).chars().take(2000).collect::<String>() }));
+            events.push(json!({ "at": at_for(first_nonzero(row.get("time"), row.get("monotonicTime"))), "type": "console", "source": source, "severity": severity, "message": safe_message(message) }));
         }
         Ok(events)
     })();
@@ -119,9 +119,14 @@ pub(crate) fn json_trace_events(
         Ok(document)
     })();
     match result {
-        Ok(document) => vec![
-            json!({ "at": parse_iso(document.get("completedAt").and_then(Value::as_str), fallback), "type": "observation", "source": file.file_name().and_then(|name| name.to_str()).unwrap_or(""), "status": document["status"], "message": safe_message(document.pointer("/observation/reply").and_then(Value::as_str).unwrap_or("")).chars().take(2000).collect::<String>() }),
-        ],
+        Ok(document) => vec![json!({
+            "at": parse_iso(document.get("completedAt").and_then(Value::as_str), fallback),
+            "type": "observation",
+            "source": file.file_name().map(|name| name.to_string_lossy().into_owned()),
+            "status": document["status"],
+            // The observation's reply whole, or null when it recorded none.
+            "message": document.pointer("/observation/reply").and_then(Value::as_str).map(safe_message),
+        })],
         Err(error) => {
             diagnostics.push(json!({ "artifact": file, "error": error }));
             Vec::new()
