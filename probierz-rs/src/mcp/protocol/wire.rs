@@ -1,9 +1,15 @@
 use crate::mcp::*;
 pub(crate) fn send(value: &Value) {
     let mut stdout = io::stdout().lock();
-    let _ = serde_json::to_writer(&mut stdout, value);
-    let _ = stdout.write_all(b"\n");
-    let _ = stdout.flush();
+    // An answer that cannot be written is said on stderr, the one channel the
+    // client does not read answers from, never dropped unseen.
+    let written = serde_json::to_writer(&mut stdout, value)
+        .map_err(io::Error::from)
+        .and_then(|()| stdout.write_all(b"\n"))
+        .and_then(|()| stdout.flush());
+    if let Err(error) = written {
+        eprintln!("probierz mcp: an answer could not be written to the client: {error}");
+    }
 }
 
 /// This binary, for the one tool that runs as a child process: an
