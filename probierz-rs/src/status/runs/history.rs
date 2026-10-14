@@ -146,22 +146,16 @@ pub(crate) fn journey_history(runs: &[Value]) -> Vec<Value> {
 }
 
 pub(crate) fn performance_trend(runs: &[Value]) -> Value {
-    let passed = runs
+    // Only passing runs that state a positive duration are timed; a run that
+    // states none is left out rather than read through a JS-style coercion.
+    let durations = runs
         .iter()
-        .filter(|run| {
-            run.get("status").and_then(Value::as_str) == Some("passed")
-                && number(run.get("durationMs")) > 0.0
-        })
+        .filter(|run| run.get("status").and_then(Value::as_str) == Some("passed"))
+        .filter_map(|run| run.get("durationMs").and_then(Value::as_f64))
+        .filter(|duration| duration.is_normal() && duration.is_sign_positive())
         .collect::<Vec<_>>();
-    let latest_ms = passed.first().map(|run| number(run.get("durationMs")));
-    let baseline = percentile(
-        passed
-            .iter()
-            .skip(1)
-            .map(|run| number(run.get("durationMs")))
-            .collect(),
-        0.5,
-    );
+    let latest_ms = durations.first().copied();
+    let baseline = percentile(durations.iter().skip(1).copied().collect(), 0.5);
     let ratio = latest_ms.zip(baseline).and_then(|(latest, baseline)| {
         if baseline != 0.0 {
             Some(latest / baseline)

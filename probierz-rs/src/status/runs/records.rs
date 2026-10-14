@@ -8,16 +8,6 @@ pub(crate) fn now() -> String {
 
 pub(crate) use crate::run::number as json_number;
 
-pub(crate) fn number(value: Option<&Value>) -> f64 {
-    match value {
-        Some(Value::Number(value)) => value.as_f64().unwrap_or(0.0),
-        Some(Value::String(value)) => value.parse::<f64>().unwrap_or(f64::NAN),
-        Some(Value::Bool(value)) => usize::from(*value) as f64,
-        Some(Value::Null) | None => 0.0,
-        _ => f64::NAN,
-    }
-}
-
 pub(crate) fn string(value: Option<&Value>) -> Option<&str> {
     value
         .and_then(Value::as_str)

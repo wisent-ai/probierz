@@ -87,10 +87,10 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
             Err(error) => log_failure_index(&format!("read {name}: {error}")),
         }
     }
-    // JavaScript joins the two grouping fields with an embedded NUL, then
-    // splits on that same byte. Keep it explicit here so source tooling does
-    // not silently hide the separator.
-    let mut grouped: Vec<(String, usize)> = Vec::new();
+    // Envelopes grouped by service and code: the map keeps them ordered by
+    // service then code, and the stable sort puts the most frequent first.
+    let mut grouped: std::collections::BTreeMap<(&str, &str), Vec<&Value>> =
+        std::collections::BTreeMap::new();
     for envelope in &envelopes {
         // An envelope without its service or code is grouped under that
         // statement; "unknown" read like a service and a code of their own.
@@ -102,39 +102,20 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
             Some(code) => code,
             None => "code not reported",
         };
-        let key = format!("{service}\0{code}");
-        if let Some((_, count)) = grouped.iter_mut().find(|entry| entry.0 == key) {
-            *count += 1;
-        } else {
-            grouped.push((key, 1));
-        }
+        grouped.entry((service, code)).or_default().push(envelope);
     }
-    let mut counts = grouped
+    let mut grouped = grouped.into_iter().collect::<Vec<_>>();
+    grouped.sort_by(|left, right| right.1.len().cmp(&left.1.len()));
+    let counts = grouped
         .into_iter()
-        .map(|(key, count)| {
-            let (service, code) = key.split_once('\0').unwrap_or((&key, ""));
+        .map(|((service, code), members)| {
             json!({
                 "service": service,
                 "error_code": code,
-                "count": count,
+                "count": members.len(),
             })
         })
         .collect::<Vec<_>>();
-    counts.sort_by(|left, right| {
-        number(right.get("count"))
-            .partial_cmp(&number(left.get("count")))
-            .unwrap_or(Ordering::Equal)
-            .then_with(|| {
-                string(left.get("service"))
-                    .unwrap_or("")
-                    .cmp(string(right.get("service")).unwrap_or(""))
-            })
-            .then_with(|| {
-                string(left.get("error_code"))
-                    .unwrap_or("")
-                    .cmp(string(right.get("error_code")).unwrap_or(""))
-            })
-    });
     let mut ordered = envelopes.iter().enumerate().collect::<Vec<_>>();
     ordered.sort_by(|(left_index, left), (right_index, right)| {
         string(left.get("received_at"))
