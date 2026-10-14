@@ -173,7 +173,7 @@ pub(crate) fn signed_media(run: &Value) -> Result<Vec<Value>, Failure> {
         Some(json!({
             "file": file, "artifactKind": kind,
             "contentSha256": inventory.get("sha256").cloned().unwrap_or(Value::Null),
-            "bytes": inventory.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
+            "bytes": inventory.get("bytes").and_then(Value::as_f64).map(js_number),
             "capturedAt": run.get("completedAt").or_else(|| run.get("startedAt")).cloned().unwrap_or(Value::Null),
         }))
     }).collect())
@@ -210,11 +210,19 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Result<Value,
                 .cloned()
         })
         .unwrap_or(Value::Null);
-    let artifacts = run.get("artifacts").and_then(Value::as_array).into_iter().flatten().map(|artifact| json!({
-        "file": artifact.get("file").cloned().unwrap_or(Value::Null),
-        "sha256": artifact.get("sha256").cloned().unwrap_or(Value::Null),
-        "bytes": artifact.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
-    })).collect::<Vec<_>>();
+    let artifacts = run
+        .get("artifacts")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|artifact| {
+            json!({
+                "file": artifact.get("file").cloned().unwrap_or(Value::Null),
+                "sha256": artifact.get("sha256").cloned().unwrap_or(Value::Null),
+                "bytes": artifact.get("bytes").and_then(Value::as_f64).map(js_number),
+            })
+        })
+        .collect::<Vec<_>>();
     Ok(json!({
         "runId": run.get("runId").cloned().unwrap_or(Value::Null),
         "target": run.get("target").cloned().unwrap_or(Value::Null),
