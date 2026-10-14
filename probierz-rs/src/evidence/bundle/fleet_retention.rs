@@ -53,16 +53,33 @@ fn read_objects() -> Result<Vec<FleetObject>, Failure> {
                 Failure::unavailable("evidence.fleet_retention", "a listed object has no uri")
             })?
             .to_string();
-        let bytes = item
-            .get("size")
-            .and_then(Value::as_i64)
-            .or_else(|| item.get("bytes").and_then(Value::as_i64))
-            .unwrap_or_default();
-        let modified = ["modified", "modified_at", "updated_at", "last_modified"]
-            .iter()
-            .find_map(|field| item.get(*field).and_then(Value::as_str))
-            .and_then(|text| DateTime::parse_from_rfc3339(text).ok())
-            .map(|value| value.with_timezone(&Utc));
+        // Stado's object list states `size` for every object and
+        // `updated_at` when its store records one (null otherwise).
+        let bytes = item.get("size").and_then(Value::as_i64).ok_or_else(|| {
+            Failure::unavailable(
+                "evidence.fleet_retention",
+                format!("the listed object {key} states no size"),
+            )
+        })?;
+        let modified = match item.get("updated_at") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(text)) => Some(
+                DateTime::parse_from_rfc3339(text)
+                    .map_err(|error| {
+                        Failure::unavailable(
+                            "evidence.fleet_retention",
+                            format!("the listed object {key} has updated_at {text:?}: {error}"),
+                        )
+                    })?
+                    .with_timezone(&Utc),
+            ),
+            Some(other) => {
+                return Err(Failure::unavailable(
+                    "evidence.fleet_retention",
+                    format!("the listed object {key} has updated_at {other}, not a time"),
+                ))
+            }
+        };
         objects.push(FleetObject {
             key,
             uri,
