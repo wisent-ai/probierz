@@ -144,7 +144,6 @@ pub(crate) fn repo_tree(root: &Path) -> String {
                 None
             }
         })
-        .take(40)
         .collect();
     entries.sort_by_key(|entry| entry.file_name());
 
