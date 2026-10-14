@@ -34,7 +34,16 @@ impl Driver {
                     return Ok(App { pid, window_id });
                 }
             }
-            match watch.next()? {
+            // Said on stderr at both ends, as every wait of Probierz is: an
+            // app that neither opens a window nor exits stands named.
+            let next = stado_wait::blocking(
+                stado_wait::Kind::Process,
+                format!("a window of pid {pid}, or its exit"),
+                "Accessibility notifications and the kernel's process events",
+                || watch.next().map_err(std::io::Error::other),
+            )
+            .map_err(|error| error.to_string())?;
+            match next {
                 events::Event::WindowCreated => {}
                 events::Event::Exited => {
                     return Err(format!("pid {pid} exited before it opened a window"));

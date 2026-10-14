@@ -60,10 +60,15 @@ impl Driver {
             if socket_exists()? {
                 return Ok(());
             }
-            match watch
-                .next()
-                .map_err(|error| format!("watching CuaDriver's socket failed: {error}"))?
-            {
+            // Said on stderr at both ends, as every wait of Probierz is.
+            let next = stado_wait::blocking(
+                stado_wait::Kind::Process,
+                format!("CuaDriver pid {pid} to create {}", self.socket.display()),
+                parent.display(),
+                || watch.next(),
+            )
+            .map_err(|error| format!("watching CuaDriver's socket failed: {error}"))?;
+            match next {
                 kernel::Event::DirectoryChanged => {}
                 kernel::Event::DaemonExited => {
                     return if socket_exists()? {

@@ -139,14 +139,25 @@ fn await_exit(pid: i32) {
         data: 0,
         udata: std::ptr::null_mut(),
     };
+    // Said on stderr at both ends, as every wait of Probierz is.
+    let waiting = stado_wait::begin(
+        stado_wait::Kind::Process,
+        format!("pid {pid}, the intake this one replaces, to exit"),
+        "the kernel's process-exit event",
+    );
     // SAFETY: one valid change and one writable event slot; a null timeout
     // blocks until the process exits. A pid already gone answers -1/ESRCH.
     let answered = unsafe { kevent(kq, &change, 1, &mut fired, 1, std::ptr::null()) };
     if answered < 0 {
         let error = std::io::Error::last_os_error();
-        if error.raw_os_error() != Some(ESRCH) {
+        if error.raw_os_error() == Some(ESRCH) {
+            waiting.done();
+        } else {
             eprintln!("probierz intake: watching pid {pid} exit failed: {error}");
+            waiting.failed(error);
         }
+    } else {
+        waiting.done();
     }
     // SAFETY: kq is the descriptor kqueue returned above.
     unsafe { close(kq) };
