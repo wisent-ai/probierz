@@ -21,7 +21,7 @@ pub(crate) fn normalize_wdio(report: &Value, tool: &str) -> Value {
                     "failed".into()
                 }
             });
-        let duration = js_number(row.get("duration"));
+        let duration = row.get("duration").and_then(Value::as_f64);
         let mut test = Map::new();
         test.insert(
             "title".into(),
@@ -29,7 +29,7 @@ pub(crate) fn normalize_wdio(report: &Value, tool: &str) -> Value {
         );
         test.insert("passed".into(), Value::Bool(status == "passed"));
         test.insert("status".into(), Value::String(status.clone()));
-        test.insert("durationMs".into(), number(duration));
+        test.insert("durationMs".into(), json!(duration.map(number)));
         if let Some(video) = row.get("video") {
             test.insert("video".into(), video.clone());
         }
@@ -55,11 +55,18 @@ pub(crate) fn normalize_wdio(report: &Value, tool: &str) -> Value {
             .filter(|test| test.get("status").and_then(Value::as_str) == Some(wanted))
             .count()
     };
-    let duration: f64 = tests
+    // A run's duration is the sum of its tests' only when every test states
+    // one; a report that states no flaky count has none, not zero.
+    let duration: Option<f64> = tests
         .iter()
-        .map(|test| js_number(test.get("durationMs")))
+        .map(|test| test.get("durationMs").and_then(Value::as_f64))
         .sum();
-    json!({ "tool": tool, "total": report.get("total").cloned().unwrap_or_else(|| json!(tests.len())), "passed": count("passed"), "failed": count("failed"), "flaky": number(js_number(report.get("flaky"))), "skipped": count("skipped"), "durationMs": number(duration), "tests": tests, "failures": failures, "reportMedia": media })
+    let total = match report.get("total") {
+        Some(total) => total.clone(),
+        None => json!(tests.len()),
+    };
+    let flaky = report.get("flaky").and_then(Value::as_f64).map(number);
+    json!({ "tool": tool, "total": total, "passed": count("passed"), "failed": count("failed"), "flaky": flaky, "skipped": count("skipped"), "durationMs": duration.map(number), "tests": tests, "failures": failures, "reportMedia": media })
 }
 pub(crate) fn first_nonzero(primary: Option<&Value>, fallback: Option<&Value>) -> f64 {
     let primary = js_number(primary);
