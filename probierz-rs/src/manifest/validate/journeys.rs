@@ -130,9 +130,8 @@ pub(crate) fn validate_journeys(
                     &format!("journey {name} publication artifact kind {kind} is unsupported"),
                 )?;
             }
-            let evidence = string_of(publication, "minimumEvidence").unwrap_or_default();
             require(
-                matches!(evidence, "E2" | "E3"),
+                matches!(string_of(publication, "minimumEvidence"), Some("E2" | "E3")),
                 file,
                 &format!("journey {name} publication.minimumEvidence must be E2 or E3"),
             )?;

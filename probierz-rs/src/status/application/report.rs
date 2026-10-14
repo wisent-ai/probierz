@@ -18,6 +18,7 @@ pub(crate) fn app_status_value(
     let history = run_history_value(harness, app_id, None, None, usize::MAX)?;
     let gates = crate::gate::gate_config(&loaded, app_id)?;
     let mut repositories = Vec::new();
+    let mut measured = Vec::new();
     let mut diff_files = Vec::new();
     for repository in document
         .get("repositories")
@@ -25,7 +26,7 @@ pub(crate) fn app_status_value(
         .into_iter()
         .flatten()
     {
-        let root = repository.get("root").and_then(Value::as_str).unwrap_or("");
+        let root = repository_root(app_id, repository)?;
         let head = git(root, &["rev-parse", "HEAD"]);
         let base = git(root, &["rev-parse", "--verify", base_ref]);
         // A diff git cannot produce is named on the repository row: read as
@@ -47,6 +48,7 @@ pub(crate) fn app_status_value(
             "baseSha": base,
             "diffError": diff_error,
         }));
+        measured.push((root, head));
     }
     let affected = affected_journeys(harness, &diff_files)?;
     let runs = history
@@ -79,8 +81,7 @@ pub(crate) fn app_status_value(
     for journey in journey_names {
         let run = latest.get(&journey);
         let fresh = run.is_some_and(|run| {
-            repositories.iter().all(|repository| {
-                let root = repository.get("root").and_then(Value::as_str).unwrap_or("");
+            measured.iter().all(|(root, head)| {
                 let recorded = run
                     .pointer("/source/repositories")
                     .and_then(Value::as_array)
@@ -88,10 +89,14 @@ pub(crate) fn app_status_value(
                         recorded.iter().find(|item| {
                             string(item.get("name"))
                                 .or_else(|| string(item.get("root")))
-                                .is_some_and(|name| root.ends_with(name) || name == root)
+                                .is_some_and(|name| root.ends_with(name) || name == *root)
                         })
                     });
-                recorded.and_then(|item| item.get("gitSha")) == repository.get("headSha")
+                head.is_some()
+                    && recorded
+                        .and_then(|item| item.get("gitSha"))
+                        .and_then(Value::as_str)
+                        == head.as_deref()
             })
         });
         let last_run = run
@@ -112,15 +117,21 @@ pub(crate) fn app_status_value(
             "affected": affected.iter().any(|name| name == &journey),
         }));
     }
+    // The minimum is the manifest's to declare: without it no journey can be
+    // judged eligible, and the missing declaration is the blocking reason.
     let minimum = document
         .pointer("/pullRequestPolicy/minimumEvidence")
-        .and_then(Value::as_str)
-        .unwrap_or("E2");
+        .and_then(Value::as_str);
     let evaluated = journeys
         .iter()
         .filter(|journey| journey.get("affected").and_then(Value::as_bool) == Some(true))
         .collect::<Vec<_>>();
     let mut blocking = Vec::new();
+    if minimum.is_none() {
+        blocking.push(Value::String(format!(
+            "app {app_id} declares no pullRequestPolicy.minimumEvidence"
+        )));
+    }
     for journey in &evaluated {
         let name = said(journey.get("journey"), "journey name");
         let Some(last) = journey.get("lastRun").filter(|value| !value.is_null()) else {
@@ -138,16 +149,18 @@ pub(crate) fn app_status_value(
             )));
         }
         // A run that states no level ranks below any minimum, and is named so.
-        if last
-            .get("evidenceLevel")
-            .and_then(Value::as_str)
-            .and_then(evidence_rank)
-            < evidence_rank(minimum)
-        {
-            blocking.push(Value::String(format!(
-                "{name}: {} is below {minimum}",
-                said(last.get("evidenceLevel"), "evidence level")
-            )));
+        if let Some(minimum) = minimum {
+            if last
+                .get("evidenceLevel")
+                .and_then(Value::as_str)
+                .and_then(evidence_rank)
+                < evidence_rank(minimum)
+            {
+                blocking.push(Value::String(format!(
+                    "{name}: {} is below {minimum}",
+                    said(last.get("evidenceLevel"), "evidence level")
+                )));
+            }
         }
     }
     let untested = journeys
@@ -193,14 +206,19 @@ pub(crate) fn render_app_status(status: &Value) -> String {
         .flatten()
     {
         let name = said(journey.get("journey"), "journey name");
-        let last = journey.get("lastRun").filter(|value| !value.is_null());
-        if last.is_none() {
+        let Some(run) = journey.get("lastRun").filter(|value| !value.is_null()) else {
             lines.push(format!("    {name:<24} — no runs —  E0  untested"));
             continue;
-        }
-        let run = last.unwrap_or(&Value::Null);
-        let started = run.get("startedAt").and_then(Value::as_str).unwrap_or("");
-        let date = started.get(..10.min(started.len())).unwrap_or(started);
+        };
+        let date = string(run.get("startedAt")).map_or_else(
+            || said(None, "start time"),
+            |started| {
+                started
+                    .split_once('T')
+                    .map_or(started, |(day, _)| day)
+                    .to_string()
+            },
+        );
         lines.push(format!(
             "    {name:<24} {date}  {}  {}  {}",
             said(run.get("runId"), "run id"),
@@ -220,10 +238,10 @@ pub(crate) fn render_app_status(status: &Value) -> String {
         .filter_map(Value::as_str)
         .collect::<Vec<_>>()
         .join(", ");
-    let eligibility = status.get("mergeEligibility").unwrap_or(&Value::Null);
+    let eligibility = status.get("mergeEligibility");
     lines.push(format!(
         "  affected ({}..HEAD): {}",
-        status.get("baseRef").and_then(Value::as_str).unwrap_or(""),
+        said(status.get("baseRef"), "base ref"),
         if affected.is_empty() {
             "(none)"
         } else {
@@ -232,22 +250,23 @@ pub(crate) fn render_app_status(status: &Value) -> String {
     ));
     lines.push(format!(
         "  merge-eligibility({}, min {}): {}",
-        eligibility
-            .get("mode")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-        eligibility
-            .get("minimumEvidence")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-        if eligibility.get("eligible").and_then(Value::as_bool) == Some(true) {
+        said(eligibility.and_then(|value| value.get("mode")), "mode"),
+        said(
+            eligibility.and_then(|value| value.get("minimumEvidence")),
+            "minimum evidence"
+        ),
+        if eligibility
+            .and_then(|value| value.get("eligible"))
+            .and_then(Value::as_bool)
+            == Some(true)
+        {
             "ELIGIBLE"
         } else {
             "BLOCKED"
         },
     ));
     for reason in eligibility
-        .get("blockingReasons")
+        .and_then(|value| value.get("blockingReasons"))
         .and_then(Value::as_array)
         .into_iter()
         .flatten()

@@ -75,6 +75,20 @@ pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {
     )
 }
 
+/// The checkout a manifest repository declares. A repository without one is
+/// refused by name, never measured in whatever directory the process runs in.
+pub(crate) fn repository_root<'a>(app_id: &str, repository: &'a Value) -> Result<&'a str, Failure> {
+    repository
+        .get("root")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            Failure::config(
+                "status.repository",
+                format!("app {app_id} declares a repository without root: {repository}"),
+            )
+        })
+}
+
 pub(crate) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec<String>, Failure> {
     let mut affected = BTreeSet::new();
     for app in manifest::list(harness)? {
@@ -87,18 +101,7 @@ pub(crate) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec
         {
             // Skipped, its changed files mapped to no journey and the merge
             // was judged on none of them.
-            let root = repository
-                .get("root")
-                .and_then(Value::as_str)
-                .ok_or_else(|| {
-                    Failure::config(
-                        "status.affected",
-                        format!(
-                            "app {} declares a repository without root: {repository}",
-                            app.app_id
-                        ),
-                    )
-                })?;
+            let root = repository_root(&app.app_id, repository)?;
             let root_path = Path::new(root);
             for file in files {
                 let Ok(relative) = file.strip_prefix(root_path) else {

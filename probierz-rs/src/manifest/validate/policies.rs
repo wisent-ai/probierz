@@ -216,9 +216,8 @@ pub(crate) fn validate_policies(
         .filter_map(|(name, policy)| Some((name.as_str()?, policy)))
         .filter(|(name, _)| name.ends_with("Policy"))
     {
-        let evidence = string_of(policy, "minimumEvidence").unwrap_or("E3");
         require(
-            matches!(evidence, "E2" | "E3"),
+            matches!(string_of(policy, "minimumEvidence"), Some("E2" | "E3")),
             file,
             &format!("{policy_name}.minimumEvidence must be E2 or E3"),
         )?;
