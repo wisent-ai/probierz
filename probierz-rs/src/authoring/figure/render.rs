@@ -39,7 +39,7 @@ pub(crate) fn figure_prerequisites(
 /// every criterion met with no blocker, which needs none.
 pub(crate) fn figure_rubric(file: Option<&Path>) -> Result<JsonValue, Failure> {
     let rubric = if let Some(file) = file {
-        serde_json::from_slice(&fs::read(file)?)?
+        crate::json_file::required(file)?
     } else {
         json!({
             "name": "scientific-figure-release",

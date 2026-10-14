@@ -37,7 +37,7 @@ pub(crate) fn create_publication(
         verification.get("expectedSourceSha"),
         "receipt source SHA-256 is missing",
     )?;
-    let signed_receipt = json_file(receipt_file)?;
+    let signed_receipt = crate::json_file::required(receipt_file)?;
     require(
         signed_receipt
             .get("schemaVersion")

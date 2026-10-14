@@ -13,7 +13,7 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
     let document = app.json()?;
     let mut items = Vec::new();
     for file in manifests_below(&harness.join("test-results").join(app_id))? {
-        let run = json_file(&file)?;
+        let run = crate::json_file::required(&file)?;
         // Every run records its kind and when it started; a manifest that
         // states neither is refused, never retained under a kind it was not.
         let unreadable = |what: &str| {

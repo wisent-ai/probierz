@@ -95,7 +95,7 @@ pub(crate) fn protect_run(
         })?;
     let days = retention_days(&document, retention_kind)?;
     let key = key_from_file(key_file)?;
-    let current = json_file(&manifest_path)?;
+    let current = crate::json_file::required(&manifest_path)?;
     if current
         .pointer("/protection/plaintextRemoved")
         .and_then(Value::as_bool)

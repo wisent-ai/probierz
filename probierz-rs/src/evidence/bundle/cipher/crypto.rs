@@ -176,7 +176,7 @@ pub(crate) fn remove_plaintext_source(
             fs::remove_file(entry.path())?;
         }
     }
-    let mut current = json_file(manifest_path)?;
+    let mut current = crate::json_file::required(manifest_path)?;
     let object = current
         .as_object_mut()
         .ok_or_else(|| Failure::config("evidence.protect", "run manifest is not an object"))?;

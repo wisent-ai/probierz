@@ -28,3 +28,10 @@ pub(crate) fn read(path: &Path) -> Result<Option<Value>, Failure> {
         )
     })
 }
+
+/// The JSON document at `path`, which must be there: a missing file is
+/// refused naming it, as is one that cannot be read or does not hold JSON.
+pub(crate) fn required(path: &Path) -> Result<Value, Failure> {
+    read(path)?
+        .ok_or_else(|| Failure::config("json.read", format!("{} is not there", path.display())))
+}

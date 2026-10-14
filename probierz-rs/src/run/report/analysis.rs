@@ -7,17 +7,15 @@ pub(crate) fn analyze_run(
     frames: f64,
     expected_run: Option<&str>,
 ) -> Result<Value, Failure> {
-    if !report_path.exists() {
-        return Err(fail(
+    let report = crate::json_file::read(report_path)?.ok_or_else(|| {
+        fail(
             "run.analyze",
             format!(
                 "report not found: {} (did the run produce one?)",
                 report_path.display()
             ),
-        ));
-    }
-    let report: Value = serde_json::from_slice(&fs::read(report_path)?)
-        .map_err(|error| Failure::config("run.analyze", error.to_string()))?;
+        )
+    })?;
     let report_run = report.pointer("/probierz/runId").and_then(Value::as_str);
     if let Some(expected) = expected_run {
         if report_run != Some(expected) {

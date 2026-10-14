@@ -216,13 +216,12 @@ pub(crate) fn write_state(path: &Path, state: &Value) -> Result<(), Failure> {
 
 pub(crate) fn read_state(source: &BTreeMap<String, String>) -> Result<(PathBuf, Value), Failure> {
     let path = state_path(source);
-    if !path.exists() {
-        return Err(Failure::config(
+    let state = crate::json_file::read(&path)?.ok_or_else(|| {
+        Failure::config(
             "apphook.oko.state",
             format!("Oko seed state not found: {}", path.display()),
-        ));
-    }
-    let state: Value = serde_json::from_slice(&fs::read(&path)?)?;
+        )
+    })?;
     let expected = source
         .get("PROBIERZ_RUN_ID")
         .map(String::as_str)

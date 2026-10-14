@@ -24,7 +24,7 @@ pub fn audit(
     };
     let mut records = Vec::new();
     for file in audit_files(&harness.join("test-results").join(".audit"))? {
-        match json_file(&file) {
+        match crate::json_file::required(&file) {
             Ok(record) => {
                 if app_id.is_some_and(|wanted| {
                     record.get("appId").and_then(Value::as_str) != Some(wanted)

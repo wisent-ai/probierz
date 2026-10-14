@@ -1,5 +1,8 @@
 use crate::evidence::*;
 use serde_json::json;
+// The receipt verifier reads its receipt under this name; the reading is
+// json_file::required, which names a missing or unreadable file.
+pub(crate) use crate::json_file::required as json_file;
 
 pub(crate) fn sha256_bytes(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
@@ -55,10 +58,6 @@ pub(crate) fn absolute(path: &Path) -> Result<PathBuf, Failure> {
         }
     }
     Ok(normalized)
-}
-
-pub(crate) fn json_file(path: &Path) -> Result<Value, Failure> {
-    Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
 /// Every run manifest below `root`. A directory that is not there holds

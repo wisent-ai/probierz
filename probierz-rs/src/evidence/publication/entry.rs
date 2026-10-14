@@ -20,7 +20,7 @@ pub fn publication(
                 ))
             }
         };
-    let assets = json_file(assets_file)?;
+    let assets = crate::json_file::required(assets_file)?;
     let result = create_publication(
         harness,
         receipt_file,

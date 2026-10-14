@@ -188,7 +188,7 @@ fn production_evidence(
     blockers: &mut Vec<JsonValue>,
 ) -> Result<JsonValue, Failure> {
     let production = if let Some(file) = production_file {
-        serde_json::from_slice(&fs::read(file)?)?
+        crate::json_file::required(file)?
     } else {
         json!({
             "required": contract.mode == "production",
