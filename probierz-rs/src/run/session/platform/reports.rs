@@ -1,33 +1,36 @@
 use crate::run::*;
 use serde_json::json;
+/// Whether the report at `path` is this run's: written after the run started
+/// and naming its run ID. Each refusal states what was observed; a report whose
+/// modification time cannot be read is refused rather than taken as fresh, and
+/// a read failure keeps its cause instead of being called invalid JSON.
 pub(crate) fn report_identity(path: &Path, run_id: &str, started: SystemTime) -> Value {
-    if !path.exists() {
-        return json!({ "ok": false, "error": "report missing" });
-    }
-    let meta = match fs::metadata(path) {
-        Ok(meta) => meta,
-        Err(error) => return json!({ "ok": false, "error": format!("report unreadable: {error}") }),
-    };
-    if meta
-        .modified()
-        .ok()
-        .is_some_and(|modified| modified < started)
-    {
-        return json!({ "ok": false, "error": "report predates run start" });
-    }
-    match fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-    {
-        Some(report) => {
-            let actual = report.pointer("/probierz/runId").and_then(Value::as_str);
-            if actual != Some(run_id) {
-                json!({ "ok": false, "error": format!("report run ID mismatch: expected {run_id}, got {}", actual.unwrap_or("missing")) })
-            } else {
-                json!({ "ok": true, "runId": run_id, "mtime": meta.modified().map(system_time_iso).unwrap_or_else(|_| now_iso()) })
-            }
+    let refused = |error: String| json!({ "ok": false, "error": error });
+    let modified = match fs::metadata(path).and_then(|meta| meta.modified()) {
+        Ok(modified) => modified,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return refused("report missing".into())
         }
-        None => json!({ "ok": false, "error": "report unreadable: invalid JSON" }),
+        Err(error) => return refused(format!("report unreadable: {error}")),
+    };
+    if modified < started {
+        return refused("report predates run start".into());
+    }
+    let report = match crate::json_file::read(path) {
+        Ok(Some(report)) => report,
+        Ok(None) => return refused("report missing".into()),
+        Err(error) => return refused(format!("report unreadable: {error}")),
+    };
+    match report.pointer("/probierz/runId").and_then(Value::as_str) {
+        Some(actual) if actual == run_id => {
+            json!({ "ok": true, "runId": run_id, "mtime": system_time_iso(modified) })
+        }
+        Some(actual) => refused(format!(
+            "report run ID mismatch: expected {run_id}, got {actual}"
+        )),
+        None => refused(format!(
+            "report run ID mismatch: expected {run_id}, the report states none"
+        )),
     }
 }
 
