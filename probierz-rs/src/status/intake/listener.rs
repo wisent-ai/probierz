@@ -147,7 +147,7 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
     let method = parts.next().unwrap_or("");
     let route = parts.next().unwrap_or("").split('?').next().unwrap_or("");
     let mut authorization = None;
-    let mut content_length = 0usize;
+    let mut content_length: Option<String> = None;
     for line in lines {
         let Some((name, value)) = line.split_once(':') else {
             continue;
@@ -155,7 +155,7 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
         if name.eq_ignore_ascii_case("authorization") {
             authorization = Some(value.trim().to_string());
         } else if name.eq_ignore_ascii_case("content-length") {
-            content_length = value.trim().parse::<usize>().unwrap_or(0);
+            content_length = Some(value.trim().to_string());
         }
     }
     if method != "POST" || route != "/v1/failures" {
@@ -171,22 +171,41 @@ pub(crate) fn handle_connection(mut stream: TcpStream, token: &str) -> Result<()
         failure_response(&mut stream, 401, "auth", "missing or wrong bearer token")?;
         return Ok(());
     }
-    while received.len().saturating_sub(header_end) < content_length {
-        let count = stream.read(&mut chunk)?;
-        if count == 0 {
-            break;
-        }
-        received.extend_from_slice(&chunk[..count]);
-    }
-    let body_bytes = &received[header_end..received.len().min(header_end + content_length)];
-    let body: Value = match serde_json::from_slice(body_bytes) {
-        Ok(body) => body,
-        Err(_) => {
-            failure_response(&mut stream, 400, "unknown", "body is not valid JSON")?;
-            return Ok(());
-        }
+    // The body is the length the request declares. A request that declares
+    // none, or a length that is not a byte count, is refused naming it,
+    // never read as an empty body that then "is not valid JSON".
+    let declared = match content_length.as_deref() {
+        Some(text) => text
+            .parse::<usize>()
+            .map_err(|error| format!("Content-Length {text:?} is not a byte count: {error}")),
+        None => Err(
+            "the request declares no Content-Length, so its body cannot be read whole".to_string(),
+        ),
     };
-    if let Some(problem) = envelope_problem(&body) {
+    let parsed = match declared {
+        Ok(content_length) => {
+            while received.len().saturating_sub(header_end) < content_length {
+                let count = stream.read(&mut chunk)?;
+                let read = &chunk[..count];
+                if read.is_empty() {
+                    break;
+                }
+                received.extend_from_slice(read);
+            }
+            let body_bytes = &received[header_end..received.len().min(header_end + content_length)];
+            serde_json::from_slice::<Value>(body_bytes)
+                .map_err(|error| format!("body is not valid JSON: {error}"))
+        }
+        Err(problem) => Err(problem),
+    };
+    let (body, problem) = match parsed {
+        Ok(body) => {
+            let problem = envelope_problem(&body);
+            (body, problem)
+        }
+        Err(problem) => (Value::Null, Some(problem)),
+    };
+    if let Some(problem) = problem {
         failure_response(&mut stream, 400, "unknown", &problem)?;
         return Ok(());
     }
