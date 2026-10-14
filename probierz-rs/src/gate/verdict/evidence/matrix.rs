@@ -81,33 +81,23 @@ pub(crate) fn matrix_cells(app: &manifest::Manifest, profile: &str) -> Result<Ve
         let surface = surfaces
             .get(&Yaml::String(target.clone()))
             .ok_or_else(|| format!("matrix {profile} references unknown target: {target}"))?;
+        // Surface dimensions override the profile's own. A dimension that is
+        // not a list is refused: read as no values it expanded the target to
+        // no cells, and the matrix stopped requiring that target at all.
         let mut dimensions: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        if let Some(mapping) = base_dimensions {
-            for (name, values) in mapping {
-                if let Some(name) = name.as_str() {
-                    dimensions.insert(
-                        name.to_string(),
-                        values
-                            .as_sequence()
-                            .map(|items| items.iter().map(yaml_js_string).collect())
-                            .unwrap_or_default(),
-                    );
-                }
-            }
-        }
-        if let Some(mapping) = per_surface
+        let surface_dimensions = per_surface
             .and_then(|all| all.get(&Yaml::String(target.clone())))
-            .and_then(|entry| yaml_mapping(yaml_get(entry, "dimensions")))
-        {
+            .and_then(|entry| yaml_mapping(yaml_get(entry, "dimensions")));
+        for mapping in [base_dimensions, surface_dimensions].into_iter().flatten() {
             for (name, values) in mapping {
                 if let Some(name) = name.as_str() {
-                    dimensions.insert(
-                        name.to_string(),
-                        values
-                            .as_sequence()
-                            .map(|items| items.iter().map(yaml_js_string).collect())
-                            .unwrap_or_default(),
-                    );
+                    let values = values
+                        .as_sequence()
+                        .map(|items| items.iter().map(yaml_js_string).collect())
+                        .ok_or_else(|| {
+                            format!("matrix {profile} dimension {name} for {target} is not a list of values")
+                        })?;
+                    dimensions.insert(name.to_string(), values);
                 }
             }
         }
@@ -130,7 +120,9 @@ pub(crate) fn matrix_cells(app: &manifest::Manifest, profile: &str) -> Result<Ve
                     if let Some(name) = name.as_str() {
                         conditions.insert(
                             name.to_string(),
-                            serde_json::to_value(value).unwrap_or(Value::Null),
+                            serde_json::to_value(value).map_err(|error| {
+                                format!("surface {target} condition {name} is not JSON-representable: {error}")
+                            })?,
                         );
                     }
                 }
@@ -176,26 +168,56 @@ pub(crate) fn matrix_cells(app: &manifest::Manifest, profile: &str) -> Result<Ve
     Ok(cells)
 }
 
+/// Which required cells the runs cover: the cells no run matched and the
+/// runs that matched no cell.
+pub(crate) struct MatrixCoverage {
+    pub(crate) profile: String,
+    pub(crate) expected: usize,
+    pub(crate) missing: Vec<Value>,
+    pub(crate) extra_run_ids: Vec<String>,
+}
+
+impl MatrixCoverage {
+    /// The coverage as the release receipt records it.
+    pub(crate) fn record(&self) -> Value {
+        object([
+            ("profile", Value::String(self.profile.clone())),
+            ("expected", Value::from(self.expected)),
+            ("matched", Value::from(self.expected - self.missing.len())),
+            ("missing", Value::Array(self.missing.clone())),
+            (
+                "extraRunIds",
+                Value::Array(
+                    self.extra_run_ids
+                        .iter()
+                        .cloned()
+                        .map(Value::String)
+                        .collect(),
+                ),
+            ),
+        ])
+    }
+}
+
 pub(crate) fn matrix_coverage(
     app: &manifest::Manifest,
     profile: &str,
     runs: &[Run],
-) -> Result<Value, String> {
+) -> Result<MatrixCoverage, String> {
     let cells = matrix_cells(app, profile)?;
     let mut remaining: Vec<&Run> = runs.iter().collect();
     let mut missing = Vec::new();
     for cell in &cells {
-        let target = string_property(cell, "target").unwrap_or_default();
+        // Every cell matrix_cells builds states its target and axes.
+        let target = string_property(cell, "target")
+            .ok_or_else(|| format!("matrix {profile} cell states no target: {cell}"))?;
         let axes = property(cell, "axes")
             .and_then(Value::as_object)
-            .cloned()
-            .unwrap_or_default();
+            .ok_or_else(|| format!("matrix {profile} cell states no axes: {cell}"))?;
         let index = remaining.iter().position(|run| {
             run.target == target
                 && axes.iter().all(|(name, wanted)| {
-                    property(&run.conditions, name)
-                        .map(|actual| js_display(Some(actual)) == js_display(Some(wanted)))
-                        .unwrap_or_else(|| js_display(None) == js_display(Some(wanted)))
+                    js_display(property(&run.conditions, name)) == js_display(Some(wanted))
                 })
         });
         if let Some(index) = index {
@@ -204,21 +226,15 @@ pub(crate) fn matrix_coverage(
             missing.push(cell.clone());
         }
     }
-    Ok(object([
-        ("profile", Value::String(profile.to_string())),
-        ("expected", Value::from(cells.len())),
-        ("matched", Value::from(cells.len() - missing.len())),
-        ("missing", Value::Array(missing)),
-        (
-            "extraRunIds",
-            Value::Array(
-                remaining
-                    .into_iter()
-                    .map(|run| Value::String(run.run_id.clone()))
-                    .collect(),
-            ),
-        ),
-    ]))
+    Ok(MatrixCoverage {
+        profile: profile.to_string(),
+        expected: cells.len(),
+        missing,
+        extra_run_ids: remaining
+            .into_iter()
+            .map(|run| run.run_id.clone())
+            .collect(),
+    })
 }
 
 pub(crate) fn receipt_run_value(run: &Run) -> Value {

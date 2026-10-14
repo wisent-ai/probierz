@@ -119,21 +119,19 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
     let matrix = if let Some(profile) = matrix_profile.as_deref() {
         let coverage = matrix_coverage(&app, profile, &runs)
             .map_err(|detail| Failure::config("gate.matrix", detail))?;
-        let missing = property(&coverage, "missing")
-            .and_then(Value::as_array)
-            .map(Vec::len)
-            .unwrap_or(0);
-        let extra = property(&coverage, "extraRunIds")
-            .and_then(Value::as_array)
-            .map(Vec::len)
-            .unwrap_or(0);
-        if missing > 0 {
-            errors.push(format!("{missing} required matrix cell(s) are missing"));
+        if !coverage.missing.is_empty() {
+            errors.push(format!(
+                "{} required matrix cell(s) are missing",
+                coverage.missing.len()
+            ));
         }
-        if extra > 0 {
-            errors.push(format!("{extra} run(s) are outside the required matrix"));
+        if !coverage.extra_run_ids.is_empty() {
+            errors.push(format!(
+                "{} run(s) are outside the required matrix",
+                coverage.extra_run_ids.len()
+            ));
         }
-        coverage
+        coverage.record()
     } else {
         Value::Null
     };
