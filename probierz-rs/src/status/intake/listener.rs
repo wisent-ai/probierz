@@ -45,11 +45,15 @@ pub(crate) fn intake_token() -> Result<(String, bool, PathBuf), Failure> {
             return Ok((
                 token,
                 false,
-                home_dir().join(".probierz").join("intake-token"),
+                crate::run::home_dir()
+                    .join(".probierz")
+                    .join("intake-token"),
             ));
         }
     }
-    let file = home_dir().join(".probierz").join("intake-token");
+    let file = crate::run::home_dir()
+        .join(".probierz")
+        .join("intake-token");
     // Only a token file that is not there, or holds nothing, is minted anew.
     // One that exists and cannot be read is refused: replacing it would cut
     // off every client already paired with the token it holds.
@@ -255,7 +259,7 @@ pub fn intake_serve(bind: &str) -> Answer {
         )
     })?;
     let url = format!("http://{listening}");
-    let url_file = home_dir().join(".probierz").join("intake-url");
+    let url_file = crate::run::home_dir().join(".probierz").join("intake-url");
     std::fs::write(&url_file, &url).map_err(|error| {
         Failure::config(
             "intake.address",

@@ -20,10 +20,10 @@ pub(crate) fn nonce(prefix: &str) -> String {
 }
 
 pub(crate) fn work_path(name: &str) -> Result<PathBuf, Failure> {
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| Failure::config("stado.pack", "HOME is required"))?;
-    let directory = home.join(".stado").join("work").join("probierz");
+    let directory = crate::run::home_dir()
+        .join(".stado")
+        .join("work")
+        .join("probierz");
     fs::create_dir_all(&directory)?;
     fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
     Ok(directory.join(name))

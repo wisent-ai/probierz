@@ -106,11 +106,10 @@ fn refuse(manifest: &Manifest, what: impl std::fmt::Display) -> Failure {
 /// A path in the manifest is absolute after `~/` expansion, or relative to
 /// the manifest's own directory.
 fn located(manifest: &Manifest, written: &str) -> PathBuf {
+    // `~/` is read under the home crate::run::home_dir names; left
+    // unexpanded it named a directory called `~` beside the manifest.
     let expanded = match written.strip_prefix("~/") {
-        Some(rest) => match std::env::var_os("HOME") {
-            Some(home) => PathBuf::from(home).join(rest),
-            None => PathBuf::from(written),
-        },
+        Some(rest) => crate::run::home_dir().join(rest),
         None => PathBuf::from(written),
     };
     if expanded.is_absolute() {

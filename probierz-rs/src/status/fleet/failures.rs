@@ -2,17 +2,14 @@
 
 use crate::status::*;
 
-/// The one Probierz home lookup: answering `.` without HOME made the failure
-/// store a different, empty directory for every working directory.
-pub(crate) fn home_dir() -> PathBuf {
-    crate::run::home_dir()
-}
-
+/// Where desktop failures are stored: PROBIERZ_FAILURES_DIR, else under the
+/// one Probierz home (crate::run::home_dir), never `.` without HOME, which
+/// made the store a different, empty directory for every working directory.
 pub(crate) fn failures_dir() -> PathBuf {
-    std::env::var_os("PROBIERZ_FAILURES_DIR")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir().join(".probierz").join("failures"))
+    match std::env::var_os("PROBIERZ_FAILURES_DIR").filter(|value| !value.is_empty()) {
+        Some(directory) => PathBuf::from(directory),
+        None => crate::run::home_dir().join(".probierz").join("failures"),
+    }
 }
 
 pub(crate) fn service_file_name(service: &str) -> String {
