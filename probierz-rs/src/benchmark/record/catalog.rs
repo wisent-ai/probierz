@@ -104,12 +104,12 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
     let rivals: Vec<Json> = named
         .iter()
         .map(|rival| {
-            let id = rival["id"].as_str().unwrap_or_default();
+            let id = rival["id"].as_str();
             json!({
                 "id": id,
                 "name": rival["name"],
                 "url": rival["url"],
-                "measured": declared.contenders.get(id).is_some_and(|contender| !contender.ours),
+                "measured": id.is_some_and(|id| declared.contenders.get(id).is_some_and(|contender| !contender.ours)),
             })
         })
         .collect();
@@ -118,8 +118,8 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
         .unwrap_or(&empty)
         .iter()
         .map(|suite| {
-            let id = suite.as_str().unwrap_or_default();
-            json!({"id": id, "declared": declared.suites.contains_key(id)})
+            let id = suite.as_str();
+            json!({"id": id, "declared": id.is_some_and(|id| declared.suites.contains_key(id))})
         })
         .collect();
     let undeclared: Vec<&str> = declared
@@ -146,20 +146,22 @@ pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
         ));
     }
     for rival in rivals.iter().filter(|rival| rival["measured"] == false) {
-        gaps.push(format!(
-            "rival {} has no contender in {}; probierz benchmark author contender {app_id} --contender {} --suite <id> drafts and verifies one",
-            rival["id"],
-            manifest.file.display(),
-            rival["id"].as_str().unwrap_or_default()
-        ));
+        gaps.push(match rival["id"].as_str() {
+            Some(id) => format!(
+                "rival {id} has no contender in {}; probierz benchmark author contender {app_id} --contender {id} --suite <id> drafts and verifies one",
+                manifest.file.display(),
+            ),
+            None => format!("a rival the catalog names for {product} states no id: {rival}"),
+        });
     }
     for suite in suites.iter().filter(|suite| suite["declared"] == false) {
-        gaps.push(format!(
-            "suite {} is named by the catalog but not declared in {}; probierz benchmark author suite {app_id} --suite {} drafts one",
-            suite["id"],
-            manifest.file.display(),
-            suite["id"].as_str().unwrap_or_default()
-        ));
+        gaps.push(match suite["id"].as_str() {
+            Some(id) => format!(
+                "suite {id} is named by the catalog but not declared in {}; probierz benchmark author suite {app_id} --suite {id} drafts one",
+                manifest.file.display(),
+            ),
+            None => format!("a suite the catalog names for {product} is not a suite id: {suite}"),
+        });
     }
     for id in &undeclared {
         gaps.push(format!(
