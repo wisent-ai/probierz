@@ -43,7 +43,12 @@ pub(crate) fn sh(command: &str, args: &[String], cwd: Option<&Path>) -> ProcessO
         }
         bytes
     });
-    let waited = child.wait();
+    let waited = stado_wait::begin(
+        stado_wait::Kind::Process,
+        format!("{command} {}", display_args.join(" ")),
+        "this host",
+    )
+    .settle(child.wait());
     let stdout = stdout_reader.join().unwrap_or_default();
     let stderr = stderr_reader.join().unwrap_or_default();
     let (status, error) = match waited {
