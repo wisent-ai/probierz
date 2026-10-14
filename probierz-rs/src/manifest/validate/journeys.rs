@@ -1,5 +1,25 @@
 use crate::manifest::*;
 
+/// The immutable identity a journey may declare; any one of its fields
+/// declared makes every one of them required.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Identity {
+    journey_id: Option<Value>,
+    journey_version: Option<Value>,
+    journey_version_id: Option<Value>,
+    first_success_fact: Option<Value>,
+}
+
+impl Identity {
+    fn declared(&self) -> bool {
+        self.journey_id.is_some()
+            || self.journey_version.is_some()
+            || self.journey_version_id.is_some()
+            || self.first_success_fact.is_some()
+    }
+}
+
 /// Every journey a manifest declares, and what its drivers can actually do.
 pub(crate) fn validate_journeys(
     document: &Value,
@@ -19,23 +39,17 @@ pub(crate) fn validate_journeys(
             file,
             &format!("journey {name} owner is required"),
         )?;
-        let timeout = journey
-            .get("timeoutMs")
-            .and_then(Value::as_f64)
-            .unwrap_or(0.0);
-        require(
-            timeout > 0.0,
-            file,
-            &format!("journey {name} timeoutMs must be positive"),
-        )?;
-        let has_identity = [
-            "journeyId",
-            "journeyVersion",
-            "journeyVersionId",
-            "firstSuccessFact",
-        ]
-        .iter()
-        .any(|field| journey.get(*field).is_some());
+        // No cutoff is required: `probierz run` waits for a suite to its own
+        // end, and a `timeoutMs` a manifest still carries is read by nothing.
+        let identity = serde_yaml::from_value::<Identity>(journey.clone());
+        if let Err(error) = &identity {
+            require(
+                false,
+                file,
+                &format!("journey {name} identity does not parse: {error}"),
+            )?;
+        }
+        let has_identity = identity.is_ok_and(|identity| identity.declared());
         if name == "onboarding-first-use" || has_identity {
             require(
                 !string_of(journey, "journeyId")

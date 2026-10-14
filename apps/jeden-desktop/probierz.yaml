@@ -35,7 +35,6 @@ surfaces:
 journeys:
   task-contract:
     owner: Jeden Desktop maintainers
-    timeoutMs: 480000
     description: Open real Jeden Desktop Settings, load the built-in contract through Stado and real Jeden RPC, inspect all seven requirements, and inspect a real recorded task report without duplicate answers. Do not change operator settings, trigger system consent prompts, or launch a browser.
 secretRefs:
   STADO_MODEL_ROUTER_TOKEN: vault://wisent/probierz/model-router-token

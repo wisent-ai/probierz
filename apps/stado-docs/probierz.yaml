@@ -22,11 +22,9 @@ surfaces:
 journeys:
   cli-scoped-generation:
     owner: Stado maintainers
-    timeoutMs: 180000
     value: The real documentation generator refreshes a complete selected command tree from STADO_BIN, preserves unrelated pages, and refuses malformed or unknown paths without changing its output.
   cli-command-pages:
     owner: Stado maintainers
-    timeoutMs: 600000
     value: The public Stado CLI index links every generated command, and each route serves its documented invocation and options under its canonical URL.
 artifacts:
   retain:

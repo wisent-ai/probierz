@@ -1,5 +1,4 @@
 use crate::stado::*;
-use serde_json::json;
 pub(crate) fn registration_directory(target: &str) -> Option<&'static str> {
     match target {
         "mobile:ios" | "mobile:android" => Some("packages/mobile/test/specs"),
@@ -142,21 +141,7 @@ pub(crate) fn install_product_spec(
     let loaded = manifest::load(harness, app_id)?;
     let manifest_file = loaded.file;
     let mut document = loaded.document;
-    let owner = document
-        .get("owner")
-        .and_then(serde_yaml::Value::as_str)
-        .unwrap_or("probierz")
-        .to_string();
-    let journeys = document
-        .get_mut("journeys")
-        .and_then(serde_yaml::Value::as_mapping_mut)
-        .ok_or_else(|| Failure::config("stado.download", "manifest journeys are required"))?;
-    journeys
-        .entry(serde_yaml::Value::from(journey))
-        .or_insert_with(|| {
-            serde_yaml::to_value(json!({ "owner": owner, "timeoutMs": 300000 }))
-                .unwrap_or(serde_yaml::Value::Null)
-        });
+    crate::manifest::declare_journey(&mut document, journey, "stado.download")?;
     let declared = document
         .get_mut("surfaces")
         .and_then(serde_yaml::Value::as_mapping_mut)

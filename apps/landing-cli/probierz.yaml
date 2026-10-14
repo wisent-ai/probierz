@@ -24,7 +24,6 @@ surfaces:
 journeys:
   docs-publication:
     owner: landing-cli maintainers
-    timeoutMs: 1800000
     description: Publish and update real Spis documentation on an isolated Vercel project while preserving the already published landing and its approval; refuse occupied destinations, unrelated aliases, and duplicate pages without changing the deployed state.
     value: A documentation update must neither publish an unapproved landing nor claim success before the page is publicly served, and a subsequent update must preserve the original landing revision.
 artifacts:

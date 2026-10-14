@@ -25,3 +25,28 @@ pub use load::*;
 pub use records::*;
 pub use redaction::Redaction;
 pub use validate::*;
+
+/// Declare `journey` in `document` when it is not declared yet, owned by the
+/// manifest's own owner; `point` names the operation for a refusal. A
+/// journey states what it proves and who owns it; a cutoff is no part of
+/// it, because `probierz run` waits for a suite to its own end.
+pub(crate) fn declare_journey(
+    document: &mut Value,
+    journey: &str,
+    point: &'static str,
+) -> Result<(), Failure> {
+    let owner = match document.get("owner").and_then(Value::as_str) {
+        Some(owner) => owner.to_string(),
+        None => return Err(Failure::config(point, "the manifest names no owner")),
+    };
+    let journeys = document
+        .get_mut("journeys")
+        .and_then(Value::as_mapping_mut)
+        .ok_or_else(|| Failure::config(point, "manifest journeys are required"))?;
+    let mut declared = serde_yaml::Mapping::new();
+    declared.insert(Value::from("owner"), Value::from(owner));
+    journeys
+        .entry(Value::from(journey))
+        .or_insert(Value::Mapping(declared));
+    Ok(())
+}

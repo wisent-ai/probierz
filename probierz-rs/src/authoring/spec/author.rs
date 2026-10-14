@@ -31,19 +31,7 @@ pub fn install_accepted_spec(
     // Written back as the operator wrote it: `loaded.document` has `~/` read
     // under this operator's home, which must not land in the file.
     let mut document: YamlValue = serde_yaml::from_str(&fs::read_to_string(&loaded.file)?)?;
-    let owner = document
-        .get("owner")
-        .and_then(YamlValue::as_str)
-        .unwrap_or("probierz")
-        .to_string();
-    let journeys = document
-        .get_mut("journeys")
-        .and_then(YamlValue::as_mapping_mut)
-        .ok_or_else(|| Failure::config("author-spec.accept", "manifest journeys are required"))?;
-    journeys.entry(YamlValue::from(journey)).or_insert_with(|| {
-        serde_yaml::to_value(json!({ "owner": owner, "timeoutMs": 300000 }))
-            .unwrap_or(YamlValue::Null)
-    });
+    crate::manifest::declare_journey(&mut document, journey, "author-spec.accept")?;
     let surface = document
         .get_mut("surfaces")
         .and_then(YamlValue::as_mapping_mut)
