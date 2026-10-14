@@ -75,7 +75,7 @@ pub(crate) fn run(
         "runId": run["runId"],
         "file": file.to_string_lossy(),
         "summary": run["summary"],
-        "standing": assess::standing(&run),
+        "standing": assess::standing(&run)?,
     }))
 }
 
@@ -253,7 +253,7 @@ pub(crate) fn standing_of(harness: &Path, app_id: &str, suite_id: &str) -> Resul
                 ),
             )
         })?;
-    Ok(assess::standing(&newest))
+    assess::standing(&newest)
 }
 
 pub(crate) fn standing(harness: &Path, app_id: &str, suite_id: &str) -> Answer {

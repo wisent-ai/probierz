@@ -147,7 +147,7 @@ pub(crate) fn pursue(
         ));
     }
     let (run, run_file) = commands::recorded_run(harness, app_id, suite_id, &[], None)?;
-    let after = assess::standing(&run);
+    let after = assess::standing(&run)?;
     let (decided, accepted) = match case_entry(&after, case_id) {
         Some(entry) => (
             entry["verdict"].clone(),

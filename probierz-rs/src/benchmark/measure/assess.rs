@@ -135,17 +135,33 @@ pub(crate) fn summary(contenders: &[Contender], samples: &[Json]) -> Json {
 }
 
 /// Who won each case of one recorded run, and every case ours did not win.
-pub(crate) fn standing(run: &Json) -> Json {
-    let ours = run["ours"].as_str().unwrap_or_default().to_string();
-    let samples = run["samples"].as_array().cloned().unwrap_or_default();
+/// A run that names no contender of ours, carries no sample list, or holds a
+/// sample without its case or contender is refused: read as empty, every case
+/// was judged against a contender nobody ran.
+pub(crate) fn standing(run: &Json) -> Result<Json, crate::failure::Failure> {
+    let unreadable =
+        |detail: String| crate::failure::Failure::invalid("benchmark.standing", detail);
+    let run_id = &run["runId"];
+    let ours = run["ours"]
+        .as_str()
+        .ok_or_else(|| unreadable(format!("recorded run {run_id} names no contender of ours")))?
+        .to_string();
+    let samples = run["samples"]
+        .as_array()
+        .ok_or_else(|| unreadable(format!("recorded run {run_id} carries no sample list")))?;
     let mut cases: BTreeMap<String, BTreeMap<String, Vec<&Json>>> = BTreeMap::new();
-    for sample in &samples {
-        let case = sample["case"].as_str().unwrap_or_default().to_string();
-        let contender = sample["contender"].as_str().unwrap_or_default().to_string();
+    for (position, sample) in samples.iter().enumerate() {
+        let field = |name: &str| {
+            sample[name].as_str().map(str::to_string).ok_or_else(|| {
+                unreadable(format!(
+                    "recorded run {run_id} sample {position} names no {name}"
+                ))
+            })
+        };
         cases
-            .entry(case)
+            .entry(field("case")?)
             .or_default()
-            .entry(contender)
+            .entry(field("contender")?)
             .or_default()
             .push(sample);
     }
@@ -201,11 +217,11 @@ pub(crate) fn standing(run: &Json) -> Json {
         }
         verdicts.push(entry);
     }
-    json!({
+    Ok(json!({
         "runId": run["runId"],
         "suite": run["suite"],
         "ours": ours,
         "cases": verdicts,
         "losses": losses,
-    })
+    }))
 }
