@@ -15,12 +15,6 @@ pub(crate) fn safe_child(root: &Path, relative: &str, message: &str) -> Result<P
     Ok(root.join(relative))
 }
 
-pub(crate) fn read_json(path: &Path) -> Option<Value> {
-    fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-}
-
 pub(crate) fn missing_evidence(job_id: &str, detail: &str) -> Value {
     failure_summary(
         &Failure::config("stado.download", format!("job={job_id}; {detail}")),
@@ -28,16 +22,38 @@ pub(crate) fn missing_evidence(job_id: &str, detail: &str) -> Value {
     )
 }
 
-pub(crate) fn read_author_submission(harness: &Path, job_id: &str) -> Option<Value> {
+/// The source-bound submission this checkout recorded for `job_id`; `None`
+/// when it recorded none or the one there belongs to another job.
+pub(crate) fn author_submission(harness: &Path, job_id: &str) -> Result<Option<Value>, Failure> {
     let file = harness
         .join("test-results")
         .join(".remote")
         .join(job_id)
         .join("authoring-submission.json");
-    let value = read_json(&file)?;
-    (value.get("schemaVersion").and_then(Value::as_u64) == Some(1)
-        && value.get("jobId").and_then(Value::as_str) == Some(job_id))
-    .then_some(value)
+    let Some(value) = crate::json_file::read(&file)? else {
+        return Ok(None);
+    };
+    Ok(
+        (value.get("schemaVersion").and_then(Value::as_u64) == Some(1)
+            && value.get("jobId").and_then(Value::as_str) == Some(job_id))
+        .then_some(value),
+    )
+}
+
+/// Whether a submission is recorded, for the collectors that only ask that.
+/// One that cannot be read is said on stderr with its cause and counts as
+/// not recorded; restoring the authored spec reads it again through
+/// [`author_submission`] and refuses it there.
+pub(crate) fn read_author_submission(harness: &Path, job_id: &str) -> Option<Value> {
+    match author_submission(harness, job_id) {
+        Ok(found) => found,
+        Err(failure) => {
+            eprintln!(
+                "probierz: the authoring submission of job {job_id} cannot be read: {failure}"
+            );
+            None
+        }
+    }
 }
 
 pub(crate) fn save_author_submission(

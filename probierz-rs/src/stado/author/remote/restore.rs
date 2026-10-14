@@ -16,7 +16,7 @@ pub(crate) fn restore_remote_authoring(
         }
         return Ok(None);
     };
-    let submission = read_author_submission(harness, job_id).ok_or_else(|| Failure::config(
+    let submission = author_submission(harness, job_id)?.ok_or_else(|| Failure::config(
         "stado.download",
         format!("Job {job_id} returned an authored spec, but this checkout has no source-bound submission receipt."),
     ))?;

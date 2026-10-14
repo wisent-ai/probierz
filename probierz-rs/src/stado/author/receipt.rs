@@ -10,10 +10,10 @@ pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> A
         .and_then(|value| value.get("testDirectory"))
         .and_then(serde_yaml::Value::as_str)
         .unwrap_or("tests");
-    let result = read_json(&args.result).ok_or_else(|| {
+    let result = crate::json_file::read(&args.result)?.ok_or_else(|| {
         Failure::config(
             "stado.author-receipt",
-            "Remote authoring did not return a readable result.",
+            "Remote authoring did not return a result.",
         )
     })?;
     if result.get("ok").and_then(Value::as_bool) != Some(true)
@@ -66,7 +66,7 @@ pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> A
         .join("test-results")
         .join(run_id)
         .join("run-manifest.json");
-    let retained_manifest = read_json(&run_manifest).ok_or_else(|| {
+    let retained_manifest = crate::json_file::read(&run_manifest)?.ok_or_else(|| {
         Failure::config(
             "stado.author-receipt",
             "Remote authoring completed without its verification manifest.",
@@ -90,10 +90,10 @@ pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> A
                 "Remote authoring has no submitting source identity.",
             )
         })?;
-    let identity = read_json(&identity_file).ok_or_else(|| {
+    let identity = crate::json_file::read(&identity_file)?.ok_or_else(|| {
         Failure::config(
             "stado.author-receipt",
-            "Remote authoring has no readable submitting source identity.",
+            "Remote authoring has no submitting source identity file.",
         )
     })?;
     if identity.get("appId").and_then(Value::as_str) != Some(args.app.as_str()) {

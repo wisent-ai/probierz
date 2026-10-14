@@ -78,12 +78,6 @@ pub(crate) fn repair_failure(
     })
 }
 
-pub(crate) fn read_json_value(path: &Path) -> Option<JsonValue> {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok())
-}
-
 pub(crate) fn write_pretty_json(path: &Path, value: &JsonValue) -> Result<(), String> {
     let text = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     fs::write(path, format!("{text}\n")).map_err(|error| error.to_string())
@@ -233,25 +227,32 @@ pub(crate) fn recorded_spec_path(
     find_named_file(&directory, name)
 }
 
-pub(crate) fn repair_evidence(run: &JsonValue) -> JsonValue {
+/// The failures and summary a repair brief carries from the run's analysis,
+/// or its report. An analysis or report that is there but cannot be read is
+/// the failure naming it, never a brief without the run's failures.
+pub(crate) fn repair_evidence(run: &JsonValue) -> Result<JsonValue, Failure> {
     let directory = run
         .get("manifestPath")
         .and_then(JsonValue::as_str)
         .and_then(|file| Path::new(file).parent())
         .map(Path::to_path_buf);
-    let analysis = run
+    let named = match run
         .get("analysisPath")
         .and_then(JsonValue::as_str)
         .filter(|value| !value.is_empty())
-        .and_then(|file| read_json_value(Path::new(file)))
-        .or_else(|| {
-            directory
-                .as_ref()
-                .and_then(|directory| read_json_value(&directory.join("analysis.json")))
-        });
-    let report = directory
-        .as_ref()
-        .and_then(|directory| read_json_value(&directory.join("report.json")));
+    {
+        Some(file) => crate::json_file::read(Path::new(file))?,
+        None => None,
+    };
+    let analysis = match (named, directory.as_ref()) {
+        (Some(analysis), _) => Some(analysis),
+        (None, Some(directory)) => crate::json_file::read(&directory.join("analysis.json"))?,
+        (None, None) => None,
+    };
+    let report = match directory.as_ref() {
+        Some(directory) => crate::json_file::read(&directory.join("report.json"))?,
+        None => None,
+    };
     let failures = analysis
         .as_ref()
         .and_then(|value| value.get("failures"))
@@ -289,5 +290,7 @@ pub(crate) fn repair_evidence(run: &JsonValue) -> JsonValue {
         })
         .take(8)
         .collect::<Vec<_>>();
-    json!({ "failures": failures, "analysis": analysis.as_ref().and_then(|value| value.get("summary")).cloned().unwrap_or(JsonValue::Null) })
+    Ok(
+        json!({ "failures": failures, "analysis": analysis.as_ref().and_then(|value| value.get("summary")) }),
+    )
 }

@@ -187,15 +187,19 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
     let author_entry = entries
         .iter()
         .find(|entry| entry.ends_with("/accepted.json"));
-    let author_receipt_file = author_entry.and_then(|entry| {
-        safe_child(
-            harness,
-            entry.strip_prefix("./").unwrap_or(entry),
-            "unsafe author receipt",
-        )
-        .ok()
-    });
-    let author_receipt = author_receipt_file.as_deref().and_then(read_json);
+    let author_receipt_file = author_entry
+        .map(|entry| {
+            safe_child(
+                harness,
+                entry.strip_prefix("./").unwrap_or(entry),
+                "unsafe author receipt",
+            )
+        })
+        .transpose()?;
+    let author_receipt = match author_receipt_file.as_deref() {
+        Some(file) => crate::json_file::read(file)?,
+        None => None,
+    };
     let selected_run = author_receipt
         .as_ref()
         .and_then(|receipt| receipt.get("runId"))
@@ -205,19 +209,18 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         .iter()
         .filter(|entry| entry.ends_with("/run-manifest.json"))
     {
-        if let Ok(file) = safe_child(
+        let file = safe_child(
             harness,
             entry.strip_prefix("./").unwrap_or(entry),
             "unsafe run manifest",
-        ) {
-            if let Some(candidate) = read_json(&file) {
-                if selected_run
-                    .map(|run_id| candidate.get("runId").and_then(Value::as_str) == Some(run_id))
-                    .unwrap_or(true)
-                {
-                    run_manifest = Some(candidate);
-                    break;
-                }
+        )?;
+        if let Some(candidate) = crate::json_file::read(&file)? {
+            if selected_run
+                .map(|run_id| candidate.get("runId").and_then(Value::as_str) == Some(run_id))
+                .unwrap_or(true)
+            {
+                run_manifest = Some(candidate);
+                break;
             }
         }
     }

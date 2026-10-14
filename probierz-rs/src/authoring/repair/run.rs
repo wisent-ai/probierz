@@ -40,7 +40,7 @@ pub fn repair_failed_run(
         .join("repairs")
         .join(&run_id);
     let result_path = repair_dir.join("result.json");
-    if let Some(previous) = read_json_value(&result_path) {
+    if let Some(previous) = crate::json_file::read(&result_path)? {
         if (previous.get("ok").and_then(JsonValue::as_bool) == Some(true)
             && previous.get("dryRun").and_then(JsonValue::as_bool) != Some(true))
             || previous.get("verdict").and_then(JsonValue::as_str) == Some("not_auto_fixable")
@@ -66,7 +66,7 @@ pub fn repair_failed_run(
             ));
         }
         fs::create_dir_all(&repair_dir).map_err(|error| error.to_string())?;
-        let evidence = repair_evidence(&run);
+        let evidence = repair_evidence(&run).map_err(|error| error.to_string())?;
         let mut prior = None;
         for round in 1..=rounds {
             let brief = repair_brief(

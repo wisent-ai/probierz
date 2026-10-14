@@ -194,7 +194,9 @@ pub(crate) fn run_history_value(
     }
     let mut runs = manifests_below(&root)?
         .iter()
-        .filter_map(|path| crate::evidence::run_record(path))
+        .filter_map(|path| crate::evidence::run_record(path).transpose())
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
         .filter(|run| {
             target.is_none_or(|target| run.get("target").and_then(Value::as_str) == Some(target))
         })

@@ -102,7 +102,7 @@ pub(crate) fn journey_identities(run: &Value, document: &Value) -> Vec<Value> {
         .collect()
 }
 
-pub(crate) fn signed_media(run: &Value) -> Vec<Value> {
+pub(crate) fn signed_media(run: &Value) -> Result<Vec<Value>, Failure> {
     let root = PathBuf::from(
         run.get("manifestPath")
             .and_then(Value::as_str)
@@ -121,10 +121,10 @@ pub(crate) fn signed_media(run: &Value) -> Vec<Value> {
                 .map(|file| (file.replace('\\', "/"), artifact.clone()))
         })
         .collect();
-    let analysis = run
-        .get("analysisPath")
-        .and_then(Value::as_str)
-        .and_then(|path| try_json_file(Path::new(path)));
+    let analysis = match run.get("analysisPath").and_then(Value::as_str) {
+        Some(path) => crate::json_file::read(Path::new(path))?,
+        None => None,
+    };
     let mut typed = BTreeMap::<String, String>::new();
     for media in analysis
         .as_ref()
@@ -163,7 +163,7 @@ pub(crate) fn signed_media(run: &Value) -> Vec<Value> {
             typed.insert(file.to_string(), "trace".to_string());
         }
     }
-    typed.into_iter().filter_map(|(file, kind)| {
+    Ok(typed.into_iter().filter_map(|(file, kind)| {
         let inventory = artifacts.get(&file)?;
         Some(json!({
             "file": file, "artifactKind": kind,
@@ -171,10 +171,10 @@ pub(crate) fn signed_media(run: &Value) -> Vec<Value> {
             "bytes": inventory.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
             "capturedAt": run.get("completedAt").or_else(|| run.get("startedAt")).cloned().unwrap_or(Value::Null),
         }))
-    }).collect()
+    }).collect())
 }
 
-pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Value {
+pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Result<Value, Failure> {
     let status = run
         .get("status")
         .and_then(Value::as_str)
@@ -210,7 +210,7 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Value {
         "sha256": artifact.get("sha256").cloned().unwrap_or(Value::Null),
         "bytes": artifact.get("bytes").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
     })).collect::<Vec<_>>();
-    json!({
+    Ok(json!({
         "runId": run.get("runId").cloned().unwrap_or(Value::Null),
         "target": run.get("target").cloned().unwrap_or(Value::Null),
         "spec": run.get("spec").cloned().unwrap_or(Value::Null),
@@ -229,9 +229,9 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Value {
         "conditions": policy_conditions(run, document),
         "protection": signed_protection(run.get("protection")),
         "artifacts": artifacts,
-        "media": signed_media(run),
-    })
+        "media": signed_media(run)?,
+    }))
 }
-pub(crate) fn signed_receipt_run_value(run: &Value, document: &Value) -> Value {
+pub(crate) fn signed_receipt_run_value(run: &Value, document: &Value) -> Result<Value, Failure> {
     signed_receipt_run(run, document)
 }

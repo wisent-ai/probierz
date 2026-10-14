@@ -70,12 +70,6 @@ pub(crate) fn json_file(path: &Path) -> Result<Value, Failure> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
-pub(crate) fn try_json_file(path: &Path) -> Option<Value> {
-    fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-}
-
 pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     if !root.exists() {
         return Ok(Vec::new());
@@ -116,8 +110,12 @@ pub(crate) fn normalized_status(manifest: &Value) -> String {
 /// The tests a run recorded, from its analysis or else its report: one per
 /// title, in first-seen order, carrying the last record of each. A status or
 /// duration the record did not state is null, never a failure or a zero, and
-/// a record without a title is not a test.
-pub(crate) fn tests_from(run_directory: &Path, manifest_value: &Value) -> Vec<Value> {
+/// a record without a title is not a test. An analysis or report that is
+/// there but cannot be read is the failure naming it.
+pub(crate) fn tests_from(
+    run_directory: &Path,
+    manifest_value: &Value,
+) -> Result<Vec<Value>, Failure> {
     let analysis_path = manifest_value
         .get("analysisPath")
         .and_then(Value::as_str)
@@ -128,8 +126,8 @@ pub(crate) fn tests_from(run_directory: &Path, manifest_value: &Value) -> Vec<Va
         .and_then(Value::as_str)
         .map(PathBuf::from)
         .unwrap_or_else(|| run_directory.join("report.json"));
-    let analysis = try_json_file(&analysis_path);
-    let report = try_json_file(&report_path);
+    let analysis = crate::json_file::read(&analysis_path)?;
+    let report = crate::json_file::read(&report_path)?;
     let source = analysis
         .as_ref()
         .and_then(|value| value.get("tests"))
@@ -172,10 +170,10 @@ pub(crate) fn tests_from(run_directory: &Path, manifest_value: &Value) -> Vec<Va
             json!({ "title": title, "status": status, "durationMs": duration }),
         );
     }
-    order
+    Ok(order
         .into_iter()
         .filter_map(|title| by_title.remove(&title))
-        .collect()
+        .collect())
 }
 
 pub(crate) fn js_number(value: f64) -> Value {

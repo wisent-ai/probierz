@@ -70,7 +70,7 @@ pub fn receipt(
     let normalized = source_runs
         .iter()
         .map(|run| signed_receipt_run(run, &document))
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     let current = app_source_identity(harness, app_id)?;
     let mut errors = Vec::<String>::new();
     if current.pointer("/harness/sha256").and_then(Value::as_str) != Some(expected_harness) {

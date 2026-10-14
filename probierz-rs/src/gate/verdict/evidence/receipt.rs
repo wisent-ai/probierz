@@ -81,7 +81,17 @@ pub(crate) fn release_receipt(
         let signed = signed_runs.iter().find(|candidate| {
             string_property(candidate, "runId").as_deref() == Some(run.run_id.as_str())
         });
-        let local = crate::evidence::signed_receipt_run_value(&receipt_run_value(run), &document);
+        let local =
+            match crate::evidence::signed_receipt_run_value(&receipt_run_value(run), &document) {
+                Ok(local) => local,
+                Err(error) => {
+                    errors.push(format!(
+                        "{}: local policy evidence cannot be read: {error}",
+                        run.run_id
+                    ));
+                    continue;
+                }
+            };
         if signed.map(canonical) != Some(canonical(&local)) {
             errors.push(format!(
                 "{}: local policy evidence differs from the signed receipt",

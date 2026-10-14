@@ -16,6 +16,7 @@ mod adoption;
 mod apphooks;
 mod discovery;
 mod failure;
+mod json_file;
 mod manifest;
 // PortAuthoring: authoring, evaluation, and identity
 mod authoring;

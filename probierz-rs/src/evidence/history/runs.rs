@@ -1,8 +1,15 @@
 use crate::evidence::*;
 use serde_json::json;
-pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
-    let source = try_json_file(manifest_path)?;
-    let directory = manifest_path.parent()?;
+/// The record the run manifest at `manifest_path` becomes; `None` when the
+/// manifest is gone. A manifest, analysis or report that is there but cannot
+/// be read is the failure naming it, never a run left out of the history.
+pub(crate) fn run_record(manifest_path: &Path) -> Result<Option<Value>, Failure> {
+    let Some(source) = crate::json_file::read(manifest_path)? else {
+        return Ok(None);
+    };
+    let Some(directory) = manifest_path.parent() else {
+        return Ok(None);
+    };
     let status = normalized_status(&source);
     let mut record = Map::new();
     record.insert(
@@ -99,13 +106,16 @@ pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
         "analysisPath".into(),
         source.get("analysisPath").cloned().unwrap_or(Value::Null),
     );
-    record.insert("tests".into(), Value::Array(tests_from(directory, &source)));
-    Some(Value::Object(record))
+    record.insert(
+        "tests".into(),
+        Value::Array(tests_from(directory, &source)?),
+    );
+    Ok(Some(Value::Object(record)))
 }
 
 pub(crate) fn get_run(harness: &Path, app_id: &str, run_id: &str) -> Result<Value, Failure> {
     for file in manifests_below(&harness.join("test-results").join(app_id))? {
-        if let Some(run) = run_record(&file) {
+        if let Some(run) = run_record(&file)? {
             if run.get("runId").and_then(Value::as_str) == Some(run_id) {
                 return Ok(run);
             }
