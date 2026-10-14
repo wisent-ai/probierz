@@ -21,7 +21,7 @@ pub(crate) fn files_below(
         let mut entries: Vec<_> = fs::read_dir(directory)?.collect::<Result<_, _>>()?;
         entries.sort_by_key(|entry| entry.file_name());
         for entry in entries {
-            let name = os_text(&entry.file_name()).to_string();
+            let name = os_text(&entry.file_name())?.to_string();
             let relative = format!("{current}/{name}");
             let source = absolute(root, &relative)?;
             let metadata = fs::symlink_metadata(&source)?;

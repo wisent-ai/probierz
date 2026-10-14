@@ -28,7 +28,7 @@ pub(crate) fn source_definitions(source_root: &Path) -> Result<Definitions, Fail
     let mut manifests = Vec::new();
     for entry in entries {
         let name = entry.file_name();
-        if os_text(&name).starts_with('.') {
+        if os_text(&name)?.starts_with('.') {
             continue;
         }
         let app_root = entry.path();
@@ -63,7 +63,7 @@ pub(crate) fn source_definitions(source_root: &Path) -> Result<Definitions, Fail
             .get("appId")
             .and_then(serde_yaml::Value::as_str)
             .unwrap_or_default();
-        let expected = os_text(&name);
+        let expected = os_text(&name)?;
         if declared != expected {
             return Err(fail(
                 "adoption.source",

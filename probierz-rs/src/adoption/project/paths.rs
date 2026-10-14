@@ -97,6 +97,13 @@ pub(crate) fn path_text(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
-pub(crate) fn os_text(value: &OsStr) -> &str {
-    value.to_str().unwrap_or_default()
+/// A project definition's file name as text. One that is not valid Unicode
+/// is refused naming it: read as '', its path became its directory's own.
+pub(crate) fn os_text(value: &OsStr) -> Result<&str, Failure> {
+    value.to_str().ok_or_else(|| {
+        fail(
+            "adoption.source",
+            format!("a project definition name is not valid Unicode: {value:?}"),
+        )
+    })
 }
