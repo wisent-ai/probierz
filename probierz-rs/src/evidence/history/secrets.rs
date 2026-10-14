@@ -190,15 +190,11 @@ pub(crate) fn assert_no_secrets(root: &Path) -> Result<Value, Failure> {
     }
     write_json(&report, &result)?;
     if result.get("passed").and_then(Value::as_bool) != Some(true) {
-        let count = result
-            .get("findings")
-            .and_then(Value::as_array)
-            .map(Vec::len)
-            .unwrap_or(0);
-        return Err(Failure::invalid(
-            "evidence.secret_scan",
-            format!("secret scan failed with {count} finding(s)"),
-        ));
+        let detail = match result.get("findings").and_then(Value::as_array) {
+            Some(findings) => format!("secret scan failed with {} finding(s)", findings.len()),
+            None => "secret scan failed and states no findings list".to_string(),
+        };
+        return Err(Failure::invalid("evidence.secret_scan", detail));
     }
     Ok(result)
 }
