@@ -135,10 +135,17 @@ pub(crate) fn gac_visual_eval(
     let mcp = config.pointer("/blender/mcp").unwrap_or(&empty_mcp);
     let mut results = Vec::new();
     for model_path in glbs {
+        // Named from the model's own file stem: 'model' stood in for one that
+        // is not Unicode, so two such models wrote over each other's renders.
         let stem = model_path
             .file_stem()
-            .and_then(|value| value.to_str())
-            .unwrap_or("model");
+            .map(|value| value.to_string_lossy().into_owned())
+            .ok_or_else(|| {
+                Failure::config(
+                    "apphook.gac.visual-eval",
+                    format!("{} has no file stem", model_path.display()),
+                )
+            })?;
         let renders: Vec<PathBuf> = angles
             .iter()
             .map(|(name, _)| output.join(format!("{stem}-{name}.png")))
@@ -163,7 +170,7 @@ pub(crate) fn gac_visual_eval(
             .and_then(Value::as_f64)
             .is_some_and(|value| value >= threshold);
         results.push(json!({
-            "asset": model_path.file_name().and_then(|value| value.to_str()).unwrap_or(""),
+            "asset": model_path.file_name().map(|value| value.to_string_lossy()),
             "renders": renders,
             "scores": scores,
             "pass": passed
