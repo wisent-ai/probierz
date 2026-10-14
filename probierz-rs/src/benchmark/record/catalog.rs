@@ -201,8 +201,18 @@ pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result
     let manifest = manifest::load(harness, app_id)?;
     let product = product_id(&manifest);
     let standing = standing_of(harness, app_id, suite_id)?;
-    let run_id = standing["runId"].as_str().unwrap_or_default().to_string();
-    let ours = standing["ours"].as_str().unwrap_or_default().to_string();
+    // A roadmap item names the run, our contender and the case it came from;
+    // one read as '' would be written into the product's catalog.
+    let stated = |value: &Json, field: &str| {
+        value[field].as_str().map(str::to_string).ok_or_else(|| {
+            Failure::config(
+                "benchmark.roadmap",
+                format!("the {suite_id} standing of {app_id} states no {field}"),
+            )
+        })
+    };
+    let run_id = stated(&standing, "runId")?;
+    let ours = stated(&standing, "ours")?;
     let prefix = title(suite_id, "");
     let existing: Vec<String> = record(&product)?["roadmap"]
         .as_array()
@@ -215,7 +225,8 @@ pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result
     let mut added = Vec::new();
     let mut wanted = Vec::new();
     for loss in standing["losses"].as_array().into_iter().flatten() {
-        let case = loss["case"].as_str().unwrap_or_default();
+        let case = stated(loss, "case")?;
+        let case = case.as_str();
         let winners: Vec<&str> = loss["winners"]
             .as_array()
             .into_iter()
