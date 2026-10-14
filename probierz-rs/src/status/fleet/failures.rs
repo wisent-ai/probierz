@@ -162,44 +162,52 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
     })
 }
 
+/// A field of the failures report as printed: its text or count, or the
+/// field named as missing, never a zero or an empty word in its place.
+fn said(value: Option<&Value>, name: &str) -> String {
+    match value {
+        Some(Value::String(text)) => text.clone(),
+        Some(Value::Number(number)) => number.to_string(),
+        _ => format!("(no {name})"),
+    }
+}
+
 pub(crate) fn render_failures(report: &Value) -> String {
     let mut lines = vec![
         format!(
             "failures: {} stored ({} unparsed lines) in {}",
-            report.get("total").and_then(Value::as_u64).unwrap_or(0),
-            report.get("unparsed").and_then(Value::as_u64).unwrap_or(0),
-            report
-                .get("directory")
-                .and_then(Value::as_str)
-                .unwrap_or(""),
+            said(report.get("total"), "total"),
+            said(report.get("unparsed"), "unparsed count"),
+            said(report.get("directory"), "directory"),
         ),
         "by service and error_code:".to_string(),
     ];
-    let counts = report
-        .get("counts")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    if counts.is_empty() {
-        lines.push("  (none)".to_string());
-    }
-    for row in counts {
-        lines.push(format!(
-            "  {}  {}  {}",
-            row.get("service").and_then(Value::as_str).unwrap_or(""),
-            row.get("error_code").and_then(Value::as_str).unwrap_or(""),
-            row.get("count").and_then(Value::as_u64).unwrap_or(0),
-        ));
+    match report.get("counts").and_then(Value::as_array) {
+        None => lines.push("  (no counts)".to_string()),
+        Some(counts) if counts.is_empty() => lines.push("  (none)".to_string()),
+        Some(counts) => {
+            for row in counts {
+                lines.push(format!(
+                    "  {}  {}  {}",
+                    said(row.get("service"), "service"),
+                    said(row.get("error_code"), "error_code"),
+                    said(row.get("count"), "count"),
+                ));
+            }
+        }
     }
     lines.push("newest:".to_string());
-    let newest = report
-        .get("newest")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    if newest.is_empty() {
-        lines.push("  (none)".to_string());
-    }
+    let newest = match report.get("newest").and_then(Value::as_array) {
+        None => {
+            lines.push("  (no newest list)".to_string());
+            Vec::new()
+        }
+        Some(newest) if newest.is_empty() => {
+            lines.push("  (none)".to_string());
+            Vec::new()
+        }
+        Some(newest) => newest.clone(),
+    };
     for envelope in newest {
         // An envelope without a detail adds nothing after its fields.
         let detail = match string(envelope.get("detail")) {
