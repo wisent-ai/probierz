@@ -157,7 +157,8 @@ pub fn surface_journeys(surface: &Value, environment: &BTreeMap<String, String>)
                         Value::Bool(flag) => flag.to_string(),
                         _ => return false,
                     };
-                    environment.get(name).map(String::as_str).unwrap_or("") == wanted
+                    // An unset variable matches no value, not the empty one.
+                    environment.get(name).map(String::as_str) == Some(wanted.as_str())
                 })
             })
             .unwrap_or(false);
