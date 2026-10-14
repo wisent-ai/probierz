@@ -197,19 +197,13 @@ pub(crate) fn render_overview(report: &Value) -> String {
     if fleet.get("available").and_then(Value::as_bool) == Some(false) {
         lines.push(format!(
             "  fleet: unknown — {}",
-            fleet.get("message").and_then(Value::as_str).unwrap_or("")
+            said(fleet.get("message"), "message")
         ));
         lines.push(format!(
             "         ({} / {} / retryable: {})",
-            fleet
-                .get("failurePoint")
-                .and_then(Value::as_str)
-                .unwrap_or(""),
-            fleet.get("errorCode").and_then(Value::as_str).unwrap_or(""),
-            fleet
-                .get("retryable")
-                .and_then(Value::as_bool)
-                .unwrap_or(false),
+            said(fleet.get("failurePoint"), "failure point"),
+            said(fleet.get("errorCode"), "error code"),
+            said(fleet.get("retryable"), "retryable flag"),
         ));
     } else {
         let live = fleet
