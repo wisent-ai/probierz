@@ -40,7 +40,11 @@ pub(in crate::benchmark::autonomy) fn watch(
     let kinds = query_kinds(harness);
     let mut added = Vec::new();
     for product in products {
-        let id = product["id"].as_str().unwrap_or_default();
+        let Some(id) = product["id"].as_str() else {
+            added
+                .push(json!({"product": Json::Null, "refusal": "catalog product has no id field"}));
+            continue;
+        };
         if !identity(id) || present.iter().any(|name| name == id) {
             continue;
         }
