@@ -92,10 +92,16 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         let Some(key) = artifact_key.as_deref() else {
             return (Value::Null, Value::Null);
         };
+        let Some(run_id) = run.get("runId").and_then(Value::as_str) else {
+            return (
+                Value::Null,
+                Value::String("the run states no runId; its artifacts cannot be protected".into()),
+            );
+        };
         let result = crate::evidence::protect_run(
             harness,
             app_id,
-            run.get("runId").and_then(Value::as_str).unwrap_or_default(),
+            run_id,
             Some(profile),
             Some(Path::new(key)),
             plan.get("removePlaintextAfterProtection")
@@ -128,7 +134,12 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         }
         let run = run_surface(
             harness,
-            cell.get("target").and_then(Value::as_str).unwrap_or(""),
+            cell.get("target").and_then(Value::as_str).ok_or_else(|| {
+                fail(
+                    "run.matrix",
+                    format!("a matrix cell states no target: {cell}"),
+                )
+            })?,
             RunOptions {
                 env: cell_env,
                 record: plan.get("record").and_then(Value::as_bool).unwrap_or(true),
