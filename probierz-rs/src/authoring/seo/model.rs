@@ -15,18 +15,21 @@ pub(crate) fn invoke_seo_model(
     let compact = adjudication.cloned().unwrap_or_else(|| json!({
         "approvedBrief": brief, "routes": policy["routes"], "pageEvidence": evidence, "deterministic": deterministic
     })).to_string();
-    let maximum = policy
+    // The evidence bound is the policy's stated `maxEvidenceCharacters`;
+    // a policy that states none sends the evidence whole.
+    if let Some(maximum) = policy
         .pointer("/model/maxEvidenceCharacters")
         .and_then(JsonValue::as_u64)
-        .unwrap_or(500_000) as usize;
-    if compact.len() > maximum {
-        return Err(Failure::config(
-            "seo-evaluate.model",
-            format!(
-                "SEO model evidence is {} characters, over the {maximum} character policy limit",
-                compact.len()
-            ),
-        ));
+    {
+        if compact.len() as u64 > maximum {
+            return Err(Failure::config(
+                "seo-evaluate.model",
+                format!(
+                    "SEO model evidence is {} characters, over the {maximum} character policy limit",
+                    compact.len()
+                ),
+            ));
+        }
     }
     let instructions: Vec<&str> = policy["modelInstructions"]
         .as_array()
@@ -36,7 +39,6 @@ pub(crate) fn invoke_seo_model(
         .collect();
     let mut request = json!({
         "model": model,
-        "temperature": 0,
         "messages": [
             { "role": "system", "content": format!("{}\n{}\nCall record_seo_content_evaluation exactly once and return no prose outside the tool call.",
                 if adjudication.is_some() { "You are the adjudicator for two independent Probierz SEO content evaluations." } else { "You are an independent Probierz SEO content evaluator." },

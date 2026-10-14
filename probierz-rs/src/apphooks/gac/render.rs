@@ -177,7 +177,6 @@ pub(crate) fn score_with_brama(
         ],
         Some(json!({
             "model": model.unwrap_or("any"),
-            "max_tokens": 1024,
             "messages": [{ "role": "user", "content": content }]
         })),
     )

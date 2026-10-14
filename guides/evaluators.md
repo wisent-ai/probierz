@@ -70,7 +70,9 @@ probierz evaluate seo \
   --mode release
 ```
 
-The two graders run independently at temperature zero. Probierz takes the
+The two graders run independently with the routed model's own sampling, and
+the evidence they are sent is bounded only by the policy's stated
+`model.maxEvidenceCharacters` (a policy that states none sends it whole). Probierz takes the
 stricter score when they agree closely and invokes the pinned adjudicator only
 when a dimension differs by more than the policy threshold or their blocker
 sets differ. Models may score search intent, factuality, information gain, and

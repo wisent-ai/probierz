@@ -13,10 +13,6 @@ use super::*;
 /// The tool call the model must make, once.
 const TOOL: &str = "record_figure_evaluation";
 
-/// No sampling: the same figures must score the same way twice. The
-/// answer's length is the routed model's own limit, not a budget chosen here.
-const TEMPERATURE: u64 = 0;
-
 /// The router is asked exactly once. A retry would let a second
 /// sampling of the same figures produce a different verdict, so the
 /// report records the one attempt it made.
@@ -120,7 +116,7 @@ fn request_body(
         }
     });
     Ok(json!({
-        "model": router.model, "temperature": TEMPERATURE,
+        "model": router.model,
         "messages": [
             { "role": "system", "content": format!(
                 "You are the release evaluator for scientific figures.\n{}\nCall {TOOL} exactly once. If the tool is unavailable, return only its arguments object as raw JSON.",
