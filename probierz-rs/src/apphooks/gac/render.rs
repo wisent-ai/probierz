@@ -177,7 +177,23 @@ pub(crate) fn score_with_brama(
         ],
         Some(json!({
             "model": model.unwrap_or("any"),
-            "messages": [{ "role": "user", "content": content }]
+            "messages": [
+                { "role": "system", "content": format!("Score the render set against the rubric the user gives, then call {SCORE_TOOL} exactly once with every score and issue.") },
+                { "role": "user", "content": content }
+            ],
+            "tools": [{ "type": "function", "function": {
+                "name": SCORE_TOOL,
+                "description": "The rubric's scores for this render set: overall, each dimension the rubric names, and the issues seen.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "overall": { "type": "number" },
+                        "issues": { "type": "array", "items": { "type": "string" } }
+                    },
+                    "required": ["overall", "issues"],
+                    "additionalProperties": { "type": "number" }
+                }
+            }}]
         })),
     )
     .map_err(|failure| {
@@ -191,32 +207,13 @@ pub(crate) fn score_with_brama(
             failure
         }
     })?;
-    let text = body
-        .pointer("/choices/0/message/content")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    let Some(start) = text.find('{') else {
-        return Err(Failure::new(
-            "apphook.gac.brama",
-            Code::Refused,
-            format!(
-                "brama reply had no JSON: {}",
-                text.chars().take(200).collect::<String>()
-            ),
-        ));
-    };
-    let Some(end) = text.rfind('}') else {
-        return Err(Failure::new(
-            "apphook.gac.brama",
-            Code::Refused,
-            format!(
-                "brama reply had no JSON: {}",
-                text.chars().take(200).collect::<String>()
-            ),
-        ));
-    };
-    serde_json::from_str(&text[start..=end]).map_err(Failure::from)
+    crate::authoring::tool_call_arguments(&body, SCORE_TOOL)
+        .map_err(|detail| Failure::new("apphook.gac.brama", Code::Refused, detail))
 }
+
+/// The one tool Brama is asked to call with a render set's scores.
+const SCORE_TOOL: &str = "record_visual_score";
+
 pub(crate) fn gac_root(
     harness: &Path,
     environment: &BTreeMap<String, String>,
