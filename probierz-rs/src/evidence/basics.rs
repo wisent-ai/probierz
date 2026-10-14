@@ -12,11 +12,20 @@ pub(crate) fn sha256_bytes(value: &[u8]) -> String {
 }
 
 /// The SHA-256 of one file's bytes, streamed; every file hash in Probierz
-/// (artifacts, bundles, adopted sources, builds) is read through this.
+/// (artifacts, bundles, adopted sources, builds) is read through this. A file
+/// that cannot be opened or read is refused naming it.
 pub(crate) fn sha256_file(file: &Path) -> Result<String, Failure> {
-    let mut input = File::open(file)?;
+    let named = |action: &str, error: std::io::Error| {
+        let failure = Failure::from(error);
+        Failure::new(
+            "evidence.hash",
+            failure.code,
+            format!("{action} {}: {}", file.display(), failure.detail),
+        )
+    };
+    let mut input = File::open(file).map_err(|error| named("open", error))?;
     let mut digest = Sha256::new();
-    std::io::copy(&mut input, &mut digest)?;
+    std::io::copy(&mut input, &mut digest).map_err(|error| named("hash", error))?;
     Ok(hex::encode(digest.finalize()))
 }
 
