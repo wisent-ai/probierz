@@ -84,7 +84,15 @@ pub(crate) fn protect_run(
     let document = yaml_json(&app.document)?;
     let retention_kind = kind
         .or_else(|| run.get("kind").and_then(Value::as_str))
-        .unwrap_or("adhoc");
+        .ok_or_else(|| {
+            Failure::invalid(
+                "evidence.protect",
+                format!(
+                    "{} states no kind and none was given; its retention cannot be read",
+                    manifest_path.display()
+                ),
+            )
+        })?;
     let days = retention_days(&document, retention_kind)?;
     let key = key_from_file(key_file)?;
     let current = json_file(&manifest_path)?;

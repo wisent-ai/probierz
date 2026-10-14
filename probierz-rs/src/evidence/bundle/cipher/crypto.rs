@@ -58,21 +58,29 @@ pub(crate) fn key_from_file(path: Option<&Path>) -> Result<[u8; 32], Failure> {
     })
 }
 
-/// The retention the manifest's `artifacts.retain` states for `kind` (or its
-/// pull-request retention), or none: evidence nobody declared a lifetime for
-/// is kept, never expired by a number chosen here.
+/// The manifest field that states the retention of runs of `kind`: the kind
+/// in camel case followed by `Days` (`pull-request` → `pullRequestDays`,
+/// `adhoc` → `adhocDays`, `repair` → `repairDays`).
+fn retention_field(kind: &str) -> String {
+    let mut segments = kind.split('-');
+    let mut name: String = segments.next().into_iter().collect();
+    for segment in segments {
+        let mut characters = segment.chars();
+        name.extend(characters.next().map(|first| first.to_ascii_uppercase()));
+        name.push_str(characters.as_str());
+    }
+    name.push_str("Days");
+    name
+}
+
+/// The retention the manifest's `artifacts.retain` states for `kind`, or
+/// none: evidence nobody declared a lifetime for is kept, never expired by a
+/// number chosen here or borrowed from another kind's lifetime.
 pub(crate) fn retention_days(document: &Value, kind: &str) -> Result<Option<f64>, Failure> {
-    let name = match kind {
-        "pull-request" => "pullRequestDays",
-        "nightly" => "nightlyDays",
-        "release" => "releaseDays",
-        "synthetic" => "syntheticDays",
-        _ => "adhocDays",
-    };
-    let retain = document.pointer("/artifacts/retain");
-    let Some(value) = retain
-        .and_then(|item| item.get(name))
-        .or_else(|| retain.and_then(|item| item.get("pullRequestDays")))
+    let name = retention_field(kind);
+    let Some(value) = document
+        .pointer("/artifacts/retain")
+        .and_then(|item| item.get(&name))
         .and_then(|item| item.as_f64().or_else(|| item.as_i64().map(|n| n as f64)))
     else {
         return Ok(None);

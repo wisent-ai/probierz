@@ -124,7 +124,11 @@ central `productId`.
 
 The same manifest makes retention and redaction explicit with positive
 `artifacts.retain.pullRequestDays`, `nightlyDays`, and `adhocDays`, plus a
-non-empty `artifacts.redact` key list.
+non-empty `artifacts.redact` key list. A run is retained under the field its
+own kind names, in camel case with `Days` appended (`pull-request` →
+`pullRequestDays`, `repair` → `repairDays`); a kind whose field the manifest
+does not state is kept, never expired under another kind's lifetime.
+`probierz retention` refuses a run manifest that states no kind or no start.
 
 After a release receipt is signed, provide an asset-registration JSON array:
 
