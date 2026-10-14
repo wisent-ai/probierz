@@ -123,17 +123,26 @@ pub(crate) fn pursue(
         )?;
     }
     let pursuit = jeden(&request_file)?;
-    let state = pursuit["state"].as_str().unwrap_or("unknown").to_string();
-    if state != "succeeded" {
+    // Jeden's response states how the pursuit ended; a response that names
+    // no state is said as that, never read as a state of its own.
+    let ended = match pursuit["state"].as_str() {
+        Some("succeeded") => None,
+        Some(state) => Some(format!("ended {state}")),
+        None => Some("answered without a state".to_string()),
+    };
+    if let Some(ended) = ended {
         print_json(
             &json!({"appId": app_id, "case": case_id, "request": request_file, "pursuit": pursuit}),
         )?;
+        let error = match pursuit["error"].as_str() {
+            Some(error) => error.to_string(),
+            None => "Jeden's response names no error".to_string(),
+        };
         return Err(Failure::new(
             POINT,
             Code::Refused,
             format!(
-                "Jeden's pursuit {request_id} ended {state}: {}; case {case_id} stays lost, and `jeden pursue --resume-run {request_id} --json` resumes a blocked one",
-                pursuit["error"].as_str().unwrap_or("no error was reported")
+                "Jeden's pursuit {request_id} {ended}: {error}; case {case_id} stays lost, and `jeden pursue --resume-run {request_id} --json` resumes a blocked one",
             ),
         ));
     }
