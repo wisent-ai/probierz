@@ -138,7 +138,12 @@ pub(crate) fn restore_bundle(
                 format!("unsafe evidence member: {member}"),
             ));
         }
-        let count = entry.get("bytes").and_then(Value::as_u64).unwrap_or(0);
+        let count = entry.get("bytes").and_then(Value::as_u64).ok_or_else(|| {
+            Failure::invalid(
+                "evidence.restore",
+                format!("evidence member {member} states no byte count"),
+            )
+        })?;
         cursor = cursor.checked_add(count).ok_or_else(|| {
             Failure::invalid(
                 "evidence.restore",
