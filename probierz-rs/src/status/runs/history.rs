@@ -51,10 +51,12 @@ pub(crate) fn test_history(runs: &[Value]) -> Vec<Value> {
                 .windows(2)
                 .filter(|window| window[0].get("status") != window[1].get("status"))
                 .count();
+            // A passing observation whose duration was not stated adds no
+            // time; it is never timed as zero.
             let durations = observations
                 .iter()
                 .filter(|item| item.get("status").and_then(Value::as_str) == Some("passed"))
-                .map(|item| number(item.get("durationMs")))
+                .filter_map(|item| item.get("durationMs").and_then(Value::as_f64))
                 .collect::<Vec<_>>();
             let p50 = percentile(durations.clone(), 0.5).map(json_number).unwrap_or(Value::Null);
             let p95 = percentile(durations.clone(), 0.95).map(json_number).unwrap_or(Value::Null);
@@ -192,7 +194,7 @@ pub(crate) fn run_history_value(
     }
     let mut runs = manifests_below(&root)?
         .iter()
-        .filter_map(|path| run_record(path))
+        .filter_map(|path| crate::evidence::run_record(path))
         .filter(|run| {
             target.is_none_or(|target| run.get("target").and_then(Value::as_str) == Some(target))
         })

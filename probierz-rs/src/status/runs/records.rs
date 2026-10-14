@@ -1,4 +1,4 @@
-//! Run records: the manifests below a root, their normalised status and failure class, and the record one run manifest becomes.
+//! Run records: the manifests below a root, their failure class, and the projections status reports print. The record one run manifest becomes is `crate::evidence::run_record`.
 
 use crate::status::*;
 
@@ -68,29 +68,6 @@ pub(crate) fn manifests_below(root: &Path) -> Result<Vec<PathBuf>, Failure> {
     Ok(files)
 }
 
-pub(crate) fn read_json(path: &Path) -> Option<Value> {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok())
-}
-
-pub(crate) fn normalized_status(manifest: &Value) -> &str {
-    match manifest.get("status").and_then(Value::as_str) {
-        Some("passed") => "passed",
-        Some("blocked") => "blocked",
-        Some("canceled") => "canceled",
-        Some("executed") => "passed",
-        Some("failed") => "failed",
-        _ if manifest
-            .get("completedAt")
-            .is_some_and(|value| !value.is_null()) =>
-        {
-            "failed"
-        }
-        _ => "incomplete",
-    }
-}
-
 /// Projects recorded ownership for status, history and evidence consumers.
 pub(crate) fn failure_class(manifest: &Value) -> &'static str {
     match manifest.get("failureOrigin") {
@@ -106,103 +83,4 @@ pub(crate) fn value_or(value: Option<&Value>, fallback: Value) -> Value {
         Some(Value::Null) | None => fallback,
         Some(value) => value.clone(),
     }
-}
-
-pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
-    let manifest = read_json(manifest_path)?;
-    let directory = manifest_path.parent()?;
-    let analysis_path = string(manifest.get("analysisPath"))
-        .map(PathBuf::from)
-        .unwrap_or_else(|| directory.join("analysis.json"));
-    let report_path = manifest
-        .get("paths")
-        .and_then(|paths| string(paths.get("reportPath")))
-        .map(PathBuf::from)
-        .unwrap_or_else(|| directory.join("report.json"));
-    let analysis = read_json(&analysis_path);
-    let report = read_json(&report_path);
-
-    let source_tests = analysis
-        .as_ref()
-        .and_then(|value| value.get("tests"))
-        .and_then(Value::as_array)
-        .or_else(|| {
-            report
-                .as_ref()
-                .and_then(|value| value.get("tests"))
-                .and_then(Value::as_array)
-        });
-    let mut test_order = Vec::new();
-    let mut tests_by_title: HashMap<String, Value> = HashMap::new();
-    for test in source_tests.into_iter().flatten() {
-        let Some(title) = test.get("title").and_then(Value::as_str) else {
-            continue;
-        };
-        if !tests_by_title.contains_key(title) {
-            test_order.push(title.to_string());
-        }
-        let status = string(test.get("status")).unwrap_or_else(|| {
-            if test.get("passed").and_then(Value::as_bool).unwrap_or(false) {
-                "passed"
-            } else {
-                "failed"
-            }
-        });
-        let duration = if test.get("durationMs").is_some_and(|value| !value.is_null()) {
-            number(test.get("durationMs"))
-        } else if test.get("duration").is_some_and(|value| !value.is_null()) {
-            number(test.get("duration"))
-        } else {
-            0.0
-        };
-        tests_by_title.insert(
-            title.to_string(),
-            json!({
-                "title": title,
-                "status": status,
-                "durationMs": json_number(duration),
-            }),
-        );
-    }
-    let tests = test_order
-        .iter()
-        .filter_map(|title| tests_by_title.get(title).cloned())
-        .collect::<Vec<_>>();
-    let status = normalized_status(&manifest);
-    let class = if status == "failed" {
-        Value::String(failure_class(&manifest).to_string())
-    } else {
-        Value::Null
-    };
-    let journeys = manifest
-        .get("appManifest")
-        .and_then(|value| value.get("journeys"))
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-
-    Some(json!({
-        "runId": value_or(manifest.get("runId"), Value::Null),
-        "appId": value_or(manifest.get("appId"), Value::Null),
-        "kind": string(manifest.get("kind")).unwrap_or("adhoc"),
-        "target": value_or(manifest.get("target"), Value::Null),
-        "spec": value_or(manifest.get("spec"), Value::Null),
-        "status": status,
-        "startedAt": value_or(manifest.get("startedAt"), Value::Null),
-        "completedAt": value_or(manifest.get("completedAt"), Value::Null),
-        "durationMs": json_number(number(manifest.get("durationMs"))),
-        "harness": value_or(manifest.get("harness"), Value::Null),
-        "source": value_or(manifest.get("source"), Value::Null),
-        "build": value_or(manifest.get("build"), Value::Null),
-        "journeys": journeys,
-        "failureClass": class,
-        "device": value_or(manifest.get("device"), Value::Null),
-        "conditions": value_or(manifest.get("conditions"), json!({})),
-        "evidence": value_or(manifest.get("evidence"), Value::Null),
-        "artifacts": value_or(manifest.get("artifacts"), json!([])),
-        "protection": value_or(manifest.get("protection"), Value::Null),
-        "manifestPath": manifest_path.to_string_lossy(),
-        "analysisPath": value_or(manifest.get("analysisPath"), Value::Null),
-        "tests": tests,
-    }))
 }

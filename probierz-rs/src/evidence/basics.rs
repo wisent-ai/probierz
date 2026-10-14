@@ -113,6 +113,10 @@ pub(crate) fn normalized_status(manifest: &Value) -> String {
     .to_string()
 }
 
+/// The tests a run recorded, from its analysis or else its report: one per
+/// title, in first-seen order, carrying the last record of each. A status or
+/// duration the record did not state is null, never a failure or a zero, and
+/// a record without a title is not a test.
 pub(crate) fn tests_from(run_directory: &Path, manifest_value: &Value) -> Vec<Value> {
     let analysis_path = manifest_value
         .get("analysisPath")
@@ -139,34 +143,33 @@ pub(crate) fn tests_from(run_directory: &Path, manifest_value: &Value) -> Vec<Va
     let mut order = Vec::<String>::new();
     let mut by_title = HashMap::<String, Value>::new();
     for test in source.into_iter().flatten() {
-        let title = test
-            .get("title")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
-        if !by_title.contains_key(&title) {
-            order.push(title.clone());
+        let Some(title) = test.get("title").and_then(Value::as_str) else {
+            continue;
+        };
+        if !by_title.contains_key(title) {
+            order.push(title.to_string());
         }
-        let status = test
-            .get("status")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_else(|| {
-                if test.get("passed").and_then(Value::as_bool).unwrap_or(false) {
-                    "passed"
-                } else {
-                    "failed"
-                }
-                .to_string()
-            });
-        let duration = test
+        let status = match (
+            test.get("status").and_then(Value::as_str),
+            test.get("passed").and_then(Value::as_bool),
+        ) {
+            (Some(status), _) => json!(status),
+            (None, Some(true)) => json!("passed"),
+            (None, Some(false)) => json!("failed"),
+            (None, None) => Value::Null,
+        };
+        let duration = match test
             .get("durationMs")
+            .filter(|value| !value.is_null())
             .or_else(|| test.get("duration"))
             .and_then(Value::as_f64)
-            .unwrap_or(0.0);
+        {
+            Some(duration) => js_number(duration),
+            None => Value::Null,
+        };
         by_title.insert(
-            title.clone(),
-            json!({ "title": title, "status": status, "durationMs": js_number(duration) }),
+            title.to_string(),
+            json!({ "title": title, "status": status, "durationMs": duration }),
         );
     }
     order

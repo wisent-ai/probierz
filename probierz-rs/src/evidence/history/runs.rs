@@ -37,14 +37,19 @@ pub(crate) fn run_record(manifest_path: &Path) -> Option<Value> {
         "completedAt".into(),
         source.get("completedAt").cloned().unwrap_or(Value::Null),
     );
-    let duration = source
-        .get("durationMs")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    record.insert("durationMs".into(), js_number(duration));
-    for key in ["harness", "source", "build"] {
-        record.insert(key.into(), source.get(key).cloned().unwrap_or(Value::Null));
-    }
+    let duration = match source.get("durationMs").and_then(Value::as_f64) {
+        Some(duration) => js_number(duration),
+        None => Value::Null,
+    };
+    record.insert("durationMs".into(), duration);
+    // What the manifest did not state stays null in the record.
+    let stated = |field: &str| match source.get(field) {
+        Some(value) => value.clone(),
+        None => Value::Null,
+    };
+    record.insert("harness".into(), stated("harness"));
+    record.insert("source".into(), stated("source"));
+    record.insert("build".into(), stated("build"));
     record.insert(
         "journeys".into(),
         source
@@ -128,19 +133,17 @@ pub fn compare(
     let right = get_run(harness, app_id, right_id)?;
     let tests = compare_named(&left, &right, "tests", "title", true);
     let artifacts = compare_named(&left, &right, "artifacts", "file", false);
-    let left_duration = left
-        .get("durationMs")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    let right_duration = right
-        .get("durationMs")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    let ratio = if left_duration > 0.0 {
-        Some(right_duration / left_duration)
-    } else {
-        None
-    };
+    // A duration is compared only when both runs stated one; an unstated
+    // one is never read as zero.
+    let left_duration = left.get("durationMs").and_then(Value::as_f64);
+    let right_duration = right.get("durationMs").and_then(Value::as_f64);
+    let ratio = left_duration
+        .zip(right_duration)
+        .filter(|(left, _)| left.is_normal())
+        .map(|(left, right)| right / left);
+    let delta = left_duration
+        .zip(right_duration)
+        .map(|(left, right)| js_number(right - left));
     let newly_failing = tests
         .1
         .iter()
@@ -157,7 +160,7 @@ pub fn compare(
             "harness": run.get("harness").cloned().unwrap_or(Value::Null),
             "source": run.get("source").cloned().unwrap_or(Value::Null),
             "build": run.get("build").cloned().unwrap_or(Value::Null),
-            "durationMs": run.get("durationMs").cloned().unwrap_or_else(|| json!(0)),
+            "durationMs": run.get("durationMs"),
             "evidence": run.get("evidence").cloned().unwrap_or(Value::Null),
         })
     };
@@ -170,9 +173,9 @@ pub fn compare(
             "statusChanged": left.get("status") != right.get("status"),
             "regression": right.get("status").and_then(Value::as_str) == Some("failed") && left.get("status").and_then(Value::as_str) == Some("passed"),
             "newlyFailing": newly_failing,
-            "durationRegression": ratio.is_some_and(|value| left_duration >= 500.0 && value >= 1.2),
+            "durationRegression": ratio.zip(left_duration).is_some_and(|(value, left)| left >= 500.0 && value >= 1.2),
         },
-        "duration": { "deltaMs": js_number(right_duration - left_duration), "ratio": ratio.map(js_number).unwrap_or(Value::Null) },
+        "duration": { "deltaMs": delta, "ratio": ratio.map(js_number) },
         "tests": { "changed": tests.0, "changes": tests.1 },
         "artifacts": { "changed": artifacts.0, "changes": artifacts.1 },
     }))
@@ -213,15 +216,15 @@ pub(crate) fn compare_named(
             (Some(old), Some(new)) if test => {
                 let old_status = old.get("status");
                 let new_status = new.get("status");
-                let old_duration = old.get("durationMs").and_then(Value::as_f64).unwrap_or(0.0);
-                let new_duration = new.get("durationMs").and_then(Value::as_f64).unwrap_or(0.0);
+                let old_duration = old.get("durationMs").and_then(Value::as_f64);
+                let new_duration = new.get("durationMs").and_then(Value::as_f64);
                 if old_status != new_status || old_duration != new_duration {
                     changes.push(json!({
                         name: entry_name,
                         "change": if old_status == new_status { "duration" } else { "status" },
                         "before": old,
                         "after": new,
-                        "durationDeltaMs": js_number(new_duration - old_duration),
+                        "durationDeltaMs": old_duration.zip(new_duration).map(|(old, new)| js_number(new - old)),
                     }));
                 }
             }
