@@ -214,7 +214,9 @@ fn objective(
     let measured = |value: &Json| {
         format!(
             "pass rate {} and p50 {} ms",
-            value["passRate"].as_f64().unwrap_or(0.0),
+            value["passRate"]
+                .as_f64()
+                .map_or("unmeasured".to_string(), |rate| rate.to_string()),
             value["p50Ms"]
                 .as_u64()
                 .map_or("unmeasured".to_string(), |ms| ms.to_string())
