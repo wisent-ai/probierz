@@ -156,19 +156,50 @@ where
         &worktree,
         None,
     )?;
-    let pull_request = pr
-        .status
-        .success()
-        .then(|| String::from_utf8_lossy(&pr.stdout).trim().to_string());
-    let _ = process_with_input(
+    // A pull request gh refused to open is said with gh's own words, and a
+    // worktree git would not remove is named with git's: the branch is pushed
+    // either way, and each is something the operator must act on.
+    let (pull_request, pull_request_refused) = if pr.status.success() {
+        (
+            Some(String::from_utf8_lossy(&pr.stdout).trim().to_string()),
+            None,
+        )
+    } else {
+        (
+            None,
+            Some(format!(
+                "gh pr create {}: {}",
+                crate::failure::ended(&pr.status),
+                String::from_utf8_lossy(&pr.stderr).trim()
+            )),
+        )
+    };
+    let removed = process_with_input(
         OsStr::new("git"),
         &[OsStr::new("worktree"), OsStr::new("remove"), worktree_arg],
         repo_root,
         None,
     );
-    Ok(
-        json!({ "branch": branch, "commit": String::from_utf8_lossy(&commit.stdout).trim(), "pullRequest": pull_request }),
-    )
+    let worktree_left = match removed {
+        Ok(output) if output.status.success() => None,
+        Ok(output) => Some(format!(
+            "git worktree remove {} {}: {}",
+            worktree.display(),
+            crate::failure::ended(&output.status),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )),
+        Err(failure) => Some(format!(
+            "git worktree remove {} could not run: {failure}",
+            worktree.display()
+        )),
+    };
+    Ok(json!({
+        "branch": branch,
+        "commit": String::from_utf8_lossy(&commit.stdout).trim(),
+        "pullRequest": pull_request,
+        "pullRequestRefused": pull_request_refused,
+        "worktreeLeft": worktree_left,
+    }))
 }
 
 pub(crate) fn verify_repaired_spec(
