@@ -6,7 +6,6 @@
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 
 use crate::failure::Failure;
 
@@ -111,7 +110,7 @@ pub(super) fn load(
         }
         policy.evidence_dir = Some(resolved);
     }
-    let digest = hex::encode(Sha256::digest(text.as_bytes()));
+    let digest = crate::evidence::sha256_bytes(text.as_bytes());
     Ok((file, policy, digest))
 }
 

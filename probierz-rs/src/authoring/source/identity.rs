@@ -59,7 +59,7 @@ pub(crate) fn repository_identity(
     let exact_bytes = serde_json::to_vec(&JsonValue::Object(exact))?;
     identity.insert(
         "sha256".to_string(),
-        json!(hex::encode(Sha256::digest(exact_bytes))),
+        json!(crate::evidence::sha256_bytes(&exact_bytes)),
     );
     Ok(JsonValue::Object(identity))
 }
@@ -177,7 +177,7 @@ pub fn app_source_identity(
             })
         })
         .collect();
-    let app_sha = hex::encode(Sha256::digest(serde_json::to_vec(&concise)?));
+    let app_sha = crate::evidence::sha256_bytes(&serde_json::to_vec(&concise)?);
     Ok(json!({
         "schemaVersion": 1,
         "appId": app_id,

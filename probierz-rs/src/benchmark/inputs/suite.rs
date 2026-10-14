@@ -12,7 +12,6 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
-use sha2::{Digest, Sha256};
 
 use crate::benchmark::SUITE_SCHEMA;
 use crate::failure::Failure;
@@ -208,7 +207,7 @@ pub(crate) fn load(file: &Path, declared_id: &str) -> Result<Loaded, Failure> {
     }
     let canonical = serde_json::to_vec(&suite)?;
     Ok(Loaded {
-        hash: hex::encode(Sha256::digest(canonical)),
+        hash: crate::evidence::sha256_bytes(&canonical),
         suite,
     })
 }
