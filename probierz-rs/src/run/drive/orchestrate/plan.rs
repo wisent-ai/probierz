@@ -1,9 +1,13 @@
 use crate::run::*;
 use serde_json::json;
 
+/// Every combination of the dimensions' values. A dimension that is not a
+/// list, or a value that is not a scalar, is refused naming it: read as no
+/// values the target expanded to no cells and left the matrix without it, and
+/// read as the empty value the cell ran under a condition nobody declared.
 pub(crate) fn matrix_expand(
     dimensions: Option<&serde_yaml::Value>,
-) -> Vec<BTreeMap<String, String>> {
+) -> Result<Vec<BTreeMap<String, String>>, String> {
     let mut cells = vec![BTreeMap::new()];
     let mut values: Vec<(&str, &serde_yaml::Value)> = dimensions
         .and_then(serde_yaml::Value::as_mapping)
@@ -13,17 +17,27 @@ pub(crate) fn matrix_expand(
         .collect();
     values.sort_by_key(|(name, _)| *name);
     for (name, items) in values {
+        let items = items
+            .as_sequence()
+            .ok_or_else(|| format!("dimension {name} is not a list of values"))?;
+        let items = items
+            .iter()
+            .map(|value| {
+                yaml_string(value)
+                    .ok_or_else(|| format!("dimension {name} value {value:?} is not a scalar"))
+            })
+            .collect::<Result<Vec<String>, String>>()?;
         let mut expanded = Vec::new();
         for cell in &cells {
-            for value in items.as_sequence().into_iter().flatten() {
+            for value in &items {
                 let mut next = cell.clone();
-                next.insert(name.into(), yaml_string(value).unwrap_or_default());
+                next.insert(name.into(), value.clone());
                 expanded.push(next);
             }
         }
         cells = expanded;
     }
-    cells
+    Ok(cells)
 }
 pub(crate) fn cell_id(target: &str, env: &BTreeMap<String, String>) -> String {
     let stable = json!({"env":env,"target":target});
@@ -88,7 +102,14 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
         {
             dimensions.extend(specific.clone());
         }
-        for axes in matrix_expand(Some(&serde_yaml::Value::Mapping(dimensions))) {
+        let expanded =
+            matrix_expand(Some(&serde_yaml::Value::Mapping(dimensions))).map_err(|detail| {
+                fail(
+                    "run.matrix",
+                    format!("matrix {profile} for {name}: {detail}"),
+                )
+            })?;
+        for axes in expanded {
             let mut public_env = yaml_ordered_strings(surface.get("conditions"));
             for (name, value) in &axes {
                 public_env.insert(name.clone(), Value::String(value.clone()));
