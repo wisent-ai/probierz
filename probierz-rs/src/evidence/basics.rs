@@ -3,6 +3,9 @@ use serde_json::json;
 // The receipt verifier reads its receipt under this name; the reading is
 // json_file::required, which names a missing or unreadable file.
 pub(crate) use crate::json_file::required as json_file;
+// A finite f64 as a JSON number (whole values as integers), else null: the
+// encoding is run::number; receipt and bundle fields call it by this name.
+pub(crate) use crate::run::number as js_number;
 
 pub(crate) fn sha256_bytes(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
@@ -165,7 +168,7 @@ pub(crate) fn tests_from(
             .or_else(|| test.get("duration"))
             .and_then(Value::as_f64)
         {
-            Some(duration) => js_number(duration),
+            Some(duration) => crate::run::number(duration),
             None => Value::Null,
         };
         by_title.insert(
@@ -177,16 +180,4 @@ pub(crate) fn tests_from(
         .into_iter()
         .filter_map(|title| by_title.remove(&title))
         .collect())
-}
-
-pub(crate) fn js_number(value: f64) -> Value {
-    if !value.is_finite() {
-        Value::Null
-    } else if value.fract() == 0.0 && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
-        json!(value as i64)
-    } else {
-        serde_json::Number::from_f64(value)
-            .map(Value::Number)
-            .unwrap_or(Value::Null)
-    }
 }

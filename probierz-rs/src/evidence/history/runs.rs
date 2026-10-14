@@ -45,7 +45,7 @@ pub(crate) fn run_record(manifest_path: &Path) -> Result<Option<Value>, Failure>
         source.get("completedAt").cloned().unwrap_or(Value::Null),
     );
     let duration = match source.get("durationMs").and_then(Value::as_f64) {
-        Some(duration) => js_number(duration),
+        Some(duration) => crate::run::number(duration),
         None => Value::Null,
     };
     record.insert("durationMs".into(), duration);
@@ -153,7 +153,7 @@ pub fn compare(
         .map(|(left, right)| right / left);
     let delta = left_duration
         .zip(right_duration)
-        .map(|(left, right)| js_number(right - left));
+        .map(|(left, right)| crate::run::number(right - left));
     let newly_failing = tests
         .1
         .iter()
@@ -233,7 +233,7 @@ pub(crate) fn compare_named(
                         "change": if old_status == new_status { "duration" } else { "status" },
                         "before": old,
                         "after": new,
-                        "durationDeltaMs": old_duration.zip(new_duration).map(|(old, new)| js_number(new - old)),
+                        "durationDeltaMs": old_duration.zip(new_duration).map(|(old, new)| crate::run::number(new - old)),
                     }));
                 }
             }
