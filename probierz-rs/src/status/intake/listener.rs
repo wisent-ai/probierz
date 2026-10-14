@@ -274,7 +274,14 @@ pub fn intake_serve(bind: &str) -> Answer {
             Ok(stream) => {
                 let token = token.clone();
                 thread::spawn(move || {
-                    let _ = handle_connection(stream, &token);
+                    // A connection this intake could not serve is said on its
+                    // log with the point and cause, never dropped unseen.
+                    if let Err(failure) = handle_connection(stream, &token) {
+                        eprintln!(
+                            "probierz intake: a connection was not served at {}: {}",
+                            failure.point, failure.detail
+                        );
+                    }
                 });
             }
             Err(error) => return Err(Failure::unavailable("intake.listen", error.to_string())),
