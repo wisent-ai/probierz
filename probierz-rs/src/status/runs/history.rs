@@ -158,7 +158,6 @@ pub(crate) fn performance_trend(runs: &[Value]) -> Value {
         passed
             .iter()
             .skip(1)
-            .take(10)
             .map(|run| number(run.get("durationMs")))
             .collect(),
         0.5,
@@ -174,7 +173,6 @@ pub(crate) fn performance_trend(runs: &[Value]) -> Value {
         "latestMs": latest_ms.map(json_number).unwrap_or(Value::Null),
         "baselineMedianMs": baseline.map(json_number).unwrap_or(Value::Null),
         "ratio": ratio.map(json_number).unwrap_or(Value::Null),
-        "regression": ratio.is_some_and(|ratio| baseline.unwrap_or(0.0) >= 500.0 && ratio >= 1.2),
     })
 }
 
@@ -266,7 +264,6 @@ pub(crate) fn run_history_value(
             "lastGreenRunId": runs.iter().find(|run| run.get("status").and_then(Value::as_str) == Some("passed"))
                 .and_then(|run| run.get("runId")).cloned().unwrap_or(Value::Null),
             "lastGreenRun": runs.iter().find(|run| run.get("status").and_then(Value::as_str) == Some("passed")),
-            "performanceRegression": performance.get("regression").cloned().unwrap_or(Value::Bool(false)),
         },
         "performance": performance,
         "journeys": journey_history(&runs),

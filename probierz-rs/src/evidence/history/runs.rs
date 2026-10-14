@@ -183,7 +183,6 @@ pub fn compare(
             "statusChanged": left.get("status") != right.get("status"),
             "regression": right.get("status").and_then(Value::as_str) == Some("failed") && left.get("status").and_then(Value::as_str) == Some("passed"),
             "newlyFailing": newly_failing,
-            "durationRegression": ratio.zip(left_duration).is_some_and(|(value, left)| left >= 500.0 && value >= 1.2),
         },
         "duration": { "deltaMs": delta, "ratio": ratio.map(js_number) },
         "tests": { "changed": tests.0, "changes": tests.1 },
