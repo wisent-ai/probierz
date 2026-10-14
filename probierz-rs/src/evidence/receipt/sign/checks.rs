@@ -89,11 +89,11 @@ pub(super) fn check_artifacts(
             Some(scan_secrets(artifact_root)?)
         };
         let normalized_scan = scan.as_ref().map(|scan| json!({
-            "passed": scan.get("passed").and_then(Value::as_bool).unwrap_or(false),
+            "passed": scan.get("passed").and_then(Value::as_bool),
             "scannedAt": scan.get("scannedAt").cloned().unwrap_or(Value::Null),
-            "scannedFiles": scan.get("scannedFiles").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
-            "skippedBinary": scan.get("skippedBinary").and_then(Value::as_f64).map(js_number).unwrap_or_else(|| json!(0)),
-            "findings": scan.get("findings").cloned().filter(Value::is_array).unwrap_or_else(|| json!([])),
+            "scannedFiles": scan.get("scannedFiles").and_then(Value::as_f64).map(js_number),
+            "skippedBinary": scan.get("skippedBinary").and_then(Value::as_f64).map(js_number),
+            "findings": scan.get("findings").cloned().filter(Value::is_array),
         })).unwrap_or(Value::Null);
         if scan
             .as_ref()
