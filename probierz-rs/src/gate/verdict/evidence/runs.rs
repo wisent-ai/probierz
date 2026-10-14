@@ -25,18 +25,11 @@ pub(crate) struct Run {
 pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
     // Only a missing manifest is no run; one that cannot be read or parsed
     // is evidence the gate could not weigh, said with its cause.
-    let text = match fs::read_to_string(file) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(format!(
-                "run manifest {} cannot be read: {error}",
-                file.display()
-            ))
-        }
+    let Some(document) =
+        crate::json_file::read(file).map_err(|error| format!("run manifest {}", error.detail))?
+    else {
+        return Ok(None);
     };
-    let document: Value = serde_json::from_str(&text)
-        .map_err(|error| format!("run manifest {} is not JSON: {error}", file.display()))?;
     let directory = file.parent().unwrap_or_else(|| Path::new("."));
     let analysis_path = string_property(&document, "analysisPath");
     let journeys = property(&document, "appManifest")
@@ -49,8 +42,14 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
                 .collect()
         })
         .unwrap_or_default();
-    let run_id = string_property(&document, "runId").unwrap_or_default();
-    let target = string_property(&document, "target").unwrap_or_default();
+    // A run is weighed by its id and target; a manifest stating neither is
+    // refused, not weighed as run '' on target ''.
+    let stated = |field: &str| {
+        string_property(&document, field)
+            .ok_or_else(|| format!("run manifest {} states no {field}", file.display()))
+    };
+    let run_id = stated("runId")?;
+    let target = stated("target")?;
     Ok(Some(Run {
         manifest_path: directory.join("run-manifest.json"),
         run_id,
