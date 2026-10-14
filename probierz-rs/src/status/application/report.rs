@@ -122,28 +122,32 @@ pub(crate) fn app_status_value(
         .collect::<Vec<_>>();
     let mut blocking = Vec::new();
     for journey in &evaluated {
-        let name = journey.get("journey").and_then(Value::as_str).unwrap_or("");
-        let last = journey.get("lastRun").filter(|value| !value.is_null());
-        if last.is_none() {
+        let name = said(journey.get("journey"), "journey name");
+        let Some(last) = journey.get("lastRun").filter(|value| !value.is_null()) else {
             blocking.push(Value::String(format!("{name}: no runs recorded")));
             continue;
-        }
-        let last = last.unwrap_or(&Value::Null);
-        let status = last.get("status").and_then(Value::as_str).unwrap_or("");
-        if status != "passed" {
-            blocking.push(Value::String(format!("{name}: last run is {status}")));
+        };
+        match last.get("status").and_then(Value::as_str) {
+            Some("passed") => {}
+            Some(status) => blocking.push(Value::String(format!("{name}: last run is {status}"))),
+            None => blocking.push(Value::String(format!("{name}: last run states no status"))),
         }
         if journey.get("fresh").and_then(Value::as_bool) != Some(true) {
             blocking.push(Value::String(format!(
                 "{name}: evidence is older than HEAD"
             )));
         }
-        let level = last
+        // A run that states no level ranks below any minimum, and is named so.
+        if last
             .get("evidenceLevel")
             .and_then(Value::as_str)
-            .unwrap_or("E0");
-        if evidence_rank(level) < evidence_rank(minimum) {
-            blocking.push(Value::String(format!("{name}: {level} is below {minimum}")));
+            .and_then(evidence_rank)
+            < evidence_rank(minimum)
+        {
+            blocking.push(Value::String(format!(
+                "{name}: {} is below {minimum}",
+                said(last.get("evidenceLevel"), "evidence level")
+            )));
         }
     }
     let untested = journeys
