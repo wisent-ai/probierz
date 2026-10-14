@@ -9,20 +9,9 @@ use serde_json::json;
 /// merged into an empty object and written back it replaced the run's whole
 /// record (identity, spec, conditions, seed) with the patch alone.
 pub(crate) fn update_json(file: &Path, patch: &Value) -> Result<(), Failure> {
-    let mut current: Value = match fs::read(file) {
-        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|error| {
-            Failure::config(
-                "run.record.update",
-                format!("{} is not JSON: {error}", file.display()),
-            )
-        })?,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => json!({}),
-        Err(error) => {
-            return Err(Failure::config(
-                "run.record.update",
-                format!("{} cannot be read: {error}", file.display()),
-            ))
-        }
+    let mut current = match crate::json_file::read(file)? {
+        Some(current) => current,
+        None => json!({}),
     };
     let target = current.as_object_mut().ok_or_else(|| {
         Failure::config(
