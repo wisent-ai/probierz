@@ -38,11 +38,24 @@ const OBJECT_API_MARKER: &str = ".stado/forwards/stado-object-api.local";
 const OBJECT_API_ROLE: &str = "probierz-object-api";
 const OBJECT_API_FIELD: &str = "token";
 
+/// One declared setting: none when unset or empty, refused by name when its
+/// value is not text. Read as unset, a launcher's declared address or token
+/// was replaced by the published one or the vault's.
+fn declared(name: &str) -> Result<Option<String>, Failure> {
+    match std::env::var(name) {
+        Ok(value) if !value.is_empty() => Ok(Some(value)),
+        Ok(_) | Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(error) => Err(Failure::config(
+            "objects.config",
+            format!("{name} cannot be read: {error}"),
+        )),
+    }
+}
+
 /// The object API address `STADO_API_URL` names, else the one Stado's
 /// service directory published for this machine.
 fn object_api_url() -> Result<String, Failure> {
-    let declared = std::env::var("STADO_API_URL").unwrap_or_default();
-    if !declared.is_empty() {
+    if let Some(declared) = declared("STADO_API_URL")? {
         return Ok(declared);
     }
     let home = std::env::var_os("HOME").ok_or_else(|| {
@@ -124,10 +137,10 @@ fn token_from_vault() -> Result<String, Failure> {
 
 pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
     let raw = object_api_url()?;
-    let mut token = std::env::var("STADO_API_TOKEN").unwrap_or_default();
-    if token.is_empty() {
-        token = token_from_vault()?;
-    }
+    let token = match declared("STADO_API_TOKEN")? {
+        Some(token) => token,
+        None => token_from_vault()?,
+    };
     if unsafe_url_text(&raw) {
         return Err(Failure::config(
             "objects.config",
@@ -149,7 +162,9 @@ pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
             "STADO_API_URL must be an absolute HTTP(S) URL",
         )
     })?;
-    let unsafe_base = !matches!(parsed.scheme(), "http" | "https")
+    // A network origin (scheme, host and port) is what an HTTP client can
+    // address; the scheme itself is held to HTTPS below.
+    let unsafe_base = !parsed.origin().is_tuple()
         || parsed.host_str().is_none()
         || !parsed.username().is_empty()
         || parsed.password().is_some()
@@ -163,7 +178,7 @@ pub(crate) fn object_store_config() -> Result<(String, String), Failure> {
             "STADO_API_URL must not contain credentials, query, fragment, or an unsafe base path",
         ));
     }
-    if parsed.scheme() == "http" && !parsed.host_str().is_some_and(loopback) {
+    if parsed.scheme() != "https" && !parsed.host_str().is_some_and(loopback) {
         return Err(Failure::config(
             "objects.config",
             "STADO_API_URL must use HTTPS except for authenticated loopback",
