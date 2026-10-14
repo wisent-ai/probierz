@@ -180,10 +180,7 @@ pub(crate) fn app_status_value(
 }
 
 pub(crate) fn render_app_status(status: &Value) -> String {
-    let mut lines = vec![format!(
-        "app: {}",
-        status.get("appId").and_then(Value::as_str).unwrap_or("")
-    )];
+    let mut lines = vec![format!("app: {}", said(status.get("appId"), "app id"))];
     lines.push("  journeys:".to_string());
     for journey in status
         .get("journeys")
@@ -191,7 +188,7 @@ pub(crate) fn render_app_status(status: &Value) -> String {
         .into_iter()
         .flatten()
     {
-        let name = journey.get("journey").and_then(Value::as_str).unwrap_or("");
+        let name = said(journey.get("journey"), "journey name");
         let last = journey.get("lastRun").filter(|value| !value.is_null());
         if last.is_none() {
             lines.push(format!("    {name:<24} — no runs —  E0  untested"));
@@ -202,10 +199,8 @@ pub(crate) fn render_app_status(status: &Value) -> String {
         let date = started.get(..10.min(started.len())).unwrap_or(started);
         lines.push(format!(
             "    {name:<24} {date}  {}  {}  {}",
-            run.get("runId").and_then(Value::as_str).unwrap_or(""),
-            run.get("evidenceLevel")
-                .and_then(Value::as_str)
-                .unwrap_or(""),
+            said(run.get("runId"), "run id"),
+            said(run.get("evidenceLevel"), "evidence level"),
             if journey.get("fresh").and_then(Value::as_bool) == Some(true) {
                 "fresh"
             } else {
