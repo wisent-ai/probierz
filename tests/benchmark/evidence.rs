@@ -182,8 +182,11 @@ fn cycle_report(root: &Path, said: &str) -> Value {
     let report_dir = root.join("test-results").join(".autonomy");
     let found = std::fs::read_dir(&report_dir)
         .expect("the cycle wrote its report directory")
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
+        .map(|entry| {
+            entry
+                .expect("every entry of the report directory is readable")
+                .path()
+        })
         .find(|path| {
             path.file_name()
                 .and_then(|name| name.to_str())
@@ -230,7 +233,7 @@ fn a_cycle_scouts_the_evidence_directory_without_trends() {
     let report = cycle_report(&root, &stderr(&cycled));
     assert_eq!(
         report["topics"]["listed"]["evidenceDir"],
-        directory.to_string_lossy()
+        directory.to_string_lossy().as_ref()
     );
     assert_eq!(report["topics"]["listed"]["topics"], json!([TOPIC]));
     assert_eq!(report["topics"]["added"], json!([]));
