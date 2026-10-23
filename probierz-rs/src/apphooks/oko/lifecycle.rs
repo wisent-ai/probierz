@@ -1,14 +1,38 @@
 use crate::apphooks::*;
 use serde_json::json;
+
+/// The text field `key` of an answer Oko's seed depends on, refused naming
+/// the answer and the field when it is absent: an id the seed cannot read is
+/// one it could neither use nor roll back.
+fn answered_text(answer: &Value, key: &str, what: &str) -> Result<String, Failure> {
+    answer
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| {
+            Failure::unavailable(
+                "apphook.oko.seed",
+                format!("{what} answered without a text {key}: {answer}"),
+            )
+        })
+}
+
 pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, requires_slack(source))?;
     let scoped = scoped_oko_source(source)?;
     let account = ensure_technical_account(&scoped)?;
-    let account_id = account
-        .get("userId")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
+    let account_id = answered_text(&account, "userId", "the technical account")?;
+    let created = account
+        .get("created")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            Failure::unavailable(
+                "apphook.oko.seed",
+                format!(
+                    "the technical account answered without saying whether it was created: {account}"
+                ),
+            )
+        })?;
     let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
     let run_hash = hash12(run_id);
     let org_id = deterministic_uuid(&["oko-e2e-org", run_id]);
@@ -16,7 +40,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
     let seed_slack = requires_slack(source);
     let mut parent_ts: Option<String> = None;
     let mut reply_ts: Option<String> = None;
-    let result = (|| {
+    let result = (|| -> Result<PathBuf, Failure> {
         delete_organization(&scoped, &org_id)?;
         supabase(
             &scoped,
@@ -47,7 +71,6 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
             Some("resolution=merge-duplicates,return=minimal"),
             Some(json!({
                 "org_id": org_id,
-                "schema_version": 2,
                 "north_star_statement": "initializing"
             })),
         )?;
@@ -74,11 +97,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 "chat.post_message",
                 json!({ "channel": channel, "text": bot_context }),
             )?;
-            let posted_parent = parent
-                .get("ts")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string();
+            let posted_parent = answered_text(&parent, "ts", "Slack's post of the thread parent")?;
             parent_ts = Some(posted_parent.clone());
             let reply = slack(
                 source,
@@ -86,11 +105,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 "chat.post_message",
                 json!({ "channel": channel, "thread_ts": posted_parent, "text": reply_text }),
             )?;
-            let posted_reply = reply
-                .get("ts")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string();
+            let posted_reply = answered_text(&reply, "ts", "Slack's post of the thread reply")?;
             reply_ts = Some(posted_reply.clone());
             supabase(
                 &scoped,
@@ -106,10 +121,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                     "last_scanned_at": Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
                 })),
             )?;
-            let author = reply
-                .get("user")
-                .and_then(Value::as_str)
-                .unwrap_or(SLACK_USER);
+            let author = answered_text(&reply, "user", "Slack's post of the thread reply")?;
             json!({
                 "channel": channel,
                 "parentTs": posted_parent,
@@ -123,12 +135,11 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
         };
         let path = state_path(source);
         let state = json!({
-            "schemaVersion": 2,
             "runId": run_id,
             "orgId": org_id,
             "orgSlug": org_slug,
             "userId": account_id,
-            "emailHash": account.get("emailHash").cloned().unwrap_or(Value::Null),
+            "emailHash": account.get("emailHash"),
             "strategy": { "initial": strategy_document(run_id) },
             "feedback": {
                 "decisionId": deterministic_uuid(&["oko-e2e-feedback-decision", run_id]),
@@ -143,17 +154,16 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
         Ok(path) => Ok(json!({
             "orgId": org_id,
             "orgSlug": org_slug,
-            "accountCreated": account.get("created").and_then(Value::as_bool).unwrap_or(false),
+            "accountCreated": created,
             "stateFile": path,
             "env": { "OKO_E2E_EMAIL": scoped.get("OKO_E2E_EMAIL").expect("scoped") }
         })),
         Err(mut error) => {
             let mut rollback_errors = Vec::new();
-            let channel = source
-                .get("OKO_E2E_SLACK_CHANNEL")
-                .map(String::as_str)
-                .unwrap_or_default();
-            if let Some(reply_ts) = reply_ts {
+            // A Slack post exists only when the channel was read to make it, so
+            // the channel is present whenever there is a post to delete.
+            let channel = source.get("OKO_E2E_SLACK_CHANNEL");
+            if let (Some(reply_ts), Some(channel)) = (&reply_ts, channel) {
                 if let Err(failure) = slack(
                     source,
                     SLACK_USER,
@@ -163,7 +173,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                     rollback_errors.push(format!("Slack reply {reply_ts} in {channel}: {failure}"));
                 }
             }
-            if let Some(parent_ts) = parent_ts {
+            if let (Some(parent_ts), Some(channel)) = (&parent_ts, channel) {
                 if let Err(failure) = slack(
                     source,
                     SLACK_BOT,
