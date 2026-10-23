@@ -72,6 +72,9 @@ apps/jeden-desktop/*
 # Rust build output
 probierz-rs/target/
 
+# the commit-review tool stages its scratch copy of the index here
+/.build/
+
 # scratch downloads and captures
 tmp/
 .artifacts/
