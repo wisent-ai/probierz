@@ -10,6 +10,7 @@
 //! | [`spec`] | drafting, installing and running an authored spec, and the manifest around it |
 //! | [`figure`] | rendering a figure pair and scoring it against a rubric |
 //! | [`seo`] | the declared SEO contract, the crawl, and the signed verdict |
+//! | [`talk`] | a rendered talk judged against the documents it presents |
 //! | [`repair`] | a recorded failure turned into a briefed, verified repair |
 //! | [`result`] | printing what any of the above decided |
 //!
@@ -45,6 +46,7 @@ mod router;
 mod seo;
 mod source;
 mod spec;
+mod talk;
 
 pub use figure::*;
 pub use repair::*;
@@ -53,3 +55,4 @@ pub(crate) use router::*;
 pub use seo::*;
 pub use source::*;
 pub use spec::*;
+pub use talk::evaluate_talk;

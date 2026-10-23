@@ -7,6 +7,8 @@ use clap::Subcommand;
 
 use crate::{adoption, apphook_help};
 
+pub use super::evaluate::EvaluateCommand;
+
 #[derive(Debug, Subcommand)]
 pub enum InspectCommand {
     // Restored: adoption
@@ -79,8 +81,9 @@ pub enum InspectCommand {
         input: PathBuf,
         #[arg(long = "out")]
         output: PathBuf,
-        #[arg(long, default_value_t = 0.0)]
-        start: f64,
+        /// Seconds into the video the GIF starts at; the start of the video when omitted.
+        #[arg(long)]
+        start: Option<f64>,
         /// Seconds of video to keep; the rest of the clip from --start when omitted.
         #[arg(long)]
         duration: Option<f64>,
@@ -135,63 +138,5 @@ pub enum AuthorCommand {
         dry_run: bool,
         #[arg(long = "specs")]
         with_specs: bool,
-    },
-}
-
-#[derive(Debug, Subcommand)]
-pub enum EvaluateCommand {
-    /// Render and rubric-score a scientific figure pair.
-    Figure {
-        #[arg(long)]
-        reference: PathBuf,
-        #[arg(long)]
-        candidate: PathBuf,
-        #[arg(long)]
-        rubric: Option<PathBuf>,
-        #[arg(long)]
-        model: Option<String>,
-        #[arg(long = "out")]
-        output: Option<PathBuf>,
-        #[arg(long)]
-        router_url: Option<String>,
-        #[arg(long)]
-        tex_preamble: Option<PathBuf>,
-        #[arg(long)]
-        agent_id: Option<String>,
-        #[arg(long)]
-        router_token_stdin: bool,
-    },
-    /// Crawl and evaluate a declared SEO contract.
-    Seo {
-        /// Manifest app whose SEO profile is evaluated; no app is assumed.
-        #[arg(long = "app")]
-        app_id: String,
-        #[arg(long)]
-        base_url: String,
-        #[arg(long)]
-        policy: Option<PathBuf>,
-        #[arg(long)]
-        brief: Option<PathBuf>,
-        /// The SEO profile to evaluate: pull-request, release, nightly or production.
-        #[arg(long)]
-        mode: String,
-        #[arg(long = "out")]
-        output: Option<PathBuf>,
-        #[arg(long)]
-        production_evidence: Option<PathBuf>,
-        #[arg(long)]
-        primary_model: Option<String>,
-        #[arg(long)]
-        secondary_model: Option<String>,
-        #[arg(long)]
-        adjudicator_model: Option<String>,
-        #[arg(long)]
-        router_url: Option<String>,
-        #[arg(long)]
-        agent_id: Option<String>,
-        #[arg(long)]
-        private_key_file: Option<PathBuf>,
-        #[arg(long)]
-        router_token_stdin: bool,
     },
 }

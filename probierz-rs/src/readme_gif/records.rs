@@ -4,8 +4,9 @@ use crate::readme_gif::*;
 pub struct Options {
     pub input: PathBuf,
     pub output: PathBuf,
-    pub start_seconds: f64,
-    /// Seconds kept from `start_seconds`; the rest of the clip when `None`.
+    /// Seconds into the video the GIF starts at; the start of the video when `None`.
+    pub start_seconds: Option<f64>,
+    /// Seconds kept from the start; the rest of the clip when `None`.
     pub duration_seconds: Option<f64>,
     /// Frame rate; the source's own when `None`.
     pub frames_per_second: Option<f64>,
@@ -17,10 +18,10 @@ pub struct Options {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Render {
-    pub(crate) start_seconds: Value,
-    pub(crate) duration_seconds: Value,
-    pub(crate) frames_per_second: Value,
-    pub(crate) width: Value,
+    pub(crate) start_seconds: Option<f64>,
+    pub(crate) duration_seconds: Option<f64>,
+    pub(crate) frames_per_second: Option<f64>,
+    pub(crate) width: Option<f64>,
     pub(crate) silent: bool,
     pub(crate) r#loop: bool,
 }
@@ -35,7 +36,7 @@ pub(crate) struct FileHash {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Publication {
     pub(crate) review_required: bool,
-    pub(crate) checks: [&'static str; 4],
+    pub(crate) checks: Vec<&'static str>,
 }
 
 #[derive(Serialize)]

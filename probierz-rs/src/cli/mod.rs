@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+pub mod evaluate;
 pub mod evidence;
 pub mod inspect;
 pub mod reporting;

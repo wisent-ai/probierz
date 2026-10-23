@@ -40,6 +40,10 @@ name = "evaluate_group"
 path = "../tests/evaluate/group.rs"
 
 [[test]]
+name = "evaluate_talk"
+path = "../tests/evaluate/talk.rs"
+
+[[test]]
 name = "history_journey"
 path = "../tests/history/journey.rs"
 
@@ -75,6 +79,7 @@ path = "../tests/suites/run.rs"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 hex = "0.4"
+http = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"

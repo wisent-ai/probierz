@@ -7,18 +7,22 @@ pub(crate) fn invalid(detail: impl Into<String>) -> Failure {
 /// unstated.
 pub(crate) fn positive(value: Option<f64>, name: &str) -> Result<Option<f64>, Failure> {
     match value {
-        Some(value) if !value.is_finite() || value <= 0.0 => {
+        Some(value) if !(value.is_normal() && value.is_sign_positive()) => {
             Err(invalid(format!("{name} must be a positive number")))
         }
         other => Ok(other),
     }
 }
 
-pub(crate) fn non_negative(value: f64, name: &str) -> Result<f64, Failure> {
-    if !value.is_finite() || value < 0.0 {
-        return Err(invalid(format!("{name} must be a non-negative number")));
+/// A stated value must be a finite number that is not negative; an unstated
+/// one stays unstated.
+pub(crate) fn non_negative(value: Option<f64>, name: &str) -> Result<Option<f64>, Failure> {
+    match value {
+        Some(value) if !(value.is_finite() && value.is_sign_positive()) => {
+            Err(invalid(format!("{name} must be a non-negative number")))
+        }
+        other => Ok(other),
     }
-    Ok(value)
 }
 
 pub(crate) fn absolute(path: &Path) -> Result<PathBuf, Failure> {
@@ -63,8 +67,6 @@ pub(crate) fn output_file(file: &Path) -> Result<PathBuf, Failure> {
     }
     Ok(resolved)
 }
-
-pub(crate) use crate::run::number as json_number;
 
 /// The ffmpeg graph: the stated frame rate and width, when stated, then a
 /// palette made from the clip itself.

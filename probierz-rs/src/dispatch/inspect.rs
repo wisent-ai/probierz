@@ -59,9 +59,9 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
     }
 }
 
-/// `evaluate figure` and `evaluate seo`: each reads the router bearer (and,
-/// for SEO, the signing key) from stdin when asked, evaluates, prints the
-/// verdict and fails when it does not pass.
+/// `evaluate figure`, `evaluate seo` and `evaluate talk`: each reads the
+/// router bearer (and, for SEO, the signing key) from stdin when asked,
+/// evaluates, prints the verdict and fails when it does not pass.
 fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
     match command {
         EvaluateCommand::Figure {
@@ -147,6 +147,39 @@ fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
                     .filter(|value| !value.trim().is_empty()),
             )?;
             authoring::print_result("evaluate.seo", "/pass", result)
+        }
+        EvaluateCommand::Talk {
+            slides,
+            script,
+            sources,
+            rubric,
+            model,
+            output,
+            router_url,
+            agent_id,
+            router_token_stdin,
+        } => {
+            let mut stdin = String::new();
+            if router_token_stdin {
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut stdin)?;
+            }
+            let mut lines = stdin.lines();
+            let bearer = lines.next();
+            let secret = lines.next();
+            let result = authoring::evaluate_talk(
+                harness,
+                &slides,
+                &script,
+                &sources,
+                rubric.as_deref(),
+                output.as_deref(),
+                model.as_deref(),
+                router_url.as_deref(),
+                bearer,
+                agent_id.as_deref(),
+                secret,
+            )?;
+            authoring::print_result("evaluate.talk", "/verdict/pass", result)
         }
     }
 }

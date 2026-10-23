@@ -1,8 +1,9 @@
 # The evaluators
 
-Two release evaluators that read an artifact against its declared
-contract: the scientific-figure comparison, and the SEO contract.
-Neither can be talked out of a deterministic blocker by a model.
+Three release evaluators that read an artifact against its declared
+contract: the scientific-figure comparison, the talk given to a review panel,
+and the SEO contract. None can be talked out of a deterministic blocker by a
+model.
 
 ## Evaluate a figure
 
@@ -44,6 +45,52 @@ reference that does not render is an input error and fails the command.
 `--tex-preamble <file>` adds the manuscript's own libraries, colours, and macros
 to the standalone wrapper used for TeX input; the file must contain preamble
 lines only, with no document class or document body.
+
+## Evaluate a talk
+
+```bash
+STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
+PROBIERZ_TALK_MODEL='<vision-model-id>' \
+probierz evaluate talk \
+  --slides /absolute/path/slides \
+  --script /absolute/path/script.md \
+  --source /absolute/path/application.pdf \
+  --out test-results/talk-evaluations/panel.json
+```
+
+`--slides` is the directory of `slide-<number>.png` pictures and `--script` the
+speaker script that `lem-cli talk render --slides <dir> --slide-width <px>
+--notes <script.md>` writes. The numbers order the slides and must run from the
+first without a gap; a picture named any other way, or a missing slide, is
+refused naming it. `--source` names a document the talk presents and is
+required at least once: Markdown, text and TeX are read as written, a PDF
+through `pdftotext -layout` (poppler); any other type, or one with no text, is
+refused.
+
+One vision model, `--model` or `PROBIERZ_TALK_MODEL`, is asked once with the
+full text of every source, the script and every slide in order, and judges each
+rubric dimension met or not with its evidence. The built-in rubric holds:
+
+- `source_fidelity`: every figure, date, name and claim on the slides and in
+  the script appears in, or follows from, the sources, and no commitment is
+  stronger or weaker than they make it;
+- `argument`: one argument a panel can follow, with nothing it needs missing;
+- `slide_design`: every slide legible at projection size, one point each, with
+  nothing clipped, overlapping or crowded;
+- `human_authorship`: specific, concrete text in the presenters' register,
+  without the filler, buzzword stacks, formulaic triplets, uniform bullets or
+  boilerplate that mark text as machine-generated;
+- `delivery`: the script fits the minutes it gives each slide and answers
+  every backup slide.
+
+`--rubric <json>` replaces it with the same shape as the figure rubric. The
+talk passes only when every criterion is met and the model names no blocker;
+each unmet criterion is a `criterion_unmet:<dimension>` blocker with the issues
+the model named, and each blocker the model names carries its slide. The JSON
+report records the SHA-256 of every slide, the script and every source, the
+rubric, the model asked and the one that answered, and the whole evaluation; it
+is written once and an existing `--out` is refused.
 
 ## Evaluate SEO
 

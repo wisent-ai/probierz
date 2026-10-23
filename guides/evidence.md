@@ -186,7 +186,7 @@ Probierz owns animated product evidence. Select one recorded journey video from
 ```bash
 probierz gif test-results/APP_ID/RUN_ID/path/to/video.webm \
   --out /path/to/product/assets/demo.gif \
-  --start 0 \
+  --start 3 \
   --duration 12 \
   --fps 12 \
   --width 960
@@ -194,10 +194,12 @@ probierz gif test-results/APP_ID/RUN_ID/path/to/video.webm \
 
 The command writes the silent, looping GIF and a sibling
 `demo.gif.probierz.json` provenance file containing source/output SHA-256 and
-the exact render settings. Duration, frame rate and width are yours: an
-omitted `--duration` keeps the rest of the clip from `--start`, and an omitted
-`--fps` or `--width` keeps the source's own (recorded as `null` in the
-sidecar); a stated value must be positive, and fps and width whole. The sidecar deliberately marks the GIF as
+the exact render settings. Start, duration, frame rate and width are yours: an
+omitted `--start` begins at the start of the video, an omitted `--duration`
+keeps the rest of the clip from the start, and an omitted `--fps` or `--width`
+keeps the source's own (each recorded as `null` in the sidecar); a stated start
+must not be negative, a stated duration, fps or width must be positive, and fps
+and width whole. The GIF loops forever, as the GIF muxer does by default. The sidecar deliberately marks the GIF as
 `reviewRequired`: conversion does not prove that the clip is free of
 credentials, personal data, production identifiers, or sensitive URLs.
 `PROBIERZ_FFMPEG_BIN` may select an explicit `ffmpeg` executable. Probierz does
