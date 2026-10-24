@@ -24,6 +24,10 @@ name = "benchmark_evidence"
 path = "../tests/benchmark/evidence.rs"
 
 [[test]]
+name = "benchmark_roadmap"
+path = "../tests/benchmark/roadmap.rs"
+
+[[test]]
 name = "gate_group"
 path = "../tests/gate/group.rs"
 

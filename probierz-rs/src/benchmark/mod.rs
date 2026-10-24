@@ -81,7 +81,7 @@ pub enum BenchmarkCommand {
     /// and suites; refuses while any rival or suite is unmeasured.
     Rivals { app_id: String },
     /// Write the newest run's lost cases into the product's catalog roadmap,
-    /// and withdraw the items of cases ours now wins.
+    /// and record the items of cases ours now wins as delivered with that run.
     Roadmap {
         app_id: String,
         #[arg(long)]

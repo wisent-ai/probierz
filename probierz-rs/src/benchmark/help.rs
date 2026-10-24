@@ -30,7 +30,8 @@ empty except for the variables its `env` names. A suite's `variables` map each
 The product catalog Stado serves names the product's rivals and the suites
 that measure them. `rivals` refuses while a named rival has no contender or a
 named suite is not declared. `roadmap` writes one catalog roadmap item per
-case the newest run lost, and withdraws the item once ours wins that case.
+case the newest run lost, and records the item delivered, with the run as its
+decision, once ours wins that case; the item stays in the roadmap.
 
 Nothing in a benchmark is written by hand for one product. `author suite`
 drafts a suite from the catalog record of the product and its rivals through
@@ -74,8 +75,8 @@ ingests, scouts every watched topic while the week's product limit allows,
 has the model judge each brief and adopts the accepted ones, runs every suite
 the catalog names, writes the roadmap, hands the newest losses to pursuits
 within the policy's budget, and turns every open Probierz incident into a
-roadmap item of the product its envelope names, withdrawn once it is
-resolved. With `evidenceDir` in the policy (a directory of <topic>.json
+roadmap item of the product its envelope names, recorded delivered once the
+register holds the incident resolved. With `evidenceDir` in the policy (a directory of <topic>.json
 evidence files, relative to the harness), the cycle scouts those topics with
 `--evidence` and neither watches, ingests nor lists through Trends; a path
 that is not a directory is refused when the policy is read. Every step is

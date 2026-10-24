@@ -1,22 +1,27 @@
 //! The benchmark against the product catalog Stado serves.
 //!
-//! The catalog says who a product's rivals are and which Probierz suites
-//! measure them. `rivals` confronts that declaration with the manifest: every
-//! rival must have a contender and every named suite must be declared, or the
-//! declaration is a promise nothing keeps. `roadmap` turns the newest run's
-//! losses into the product's roadmap, one item per case, and withdraws the
-//! item for a case once a newer run shows ours winning it.
+//! The catalog says who a product's rivals are, which Probierz suites
+//! measure them and what the product's roadmap holds. [`rivals`] confronts
+//! that declaration with the manifest; [`roadmap`] turns the newest run's
+//! losses into roadmap items and records a case ours now wins as delivered;
+//! [`ledger`] is the one writer every roadmap item goes through, the
+//! benchmark's and the incident feedback's alike.
 
-use std::path::Path;
 use std::process::Command;
 
-use serde_json::{json, Value as Json};
+use serde_json::Value as Json;
 
-use super::commands::standing_of;
-use crate::benchmark::inputs::declare::declared;
-use crate::failure::{ended, print_json, Answer, Code, Failure};
-use crate::manifest::{self, Manifest};
+use crate::failure::{ended, Code, Failure};
+use crate::manifest::Manifest;
 use crate::stado::STADO_BIN;
+
+mod ledger;
+mod rivals;
+mod roadmap;
+
+pub(crate) use ledger::{delivered, is_open, titled, write_roadmap, PLANNED};
+pub(crate) use rivals::rivals;
+pub(crate) use roadmap::{roadmap, roadmap_of};
 
 /// The catalog id of the product a manifest describes.
 pub(crate) fn product_id(manifest: &Manifest) -> String {
@@ -42,11 +47,12 @@ pub(crate) fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
     })?;
     if !output.status.success() {
         // Stado's sentence first: the failure line is cut for a person, and a
-        // long argv ahead of it hid the reason.
+        // long argv ahead of it hid the reason. The command is named by its
+        // words before the first option: the subcommand and its operands.
         let verb: Vec<String> = command
             .get_args()
-            .take(2)
             .map(|arg| arg.to_string_lossy().into_owned())
+            .take_while(|arg| !arg.starts_with('-'))
             .collect();
         return Err(Failure::new(
             "benchmark.catalog",
@@ -92,208 +98,4 @@ pub(crate) fn record(product: &str) -> Result<Json, Failure> {
                 format!("the product catalog has no product {product}; the manifest's productId names it"),
             )
         })
-}
-
-pub(crate) fn rivals(harness: &Path, app_id: &str) -> Answer {
-    let manifest = manifest::load(harness, app_id)?;
-    let declared = declared(&manifest)?;
-    let product = product_id(&manifest);
-    let entry = record(&product)?;
-    let empty = Vec::new();
-    let named = entry["rivals"].as_array().unwrap_or(&empty);
-    let rivals: Vec<Json> = named
-        .iter()
-        .map(|rival| {
-            let id = rival["id"].as_str();
-            json!({
-                "id": id,
-                "name": rival["name"],
-                "url": rival["url"],
-                "measured": id.is_some_and(|id| declared.contenders.get(id).is_some_and(|contender| !contender.ours)),
-            })
-        })
-        .collect();
-    let suites: Vec<Json> = entry["benchmark"]["suites"]
-        .as_array()
-        .unwrap_or(&empty)
-        .iter()
-        .map(|suite| {
-            let id = suite.as_str();
-            json!({"id": id, "declared": id.is_some_and(|id| declared.suites.contains_key(id))})
-        })
-        .collect();
-    let undeclared: Vec<&str> = declared
-        .contenders
-        .values()
-        .filter(|contender| {
-            !contender.ours
-                && !named
-                    .iter()
-                    .any(|rival| rival["id"] == contender.id.as_str())
-        })
-        .map(|contender| contender.id.as_str())
-        .collect();
-    let catalog_app = entry["benchmark"]["app"].as_str();
-    let mut gaps = Vec::new();
-    if named.is_empty() {
-        gaps.push(format!(
-            "the catalog names no rival for {product}; stado product registry set {product} --add-rival declares one"
-        ));
-    }
-    if catalog_app != Some(app_id) {
-        gaps.push(format!(
-            "the catalog's benchmark for {product} names app {catalog_app:?}, not {app_id}"
-        ));
-    }
-    for rival in rivals.iter().filter(|rival| rival["measured"] == false) {
-        gaps.push(match rival["id"].as_str() {
-            Some(id) => format!(
-                "rival {id} has no contender in {}; probierz benchmark author contender {app_id} --contender {id} --suite <id> drafts and verifies one",
-                manifest.file.display(),
-            ),
-            None => format!("a rival the catalog names for {product} states no id: {rival}"),
-        });
-    }
-    for suite in suites.iter().filter(|suite| suite["declared"] == false) {
-        gaps.push(match suite["id"].as_str() {
-            Some(id) => format!(
-                "suite {id} is named by the catalog but not declared in {}; probierz benchmark author suite {app_id} --suite {id} drafts one",
-                manifest.file.display(),
-            ),
-            None => format!("a suite the catalog names for {product} is not a suite id: {suite}"),
-        });
-    }
-    for id in &undeclared {
-        gaps.push(format!(
-            "contender {id} is not a rival the catalog names for {product}"
-        ));
-    }
-    print_json(&json!({
-        "appId": app_id,
-        "product": product,
-        "rivals": rivals,
-        "suites": suites,
-        "gaps": gaps,
-    }))?;
-    if gaps.is_empty() {
-        Ok(())
-    } else {
-        Err(Failure::config(
-            "benchmark.rivals",
-            format!(
-                "{} gap(s) between the catalog and the manifest: {}",
-                gaps.len(),
-                gaps.join("; ")
-            ),
-        ))
-    }
-}
-
-fn title(suite: &str, case: &str) -> String {
-    format!("Win benchmark case {suite}/{case}")
-}
-
-pub(crate) fn roadmap(harness: &Path, app_id: &str, suite_id: &str) -> Answer {
-    print_json(&roadmap_of(harness, app_id, suite_id)?)
-}
-
-/// Bring the product's catalog roadmap in line with the newest run of one
-/// suite and answer what was added and withdrawn.
-pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result<Json, Failure> {
-    let manifest = manifest::load(harness, app_id)?;
-    let product = product_id(&manifest);
-    let standing = standing_of(harness, app_id, suite_id)?;
-    // A roadmap item names the run, our contender and the case it came from;
-    // one read as '' would be written into the product's catalog.
-    let stated = |value: &Json, field: &str| {
-        value[field].as_str().map(str::to_string).ok_or_else(|| {
-            Failure::config(
-                "benchmark.roadmap",
-                format!("the {suite_id} standing of {app_id} states no {field}"),
-            )
-        })
-    };
-    let run_id = stated(&standing, "runId")?;
-    let ours = stated(&standing, "ours")?;
-    let prefix = title(suite_id, "");
-    let existing: Vec<String> = record(&product)?["roadmap"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|item| item["title"].as_str())
-        .filter(|title| title.starts_with(&prefix))
-        .map(str::to_string)
-        .collect();
-    let mut added = Vec::new();
-    let mut wanted = Vec::new();
-    for loss in standing["losses"].as_array().into_iter().flatten() {
-        let case = stated(loss, "case")?;
-        let case = case.as_str();
-        let winners: Vec<&str> = loss["winners"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Json::as_str)
-            .collect();
-        added.push(json!({
-            "title": title(suite_id, case),
-            "status": "planned",
-            "outcome": format!(
-                "probierz benchmark standing {app_id} --suite {suite_id} shows {ours} winning or tying case {case}, which {} won",
-                winners.join(", ")
-            ),
-            "source": format!("probierz benchmark run {run_id} of {app_id}"),
-        }));
-        wanted.push(title(suite_id, case));
-    }
-    let removed: Vec<String> = existing
-        .into_iter()
-        .filter(|old| !wanted.contains(old))
-        .collect();
-    if !added.is_empty() || !removed.is_empty() {
-        let mut write = Command::new(STADO_BIN);
-        write
-            .arg("product")
-            .arg("registry")
-            .arg("set")
-            .arg(&product);
-        for item in &added {
-            write.arg("--add-roadmap").arg(item.to_string());
-        }
-        for old in &removed {
-            write.arg("--remove-roadmap").arg(old);
-        }
-        stado(&mut write)?;
-    }
-    let written = record(&product)?;
-    let titles: Vec<&str> = written["roadmap"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|item| item["title"].as_str())
-        .collect();
-    let missing: Vec<&String> = wanted
-        .iter()
-        .filter(|title| !titles.contains(&title.as_str()))
-        .collect();
-    let lingering: Vec<&String> = removed
-        .iter()
-        .filter(|title| titles.contains(&title.as_str()))
-        .collect();
-    if !missing.is_empty() || !lingering.is_empty() {
-        return Err(Failure::new(
-            "benchmark.roadmap",
-            Code::Unknown,
-            format!(
-                "the catalog read back after the write lacks {missing:?} and still holds {lingering:?}"
-            ),
-        ));
-    }
-    Ok(json!({
-        "appId": app_id,
-        "product": product,
-        "runId": run_id,
-        "added": added,
-        "removed": removed,
-    }))
 }
