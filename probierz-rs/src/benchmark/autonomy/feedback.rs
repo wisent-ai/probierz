@@ -109,13 +109,25 @@ fn planned_item(row: &Json, incident: &str, items: &[Json]) -> Result<Json, Stri
     }))
 }
 
-fn changes_of(rows: &[Json], open: &[&Json], items: &[Json]) -> Changes {
+fn changes_of(
+    rows: &[Json],
+    open: &[&Json],
+    items: &[Json],
+    statuses: &catalog::Statuses,
+) -> Changes {
     let mut changes = Changes {
         added: Vec::new(),
         delivered: Vec::new(),
         refused: Vec::new(),
     };
-    let existing: Vec<&Json> = items.iter().filter(|item| catalog::is_open(item)).collect();
+    let mut existing: Vec<&Json> = Vec::new();
+    for item in items {
+        match statuses.is_open(item) {
+            Ok(true) => existing.push(item),
+            Ok(false) => {}
+            Err(refusal) => changes.refused.push(refusal),
+        }
+    }
     let mut incidents = Vec::new();
     for row in open {
         let Some(incident) = row["incident_id"].as_str() else {
@@ -150,6 +162,12 @@ fn changes_of(rows: &[Json], open: &[&Json], items: &[Json]) -> Changes {
 
 /// Bring every product's incident items in line with the register.
 pub(super) fn incidents(harness: &Path, me: &Path, products: &[Json]) -> Json {
+    // Which roadmap statuses are still open is Stado's declaration, read from
+    // the catalog answer; without it no item can be told open or ended.
+    let statuses = match catalog::catalog().and_then(|answer| catalog::statuses(&answer)) {
+        Ok(statuses) => statuses,
+        Err(failure) => return json!({"refusal": failure.detail}),
+    };
     let listed = steps::run(
         me,
         &steps::args(&["incident", "list", "--state", "all", "--json"]),
@@ -184,7 +202,7 @@ pub(super) fn incidents(harness: &Path, me: &Path, products: &[Json]) -> Json {
             added,
             delivered,
             refused,
-        } = changes_of(rows, &open, &items);
+        } = changes_of(rows, &open, &items, &statuses);
         if added.is_empty() && delivered.is_empty() && refused.is_empty() {
             continue;
         }

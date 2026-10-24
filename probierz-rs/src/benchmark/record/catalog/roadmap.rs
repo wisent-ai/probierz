@@ -15,7 +15,7 @@ use serde_json::{json, Value as Json};
 
 use super::super::commands::standing_of;
 use super::ledger::{self, PLANNED};
-use super::{product_id, record};
+use super::{catalog, product_id, record_of};
 use crate::failure::{print_json, Answer, Failure};
 use crate::manifest;
 
@@ -65,8 +65,10 @@ pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result
         )
     })?;
     let prefix = title(suite_id, "");
-    let items = ledger::titled(&product, &record(&product)?, &prefix)?;
-    let open: Vec<&Json> = items.iter().filter(|item| ledger::is_open(item)).collect();
+    let catalog = catalog()?;
+    let statuses = ledger::statuses(&catalog)?;
+    let items = ledger::titled(&product, &record_of(&catalog, &product)?, &prefix)?;
+    let open: Vec<&Json> = ledger::open_of(&statuses, &items)?;
     let mut planned = Vec::new();
     let mut lost = Vec::new();
     for loss in losses {

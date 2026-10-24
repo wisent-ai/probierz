@@ -19,7 +19,7 @@ mod ledger;
 mod rivals;
 mod roadmap;
 
-pub(crate) use ledger::{delivered, is_open, titled, write_roadmap, PLANNED};
+pub(crate) use ledger::{delivered, statuses, titled, write_roadmap, Statuses, PLANNED};
 pub(crate) use rivals::rivals;
 pub(crate) use roadmap::{roadmap, roadmap_of};
 
@@ -68,17 +68,22 @@ pub(crate) fn stado(command: &mut Command) -> Result<Vec<u8>, Failure> {
     Ok(output.stdout)
 }
 
-/// Every product record in the catalog Stado serves.
-pub(crate) fn products() -> Result<Vec<Json>, Failure> {
+/// The whole answer of `stado product catalog --json`: its products and the
+/// roadmap statuses it declares.
+pub(crate) fn catalog() -> Result<Json, Failure> {
     let mut read = Command::new(STADO_BIN);
     read.arg("product").arg("catalog").arg("--json");
-    let mut catalog: Json = serde_json::from_slice(&stado(&mut read)?).map_err(|error| {
+    serde_json::from_slice(&stado(&mut read)?).map_err(|error| {
         Failure::config(
             "benchmark.catalog",
             format!("stado product catalog --json is not JSON: {error}"),
         )
-    })?;
-    match catalog["products"].take() {
+    })
+}
+
+/// The product records of a catalog answer.
+pub(crate) fn products_of(catalog: &Json) -> Result<&[Json], Failure> {
+    match &catalog["products"] {
         Json::Array(products) => Ok(products),
         _ => Err(Failure::config(
             "benchmark.catalog",
@@ -87,15 +92,26 @@ pub(crate) fn products() -> Result<Vec<Json>, Failure> {
     }
 }
 
-/// One product's record in the catalog Stado serves.
-pub(crate) fn record(product: &str) -> Result<Json, Failure> {
-    products()?
-        .into_iter()
+/// Every product record in the catalog Stado serves.
+pub(crate) fn products() -> Result<Vec<Json>, Failure> {
+    Ok(products_of(&catalog()?)?.to_vec())
+}
+
+/// One product's record in a catalog answer.
+pub(crate) fn record_of(catalog: &Json, product: &str) -> Result<Json, Failure> {
+    products_of(catalog)?
+        .iter()
         .find(|entry| entry["id"] == product)
+        .cloned()
         .ok_or_else(|| {
             Failure::config(
                 "benchmark.catalog",
                 format!("the product catalog has no product {product}; the manifest's productId names it"),
             )
         })
+}
+
+/// One product's record in the catalog Stado serves.
+pub(crate) fn record(product: &str) -> Result<Json, Failure> {
+    record_of(&catalog()?, product)
 }
