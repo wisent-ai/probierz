@@ -131,14 +131,25 @@ pub(crate) fn validate_index_records(
     project_root: &Path,
     file: &Path,
 ) -> Result<(), Failure> {
-    for source in document["sources"].as_array().expect("checked") {
-        let valid_source = source
-            .get("sourceKey")
-            .and_then(Value::as_str)
-            .is_some_and(crate::evidence::is_sha256)
-            && source.get("sourceRoot").is_some_and(Value::is_string)
-            && source.get("files").is_some_and(Value::is_array);
-        if !valid_source {
+    let Some(sources) = document["sources"].as_array() else {
+        return Err(fail(
+            "adoption.index",
+            format!(
+                "Probierz adoption index {} holds no sources list",
+                file.display()
+            ),
+        ));
+    };
+    for source in sources {
+        // A record is read once: the fields its check found are the ones used.
+        let (Some(_source_key), Some(_source_root), Some(files)) = (
+            source
+                .get("sourceKey")
+                .and_then(Value::as_str)
+                .filter(|key| crate::evidence::is_sha256(key)),
+            source.get("sourceRoot").and_then(Value::as_str),
+            source.get("files").and_then(Value::as_array),
+        ) else {
             return Err(fail(
                 "adoption.index",
                 format!(
@@ -146,24 +157,22 @@ pub(crate) fn validate_index_records(
                     file.display()
                 ),
             ));
-        }
-        for retained in source["files"].as_array().expect("checked") {
-            let valid_file = retained.get("path").is_some_and(Value::is_string)
-                && retained
+        };
+        for retained in files {
+            let (Some(path), Some(_sha256), Some(_mode)) = (
+                retained.get("path").and_then(Value::as_str),
+                retained
                     .get("sha256")
                     .and_then(Value::as_str)
-                    .is_some_and(crate::evidence::is_sha256)
-                && retained.get("mode").and_then(Value::as_u64).is_some();
-            if !valid_file {
+                    .filter(|sha256| crate::evidence::is_sha256(sha256)),
+                retained.get("mode").and_then(Value::as_u64),
+            ) else {
                 return Err(fail(
                     "adoption.index",
                     format!("invalid Probierz adoption file record: {}", file.display()),
                 ));
-            }
-            absolute(
-                project_root,
-                retained["path"].as_str().expect("validated string"),
-            )?;
+            };
+            absolute(project_root, path)?;
         }
     }
     Ok(())

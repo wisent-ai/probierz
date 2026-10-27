@@ -86,7 +86,7 @@ pub(crate) fn provision_inputs(
                     "Remote native-binary provisioning needs --app-repo <path>.",
                 )
             })?;
-            if !binary_path.is_file() {
+            if !crate::paths::present(&binary_path)? || !binary_path.is_file() {
                 return Err(Failure::config("stado.pack", "The --app-binary-path you gave is not a file. Supply the signed native executable."));
             }
             let staged = work_path(&format!(
@@ -139,7 +139,7 @@ pub(crate) fn provision_inputs(
             bundle_name,
             ..
         }) => {
-            if !bundle_path.exists() {
+            if !crate::paths::present(bundle_path)? {
                 return Err(Failure::config(
                     "stado.pack",
                     "The --app-bundle-path you gave does not exist. Build the bundle first.",

@@ -18,7 +18,7 @@ pub(crate) fn response_json(response: ureq::Response) -> Result<Value, Failure> 
             )
         })
     };
-    if (200..300).contains(&status) {
+    if ::http::StatusCode::from_u16(status).is_ok_and(|code| code.is_success()) {
         body()
     } else {
         // The refusal as the service sent it: a structured error (wisent-
@@ -46,10 +46,11 @@ pub(crate) fn request_json(
     for (name, value) in headers {
         request = request.set(name, value);
     }
-    let response = match body {
+    let place = format!("{method} {endpoint}");
+    let response = stado_wait::blocking(stado_wait::Kind::Network, "app hook request", &place, || match body {
         Some(body) => request.send_json(body),
         None => request.call(),
-    };
+    });
     match response {
         Ok(response) => response_json(response),
         Err(ureq::Error::Status(_, response)) => response_json(response),
@@ -61,10 +62,11 @@ pub(crate) fn supabase_headers(
     source: &BTreeMap<String, String>,
     prefer: Option<&str>,
 ) -> Vec<(&'static str, String)> {
+    // The hook's entry refuses a run without OKO_REQUIRED, which names the key.
     let key = source
         .get("OKO_E2E_SUPABASE_SERVICE_ROLE_KEY")
         .cloned()
-        .unwrap_or_default();
+        .expect("the app hook entry requires OKO_E2E_SUPABASE_SERVICE_ROLE_KEY");
     let mut headers = vec![
         ("apikey", key.clone()),
         ("Authorization", format!("Bearer {key}")),
@@ -76,6 +78,16 @@ pub(crate) fn supabase_headers(
     headers
 }
 
+/// The configured value `key` of an app hook's source. The hook's entry
+/// checks its required names before it runs, so a missing one here is a hook
+/// reading a name its entry does not require: refused naming the key, not a
+/// panic of the whole Probierz process the MCP server shares.
+pub(crate) fn configured<'a>(source: &'a BTreeMap<String, String>, key: &str) -> Result<&'a str, Failure> {
+    source.get(key).map(String::as_str).ok_or_else(|| {
+        Failure::config("apphook", format!("the app hook needs {key}, which its configuration does not set"))
+    })
+}
+
 pub(crate) fn supabase(
     source: &BTreeMap<String, String>,
     path: &str,
@@ -83,10 +95,7 @@ pub(crate) fn supabase(
     prefer: Option<&str>,
     body: Option<Value>,
 ) -> Result<Value, Failure> {
-    let base = source
-        .get("OKO_E2E_SUPABASE_URL")
-        .map(|value| value.trim_end_matches('/'))
-        .unwrap_or_default();
+    let base = configured(source, "OKO_E2E_SUPABASE_URL")?.trim_end_matches('/');
     request_json(
         method,
         &format!("{base}{path}"),
@@ -144,5 +153,6 @@ pub(crate) fn slack(
             format!("wisent-integrations slack/{action} as {identity}: {failure}"),
         )
     })?;
-    Ok(envelope.get("result").cloned().unwrap_or(Value::Null))
+    // A call whose envelope holds no result answered null.
+    Ok(json!(envelope.get("result")))
 }

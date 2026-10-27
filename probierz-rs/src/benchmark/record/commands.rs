@@ -42,25 +42,37 @@ pub(crate) fn suites(harness: &Path, app_id: &str) -> Answer {
 }
 
 /// The revision a contender's program was built from, when it lives in a
-/// git checkout: its commit and whether the tree differs from it.
-pub(crate) fn source(contender: &Contender) -> Json {
+/// git checkout: its commit and whether the tree differs from it. A program
+/// outside any checkout has none (null); a git that cannot run is the error.
+pub(crate) fn source(contender: &Contender) -> Result<Json, Failure> {
     let Some(directory) = contender.program.parent() else {
-        return Json::Null;
+        return Ok(Json::Null);
     };
-    let git = |args: &[&str]| {
-        stado_wait::output(Command::new("git").arg("-C").arg(directory).args(args))
-            .ok()
-            .filter(|output| output.status.success())
-            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+    let git = |args: &[&str]| -> Result<Option<String>, Failure> {
+        let output = stado_wait::output(Command::new("git").arg("-C").arg(directory).args(args))
+            .map_err(|error| {
+                Failure::unavailable(
+                    "benchmark.source",
+                    format!(
+                        "git {} in {} could not run: {error}",
+                        args.join(" "),
+                        directory.display()
+                    ),
+                )
+            })?;
+        Ok(output
+            .status
+            .success()
+            .then(|| String::from_utf8_lossy(&output.stdout).trim().to_string()))
     };
-    match git(&["rev-parse", "HEAD"]) {
+    Ok(match git(&["rev-parse", "HEAD"])? {
         Some(commit) => json!({
-            "repository": git(&["rev-parse", "--show-toplevel"]),
+            "repository": git(&["rev-parse", "--show-toplevel"])?,
             "commit": commit,
-            "dirty": git(&["status", "--porcelain"]).map(|status| !status.is_empty()),
+            "dirty": git(&["status", "--porcelain"])?.map(|status| !status.is_empty()),
         }),
         None => Json::Null,
-    }
+    })
 }
 
 pub(crate) fn run(
@@ -97,11 +109,15 @@ pub(crate) fn recorded_run(
     for contender in &contenders {
         execute::ready(contender)?;
     }
-    let repetitions = repetitions.unwrap_or(loaded.suite.repetitions);
+    // The caller's count when it names one; otherwise the suite's own.
+    let repetitions = match repetitions {
+        Some(asked) => asked,
+        None => loaded.suite.repetitions,
+    };
     let started_at = now_iso();
     let mut samples = Vec::new();
     for case in &loaded.suite.cases {
-        for repetition in 1..=repetitions {
+        for repetition in std::num::NonZeroUsize::MIN.get()..=repetitions {
             for contender in &contenders {
                 let attempt = execute::attempt(contender, &loaded, &values, case, repetition)?;
                 let sample = assess::sample(contender, case, repetition, attempt);
@@ -112,6 +128,17 @@ pub(crate) fn recorded_run(
                 samples.push(sample);
             }
         }
+    }
+    let mut sources = Vec::new();
+    for contender in &contenders {
+        sources.push(json!({
+            "id": contender.id,
+            "ours": contender.ours,
+            "program": contender.program.to_string_lossy(),
+            "args": contender.args,
+            "env": contender.env,
+            "source": source(contender)?,
+        }));
     }
     let mut run = json!({
         "schema": RUN_SCHEMA,
@@ -125,14 +152,7 @@ pub(crate) fn recorded_run(
             "repetitions": repetitions,
         },
         "ours": declared.ours().id,
-        "contenders": contenders.iter().map(|contender| json!({
-            "id": contender.id,
-            "ours": contender.ours,
-            "program": contender.program.to_string_lossy(),
-            "args": contender.args,
-            "env": contender.env,
-            "source": source(contender),
-        })).collect::<Vec<_>>(),
+        "contenders": sources,
         "startedAt": started_at,
         "finishedAt": now_iso(),
         "summary": assess::summary(&contenders, &samples),
@@ -151,10 +171,9 @@ pub(crate) fn list(
     limit: Option<usize>,
 ) -> Answer {
     manifest::load(harness, app_id)?;
-    let runs: Vec<Json> = store::all(harness, app_id)?
+    let mut runs: Vec<Json> = store::all(harness, app_id)?
         .into_iter()
         .filter(|run| suite_id.is_none_or(|id| run["suite"]["id"] == id))
-        .take(limit.unwrap_or(usize::MAX))
         .map(|run| {
             json!({
                 "runId": run["runId"],
@@ -166,6 +185,9 @@ pub(crate) fn list(
             })
         })
         .collect();
+    if let Some(limit) = limit {
+        runs.truncate(limit);
+    }
     print_json(&json!({"appId": app_id, "runs": runs}))
 }
 
@@ -186,21 +208,25 @@ pub(crate) fn compare(harness: &Path, app_id: &str, baseline: &str, candidate: &
             ),
         ));
     }
-    let summary = |run: &Json, name: &str| {
+    fn summary<'run>(
+        run: &'run Json,
+        name: &str,
+    ) -> Result<&'run serde_json::Map<String, Json>, Failure> {
         run["summary"].as_object().ok_or_else(|| {
             Failure::invalid(
                 "benchmark.compare",
                 format!("run {name} records no summary of its contenders"),
             )
         })
-    };
+    }
     let earlier = summary(&before, baseline)?;
     let later = summary(&after, candidate)?;
+    // A ratio over a base of no passes is no number, and is null.
     let ratio = |field: &str, left: &Json, right: &Json| match (
         left[field].as_f64(),
         right[field].as_f64(),
     ) {
-        (Some(base), Some(next)) if base > 0.0 => json!(next / base),
+        (Some(base), Some(next)) if (next / base).is_finite() => json!(next / base),
         _ => Json::Null,
     };
     let mut contenders = Vec::new();

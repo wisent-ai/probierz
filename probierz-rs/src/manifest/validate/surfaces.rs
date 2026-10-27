@@ -1,5 +1,20 @@
 use crate::manifest::*;
 
+/// The text `value` holds when it is non-empty text.
+fn stated(value: Option<&str>) -> Option<&str> {
+    value.filter(|text| !text.is_empty())
+}
+
+/// The list `value` holds when it is a non-empty sequence.
+fn listed(value: Option<&Vec<Value>>) -> Option<&Vec<Value>> {
+    value.filter(|list| !list.is_empty())
+}
+
+/// Refuse the manifest at `file` with `sentence`.
+fn refuse(file: &Path, sentence: &str) -> Answer {
+    require(false, file, sentence)
+}
+
 /// The repositories a manifest maps and the surfaces it declares. A plain
 /// value a surface states may not sit under a name the manifest's own
 /// redaction hides: that value belongs in `secretRefs`.
@@ -11,9 +26,11 @@ pub(crate) fn validate_repositories_and_surfaces(
     redaction: &Redaction,
 ) -> Answer {
     for repository in repositories {
-        let root = string_of(repository, "root").unwrap_or_default();
+        let Some(root) = stated(string_of(repository, "root")) else {
+            return refuse(file, "repository root must be absolute or under ~/");
+        };
         require(
-            !root.is_empty() && (root.starts_with("~/") || Path::new(root).is_absolute()),
+            root.starts_with("~/") || Path::new(root).is_absolute(),
             file,
             "repository root must be absolute or under ~/",
         )?;
@@ -28,27 +45,26 @@ pub(crate) fn validate_repositories_and_surfaces(
     }
 
     for (target_key, surface) in surfaces {
-        let target = target_key.as_str().unwrap_or_default();
+        let Some(target) = target_key.as_str() else {
+            return refuse(file, &format!("surface name {target_key:?} must be text"));
+        };
         require(
             surface.as_mapping().is_some(),
             file,
             &format!("surface {target} must be an object"),
         )?;
         require(
-            !string_of(surface, "spec").unwrap_or_default().is_empty(),
+            stated(string_of(surface, "spec")).is_some(),
             file,
             &format!("surface {target} spec is required"),
         )?;
-        let surface_journeys = sequence_of(surface, "journeys");
-        require(
-            surface_journeys
-                .map(|list| !list.is_empty())
-                .unwrap_or(false),
-            file,
-            &format!("surface {target} journeys are required"),
-        )?;
-        for journey in surface_journeys.expect("checked") {
-            let name = journey.as_str().unwrap_or_default();
+        let Some(surface_journeys) = listed(sequence_of(surface, "journeys")) else {
+            return refuse(file, &format!("surface {target} journeys are required"));
+        };
+        for journey in surface_journeys {
+            let Some(name) = journey.as_str() else {
+                return refuse(file, &format!("surface {target} journey {journey:?} must be a name"));
+            };
             require(
                 journeys.get(Value::from(name)).is_some(),
                 file,
@@ -61,8 +77,8 @@ pub(crate) fn validate_repositories_and_surfaces(
                 file,
                 &format!("surface {target} runner must be an object"),
             )?;
-            let command = string_of(runner, "command").filter(|value| !value.is_empty());
-            let capability = string_of(runner, "capability").filter(|value| !value.is_empty());
+            let command = stated(string_of(runner, "command"));
+            let capability = stated(string_of(runner, "capability"));
             require(
                 command.is_some() ^ capability.is_some(),
                 file,
@@ -75,60 +91,18 @@ pub(crate) fn validate_repositories_and_surfaces(
                     &format!("surface {target} runner capability {capability} is unknown"),
                 )?;
             }
-            let args_are_strings = sequence_of(runner, "args")
-                .map(|list| list.iter().all(Value::is_string))
-                .unwrap_or(true);
-            require(
-                args_are_strings,
-                file,
-                &format!("surface {target} runner args must be strings"),
-            )?;
-        }
-        for (index, override_entry) in sequence_of(surface, "journeyOverrides")
-            .unwrap_or(&Vec::new())
-            .iter()
-            .enumerate()
-        {
-            require(
-                override_entry.as_mapping().is_some(),
-                file,
-                &format!("surface {target} journeyOverrides.{index} must be an object"),
-            )?;
-            let when = map_of(override_entry, "when");
-            require(
-                when.map(|map| !map.is_empty()).unwrap_or(false),
-                file,
-                &format!("surface {target} journeyOverrides.{index}.when is required"),
-            )?;
-            let override_journeys = sequence_of(override_entry, "journeys");
-            require(
-                override_journeys
-                    .map(|list| !list.is_empty())
-                    .unwrap_or(false),
-                file,
-                &format!("surface {target} journeyOverrides.{index}.journeys are required"),
-            )?;
-            for (key, value) in when.expect("checked") {
-                let name = key.as_str().unwrap_or_default();
+            // A runner without args passes none; args it states are strings.
+            if let Some(args) = sequence_of(runner, "args") {
                 require(
-                    !redaction.covers(name),
+                    args.iter().all(Value::is_string),
                     file,
-                    &format!("surface {target} journey override {name} must not be sensitive"),
-                )?;
-                let scalar = value.is_string() || value.is_number() || value.is_bool();
-                require(
-                    scalar,
-                    file,
-                    &format!("surface {target} journey override {name} must be scalar"),
+                    &format!("surface {target} runner args must be strings"),
                 )?;
             }
-            for journey in override_journeys.expect("checked") {
-                let name = journey.as_str().unwrap_or_default();
-                require(
-                    journeys.get(Value::from(name)).is_some(),
-                    file,
-                    &format!("surface {target} journey override {name} is unknown"),
-                )?;
+        }
+        if let Some(overrides) = sequence_of(surface, "journeyOverrides") {
+            for (index, override_entry) in overrides.iter().enumerate() {
+                validate_override(file, target, index, override_entry, journeys, redaction)?;
             }
         }
         if let Some(conditions) = map_of(surface, "conditions") {
@@ -143,17 +117,73 @@ pub(crate) fn validate_repositories_and_surfaces(
         if let Some(env) = map_of(surface, "env") {
             for (target_name, source_name) in env {
                 require(
-                    !target_name.as_str().unwrap_or_default().is_empty(),
+                    stated(target_name.as_str()).is_some(),
                     file,
                     &format!("surface {target} env target is required"),
                 )?;
                 require(
-                    !source_name.as_str().unwrap_or_default().is_empty(),
+                    stated(source_name.as_str()).is_some(),
                     file,
                     &format!("surface {target} env source is required"),
                 )?;
             }
         }
+    }
+    Ok(())
+}
+
+/// One `journeyOverrides` entry: non-empty scalar conditions on names the
+/// redaction does not hide, and a non-empty list of known journeys.
+fn validate_override(
+    file: &Path,
+    target: &str,
+    index: usize,
+    override_entry: &Value,
+    journeys: &serde_yaml::Mapping,
+    redaction: &Redaction,
+) -> Answer {
+    require(
+        override_entry.as_mapping().is_some(),
+        file,
+        &format!("surface {target} journeyOverrides.{index} must be an object"),
+    )?;
+    let Some(when) = map_of(override_entry, "when").filter(|map| !map.is_empty()) else {
+        return refuse(file, &format!("surface {target} journeyOverrides.{index}.when is required"));
+    };
+    let Some(override_journeys) = listed(sequence_of(override_entry, "journeys")) else {
+        return refuse(
+            file,
+            &format!("surface {target} journeyOverrides.{index}.journeys are required"),
+        );
+    };
+    for (key, value) in when {
+        let Some(name) = key.as_str() else {
+            return refuse(file, &format!("surface {target} journey override {key:?} must be a name"));
+        };
+        require(
+            !redaction.covers(name),
+            file,
+            &format!("surface {target} journey override {name} must not be sensitive"),
+        )?;
+        let scalar = value.is_string() || value.is_number() || value.is_bool();
+        require(
+            scalar,
+            file,
+            &format!("surface {target} journey override {name} must be scalar"),
+        )?;
+    }
+    for journey in override_journeys {
+        let Some(name) = journey.as_str() else {
+            return refuse(
+                file,
+                &format!("surface {target} journey override {journey:?} must be a name"),
+            );
+        };
+        require(
+            journeys.get(Value::from(name)).is_some(),
+            file,
+            &format!("surface {target} journey override {name} is unknown"),
+        )?;
     }
     Ok(())
 }

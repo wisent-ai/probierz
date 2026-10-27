@@ -107,14 +107,21 @@ fn case_harness(case: &str, declaration: Option<&serde_yaml::Value>) -> PathBuf 
 }
 
 /// Whether any run of the case harness got as far as installing into its home.
+/// No runs directory means no run started; one that cannot be listed fails
+/// the test with its cause, never reads as nothing installed.
 fn anything_installed(harness: &Path) -> bool {
     let runs = harness.join("test-results").join(APP).join("first-use");
-    match runs.read_dir() {
-        Err(_) => false,
-        Ok(entries) => entries
-            .flatten()
-            .any(|run| run.path().join("home").join(".stado").exists()),
-    }
+    let entries = match runs.read_dir() {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return false,
+        Err(error) => panic!("the case's runs at {} cannot be listed: {error}", runs.display()),
+    };
+    entries
+        .map(|entry| match entry {
+            Ok(run) => run.path().join("home").join(".stado").exists(),
+            Err(error) => panic!("a run under {} cannot be read: {error}", runs.display()),
+        })
+        .any(|installed| installed)
 }
 
 #[test]

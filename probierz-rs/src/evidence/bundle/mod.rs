@@ -21,7 +21,7 @@ use serde_json::Value;
 /// stands, but an audit that could not be written is the command's failure,
 /// where it used to be dropped and the trail silently missed the access.
 pub(crate) fn allowed_audit_written(action: &str, written: Result<Value, Failure>) -> Answer {
-    written.map(|_| ()).map_err(|audit| {
+    written.map(|_audit_record| ()).map_err(|audit| {
         Failure::new(
             "evidence.audit",
             audit.code,

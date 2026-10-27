@@ -49,14 +49,13 @@ pub(crate) fn apply_transaction(
     removals: &[String],
     index: &AdoptionIndex,
 ) -> Result<(), Failure> {
-    let transaction_id = format!(
-        "{}-{}",
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos()
-    );
+    let since_epoch = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|error| {
+        Failure::config(
+            "adoption.transaction",
+            format!("this machine's clock reads before the Unix epoch, so no transaction can be named: {error}"),
+        )
+    })?;
+    let transaction_id = format!("{}-{}", std::process::id(), since_epoch.as_nanos());
     let stage_root = destination.join(format!(".probierz-adoption-stage-{transaction_id}"));
     let backup_root = destination.join(format!(".probierz-adoption-backup-{transaction_id}"));
     let index_bytes = format!("{}\n", serde_json::to_string_pretty(index)?).into_bytes();
@@ -77,7 +76,7 @@ pub(crate) fn apply_transaction(
             fs::create_dir_all(parent)?;
         }
         write_private(&staged_index, &index_bytes)?;
-        set_mode(&staged_index, 0o600)?;
+        set_mode(&staged_index, u32::from(libc::S_IRUSR | libc::S_IWUSR))?;
 
         for relative in removals {
             let target = absolute(destination, relative)?;

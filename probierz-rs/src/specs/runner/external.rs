@@ -82,9 +82,9 @@ program that writes the canonical report"
         // The status as the process ended (a signal included) and both
         // streams, never an exit code it did not return.
         Err(format!(
-            "{} ended {}; stderr: {}; stdout: {}",
+            "{} {}; stderr: {}; stdout: {}",
             self.program.display(),
-            output.status,
+            crate::failure::ended(&output.status),
             String::from_utf8_lossy(&output.stderr).trim(),
             String::from_utf8_lossy(&output.stdout).trim()
         ))

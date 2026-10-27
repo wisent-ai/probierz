@@ -1,19 +1,26 @@
 use crate::stado::*;
 use serde_json::json;
+
+/// A random (version 4) UUID drawn from the system's random device.
 pub(crate) fn uuid_v4() -> Result<String, Failure> {
-    let mut bytes = [0_u8; 16];
+    let mut bytes: uuid::Bytes = Default::default();
     File::open("/dev/urandom")?.read_exact(&mut bytes)?;
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    let encoded = hex::encode(bytes);
-    Ok(format!(
-        "{}-{}-{}-{}-{}",
-        &encoded[0..8],
-        &encoded[8..12],
-        &encoded[12..16],
-        &encoded[16..20],
-        &encoded[20..32],
-    ))
+    Ok(uuid::Builder::from_random_bytes(bytes).into_uuid().to_string())
+}
+
+/// The yes/no `key` of an SEO profile: absent means the profile does not ask
+/// for it; any value that is not a boolean is refused naming the key, rather
+/// than read as not asked.
+fn profile_flag(profile: &serde_yaml::Value, mode: &str, key: &str) -> Result<bool, Failure> {
+    match profile.get(key) {
+        None => Ok(false),
+        Some(value) => value.as_bool().ok_or_else(|| {
+            Failure::config(
+                "stado.submit",
+                format!("the {mode} SEO profile's {key} is {value:?}, not true or false"),
+            )
+        }),
+    }
 }
 
 pub(crate) fn submit_remote_seo(
@@ -44,14 +51,8 @@ pub(crate) fn submit_remote_seo(
                 format!("app {app_id} has no SEO profile for {}", args.mode),
             )
         })?;
-    let signature = profile
-        .get("requireSignature")
-        .and_then(serde_yaml::Value::as_bool)
-        .unwrap_or(false);
-    let needs_production = profile
-        .get("requireProductionEvidence")
-        .and_then(serde_yaml::Value::as_bool)
-        .unwrap_or(false);
+    let signature = profile_flag(profile, &args.mode, "requireSignature")?;
+    let needs_production = profile_flag(profile, &args.mode, "requireProductionEvidence")?;
     if needs_production && args.production_evidence.is_none() {
         return Err(Failure::config(
             "stado.submit",
@@ -78,7 +79,19 @@ pub(crate) fn submit_remote_seo(
     }
     let packed = pack_repo(harness, &[app_id])?;
     let repo_uri = upload(&packed.file, &format!("probierz-{}.tar.gz", packed.hash))?;
-    let router = model_router_url(std::env::var("STADO_MODEL_ROUTER_URL").ok().as_deref())?;
+    // A router setting the environment holds but cannot hand over as text is
+    // refused with its cause, not read as never set.
+    let configured_router = match std::env::var("STADO_MODEL_ROUTER_URL") {
+        Ok(router) => Some(router),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(error) => {
+            return Err(Failure::config(
+                "stado.submit",
+                format!("STADO_MODEL_ROUTER_URL cannot be read: {error}"),
+            ))
+        }
+    };
+    let router = model_router_url(configured_router.as_deref())?;
     let script = seo_script(
         app_id,
         base_url,
@@ -123,57 +136,45 @@ pub(crate) fn submit_remote_seo(
     }
     let secrets = remote_secret_env(harness, app_id, &secret_names)?;
     let submission = submit_machine(harness, &selected, &packed.hash, "seo", inputs, secrets)?;
-    let mut result = json!({
-        "host": args.host,
-        "jobId": submission.job_id,
-        "appId": app_id,
-        "mode": args.mode,
-        "submitted": submission.job_id.is_some(),
-    });
+    let mut result = Map::from_iter([
+        ("host".to_owned(), json!(args.host)),
+        ("jobId".to_owned(), json!(submission.job_id)),
+        ("appId".to_owned(), json!(app_id)),
+        ("mode".to_owned(), json!(args.mode)),
+        ("submitted".to_owned(), json!(submission.job_id.is_some())),
+    ]);
     let Some(job_id) = submission.job_id else {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("submit-failed".into()));
-        object.insert("failure".into(), submission.failure.unwrap_or(Value::Null));
-        return Ok(result);
+        result.insert("state".into(), Value::String("submit-failed".into()));
+        result.insert("failure".into(), json!(submission.failure));
+        return Ok(Value::Object(result));
     };
     if args.no_watch {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("queued".into()));
-        object.insert("failure".into(), Value::Null);
-        return Ok(result);
+        result.insert("state".into(), Value::String("queued".into()));
+        result.insert("failure".into(), Value::Null);
+        return Ok(Value::Object(result));
     }
+    // How the job ended is read from Stado's terminal state, typed in
+    // watch.rs, as resume and remote authoring read it.
     let watched = watch_job(&job_id)?;
-    result
-        .as_object_mut()
-        .expect("object")
-        .extend(watched.as_object().cloned().unwrap_or_default());
-    let state = result
-        .get("state")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    if matches!(state.as_str(), "completed" | "failed") {
-        let retained = fetch_run_evidence(harness, &job_id)?;
-        if let Some(path) = retained.results_dir {
-            result.as_object_mut().expect("object").insert(
-                "resultsDir".into(),
-                Value::String(path.display().to_string()),
-            );
-        }
-        if let Some(error) = retained.artifact_error {
-            result
-                .as_object_mut()
-                .expect("object")
-                .insert("artifactError".into(), error);
-        }
-        if state == "completed" && result.get("resultsDir").is_none() {
-            let object = result.as_object_mut().expect("object");
-            object.insert("state".into(), Value::String("evidence-unavailable".into()));
-            object.insert(
-                "failure".into(),
-                missing_evidence(&job_id, "artifact_error=null"),
-            );
-        }
+    let left_evidence = watched_left_evidence(&watched);
+    let completed = watched_completed(&watched);
+    let Value::Object(watched) = watched else {
+        return Err(Failure::invalid("stado.watch", format!("the watch of job {job_id} answered no object")));
+    };
+    result.extend(watched);
+    if !left_evidence {
+        return Ok(Value::Object(result));
     }
-    Ok(result)
+    let retained = fetch_run_evidence(harness, &job_id)?;
+    if let Some(path) = retained.results_dir {
+        result.insert("resultsDir".into(), Value::String(path.display().to_string()));
+    }
+    if let Some(error) = retained.artifact_error {
+        result.insert("artifactError".into(), error);
+    }
+    if completed && result.get("resultsDir").is_none() {
+        result.insert("state".into(), Value::String("evidence-unavailable".into()));
+        result.insert("failure".into(), missing_evidence(&job_id, "artifact_error=null"));
+    }
+    Ok(Value::Object(result))
 }

@@ -24,30 +24,37 @@ pub(crate) fn prepush_value(
         }
     };
     let app = manifest::load(harness, &resolved_app)?;
-    let resolved_head = head
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-        .or_else(|| git(repo, &["rev-parse", "HEAD"]));
-    let resolved_base =
-        if let Some(base) = base.filter(|base| !base.is_empty() && *base != ZERO_SHA) {
-            git(repo, &["rev-parse", base])
-        } else if let Some(head) = &resolved_head {
-            git(repo, &["merge-base", head, crate::status::TRACKED_UPSTREAM])
-        } else {
-            None
-        };
-    let Some(resolved_base) = resolved_base else {
-        return Ok(object([
-            ("ok", Value::Bool(false)),
-            ("appId", Value::String(resolved_app)),
-            (
-                "reason",
-                Value::String(
-                    "cannot resolve a merge base with the branch this checkout tracks; set an upstream or pass --base"
-                        .to_string(),
-                ),
-            ),
-        ]));
+    let resolved_head = match head.filter(|value| !value.is_empty()) {
+        Some(head) => Ok(head.to_string()),
+        None => revision(repo, &["rev-parse", "HEAD"])
+            .map_err(|cause| format!("cannot resolve HEAD: {cause}")),
+    };
+    // Each ref that does not resolve is the verdict's reason with git's own
+    // words: read as absent, the gate said "cannot resolve" and not why.
+    let stated_base = base.filter(|base| !base.is_empty() && *base != ZERO_SHA);
+    let resolved_base = match (stated_base, &resolved_head) {
+        (Some(base), _) => revision(repo, &["rev-parse", base])
+            .map_err(|cause| format!("cannot resolve --base {base}: {cause}")),
+        (None, Ok(head)) => revision(
+            repo,
+            &["merge-base", head, crate::status::TRACKED_UPSTREAM],
+        )
+        .map_err(|cause| {
+            format!(
+                "cannot resolve a merge base with the branch this checkout tracks; set an upstream or pass --base: {cause}"
+            )
+        }),
+        (None, Err(cause)) => Err(cause.clone()),
+    };
+    let resolved_base = match resolved_base {
+        Ok(base) => base,
+        Err(reason) => {
+            return Ok(object([
+                ("ok", Value::Bool(false)),
+                ("appId", Value::String(resolved_app)),
+                ("reason", Value::String(reason)),
+            ]))
+        }
     };
     // A head that does not resolve, or a diff git cannot produce, is the
     // verdict's reason: read as no files, the gate passed with no journeys run.
@@ -58,15 +65,16 @@ pub(crate) fn prepush_value(
             ("reason", Value::String(reason)),
         ]))
     };
-    let Some(resolved_head) = resolved_head else {
-        return unread(format!("cannot resolve HEAD in {}", repo.display()));
+    let resolved_head = match resolved_head {
+        Ok(head) => head,
+        Err(reason) => return unread(reason),
     };
     let range = format!("{resolved_base}..{resolved_head}");
     let files: Vec<PathBuf> = match git_lines(repo, &["diff", "--name-only", &range]) {
         Ok(lines) => lines.into_iter().map(|file| repo.join(file)).collect(),
         Err(reason) => return unread(reason),
     };
-    let journeys = affected_journeys(&app, &files);
+    let journeys = affected_journeys(&app, &files)?;
     if journeys.is_empty() {
         return Ok(object([
             ("ok", Value::Bool(true)),
@@ -108,13 +116,7 @@ pub(crate) fn prepush_value(
                 ("affectedJourneys", strings(&journeys)),
                 (
                     "reason",
-                    Value::String(format!(
-                        "probierz ci failed (exit {})",
-                        status
-                            .code()
-                            .map(|code| code.to_string())
-                            .unwrap_or_else(|| "null".to_string())
-                    )),
+                    Value::String(format!("probierz ci {}", crate::failure::ended(&status))),
                 ),
             ]));
         }
@@ -147,18 +149,22 @@ pub(crate) fn prepush_value(
         ]));
     }
     let identity = crate::authoring::app_source_identity(harness, &resolved_app, None)?;
+    let harness_sha = property(&identity, "harness")
+        .and_then(|harness| string_property(harness, "sha256"))
+        .ok_or_else(|| {
+            Failure::config(
+                "gate.prepush",
+                format!(
+                    "the source identity of {resolved_app} states no harness sha256: {identity}"
+                ),
+            )
+        })?;
     let gate_args = GateArgs {
         app_id: resolved_app.clone(),
         mode: "pull-request".to_string(),
-        expected_harness_sha: string_property(
-            property(&identity, "harness").unwrap_or(&Value::Null),
-            "sha256",
-        )
-        .unwrap_or_default(),
-        expected_source_sha: string_property(
-            property(&identity, "app").unwrap_or(&Value::Null),
-            "sha256",
-        ),
+        expected_harness_sha: harness_sha,
+        expected_source_sha: property(&identity, "app")
+            .and_then(|app| string_property(app, "sha256")),
         runs: Some(run_ids.join(",")),
         release: None,
         receipt: None,
@@ -166,10 +172,13 @@ pub(crate) fn prepush_value(
         fingerprint: None,
     };
     let evaluation = evaluate_value(harness, &gate_args)?;
-    let verdict = property(&evaluation, "verdict")
-        .cloned()
-        .unwrap_or(Value::Null);
-    let ok = truthy(property(&verdict, "passed"));
+    let verdict = property(&evaluation, "verdict").cloned().ok_or_else(|| {
+        Failure::config(
+            "gate.prepush",
+            format!("the gate evaluation of {resolved_app} states no verdict: {evaluation}"),
+        )
+    })?;
+    let ok = is_true(property(&verdict, "passed"));
     Ok(object([
         ("ok", Value::Bool(ok)),
         ("appId", Value::String(resolved_app)),
@@ -181,19 +190,23 @@ pub(crate) fn prepush_value(
     ]))
 }
 
+/// The base and head of the push to the gated branch, read from the lines
+/// git hands a pre-push hook (`<local ref> <local sha> <remote ref> <remote
+/// sha>`, githooks(5)); a remote sha of zeros is a new branch, whose base is
+/// left for the merge base.
 pub(crate) fn parse_hook_refs(text: &str) -> Option<(String, String)> {
     for line in text.lines() {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 4 {
+        let fields: Vec<&str> = line.split_whitespace().collect();
+        let [_, local_sha, remote_ref, remote_sha] = fields[..] else {
             continue;
-        }
-        if matches!(parts[2], "refs/heads/main" | "refs/heads/master") {
-            let base = if parts[3] == ZERO_SHA {
+        };
+        if matches!(remote_ref, "refs/heads/main" | "refs/heads/master") {
+            let base = if remote_sha == ZERO_SHA {
                 String::new()
             } else {
-                parts[3].to_string()
+                remote_sha.to_string()
             };
-            return Some((base, parts[1].to_string()));
+            return Some((base, local_sha.to_string()));
         }
     }
     None

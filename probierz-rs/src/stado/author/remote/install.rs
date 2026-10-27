@@ -32,16 +32,16 @@ pub(crate) fn authored_path_is_inside(root: &Path, candidate: &Path) -> bool {
 pub(crate) fn relative_symlink_target(from: &Path, to: &Path) -> PathBuf {
     let from_components: Vec<_> = from.components().collect();
     let to_components: Vec<_> = to.components().collect();
-    let mut shared = 0;
-    while shared < from_components.len()
-        && shared < to_components.len()
-        && from_components[shared] == to_components[shared]
-    {
-        shared += 1;
+    // Paths that share no leading component have no relative route.
+    match (from_components.first(), to_components.first()) {
+        (Some(left), Some(right)) if left == right => {}
+        _ => return to.to_path_buf(),
     }
-    if shared == 0 {
-        return to.to_path_buf();
-    }
+    let shared = from_components
+        .iter()
+        .zip(&to_components)
+        .take_while(|(left, right)| left == right)
+        .count();
     let mut relative = PathBuf::new();
     for component in &from_components[shared..] {
         if matches!(component, std::path::Component::Normal(_)) {
@@ -156,11 +156,7 @@ pub(crate) fn install_product_spec(
         })?;
     if !declared.iter().any(|value| value.as_str() == Some(journey)) {
         declared.push(serde_yaml::Value::from(journey));
-        declared.sort_by(|left, right| {
-            left.as_str()
-                .unwrap_or_default()
-                .cmp(right.as_str().unwrap_or_default())
-        });
+        declared.sort_by(|left, right| left.as_str().cmp(&right.as_str()));
     }
     manifest::validate(&document, &manifest_file)?;
 
@@ -176,40 +172,73 @@ pub(crate) fn install_product_spec(
         })?;
     assert_physical_product_path(product_root, tests_root, &product_spec)?;
     let registration = harness.join(registration_relative);
-    let replaced_product = fs::symlink_metadata(&registration)
-        .ok()
-        .filter(|metadata| metadata.file_type().is_symlink())
-        .and_then(|_| fs::read_link(&registration).ok())
-        .and_then(|target| {
-            let candidate = if target.is_absolute() {
-                target
-            } else {
-                registration.parent().unwrap_or(harness).join(target)
-            };
-            fs::canonicalize(candidate).ok()
-        })
-        .filter(|candidate| {
-            fs::canonicalize(&product_spec).ok().as_ref() != Some(candidate)
-                && fs::canonicalize(tests_root)
-                    .ok()
-                    .is_some_and(|tests| authored_path_is_inside(&tests, candidate))
-        });
+    let registration_parent = registration.parent().ok_or_else(|| {
+        Failure::config(
+            "stado.download",
+            "the registration path has no parent directory",
+        )
+    })?;
+    let replaced_product = replaced_product(registration_parent, &registration, &product_spec, tests_root)?;
     if let Some(parent) = product_spec.parent() {
         fs::create_dir_all(parent)?;
     }
-    if let Some(parent) = registration.parent() {
-        fs::create_dir_all(parent)?;
-    }
+    fs::create_dir_all(registration_parent)?;
     fs::write(&product_spec, bytes)?;
     if let Some(replaced) = replaced_product {
         fs::remove_file(replaced)?;
     }
-    if fs::symlink_metadata(&registration).is_ok() {
-        fs::remove_file(&registration)?;
+    // A registration that cannot be examined is refused rather than read as
+    // absent: the link below would then fail on a path nobody looked at.
+    match fs::symlink_metadata(&registration) {
+        Ok(_registered) => fs::remove_file(&registration)?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
     }
-    let link_target =
-        relative_symlink_target(registration.parent().unwrap_or(harness), &product_spec);
+    let link_target = relative_symlink_target(registration_parent, &product_spec);
     std::os::unix::fs::symlink(link_target, &registration)?;
     fs::write(&manifest_file, serde_yaml::to_string(&document)?)?;
     Ok((product_spec, registration, manifest_file))
+}
+
+/// The product spec the existing registration links to, when it is a
+/// different spec inside the product tests directory and so is replaced by
+/// this install. A registration that is absent or not a link, or a link to
+/// nothing, replaces nothing; one that cannot be read is refused, because
+/// read as "nothing to replace" the old spec stayed behind beside the new.
+fn replaced_product(
+    registration_parent: &Path,
+    registration: &Path,
+    product_spec: &Path,
+    tests_root: &Path,
+) -> Result<Option<PathBuf>, Failure> {
+    let Some(metadata) = examined(fs::symlink_metadata(registration))? else {
+        return Ok(None);
+    };
+    if !metadata.file_type().is_symlink() {
+        return Ok(None);
+    }
+    let target = fs::read_link(registration)?;
+    let candidate = match target.is_absolute() {
+        true => target,
+        false => registration_parent.join(target),
+    };
+    let Some(candidate) = examined(fs::canonicalize(candidate))? else {
+        return Ok(None);
+    };
+    if examined(fs::canonicalize(product_spec))?.as_ref() == Some(&candidate) {
+        return Ok(None);
+    }
+    let inside = examined(fs::canonicalize(tests_root))?
+        .is_some_and(|tests| authored_path_is_inside(&tests, &candidate));
+    Ok(inside.then_some(candidate))
+}
+
+/// A filesystem answer where absent is `None` and any other failure is the
+/// caller's error.
+fn examined<T>(answer: std::io::Result<T>) -> Result<Option<T>, Failure> {
+    match answer {
+        Ok(value) => Ok(Some(value)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.into()),
+    }
 }

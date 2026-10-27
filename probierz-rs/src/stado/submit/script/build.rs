@@ -6,7 +6,7 @@ pub(crate) fn run_script(
     provision: Option<&Provision>,
     hash: &str,
     platform: Option<&str>,
-    mode: &str,
+    mode: ScriptMode,
     author: Option<(&str, &str, &str, &str)>,
     model_router_url: Option<&str>,
     record: bool,
@@ -87,15 +87,19 @@ pub(crate) fn run_script(
                 binary,
                 manifest_path,
             } => {
-                let manifest_dir = Path::new(manifest_path)
+                // A manifest in a subdirectory builds there and keeps its
+                // target below it; one at the archive's root builds in the
+                // root itself, which is the directory `.`.
+                let (manifest_dir, target_prefix) = match Path::new(manifest_path)
                     .parent()
                     .filter(|path| !path.as_os_str().is_empty())
-                    .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| ".".to_string());
-                let target_prefix = if manifest_dir == "." {
-                    String::new()
-                } else {
-                    format!("{manifest_dir}/")
+                {
+                    Some(path) => {
+                        let dir = path.to_string_lossy().into_owned();
+                        let prefix = format!("{dir}/");
+                        (dir, prefix)
+                    }
+                    None => (".".to_string(), String::new()),
                 };
                 lines.extend([
                     format!("mkdir -p \"$JOB_ROOT/work/{app_id}\" && tar --no-same-owner -xzf \"$JOB_ROOT/inputs/{app_id}.tar.gz\" -C \"$JOB_ROOT/work/{app_id}\""),
@@ -137,7 +141,7 @@ pub(crate) fn run_script(
             }
         }
     }
-    if mode == "author" && matches!(provision, None | Some(Provision::InstalledTui { .. })) {
+    if mode == ScriptMode::Author && matches!(provision, None | Some(Provision::InstalledTui { .. })) {
         lines.extend([
             format!("mkdir -p \"$JOB_ROOT/work/{app_id}\" && tar --no-same-owner -xzf \"$JOB_ROOT/inputs/{app_id}.tar.gz\" -C \"$JOB_ROOT/work/{app_id}\""),
             format!("export PROBIERZ_APP_SOURCE=\"$JOB_ROOT/work/{app_id}\""),

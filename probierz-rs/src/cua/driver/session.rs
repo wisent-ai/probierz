@@ -7,12 +7,21 @@ impl Driver {
         let home = std::env::var_os("HOME").map(PathBuf::from).ok_or_else(|| {
             "HOME is required to locate the Probierz CuaDriver socket".to_string()
         })?;
-        let socket = socket
-            .or_else(|| std::env::var_os("CUA_DRIVER_SOCKET").map(PathBuf::from))
-            .unwrap_or_else(|| home.join("Library/Caches/cua-driver/probierz.sock"));
-        let binary = binary
-            .or_else(|| std::env::var("CUA_DRIVER_BIN").ok())
-            .unwrap_or_else(|| "cua-driver".to_string());
+        // The socket and binary the caller names, else the environment's,
+        // else the driver's own: its socket under the user's caches and its
+        // binary on PATH. A CUA_DRIVER_BIN that is not Unicode is refused.
+        let socket = match socket.or_else(|| std::env::var_os("CUA_DRIVER_SOCKET").map(PathBuf::from)) {
+            Some(socket) => socket,
+            None => home.join("Library/Caches/cua-driver/probierz.sock"),
+        };
+        let binary = match binary {
+            Some(binary) => binary,
+            None => match std::env::var("CUA_DRIVER_BIN") {
+                Ok(binary) => binary,
+                Err(std::env::VarError::NotPresent) => "cua-driver".to_string(),
+                Err(error) => return Err(format!("CUA_DRIVER_BIN cannot be read: {error}")),
+            },
+        };
         let driver = Self { binary, socket };
         driver.ensure_daemon()?;
         Ok(driver)
@@ -36,7 +45,11 @@ impl Driver {
         if text.is_empty() {
             return Ok(Value::Null);
         }
-        Ok(serde_json::from_str(&text).unwrap_or(Value::String(text)))
+        // A tool answers JSON, or plain text for a tool that reports in words.
+        Ok(match serde_json::from_str(&text) {
+            Ok(answer) => answer,
+            Err(_plain_text) => Value::String(text),
+        })
     }
 
     pub fn launch_app(
@@ -111,7 +124,7 @@ impl Driver {
     }
 
     pub fn list_windows(&self, pid: Option<u32>) -> Result<Vec<Value>, String> {
-        let listed = self.call("list_windows", Value::Object(Default::default()))?;
+        let listed = self.call("list_windows", Value::Object(serde_json::Map::new()))?;
         Ok(listed
             .get("windows")
             .and_then(Value::as_array)

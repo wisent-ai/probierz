@@ -29,15 +29,16 @@ fn root(manifest: &Manifest) -> Result<PathBuf, Failure> {
 }
 
 /// A path as the manifest writes it: under the operator's home as `~/…`, so
-/// the file names no account.
-fn written(path: &Path) -> String {
-    match std::env::var("HOME")
-        .ok()
-        .and_then(|home| path.strip_prefix(home).ok().map(Path::to_path_buf))
-    {
-        Some(relative) => format!("~/{}", relative.display()),
-        None => path.display().to_string(),
-    }
+/// the file names no account. A HOME that cannot be read is refused: the
+/// path was written whole, naming the account the manifest is meant not to.
+pub(crate) fn written(path: &Path) -> Result<String, Failure> {
+    let home = std::env::var("HOME").map_err(|cause| {
+        Failure::config("benchmark.author", format!("HOME cannot be read, so {} cannot be written under ~: {cause}", path.display()))
+    })?;
+    Ok(match path.strip_prefix(&home) {
+        Ok(relative) => format!("~/{}", relative.display()),
+        Err(_outside) => path.display().to_string(),
+    })
 }
 
 fn section(document: &mut Yaml) -> Result<&mut Mapping, Failure> {
@@ -78,34 +79,30 @@ fn edit(
     Ok(())
 }
 
-/// The suite file the manifest declares for `suite_id`, read without
-/// requiring any contender to be declared yet.
-pub(crate) fn suite_file(manifest: &Manifest, suite_id: &str) -> Result<PathBuf, Failure> {
-    let written = manifest
+/// The suite file the manifest declares for `suite_id`, or `None` when it
+/// declares none, read without requiring any contender to be declared yet.
+pub(crate) fn declared_suite(manifest: &Manifest, suite_id: &str) -> Option<PathBuf> {
+    manifest
         .document
         .get("benchmark")
         .and_then(|benchmark| benchmark.get("suites"))
         .and_then(|suites| suites.get(suite_id))
         .and_then(Yaml::as_str)
-        .ok_or_else(|| {
-            Failure::invalid(
-                "benchmark.author",
-                format!(
-                    "{} declares no suite {suite_id}; probierz benchmark author suite {} --suite {suite_id} drafts one",
-                    manifest.file.display(),
-                    manifest.app_id
-                ),
-            )
-        })?;
-    let path = Path::new(written);
-    Ok(if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        manifest
-            .file
-            .parent()
-            .expect("a manifest sits in its app directory")
-            .join(path)
+        .map(|written| manifest.beside(written))
+}
+
+/// The suite file the manifest declares for `suite_id`, refused naming the
+/// command that drafts one when it declares none.
+pub(crate) fn suite_file(manifest: &Manifest, suite_id: &str) -> Result<PathBuf, Failure> {
+    declared_suite(manifest, suite_id).ok_or_else(|| {
+        Failure::invalid(
+            "benchmark.author",
+            format!(
+                "{} declares no suite {suite_id}; probierz benchmark author suite {} --suite {suite_id} drafts one",
+                manifest.file.display(),
+                manifest.app_id
+            ),
+        )
     })
 }
 
@@ -145,7 +142,7 @@ pub(crate) fn driver(
 ) -> Result<PathBuf, Failure> {
     let side = if ours { "contenders" } else { "rivals" };
     let directory = root(manifest)?.join("benchmark").join(side).join(id);
-    if directory.exists() {
+    if crate::paths::present(&directory)? {
         std::fs::remove_dir_all(&directory)?;
     }
     std::fs::create_dir_all(&directory)?;
@@ -154,7 +151,9 @@ pub(crate) fn driver(
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755))?;
+        // The driver is run: its owner may change it, everyone may run it.
+        let runnable = libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH;
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(u32::from(runnable)))?;
     }
     Ok(file)
 }
@@ -172,7 +171,7 @@ pub(crate) fn declare(
         if ours {
             declaration.insert(Yaml::from("ours"), Yaml::from(true));
         }
-        declaration.insert(Yaml::from("program"), Yaml::from(written(program)));
+        declaration.insert(Yaml::from("program"), Yaml::from(written(program)?));
         declaration.insert(
             Yaml::from("env"),
             Yaml::Sequence(env.iter().map(|name| Yaml::from(name.as_str())).collect()),
@@ -187,7 +186,7 @@ pub(crate) fn suite_target(manifest: &Manifest, suite_id: &str) -> Result<PathBu
     let file = root(manifest)?
         .join("benchmark")
         .join(format!("{suite_id}.json"));
-    if file.exists() {
+    if crate::paths::present(&file)? {
         return Err(Failure::invalid(
             "benchmark.author",
             format!(
@@ -206,7 +205,7 @@ pub(crate) fn declare_suite(
     file: &Path,
 ) -> Result<(), Failure> {
     edit(manifest, |benchmark| {
-        child(benchmark, "suites")?.insert(Yaml::from(suite_id), Yaml::from(written(file)));
+        child(benchmark, "suites")?.insert(Yaml::from(suite_id), Yaml::from(written(file)?));
         child(benchmark, "contenders")?;
         Ok(())
     })

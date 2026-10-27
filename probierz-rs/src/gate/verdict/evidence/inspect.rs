@@ -49,30 +49,27 @@ fn inspect_run(
     if run.status != "passed" {
         errors.push(format!("{}: status is {}", run.run_id, run.status));
     }
-    let harness_sha = string_property(&run.harness, "sha256");
-    let harness_git = string_property(&run.harness, "gitSha");
-    let harness_worktree = string_property(&run.harness, "worktreeSha256");
-    if harness_sha.as_deref().unwrap_or("").is_empty()
-        || harness_git.as_deref().unwrap_or("").is_empty()
-        || harness_worktree.as_deref().unwrap_or("").is_empty()
-    {
-        errors.push(format!(
+    // An identity counts only when the run states it as non-empty text.
+    let stated = |value: &Value, name: &str| string_property(value, name).filter(|text| !text.is_empty());
+    let harness_sha = stated(&run.harness, "sha256");
+    let harness_complete = harness_sha.is_some()
+        && stated(&run.harness, "gitSha").is_some()
+        && stated(&run.harness, "worktreeSha256").is_some();
+    match &harness_sha {
+        Some(sha) if harness_complete => {
+            if sha != &args.expected_harness_sha {
+                errors.push(format!(
+                    "{}: harness source {sha} does not match {}",
+                    run.run_id, args.expected_harness_sha
+                ));
+            }
+        }
+        _ => errors.push(format!(
             "{}: complete harness source identity is missing",
             run.run_id
-        ));
-    } else if harness_sha.as_deref() != Some(args.expected_harness_sha.as_str()) {
-        errors.push(format!(
-            "{}: harness source {} does not match {}",
-            run.run_id,
-            harness_sha.unwrap_or_default(),
-            args.expected_harness_sha
-        ));
+        )),
     }
-    if string_property(&run.build, "sha256")
-        .as_deref()
-        .unwrap_or("")
-        .is_empty()
-    {
+    if stated(&run.build, "sha256").is_none() {
         errors.push(format!("{}: exact build hash is missing", run.run_id));
     }
     if evidence_rank(evidence_level(run)) < Some(required_rank) {
@@ -83,78 +80,87 @@ fn inspect_run(
             minimum_evidence
         ));
     }
-    let source_sha = string_property(&run.source, "sha256");
-    let repositories = property(&run.source, "repositories").and_then(Value::as_array);
-    let repositories_complete = repositories
-        .map(|items| {
+    let source_sha = stated(&run.source, "sha256");
+    // Every repository the source names states its commit and worktree; a
+    // source that names no repositories is not a complete identity.
+    let repositories_complete = property(&run.source, "repositories")
+        .and_then(Value::as_array)
+        .is_some_and(|items| {
             items.iter().all(|repository| {
-                !string_property(repository, "gitSha")
-                    .as_deref()
-                    .unwrap_or("")
-                    .is_empty()
-                    && !string_property(repository, "worktreeSha256")
-                        .as_deref()
-                        .unwrap_or("")
-                        .is_empty()
+                stated(repository, "gitSha").is_some() && stated(repository, "worktreeSha256").is_some()
             })
-        })
-        .unwrap_or(false);
-    if source_sha.as_deref().unwrap_or("").is_empty() || !repositories_complete {
+        });
+    if source_sha.is_none() || !repositories_complete {
         errors.push(format!(
             "{}: complete app source identity is missing",
             run.run_id
         ));
     }
     if let Some(expected_source) = expected_source.filter(|value| !value.is_empty()) {
-        if source_sha.as_deref() != Some(expected_source) {
-            errors.push(format!(
-                "{}: app source {} does not match {expected_source}",
-                run.run_id,
-                source_sha.unwrap_or_else(|| "missing".to_string())
-            ));
+        match source_sha.as_deref() {
+            Some(sha) if sha == expected_source => {}
+            Some(sha) => errors.push(format!(
+                "{}: app source {sha} does not match {expected_source}",
+                run.run_id
+            )),
+            None => errors.push(format!(
+                "{}: app source is missing, so it cannot match {expected_source}",
+                run.run_id
+            )),
         }
     }
-    if required_rank >= 3
+    // At the E3 rank every artifact states its hash.
+    if Some(required_rank) >= evidence_rank("E3")
         && (run.artifacts.is_empty()
-            || run.artifacts.iter().any(|artifact| {
-                string_property(artifact, "sha256")
-                    .as_deref()
-                    .unwrap_or("")
-                    .is_empty()
-            }))
+            || run.artifacts.iter().any(|artifact| stated(artifact, "sha256").is_none()))
     {
         errors.push(format!("{}: E3 artifact hashes are incomplete", run.run_id));
     }
-    if !truthy(property(&run.protection, "plaintextRemoved")) {
-        let artifact_root = run.manifest_path.parent().unwrap_or_else(|| Path::new("."));
+    if !is_true(property(&run.protection, "plaintextRemoved")) {
+        // A run's manifest lies in its run directory, so it has one.
+        let Some(artifact_root) = run.manifest_path.parent() else {
+            errors.push(format!(
+                "{}: run manifest {} lies in no directory, so its artifacts cannot be found",
+                run.run_id,
+                run.manifest_path.display()
+            ));
+            return;
+        };
+        let normalized_root = match normalize_absolute(artifact_root) {
+            Ok(root) => root,
+            Err(cause) => {
+                errors.push(format!("{}: artifacts cannot be located: {cause}", run.run_id));
+                return;
+            }
+        };
         for artifact in &run.artifacts {
-            let relative = string_property(artifact, "file").unwrap_or_default();
-            let file = normalize_absolute(&artifact_root.join(&relative));
-            let normalized_root = normalize_absolute(artifact_root);
+            let Some(relative) = stated(artifact, "file") else {
+                errors.push(format!("{}: an artifact names no file: {artifact}", run.run_id));
+                continue;
+            };
+            let file = match normalize_absolute(&artifact_root.join(&relative)) {
+                Ok(file) => file,
+                Err(cause) => {
+                    errors.push(format!("{}: artifact {relative} cannot be located: {cause}", run.run_id));
+                    continue;
+                }
+            };
             if file != normalized_root && !file.starts_with(&normalized_root) {
                 errors.push(format!(
                     "{}: artifact path escapes its run: {relative}",
                     run.run_id
                 ));
-            } else if !file.exists() {
-                errors.push(format!("{}: artifact is missing: {relative}", run.run_id));
-            } else {
-                match crate::evidence::sha256_file(&file) {
-                    Ok(actual)
-                        if Some(actual.as_str())
-                            != string_property(artifact, "sha256").as_deref() =>
-                    {
-                        errors.push(format!(
-                            "{}: artifact hash mismatch: {relative}",
-                            run.run_id
-                        ))
-                    }
-                    Ok(_) => {}
-                    Err(error) => errors.push(format!(
-                        "{}: artifact cannot be hashed: {relative} ({error})",
-                        run.run_id
-                    )),
+                continue;
+            }
+            match crate::evidence::sha256_file(&file) {
+                Ok(actual) if Some(actual.as_str()) != string_property(artifact, "sha256").as_deref() => {
+                    errors.push(format!("{}: artifact hash mismatch: {relative}", run.run_id))
                 }
+                Ok(_) => {}
+                Err(error) => errors.push(format!(
+                    "{}: artifact is missing or cannot be hashed: {relative} ({error})",
+                    run.run_id
+                )),
             }
         }
     }
@@ -174,21 +180,13 @@ fn inspect_run(
             ));
         }
     }
-    if require_protected || truthy(property(&run.protection, "plaintextRemoved")) {
-        let protected_file = string_property(&run.protection, "file");
-        if !truthy(property(&run.protection, "plaintextRemoved"))
-            || protected_file.as_deref().unwrap_or("").is_empty()
-            || !protected_file
-                .as_deref()
-                .map(Path::new)
-                .map(Path::exists)
-                .unwrap_or(false)
-        {
-            errors.push(format!(
-                "{}: encrypted-at-rest artifact bundle is missing",
-                run.run_id
-            ));
-        } else if let Some(file) = protected_file {
+    if require_protected || is_true(property(&run.protection, "plaintextRemoved")) {
+        let protected_file = stated(&run.protection, "file");
+        let bundle = match protected_file {
+            Some(file) if is_true(property(&run.protection, "plaintextRemoved")) => Some(file),
+            _ => None,
+        };
+        if let Some(file) = bundle {
             match crate::evidence::sha256_file(Path::new(&file)) {
                 Ok(hash) => {
                     bundle_hashes.insert(run.run_id.clone(), hash.clone());
@@ -201,14 +199,19 @@ fn inspect_run(
                     }
                 }
                 Err(error) => errors.push(format!(
-                    "{}: encrypted bundle cannot be hashed: {error}",
+                    "{}: encrypted-at-rest artifact bundle is missing or cannot be hashed: {error}",
                     run.run_id
                 )),
             }
+        } else {
+            errors.push(format!(
+                "{}: encrypted-at-rest artifact bundle is missing",
+                run.run_id
+            ));
         }
     }
     if require_secret_scan
-        && !truthy(
+        && !is_true(
             property(&run.protection, "secretScan").and_then(|scan| property(scan, "passed")),
         )
     {

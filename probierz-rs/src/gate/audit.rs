@@ -21,5 +21,5 @@ pub(crate) fn audit_access(
         resource.map(Path::new),
         details,
     )
-    .map(|_| ())
+    .map(|_audit_record| ())
 }

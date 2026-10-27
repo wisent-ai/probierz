@@ -3,11 +3,10 @@ pub(crate) fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\"'\"'"))
 }
 
-pub(crate) fn now_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis()
+/// Milliseconds since the Unix epoch, as chrono reads the clock: a clock
+/// before the epoch is a negative count, never a silent zero.
+pub(crate) fn now_millis() -> i64 {
+    Utc::now().timestamp_millis()
 }
 
 pub(crate) fn nonce(prefix: &str) -> String {
@@ -16,7 +15,7 @@ pub(crate) fn nonce(prefix: &str) -> String {
     digest.update(now_millis().to_string().as_bytes());
     digest.update(std::process::id().to_string().as_bytes());
     digest.update(format!("{:?}", Instant::now()).as_bytes());
-    hex::encode(digest.finalize())[..12].to_string()
+    hex::encode(digest.finalize())
 }
 
 pub(crate) fn work_path(name: &str) -> Result<PathBuf, Failure> {
@@ -25,7 +24,7 @@ pub(crate) fn work_path(name: &str) -> Result<PathBuf, Failure> {
         .join("work")
         .join("probierz");
     fs::create_dir_all(&directory)?;
-    fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
+    fs::set_permissions(&directory, fs::Permissions::from_mode(u32::from(libc::S_IRWXU)))?;
     Ok(directory.join(name))
 }
 
@@ -53,14 +52,7 @@ pub(crate) fn write_json(
 pub(crate) fn hash_file(path: &Path) -> Result<String, Failure> {
     let mut file = File::open(path)?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
-    loop {
-        let count = file.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        digest.update(&buffer[..count]);
-    }
+    std::io::copy(&mut file, &mut digest)?;
     Ok(hex::encode(digest.finalize()))
 }
 
@@ -72,7 +64,7 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
     ))?;
     fs::write(&list, source_file_list(root)?)
         .map_err(|error| Failure::from(error).discarding(&list))?;
-    fs::set_permissions(&list, fs::Permissions::from_mode(0o600))
+    fs::set_permissions(&list, fs::Permissions::from_mode(u32::from(libc::S_IRUSR | libc::S_IWUSR)))
         .map_err(|error| Failure::from(error).discarding(&list))?;
     let args = vec![
         "-czf".to_string(),
@@ -82,7 +74,7 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
         list.display().to_string(),
     ];
     let output = sh("tar", &args, Some(root));
-    if output.status != Some(0) {
+    if !output.succeeded {
         return Err(
             local_failure("stado.pack", &format!("Packing {label} failed"), &output)
                 .discarding(&list),
@@ -132,7 +124,7 @@ pub(crate) fn pack_app_bundle(app_id: &str, bundle: &Path) -> Result<(Packed, St
         name.clone(),
     ];
     let output = sh("tar", &args, None);
-    if output.status != Some(0) {
+    if !output.succeeded {
         return Err(local_failure(
             "stado.pack",
             &format!("Packing the {app_id} application bundle failed"),
@@ -149,7 +141,7 @@ pub(crate) fn pack_source_identity(
 ) -> Result<Identity, Failure> {
     let document = crate::authoring::app_source_identity(harness, app_id, app_repo)?;
     let compact = serde_json::to_vec(&document)?;
-    let hash = hex::encode(Sha256::digest(&compact))[..12].to_string();
+    let hash = hex::encode(Sha256::digest(&compact));
     let file = work_path(&format!("{app_id}-source-{hash}.json"))?;
     write_json(&file, &document, true, true)?;
     Ok(Identity {
@@ -173,7 +165,7 @@ pub(crate) fn upload(local_file: &Path, name: &str) -> Result<String, Failure> {
         ],
         None,
     );
-    if output.status == Some(0) {
+    if output.succeeded {
         return Ok(destination);
     }
     output

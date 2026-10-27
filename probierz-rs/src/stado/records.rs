@@ -16,7 +16,7 @@ pub enum StadoCommand {
     Seo(SeoArgs),
     /// Internal source-bound receipt writer used only inside an author job.
     #[command(hide = true)]
-    AuthorReceipt(AuthorReceiptArgs),
+    Receipt(AuthorReceiptArgs),
 }
 
 #[derive(Debug, Args)]
@@ -40,9 +40,9 @@ pub struct RunArgs {
     pub binary: Option<String>,
     #[arg(long)]
     pub cargo_manifest: Option<String>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long)]
     pub app_binary_path: Option<Option<PathBuf>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long)]
     pub app_bundle_path: Option<Option<PathBuf>>,
     #[arg(long)]
     pub node_source: bool,
@@ -95,11 +95,11 @@ pub struct AuthorArgs {
     /// placed on, from `probierz hosts`. No provider is assumed.
     #[arg(long)]
     pub host: String,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long)]
     pub app_path: Option<Option<PathBuf>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long)]
     pub app_binary_path: Option<Option<PathBuf>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long)]
     pub app_bundle_path: Option<Option<PathBuf>>,
     #[arg(long)]
     pub app_repo: Option<PathBuf>,
@@ -207,6 +207,9 @@ pub(crate) struct ProcessOutput {
     pub(crate) stdout: String,
     pub(crate) stderr: String,
     pub(crate) error: Option<String>,
+    /// The program ran, its exit status reports success
+    /// (`ExitStatus::success`) and both of its streams were read whole.
+    pub(crate) succeeded: bool,
 }
 
 impl ProcessOutput {

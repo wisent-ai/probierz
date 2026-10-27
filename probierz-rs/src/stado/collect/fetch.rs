@@ -1,19 +1,29 @@
 use crate::stado::*;
 use serde_json::json;
+/// Every remote script packs its retained evidence into the one archive it
+/// writes to `$JOB_ROOT/output`; the job's artifacts name it by this extension.
+const ARCHIVE_EXTENSION: &str = ".tar.gz";
+
+/// A tar listing's entry as a path inside the harness: tar writes the
+/// same entry with or without a leading `./`.
+fn inside(entry: &str) -> &str {
+    match entry.strip_prefix("./") {
+        Some(stripped) => stripped,
+        None => entry,
+    }
+}
+
 pub(crate) fn collection_directory(job_dir: &Path) -> Result<PathBuf, Failure> {
     fs::create_dir_all(job_dir)?;
-    for sequence in 0..1000_u16 {
-        let candidate = job_dir.join(format!("collection-{}-{sequence:03}", now_millis()));
-        match fs::create_dir(&candidate) {
-            Ok(()) => return Ok(candidate),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error.into()),
-        }
-    }
-    Err(Failure::config(
-        "stado.download",
-        "could not allocate a unique evidence collection directory",
-    ))
+    // The clock and a nonce of this process and instant name the directory;
+    // one that exists already is refused by create_dir, never reused.
+    let candidate = job_dir.join(format!(
+        "collection-{}-{}",
+        now_millis(),
+        nonce("collection")
+    ));
+    fs::create_dir(&candidate)?;
+    Ok(candidate)
 }
 
 pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retained, Failure> {
@@ -41,16 +51,16 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
     );
     let payload: Value = match serde_json::from_str(&output.stdout) {
         Ok(value) => value,
-        Err(_) => {
+        Err(error) => {
             return Err(remote_failure(
                 "stado.download",
-                "The queue returned invalid artifact metadata",
+                &format!("The queue returned invalid artifact metadata ({error})"),
                 &output,
             )
             .discarding(&staging));
         }
     };
-    if output.status != Some(0) || payload.get("ok").and_then(Value::as_bool) != Some(true) {
+    if !output.succeeded || payload.get("ok").and_then(Value::as_bool) != Some(true) {
         let upstream = payload.get("error").cloned();
         if upstream
             .as_ref()
@@ -106,16 +116,26 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
             artifact_error: None,
         });
     }
-    let artifact_relative = artifacts
+    let archives: Vec<&str> = artifacts
         .iter()
         .filter_map(|value| value.get("relative_path").and_then(Value::as_str))
-        .find(|path| {
-            (path.starts_with("probierz-run-")
-                || path.starts_with("probierz-author-")
-                || path.starts_with("probierz-seo-"))
-                && path.ends_with(".tar.gz")
-        })
-        .map(str::to_string);
+        .filter(|path| path.ends_with(ARCHIVE_EXTENSION))
+        .collect();
+    let artifact_relative = match archives.as_slice() {
+        [] => None,
+        [archive] => Some(archive.to_string()),
+        several => {
+            return Err(Failure::config(
+                "stado.download",
+                format!(
+                    "Job {job_id} retained {} archives where its script writes one: {}",
+                    several.len(),
+                    several.join(", ")
+                ),
+            )
+            .discarding(&staging));
+        }
+    };
     let mut entries = Vec::new();
     if let Some(relative) = &artifact_relative {
         let tarball = safe_child(
@@ -128,7 +148,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
             &["-tzf".into(), tarball.display().to_string()],
             Some(harness),
         );
-        if listed.status != Some(0) {
+        if !listed.succeeded {
             return Err(local_failure(
                 "stado.download",
                 "Listing the retained evidence archive failed",
@@ -143,7 +163,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
             .map(str::to_string)
             .collect();
         for entry in &entries {
-            let normalized = entry.strip_prefix("./").unwrap_or(entry);
+            let normalized = inside(entry);
             if normalized != "test-results" && !normalized.starts_with("test-results/") {
                 return Err(Failure::config(
                     "stado.download",
@@ -188,7 +208,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         ],
         Some(harness),
     );
-    if extracted.status != Some(0) {
+    if !extracted.succeeded {
         return Err(local_failure(
             "stado.download",
             "Extracting the retained evidence failed",
@@ -202,7 +222,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         .map(|entry| {
             safe_child(
                 harness,
-                entry.strip_prefix("./").unwrap_or(entry),
+                inside(entry),
                 "unsafe author receipt",
             )
         })
@@ -222,14 +242,17 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
     {
         let file = safe_child(
             harness,
-            entry.strip_prefix("./").unwrap_or(entry),
+            inside(entry),
             "unsafe run manifest",
         )?;
         if let Some(candidate) = crate::json_file::read(&file)? {
-            if selected_run
-                .map(|run_id| candidate.get("runId").and_then(Value::as_str) == Some(run_id))
-                .unwrap_or(true)
-            {
+            // With an author receipt, only the manifest of the run it
+            // accepted; without one, the first manifest the archive holds.
+            let selected = match selected_run {
+                Some(run_id) => candidate.get("runId").and_then(Value::as_str) == Some(run_id),
+                None => true,
+            };
+            if selected {
                 run_manifest = Some(candidate);
                 break;
             }

@@ -12,6 +12,18 @@ name = "probierz"
 path = "src/main.rs"
 
 [[test]]
+name = "security_scope"
+path = "../tests/security/scope.rs"
+
+[[test]]
+name = "security_journey"
+path = "../tests/security/journey.rs"
+required-features = ["security-live-tests"]
+
+[features]
+security-live-tests = []
+
+[[test]]
 name = "benchmark_scout"
 path = "../tests/benchmark/scout.rs"
 
@@ -52,6 +64,10 @@ name = "history_journey"
 path = "../tests/history/journey.rs"
 
 [[test]]
+name = "incidents_register"
+path = "../tests/incidents/register.rs"
+
+[[test]]
 name = "repair_model_service"
 path = "../tests/repair/model_service.rs"
 
@@ -79,6 +95,10 @@ path = "../tests/redaction/journey.rs"
 name = "suites_run"
 path = "../tests/suites/run.rs"
 
+[[test]]
+name = "intake_serve"
+path = "../tests/intake/serve.rs"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
@@ -88,9 +108,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
 sha2 = "0.10"
+hmac = "0.12"
 flate2 = "1"
 regex = "1"
 url = "2"
+uuid = "1"
 aes = "0.8"
 ctr = "0.9"
 ghash = "0.5"
@@ -99,7 +121,10 @@ base64 = "0.22"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 ureq = { version = "2", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 fs2 = "0.4.3"
+# File mode bits by their POSIX names (S_IRUSR...), never written as octal.
+libc = "0.2"
 stado-wait = { git = "https://github.com/wisent-ai/stado.git", rev = "692c0438d24117735c61373c0c178f1c1e21b080" }
 
 [dev-dependencies]

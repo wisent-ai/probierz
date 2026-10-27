@@ -120,10 +120,11 @@ pub(crate) fn receipt_run_value(run: &Run) -> Value {
         ),
         (
             "analysisPath",
-            run.analysis_path
-                .clone()
-                .map(Value::String)
-                .unwrap_or(Value::Null),
+            // A run that wrote no analysis records none: `null`.
+            match &run.analysis_path {
+                Some(path) => Value::String(path.clone()),
+                None => Value::Null,
+            },
         ),
     ])
 }

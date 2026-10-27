@@ -1,22 +1,9 @@
 use crate::gate::*;
-pub(crate) fn git(repo: &Path, args: &[&str]) -> Option<String> {
-    let output =
-        stado_wait::output(ProcessCommand::new("git").arg("-C").arg(repo).args(args)).ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if text.is_empty() {
-        None
-    } else {
-        Some(text)
-    }
-}
 
-/// The non-empty lines git prints, or why it printed none: git that cannot
-/// start or exits non-zero is the cause, never an empty answer. An empty list
-/// read as "nothing changed" let the gate pass on a diff it never saw.
-pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Result<Vec<String>, String> {
+/// What git prints on stdout for `args` in `repo`, or why it printed nothing
+/// to read: git that cannot start or exits non-zero is the cause, with its
+/// exit and stderr.
+fn git_stdout(repo: &Path, args: &[&str]) -> Result<String, String> {
     let mut command = ProcessCommand::new("git");
     command.arg("-C").arg(repo).args(args);
     let output = stado_wait::output(&mut command).map_err(|error| {
@@ -28,14 +15,36 @@ pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Result<Vec<String>, Strin
     })?;
     if !output.status.success() {
         return Err(format!(
-            "git {} in {} failed ({}): {}",
+            "git {} in {} {}: {}",
             args.join(" "),
             repo.display(),
-            output.status,
+            crate::failure::ended(&output.status),
             String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
-    Ok(String::from_utf8_lossy(&output.stdout)
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// The one value git prints (a revision, a merge base), or why there is
+/// none: read as absent, the gate said "cannot resolve" without git's own
+/// reason.
+pub(crate) fn revision(repo: &Path, args: &[&str]) -> Result<String, String> {
+    let text = git_stdout(repo, args)?;
+    match text.trim() {
+        "" => Err(format!(
+            "git {} in {} printed nothing",
+            args.join(" "),
+            repo.display()
+        )),
+        value => Ok(value.to_string()),
+    }
+}
+
+/// The non-empty lines git prints, or why it printed none: git that cannot
+/// start or exits non-zero is the cause, never an empty answer. An empty list
+/// read as "nothing changed" let the gate pass on a diff it never saw.
+pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Result<Vec<String>, String> {
+    Ok(git_stdout(repo, args)?
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty())
@@ -44,92 +53,117 @@ pub(crate) fn git_lines(repo: &Path, args: &[&str]) -> Result<Vec<String>, Strin
 }
 
 pub(crate) fn manifest_repositories(app: &manifest::Manifest) -> Vec<&Yaml> {
-    yaml_get(&app.document, "repositories")
-        .and_then(Yaml::as_sequence)
-        .map(|list| list.iter().collect())
-        .unwrap_or_default()
+    match yaml_get(&app.document, "repositories").and_then(Yaml::as_sequence) {
+        Some(list) => list.iter().collect(),
+        None => Vec::new(),
+    }
+}
+
+/// A path resolved for comparison, or the gate's refusal naming why it
+/// cannot be.
+fn resolved(path: &Path) -> Result<PathBuf, Failure> {
+    normalize_absolute(path).map_err(|cause| Failure::config("gate.paths", cause))
 }
 
 pub(crate) fn infer_app_id(harness: &Path, repo: &Path) -> Result<Option<String>, Failure> {
-    let normalized = normalize_absolute(repo);
+    let normalized = resolved(repo)?;
     for summary in manifest::list(harness)? {
         let app = manifest::load(harness, &summary.app_id)?;
-        if manifest_repositories(&app).iter().any(|repository| {
-            yaml_string(yaml_get(repository, "root"))
-                .map(|root| normalize_absolute(Path::new(&root)) == normalized)
-                .unwrap_or(false)
-        }) {
-            return Ok(Some(app.app_id));
+        for repository in manifest_repositories(&app) {
+            let Some(root) = yaml_string(yaml_get(repository, "root")) else {
+                continue;
+            };
+            if resolved(Path::new(&root))? == normalized {
+                return Ok(Some(app.app_id));
+            }
         }
     }
     Ok(None)
 }
 
-pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {
-    fn matches(
-        pattern: &[u8],
-        text: &[u8],
-        pi: usize,
-        ti: usize,
-        memo: &mut HashMap<(usize, usize), bool>,
-    ) -> bool {
-        if let Some(result) = memo.get(&(pi, ti)) {
-            return *result;
-        }
-        let result = if pi == pattern.len() {
-            ti == text.len()
-        } else if pattern[pi] == b'*' && pi + 1 < pattern.len() && pattern[pi + 1] == b'*' {
-            matches(pattern, text, pi + 2, ti, memo)
-                || (ti < text.len() && matches(pattern, text, pi, ti + 1, memo))
-        } else if pattern[pi] == b'*' {
-            matches(pattern, text, pi + 1, ti, memo)
-                || (ti < text.len() && text[ti] != b'/' && matches(pattern, text, pi, ti + 1, memo))
-        } else {
-            ti < text.len()
-                && pattern[pi] == text[ti]
-                && matches(pattern, text, pi + 1, ti + 1, memo)
-        };
-        memo.insert((pi, ti), result);
-        result
+/// A list a mapping declares under `field`: absent is none; anything but a
+/// list of strings is refused naming the app, so a malformed mapping never
+/// reads as one that maps nothing and lets every change through.
+fn declared_list(
+    app: &manifest::Manifest,
+    holder: &Yaml,
+    field: &str,
+) -> Result<Vec<String>, Failure> {
+    let refused =
+        |what: String| Failure::config("gate.mappings", format!("app {} {what}", app.app_id));
+    match yaml_get(holder, field) {
+        None | Some(Yaml::Null) => Ok(Vec::new()),
+        Some(Yaml::Sequence(items)) => items
+            .iter()
+            .map(|item| {
+                item.as_str().map(str::to_string).ok_or_else(|| {
+                    refused(format!("declares {field} holding {item:?}, not a string"))
+                })
+            })
+            .collect(),
+        Some(other) => Err(refused(format!(
+            "declares {field} as {other:?}, not a list"
+        ))),
     }
-    matches(
-        pattern.as_bytes(),
-        text.as_bytes(),
-        0,
-        0,
-        &mut HashMap::new(),
-    )
 }
 
-pub(crate) fn affected_journeys(app: &manifest::Manifest, files: &[PathBuf]) -> Vec<String> {
+/// The journeys `files` touch in `app`, read from each repository's
+/// `mappings`: every path pattern a changed file under the repository's root
+/// matches names its journeys. A repository without a root, or a mapping
+/// whose `mappings`, `paths` or `journeys` is not a list, is refused naming
+/// the app: skipped, its changes mapped to no journey and the push or merge
+/// was judged on none of them. The pre-push gate and `probierz status` both
+/// read journeys here.
+pub(crate) fn affected_journeys(
+    app: &manifest::Manifest,
+    files: &[PathBuf],
+) -> Result<Vec<String>, Failure> {
     let mut journeys = BTreeSet::new();
     for repository in manifest_repositories(app) {
-        let Some(root) = yaml_string(yaml_get(repository, "root")) else {
-            continue;
+        let root = yaml_string(yaml_get(repository, "root")).ok_or_else(|| {
+            Failure::config(
+                "gate.mappings",
+                format!("app {} declares a repository without root", app.app_id),
+            )
+        })?;
+        let root = resolved(Path::new(&root))?;
+        let mappings = match yaml_get(repository, "mappings") {
+            None | Some(Yaml::Null) => Vec::new(),
+            Some(Yaml::Sequence(mappings)) => mappings.iter().collect(),
+            Some(other) => {
+                return Err(Failure::config(
+                    "gate.mappings",
+                    format!(
+                        "app {} declares mappings as {other:?}, not a list",
+                        app.app_id
+                    ),
+                ))
+            }
         };
-        let root = normalize_absolute(Path::new(&root));
-        let mappings = yaml_get(repository, "mappings")
-            .and_then(Yaml::as_sequence)
-            .cloned()
-            .unwrap_or_default();
-        for file in files {
-            let file = normalize_absolute(file);
-            let Ok(relative) = file.strip_prefix(&root) else {
-                continue;
-            };
-            let relative = relative
-                .to_string_lossy()
-                .replace(std::path::MAIN_SEPARATOR, "/");
-            for mapping in &mappings {
-                let patterns = yaml_strings(yaml_get(mapping, "paths"));
+        for mapping in mappings {
+            let patterns = declared_list(app, mapping, "paths")?;
+            let named = declared_list(app, mapping, "journeys")?;
+            for file in files {
+                let file = resolved(file)?;
+                // A file outside this repository's root is another
+                // repository's change.
+                if !file.starts_with(&root) {
+                    continue;
+                }
+                let relative = file
+                    .components()
+                    .skip(root.components().count())
+                    .collect::<PathBuf>()
+                    .to_string_lossy()
+                    .replace(std::path::MAIN_SEPARATOR, "/");
                 if patterns
                     .iter()
-                    .any(|pattern| glob_matches(pattern, &relative))
+                    .any(|pattern| crate::run::glob_matches(pattern, &relative))
                 {
-                    journeys.extend(yaml_strings(yaml_get(mapping, "journeys")));
+                    journeys.extend(named.iter().cloned());
                 }
             }
         }
     }
-    journeys.into_iter().collect()
+    Ok(journeys.into_iter().collect())
 }

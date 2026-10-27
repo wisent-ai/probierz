@@ -93,7 +93,7 @@ impl Declared {
 
 /// The file that declares the app's first use, beside its manifest.
 fn first_use_file(manifest: &Manifest) -> PathBuf {
-    located(manifest, FIRST_USE_FILE)
+    manifest.beside(FIRST_USE_FILE)
 }
 
 fn refuse(manifest: &Manifest, what: impl std::fmt::Display) -> Failure {
@@ -101,25 +101,6 @@ fn refuse(manifest: &Manifest, what: impl std::fmt::Display) -> Failure {
         "first-use.manifest",
         format!("{}: {what}", first_use_file(manifest).display()),
     )
-}
-
-/// A path in the manifest is absolute after `~/` expansion, or relative to
-/// the manifest's own directory.
-fn located(manifest: &Manifest, written: &str) -> PathBuf {
-    // `~/` is read under the home crate::run::home_dir names; left
-    // unexpanded it named a directory called `~` beside the manifest.
-    let expanded = match written.strip_prefix("~/") {
-        Some(rest) => crate::run::home_dir().join(rest),
-        None => PathBuf::from(written),
-    };
-    if expanded.is_absolute() {
-        return expanded;
-    }
-    manifest
-        .file
-        .parent()
-        .expect("a manifest file sits in its app directory")
-        .join(expanded)
 }
 
 /// A path under the user's home: relative, with no `..` that leaves it.
@@ -161,7 +142,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
             ),
         ));
     }
-    let definition_file = located(manifest, &section.definition);
+    let definition_file = manifest.beside(&section.definition);
     let bytes = std::fs::read(&definition_file).map_err(|error| {
         refuse(
             manifest,
@@ -183,7 +164,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
     let fixtures = section
         .fixtures
         .iter()
-        .map(|(name, file)| (name.clone(), located(manifest, file)))
+        .map(|(name, file)| (name.clone(), manifest.beside(file)))
         .collect();
     Ok(Declared {
         definition_file,
@@ -197,7 +178,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
             .map(|argv| {
                 argv.iter()
                     .map(|argument| match argument.starts_with("~/") {
-                        true => located(manifest, argument).to_string_lossy().into_owned(),
+                        true => manifest.beside(argument).to_string_lossy().into_owned(),
                         false => argument.clone(),
                     })
                     .collect()

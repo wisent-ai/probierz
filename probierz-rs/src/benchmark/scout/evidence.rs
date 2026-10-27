@@ -47,7 +47,7 @@ pub(super) fn trend(topic: &str) -> Result<Json, Failure> {
         Command::new(TRENDS_BIN).args(["detect", "--topic", topic]),
         TRENDS_OWNER,
     )?;
-    detected["topics"]
+    let trend = detected["topics"]
         .as_array()
         .and_then(|topics| topics.iter().find(|entry| entry["topic"] == topic))
         .cloned()
@@ -56,7 +56,34 @@ pub(super) fn trend(topic: &str) -> Result<Json, Failure> {
                 POINT,
                 format!("trends detect --topic {topic} answered no verdict for {topic}"),
             )
-        })
+        })?;
+    checked_trend(trend, &format!("trends detect --topic {topic}"))
+}
+
+/// The counts a topic is judged buildable on: its evidence and evidence
+/// floor, its recent window and the window before.
+const TREND_COUNTS: &[&str] = &["evidence", "min_evidence", "recent", "baseline"];
+
+/// A trend whose verdict is text and whose every count is a whole number, or
+/// a refusal naming `source` and the field. A count read as anything else
+/// was taken as none, and a floor of none let any topic through.
+pub(super) fn checked_trend(trend: Json, source: &str) -> Result<Json, Failure> {
+    if !trend["verdict"].is_string() {
+        return Err(Failure::config(
+            POINT,
+            format!("{source} gave a trend whose verdict is not text: {}", trend["verdict"]),
+        ));
+    }
+    if let Some(field) = TREND_COUNTS.iter().find(|field| !trend[**field].is_u64()) {
+        return Err(Failure::config(
+            POINT,
+            format!(
+                "{source} gave a trend whose {field} is not a whole number: {}",
+                trend[*field]
+            ),
+        ));
+    }
+    Ok(trend)
 }
 
 /// The newest observations Trends matched to the topic.
@@ -71,10 +98,13 @@ pub(super) fn observations(topic: &str, limit: usize) -> Result<Vec<Json>, Failu
         ]),
         TRENDS_OWNER,
     )?;
-    let seen: Vec<Json> = listed["observations"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let seen: Vec<Json> = listed["observations"].as_array().cloned().ok_or_else(|| {
+        Failure::new(
+            POINT,
+            Code::Refused,
+            format!("trends observations answered without an observations list: {listed}"),
+        )
+    })?;
     if seen.is_empty() {
         return Err(Failure::new(
             POINT,
@@ -102,10 +132,13 @@ pub(super) fn candidates(records: &[Json], file: &Path) -> Result<Vec<Json>, Fai
             .arg(file),
         "the competitors CLI of wisent-ai/competitors-cli (its package bin) must be on PATH",
     )?;
-    let candidates: Vec<Json> = discovered["candidates"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let candidates: Vec<Json> = discovered["candidates"].as_array().cloned().ok_or_else(|| {
+        Failure::new(
+            POINT,
+            Code::Refused,
+            format!("competitors discover answered without a candidates list: {discovered}"),
+        )
+    })?;
     if candidates.is_empty() {
         return Err(Failure::new(
             POINT,

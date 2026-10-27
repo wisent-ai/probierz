@@ -1,4 +1,14 @@
 use crate::stado::*;
+
+/// What a remote job script does: run a target's journeys, run an
+/// application's own staged script, or author one journey.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ScriptMode {
+    Run,
+    Script,
+    Author,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn script_body(
     target: &str,
@@ -6,7 +16,7 @@ pub(crate) fn script_body(
     hash: &str,
     spec: Option<&str>,
     provision: Option<&Provision>,
-    mode: &str,
+    mode: ScriptMode,
     author: Option<(&str, &str, &str, &str)>,
     model_router_url: Option<&str>,
     record: bool,
@@ -17,7 +27,7 @@ pub(crate) fn script_body(
         "cd \"$HARNESS\"".into(),
         "export PROBIERZ_SOURCE_IDENTITY=\"$JOB_ROOT/inputs/source-identity.json\"".into(),
     ]);
-    if mode == "author" || (mode != "run" && provision.is_some()) {
+    if mode == ScriptMode::Author || (mode != ScriptMode::Run && provision.is_some()) {
         let source = match provision {
             Some(Provision::AppBundle { app_id, .. }) => format!("$JOB_ROOT/work/{app_id}-src"),
             Some(value) => format!("$JOB_ROOT/work/{}", value.app_id()),
@@ -46,7 +56,7 @@ pub(crate) fn script_body(
             "\"$PROBIERZ\" --harness \"$HARNESS\" setup {target}"
         ));
     }
-    if mode == "script" {
+    if mode == ScriptMode::Script {
         let script = match provision {
             Some(Provision::NodeSource {
                 script: Some(script),
@@ -70,7 +80,7 @@ pub(crate) fn script_body(
         ]);
         return Ok(());
     }
-    if mode == "author" {
+    if mode == ScriptMode::Author {
         let (journey, area, description, receipt_id) = author.ok_or_else(|| {
             Failure::config(
                 "stado.submit",
@@ -103,7 +113,7 @@ pub(crate) fn script_body(
             "set -e".into(),
             "if [ \"$PROBIERZ_RC\" -eq 0 ]; then".into(),
             format!(
-                "  \"$PROBIERZ\" --harness \"$HARNESS\" stado author-receipt --app {} --journey {} --area {} --target {} --receipt-id {} --result \"$JOB_ROOT/work/author-result.json\"",
+                "  \"$PROBIERZ\" --harness \"$HARNESS\" stado receipt --app {} --journey {} --area {} --target {} --receipt-id {} --result \"$JOB_ROOT/work/author-result.json\"",
                 shell_quote(app_id), shell_quote(journey), shell_quote(area), shell_quote(target), shell_quote(receipt_id),
             ),
             "fi".into(),
@@ -142,9 +152,10 @@ pub(crate) fn script_body(
     } else {
         ""
     };
-    let spec_flag = spec
-        .map(|value| format!(" --spec {value}"))
-        .unwrap_or_default();
+    let spec_flag = match spec {
+        Some(value) => format!(" --spec {value}"),
+        None => String::new(),
+    };
     let record_flag = if record { " --record" } else { "" };
     lines.extend([
         "set +e".into(),

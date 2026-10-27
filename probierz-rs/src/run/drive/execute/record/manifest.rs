@@ -8,53 +8,47 @@ pub(crate) fn complete_run(
     if run.get("canceled").and_then(Value::as_bool) == Some(true) {
         return Ok(run);
     }
-    let artifacts = PathBuf::from(
-        run.get("artifactsDir")
+    // Every run records where its artifacts, manifest and id are; a run
+    // value without one is refused, never completed under an empty path.
+    let recorded = |field: &str| {
+        run.get(field)
             .and_then(Value::as_str)
-            .unwrap_or(""),
-    );
-    let manifest_path = PathBuf::from(
-        run.get("manifestPath")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-    );
-    let run_id = run
-        .get("runId")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
+            .map(str::to_string)
+            .ok_or_else(|| fail("run.complete", format!("the run records no {field}: {run}")))
+    };
+    let artifacts = PathBuf::from(recorded("artifactsDir")?);
+    let manifest_path = PathBuf::from(recorded("manifestPath")?);
+    let run_id = recorded("runId")?;
     let analysis_path = artifacts.join("analysis.json");
-    let payload = if let Some(error) = analysis_error {
-        json!({"runId":run_id,"error":error})
-    } else {
-        let mut value = analysis.cloned().unwrap_or_else(|| json!({}));
-        value
-            .as_object_mut()
-            .expect("object")
-            .insert("runId".into(), json!(run_id));
-        value
+    let payload = match (analysis_error, analysis) {
+        (Some(error), _) => json!({"runId":run_id,"error":error}),
+        (None, Some(Value::Object(fields))) => {
+            let mut fields = fields.clone();
+            fields.insert("runId".into(), json!(run_id));
+            Value::Object(fields)
+        }
+        (None, other) => {
+            return Err(fail(
+                "run.complete",
+                format!("run {run_id} completes with neither an analysis object nor its error: {other:?}"),
+            ))
+        }
     };
     write_json(&analysis_path, &payload)?;
-    let capture_errors = analysis
-        .and_then(|value| value.get("captureErrors"))
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    let media = analysis
-        .and_then(|value| value.get("media"))
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
+    // What the analysis lists under `pointer`; an analysis that lists
+    // nothing there (or no analysis, when it failed) lists none.
+    let listed = |pointer: &str| match analysis.and_then(|value| value.pointer(pointer)) {
+        Some(Value::Array(items)) => items.clone(),
+        _ => Vec::new(),
+    };
+    let capture_errors = listed("/captureErrors");
+    let media = listed("/media");
     let missing: Vec<Value> = media
         .iter()
         .filter(|item| item.get("missing").and_then(Value::as_bool) == Some(true))
         .cloned()
         .collect();
-    let crashes = analysis
-        .and_then(|value| value.pointer("/diagnostics/crashes"))
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
+    let crashes = listed("/diagnostics/crashes");
     // The analysis's executed and failed check counts as it states them; a
     // count it does not state is never read as zero checks or zero failures.
     let checks = |field: &str| {
@@ -84,9 +78,10 @@ pub(crate) fn complete_run(
                 .and_then(crate::manifest::ArtifactKind::of_report_media)
                 .is_some()
         });
-    let mut errors: Vec<Value> = analysis_error
-        .map(|error| vec![json!(error)])
-        .unwrap_or_default();
+    let mut errors: Vec<Value> = match analysis_error {
+        Some(error) => vec![json!(error)],
+        None => Vec::new(),
+    };
     if analysis_error.is_none()
         && analysis
             .and_then(|value| value.get("runId"))
@@ -112,10 +107,10 @@ pub(crate) fn complete_run(
     }
     errors.extend(capture_errors.clone());
     errors.extend(missing.iter().map(|item| {
-        json!(format!(
-            "missing report-typed artifact: {}",
-            item.get("file").and_then(Value::as_str).unwrap_or("")
-        ))
+        json!(match item.get("file").and_then(Value::as_str) {
+            Some(file) => format!("missing report-typed artifact: {file}"),
+            None => format!("missing report-typed artifact that names no file: {item}"),
+        })
     }));
     if !present {
         errors.push(json!(
@@ -123,17 +118,15 @@ pub(crate) fn complete_run(
         ));
     }
     errors.extend(crashes.iter().map(|item| {
-        json!(format!(
-            "crash evidence: {}",
-            item.get("message")
-                .or_else(|| item.get("source"))
-                .and_then(Value::as_str)
-                .unwrap_or("unknown crash")
-        ))
+        json!(match item.get("message").or_else(|| item.get("source")).and_then(Value::as_str) {
+            Some(said) => format!("crash evidence: {said}"),
+            None => format!("crash evidence that states neither message nor source: {item}"),
+        })
     }));
-    let evidence = json!({"report":run.pointer("/reportValidation/ok").and_then(Value::as_bool).unwrap_or(false),"analysis":valid,"captureRequired":required,"capturePresent":present,"captureErrors":capture_errors,"missingMedia":missing.iter().filter_map(|item|item.get("file").cloned()).collect::<Vec<_>>(),"crashes":crashes,"errors":errors});
-    let passed = run.get("passed").and_then(Value::as_bool).unwrap_or(false)
-        && evidence.get("report").and_then(Value::as_bool) == Some(true)
+    let report_valid = run.pointer("/reportValidation/ok").and_then(Value::as_bool) == Some(true);
+    let evidence = json!({"report":report_valid,"analysis":valid,"captureRequired":required,"capturePresent":present,"captureErrors":capture_errors,"missingMedia":missing.iter().filter_map(|item|item.get("file").cloned()).collect::<Vec<_>>(),"crashes":crashes,"errors":errors});
+    let passed = run.get("passed").and_then(Value::as_bool) == Some(true)
+        && report_valid
         && valid
         && present;
     // Product evidence must belong to this run before it can outrank cleanup.
@@ -151,7 +144,9 @@ pub(crate) fn complete_run(
         &manifest_path,
         &json!({"status":if passed{"passed"}else{"failed"},"completedAt":now_iso(),"exitCode":run.get("exitCode"),"reportValidation":run.get("reportValidation"),"evidence":evidence,"failure":Value::Null,"failureOrigin":origin,"analysisPath":analysis_path,"artifacts":artifact_hashes(&artifacts,&manifest_path)?}),
     )?;
-    let object = run.as_object_mut().expect("object");
+    let object = run
+        .as_object_mut()
+        .ok_or_else(|| fail("run.complete", format!("run {run_id} is not a JSON object")))?;
     object.insert("passed".into(), json!(passed));
     object.insert("failureOrigin".into(), origin);
     object.insert("analysisPath".into(), json!(analysis_path));

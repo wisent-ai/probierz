@@ -1,6 +1,10 @@
 use crate::gate::*;
+/// A new Git ref has no old object: <https://git-scm.com/docs/githooks#_pre_push>.
 pub(crate) const ZERO_SHA: &str = "0000000000000000000000000000000000000000";
 pub(crate) const MANAGED_MARKER: &str = "# managed-by: probierz-prepush-gate";
+
+/// Gate configuration wire version: <https://probierz.wisent.com/docs/cli/gate/activate>.
+const GATE_CONFIG_SCHEMA_VERSION: u64 = 2;
 
 #[derive(Debug, Clone, Args)]
 pub struct GateArgs {
@@ -71,17 +75,15 @@ pub(crate) fn strings(values: &[String]) -> Value {
     Value::Array(values.iter().cloned().map(Value::String).collect())
 }
 
-pub(crate) fn config_file(manifest: &manifest::Manifest) -> PathBuf {
-    manifest
-        .file
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join("gates.json")
+pub(crate) fn config_file(manifest: &manifest::Manifest) -> Result<PathBuf, Failure> {
+    manifest.file.parent().map(|directory| directory.join("gates.json")).ok_or_else(|| {
+        Failure::config("gate.config", format!("manifest {} has no parent directory for gates.json", manifest.file.display()))
+    })
 }
 
 pub(crate) fn default_config(app_id: &str) -> Value {
     object([
-        ("schemaVersion", Value::from(2)),
+        ("schemaVersion", Value::from(GATE_CONFIG_SCHEMA_VERSION)),
         ("appId", Value::String(app_id.to_string())),
         (
             "modes",
@@ -107,7 +109,7 @@ pub(crate) fn gate_status_value(harness: &Path, app_id: &str) -> Result<Value, F
 /// exists; an absent file is the default config. Gate commands and the status
 /// report both read it here.
 pub(crate) fn gate_config(app: &manifest::Manifest, app_id: &str) -> Result<Value, Failure> {
-    let file = config_file(app);
+    let file = config_file(app)?;
     let recorded = crate::json_file::read(&file)?;
     let exists = recorded.is_some();
     let mut config = match recorded {
@@ -140,27 +142,18 @@ pub(crate) fn yaml_string(value: Option<&Yaml>) -> Option<String> {
     value.and_then(Yaml::as_str).map(str::to_string)
 }
 
-pub(crate) fn yaml_strings(value: Option<&Yaml>) -> Vec<String> {
-    value
-        .and_then(Yaml::as_sequence)
-        .map(|list| {
-            list.iter()
-                .filter_map(Yaml::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-pub(crate) fn yaml_bool(value: Option<&Yaml>) -> bool {
-    value.and_then(Yaml::as_bool).unwrap_or(false)
-}
-
 /// An evidence level's rank is the number its name carries (`E<n>`); a name
 /// that is not `E` followed by a number is not an evidence level. Every gate,
 /// status, receipt and publication comparison reads ranks here.
 pub(crate) fn evidence_rank(level: &str) -> Option<i32> {
-    level.strip_prefix('E')?.parse::<u8>().ok().map(i32::from)
+    let digits = level.strip_prefix('E')?;
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    match digits.parse::<u8>() {
+        Ok(rank) => Some(i32::from(rank)),
+        Err(_out_of_range) => None,
+    }
 }
 
 pub(crate) fn property<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
@@ -173,31 +166,18 @@ pub(crate) fn string_property(value: &Value, name: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-pub(crate) fn truthy(value: Option<&Value>) -> bool {
+/// Required evidence lists never become empty lists because their shape is wrong.
+pub(crate) fn value_array<'a>(value: Option<&'a Value>, location: &str) -> Result<&'a [Value], String> {
     match value {
-        None | Some(Value::Null) => false,
-        Some(Value::Bool(flag)) => *flag,
-        Some(Value::Number(number)) => number
-            .as_f64()
-            .map(|number| number != 0.0 && !number.is_nan())
-            .unwrap_or(false),
-        Some(Value::String(text)) => !text.is_empty(),
-        Some(Value::Array(_)) | Some(Value::Object(_)) => true,
+        Some(Value::Array(list)) => Ok(list.as_slice()),
+        Some(other) => Err(format!("{location} must be an array, found {other}")),
+        None => Err(format!("{location} is missing; record an array")),
     }
 }
 
-pub(crate) fn value_array(value: Option<&Value>) -> Vec<Value> {
-    value.and_then(Value::as_array).cloned().unwrap_or_default()
-}
-
-pub(crate) fn value_strings(value: Option<&Value>) -> Vec<String> {
-    value
-        .and_then(Value::as_array)
-        .map(|list| {
-            list.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
+pub(crate) fn value_strings(value: Option<&Value>, location: &str) -> Result<Vec<String>, String> {
+    value_array(value, location)?.iter().map(|value| match value {
+        Value::String(text) if !text.trim().is_empty() => Ok(text.clone()),
+        other => Err(format!("{location} must contain non-empty text values, found {other}")),
+    }).collect()
 }

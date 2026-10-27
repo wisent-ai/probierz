@@ -20,7 +20,7 @@ pub(crate) fn release_receipt(
     if args.mode != "release" {
         return Ok(Value::Null);
     }
-    if args.release.as_deref().unwrap_or("").is_empty() {
+    if args.release.as_deref().is_none_or(str::is_empty) {
         errors.push("release ID is required".to_string());
     }
     let Some(receipt_file) = args.receipt.as_deref() else {
@@ -38,7 +38,7 @@ pub(crate) fn release_receipt(
             return Ok(Value::Null);
         }
     };
-    if !truthy(property(&verified, "valid")) {
+    if !is_true(property(&verified, "valid")) {
         errors.push("receipt signature, trust, or payload hash is invalid".to_string());
     }
     if string_property(&verified, "appId").as_deref() != Some(args.app_id.as_str()) {
@@ -71,14 +71,16 @@ pub(crate) fn release_receipt(
     {
         errors.push("receipt build identities do not match".to_string());
     }
-    let receipt_run_ids = value_strings(property(&verified, "runIds"));
+    let receipt_run_ids = value_strings(property(&verified, "runIds"), &format!("receipt {} runIds", receipt_file.display()))
+        .map_err(|detail| Failure::config("gate.receipt", detail))?;
     if !same_set(&receipt_run_ids, run_ids) {
         errors.push("receipt run IDs do not match gate run IDs".to_string());
     }
-    if !truthy(property(&verified, "verdict").and_then(|verdict| property(verdict, "passed"))) {
+    if !is_true(property(&verified, "verdict").and_then(|verdict| property(verdict, "passed"))) {
         errors.push("receipt verdict is not passed".to_string());
     }
-    let signed_runs = value_array(property(&verified, "runs"));
+    let signed_runs = value_array(property(&verified, "runs"), &format!("receipt {} runs", receipt_file.display()))
+        .map_err(|detail| Failure::config("gate.receipt", detail))?;
     let document = app.json()?;
     for run in runs {
         let signed = signed_runs.iter().find(|candidate| {

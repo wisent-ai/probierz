@@ -13,15 +13,13 @@
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{self, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread;
 
-use base64::Engine;
 use chrono::{SecondsFormat, Utc};
-use rand_core::RngCore;
 use serde_json::{json, Value};
 
 use crate::failure::{print_json, Answer, Code, Failure};
@@ -37,7 +35,7 @@ use fleet::*;
 use intake::*;
 use runs::*;
 
-pub use application::report::status;
+pub use application::render::status;
 pub(crate) use application::report::TRACKED_UPSTREAM;
 pub use fleet::failures::failures;
 pub use fleet::overview::overview;

@@ -26,11 +26,17 @@ impl Driver {
             fs::create_dir_all(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
         }
         let snapshot = self.snapshot_to(pid, window_id, Some(file))?;
-        if !file.is_file() {
-            return Err(format!(
-                "cua-driver produced no screenshot at {}",
-                file.display()
-            ));
+        match fs::metadata(file) {
+            Ok(metadata) if metadata.is_file() => {}
+            Ok(_not_file) => {
+                return Err(format!("cua-driver produced no screenshot file at {}", file.display()))
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Err(format!("cua-driver produced no screenshot at {}", file.display()))
+            }
+            Err(error) => {
+                return Err(format!("the screenshot at {} cannot be examined: {error}", file.display()))
+            }
         }
         Ok(snapshot)
     }

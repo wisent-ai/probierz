@@ -117,29 +117,39 @@ pub(in crate::benchmark::autonomy) fn measure(
         &steps::args(&["benchmark", "standing", app, "--suite", suite]),
         harness,
     );
-    let pursued: Vec<Json> = standing["answer"]["losses"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|loss| loss["case"].as_str())
-        .take(policy.pursuits_per_product)
-        .map(|case| {
-            steps::run(
-                me,
-                &steps::args(&[
-                    "benchmark",
-                    "pursue",
-                    app,
-                    "--suite",
-                    suite,
-                    "--case",
-                    case,
-                    "--budget-usd",
-                    policy.pursuit_budget_usd.as_str(),
-                ]),
-                harness,
-            )
-        })
-        .collect();
+    // A standing that failed carries no losses and its own step says why. A
+    // list in another shape is said in the record: read as empty, the cycle
+    // pursued nothing and its record read as a product with no loss.
+    let losses = match &standing["answer"]["losses"] {
+        Json::Null => Ok(Vec::new()),
+        Json::Array(losses) => Ok(losses.iter().filter_map(|loss| loss["case"].as_str()).collect()),
+        other => Err(format!("benchmark standing answered losses that are no list: {other}")),
+    };
+    let pursued = match losses {
+        Ok(cases) => Json::Array(
+            cases
+                .into_iter()
+                .take(policy.pursuits_per_product)
+                .map(|case| {
+                    steps::run(
+                        me,
+                        &steps::args(&[
+                            "benchmark",
+                            "pursue",
+                            app,
+                            "--suite",
+                            suite,
+                            "--case",
+                            case,
+                            "--budget-usd",
+                            policy.pursuit_budget_usd.as_str(),
+                        ]),
+                        harness,
+                    )
+                })
+                .collect(),
+        ),
+        Err(unread) => json!({ "unread": unread }),
+    };
     json!({"app": app, "suite": suite, "run": run, "roadmap": roadmap, "standing": standing, "pursued": pursued})
 }

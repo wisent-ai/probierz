@@ -1,4 +1,6 @@
 use crate::authoring::*;
+use hmac::{Hmac, Mac};
+use std::os::unix::fs::OpenOptionsExt;
 pub(crate) fn selected_setting(
     loaded: Option<&manifest::Manifest>,
     target: Option<&str>,
@@ -20,58 +22,17 @@ pub(crate) fn selected_setting(
     }) {
         return Some(value.trim().to_string());
     }
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_string())
+    // A setting the environment holds in bytes that are not UTF-8 is kept,
+    // shown lossily, so the check it reaches refuses it by its value rather
+    // than the setting being read as never given.
+    std::env::var_os(name).map(|value| value.to_string_lossy().trim().to_string())
 }
 
-pub(crate) fn loopback(host: &str) -> bool {
-    let host = host.to_ascii_lowercase();
-    host == "localhost"
-        || host.ends_with(".localhost")
-        || host == "::1"
-        || host == "[::1]"
-        || host.starts_with("127.")
-}
-
-/// The scheme a router URL may use anywhere, and the one it may use only to
-/// reach this machine.
-const SECURE_SCHEME: &str = "https";
-const LOOPBACK_SCHEME: &str = "http";
-
+/// The router URL authoring calls: the one check `stado submit` uses, which
+/// judges the host from the parsed URL, so 127.attacker.example is not taken
+/// for this machine and sent the router token over plain HTTP.
 pub(crate) fn stado_model_router_url(raw: Option<&str>) -> Result<String, String> {
-    let configured = raw.unwrap_or_default().trim();
-    if configured.is_empty() {
-        return Err("STADO_MODEL_ROUTER_URL is required".to_string());
-    }
-    let (scheme, remainder) = configured
-        .split_once("://")
-        .ok_or_else(|| "STADO_MODEL_ROUTER_URL must be a valid URL".to_string())?;
-    if remainder.is_empty() || remainder.chars().any(char::is_whitespace) {
-        return Err("STADO_MODEL_ROUTER_URL must be a valid URL".to_string());
-    }
-    if remainder.contains('@') || remainder.contains('?') || remainder.contains('#') {
-        return Err(
-            "STADO_MODEL_ROUTER_URL must not contain credentials, query parameters, or a fragment"
-                .to_string(),
-        );
-    }
-    let authority = remainder.split('/').next().unwrap_or_default();
-    if authority.is_empty() {
-        return Err("STADO_MODEL_ROUTER_URL must be a valid URL".to_string());
-    }
-    let host = if authority.starts_with('[') {
-        authority
-            .split_once(']')
-            .map(|(value, _)| format!("{value}]"))
-            .unwrap_or_else(|| authority.to_string())
-    } else {
-        authority.split(':').next().unwrap_or_default().to_string()
-    };
-    if scheme != SECURE_SCHEME && !(scheme == LOOPBACK_SCHEME && loopback(&host)) {
-        return Err("STADO_MODEL_ROUTER_URL must use HTTPS or loopback HTTP".to_string());
-    }
-    Ok(configured.trim_end_matches('/').to_string())
+    crate::stado::model_router_url(raw).map_err(|failure| failure.detail)
 }
 
 pub(crate) fn required_setting(value: Option<String>, name: &str) -> Result<String, String> {
@@ -80,27 +41,13 @@ pub(crate) fn required_setting(value: Option<String>, name: &str) -> Result<Stri
         .ok_or_else(|| format!("{name} is required"))
 }
 
-pub(crate) fn hmac_sha256(secret: &[u8], message: &[u8]) -> String {
-    let mut key = [0u8; 64];
-    if secret.len() > 64 {
-        key[..32].copy_from_slice(&Sha256::digest(secret));
-    } else {
-        key[..secret.len()].copy_from_slice(secret);
-    }
-    let mut inner_pad = [0x36u8; 64];
-    let mut outer_pad = [0x5cu8; 64];
-    for index in 0..64 {
-        inner_pad[index] ^= key[index];
-        outer_pad[index] ^= key[index];
-    }
-    let mut inner = Sha256::new();
-    inner.update(inner_pad);
-    inner.update(message);
-    let inner = inner.finalize();
-    let mut outer = Sha256::new();
-    outer.update(outer_pad);
-    outer.update(inner);
-    hex::encode(outer.finalize())
+/// The request signature the model router checks: HMAC-SHA256 of `message`
+/// keyed by `secret`, hex-encoded.
+pub(crate) fn hmac_sha256(secret: &[u8], message: &[u8]) -> Result<String, String> {
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secret)
+        .map_err(|error| format!("the agent secret cannot key HMAC-SHA256: {error}"))?;
+    mac.update(message);
+    Ok(hex::encode(mac.finalize().into_bytes()))
 }
 
 pub(crate) struct RouterReply {
@@ -125,6 +72,9 @@ fn abandoned(file: &std::path::Path, cause: impl std::fmt::Display) -> String {
     }
 }
 
+/// A file holding `content` that only this user can read: it is created
+/// owner-only, never readable by others between creation and a later chmod,
+/// because the router headers it holds carry the bearer token.
 pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -132,10 +82,12 @@ pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> 
         .as_nanos();
     let file =
         std::env::temp_dir().join(format!("probierz-{label}-{}-{stamp}", std::process::id()));
-    let mut handle = File::create(&file).map_err(|error| error.to_string())?;
-    handle
-        .set_permissions(fs::Permissions::from_mode(0o600))
-        .map_err(|error| abandoned(&file, error))?;
+    let mut handle = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(u32::from(libc::S_IRUSR | libc::S_IWUSR))
+        .open(&file)
+        .map_err(|error| format!("{} cannot be created: {error}", file.display()))?;
     handle
         .write_all(content)
         .map_err(|error| abandoned(&file, error))?;
@@ -172,7 +124,7 @@ pub(crate) fn post_router(
         let signature = hmac_sha256(
             agent_secret.as_bytes(),
             format!("{agent_id}:{timestamp}:{digest}").as_bytes(),
-        );
+        )?;
         headers.push_str(&format!("x-agent-id: {agent_id}\nx-agent-timestamp: {timestamp}\nx-agent-signature: {signature}\n"));
     }
     let header_file = temp_file("router-headers", headers.as_bytes())?;
@@ -212,7 +164,7 @@ pub(crate) fn post_router(
         .ok_or_else(|| "model router returned no HTTP status".to_string())?;
     let status = status
         .parse::<u16>()
-        .map_err(|_| "model router returned an invalid HTTP status".to_string())?;
+        .map_err(|error| format!("model router returned an invalid HTTP status {status:?}: {error}"))?;
     Ok((status, payload.to_string()))
 }
 

@@ -7,7 +7,7 @@ pub fn dispatch(harness: &Path, command: StadoCommand) -> Answer {
         StadoCommand::Cancel(args) => dispatch_cancel(harness, args),
         StadoCommand::Author(args) => dispatch_author(harness, args),
         StadoCommand::Seo(args) => dispatch_seo(harness, args),
-        StadoCommand::AuthorReceipt(args) => write_author_receipt(harness, args),
+        StadoCommand::Receipt(args) => write_author_receipt(harness, args),
     }
 }
 
@@ -38,9 +38,9 @@ pub(crate) fn dispatch_run(harness: &Path, args: RunArgs) -> Answer {
         args.app_repo.as_deref(),
         !args.no_watch,
         if args.script.is_some() {
-            "script"
+            ScriptMode::Script
         } else {
-            "run"
+            ScriptMode::Run
         },
         args.record,
         &environment,
@@ -53,10 +53,8 @@ pub(crate) fn dispatch_collect(harness: &Path, args: CollectArgs) -> Answer {
         .app
         .ok_or_else(|| Failure::config("stado.collect", "remote collect needs --app <appId>"))?;
     let result = collect_remote_run(harness, args.job_id.as_deref(), &app_id, &args.host)?;
-    let must_finish = result
-        .get("collected")
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
+    let collected = result.get("collected").and_then(Value::as_bool) == Some(true);
+    let must_finish = collected
         || matches!(
             result.get("state").and_then(Value::as_str),
             Some("failed" | "cancelled" | "evidence-unavailable")
@@ -111,7 +109,11 @@ pub(crate) fn dispatch_author(harness: &Path, args: AuthorArgs) -> Answer {
         journey,
         target,
         desc,
-        args.area.as_deref().unwrap_or(journey),
+        // The area a journey is filed under is the journey itself unless --area names another.
+        match args.area.as_deref() {
+            Some(area) => area,
+            None => journey,
+        },
         &args.host,
         provision,
         args.app_repo.as_deref(),

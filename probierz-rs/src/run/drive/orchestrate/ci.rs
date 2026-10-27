@@ -26,7 +26,7 @@ pub(crate) fn orchestrate(
     for app_id in app_ids {
         let (status, result) = match crate::authoring::validate_accessibility(harness, &app_id) {
             Ok(result) => {
-                let status = if result.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+                let status = if result.get("ok").and_then(Value::as_bool) == Some(true) {
                     "passed"
                 } else {
                     "failed"
@@ -63,31 +63,36 @@ pub(crate) fn orchestrate(
             },
         )?;
         if run.get("skipped").and_then(Value::as_bool) == Some(true) {
-            let remediation = run
-                .pointer("/preflight/remediation")
-                .cloned()
-                .unwrap_or_else(|| {
-                    run.pointer("/resourceLock/error")
-                        .map(|value| json!([value]))
-                        .unwrap_or_else(|| json!([]))
-                });
+            // A skipped run names why: the preflight it failed, with what is
+            // missing and its remediation, or the resource lock it could
+            // not take. One that names neither is refused, never shown as a
+            // blocked row with nothing to act on.
+            let missing = run["preflight"]["missing"].clone();
+            let remediation = match (run.pointer("/preflight/remediation"), run.pointer("/resourceLock/error")) {
+                (Some(remediation), _) => remediation.clone(),
+                (None, Some(error)) => json!([error]),
+                (None, None) => {
+                    return Err(Failure::new(
+                        "ci",
+                        Code::Unknown,
+                        format!("the run of {target} was skipped without a preflight or a resource lock naming why: {run}"),
+                    ))
+                }
+            };
             results.push(json!({
                 "target": target,
                 "runId": run["runId"],
                 "status": "blocked",
                 "artifactsDir": run["artifactsDir"],
                 "manifestPath": run["manifestPath"],
-                "missing": run.pointer("/preflight/missing").cloned().unwrap_or_else(|| json!([])),
+                "missing": missing,
                 "remediation": remediation,
-                "resourceLock": run.get("resourceLock").cloned().unwrap_or(Value::Null),
+                "resourceLock": run["resourceLock"],
             }));
             continue;
         }
         let (analysis, completed) = analyze_and_complete(run, opts.frames)?;
-        let passed = completed
-            .get("passed")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
+        let passed = completed.get("passed").and_then(Value::as_bool) == Some(true);
         let repair = repair_after_run(harness, &completed, opts.no_repair)?;
         results.push(json!({
             "target": target,
@@ -128,18 +133,12 @@ pub(crate) fn orchestrate(
         "targets": selection["targets"],
         "crossCutting": selection["crossCutting"],
         "files": selection["files"],
-        "apps": selection.get("apps").cloned().unwrap_or_else(|| json!([])),
+        "apps": selection["apps"],
     });
     let mut output = Map::new();
     if files.is_none() {
-        output.insert(
-            "ref".into(),
-            selection
-                .get("ref")
-                .cloned()
-                .or_else(|| reference.map(|value| json!(value)))
-                .unwrap_or_else(|| json!("HEAD")),
-        );
+        // The git selection names the ref it compared against.
+        output.insert("ref".into(), selection["ref"].clone());
     }
     output.insert("affected".into(), affected);
     output.insert("results".into(), Value::Array(results));

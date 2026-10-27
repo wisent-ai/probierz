@@ -1,5 +1,6 @@
 use crate::stado::*;
 use serde_json::json;
+use std::num::NonZeroU64;
 pub(crate) fn submit_remote_run(
     harness: &Path,
     target: &str,
@@ -9,7 +10,7 @@ pub(crate) fn submit_remote_run(
     mut provision: Option<Provision>,
     app_repo: Option<&Path>,
     watch: bool,
-    mode: &str,
+    mode: ScriptMode,
     record: bool,
     environment: &[(String, String)],
 ) -> Result<Value, Failure> {
@@ -73,106 +74,81 @@ pub(crate) fn submit_remote_run(
         &submission.receipt_dir,
         &inputs,
     )?;
-    let mut result = json!({
-        "host": host_name,
-        "jobId": submission.job_id,
-        "target": target,
-        "appId": app_id,
-        "submitted": submission.job_id.is_some(),
-    });
-    result
-        .as_object_mut()
-        .expect("object")
-        .extend(identity_fields);
+    let mut result = Map::from_iter([
+        ("host".to_owned(), json!(host_name)),
+        ("jobId".to_owned(), json!(submission.job_id)),
+        ("target".to_owned(), json!(target)),
+        ("appId".to_owned(), json!(app_id)),
+        ("submitted".to_owned(), json!(submission.job_id.is_some())),
+    ]);
+    result.extend(identity_fields);
     let Some(job_id) = submission.job_id else {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("submit-failed".into()));
-        object.insert("failure".into(), submission.failure.unwrap_or(Value::Null));
-        return Ok(result);
+        result.insert("state".into(), Value::String("submit-failed".into()));
+        result.insert("failure".into(), json!(submission.failure));
+        return Ok(Value::Object(result));
     };
     if !watch {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("queued".into()));
-        object.insert("failure".into(), Value::Null);
-        return Ok(result);
+        result.insert("state".into(), Value::String("queued".into()));
+        result.insert("failure".into(), Value::Null);
+        return Ok(Value::Object(result));
     }
+    // How the job ended is read from Stado's terminal state, typed in
+    // watch.rs, as resume and remote authoring read it.
     let watched = watch_job(&job_id)?;
-    result
-        .as_object_mut()
-        .expect("object")
-        .extend(watched.as_object().cloned().unwrap_or_default());
-    let state = result
-        .get("state")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    if matches!(state.as_str(), "completed" | "failed") {
-        let retained = fetch_run_evidence(harness, &job_id)?;
-        if let Some(path) = retained.results_dir {
-            result.as_object_mut().expect("object").insert(
-                "resultsDir".into(),
-                Value::String(path.display().to_string()),
-            );
-        }
-        if let Some(error) = retained.artifact_error {
-            result
-                .as_object_mut()
-                .expect("object")
-                .insert("artifactError".into(), error);
-        }
-        if state == "completed" && result.get("resultsDir").is_none() {
-            let object = result.as_object_mut().expect("object");
-            object.insert("state".into(), Value::String("evidence-unavailable".into()));
-            object.insert(
-                "failure".into(),
-                missing_evidence(&job_id, "artifact_error=null"),
-            );
-        } else if state == "failed" {
-            if let Some(preflight) = retained
-                .manifest
-                .as_ref()
-                .and_then(|value| value.get("preflight"))
-                .filter(|value| value.get("ready").and_then(Value::as_bool) == Some(false))
-            {
-                let missing = preflight
-                    .get("missing")
-                    .and_then(Value::as_array)
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter_map(Value::as_str)
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    })
-                    .filter(|text| !text.is_empty())
-                    .unwrap_or_else(|| "target prerequisites".into());
-                let remediation = preflight
-                    .get("remediation")
-                    .and_then(Value::as_array)
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter_map(Value::as_str)
-                            .collect::<Vec<_>>()
-                            .join("; ")
-                    })
-                    .unwrap_or_default();
-                let detail = format!(
-                    "missing: {missing}{}",
-                    if remediation.is_empty() {
-                        String::new()
-                    } else {
-                        format!("; remediation: {remediation}")
-                    }
-                );
-                let failure = Failure::config("stado.worker", detail);
-                let object = result.as_object_mut().expect("object");
-                object.insert("preflight".into(), preflight.clone());
-                object.insert("failure".into(), failure_summary(&failure, format!("Job {job_id} did not execute because the selected host is missing: {missing}.")));
-            }
-        }
+    let left_evidence = watched_left_evidence(&watched);
+    let completed = watched_completed(&watched);
+    let Value::Object(watched) = watched else {
+        return Err(Failure::invalid("stado.watch", format!("the watch of job {job_id} answered no object")));
+    };
+    result.extend(watched);
+    if !left_evidence {
+        return Ok(Value::Object(result));
     }
-    Ok(result)
+    let retained = fetch_run_evidence(harness, &job_id)?;
+    if let Some(path) = retained.results_dir {
+        result.insert("resultsDir".into(), Value::String(path.display().to_string()));
+    }
+    if let Some(error) = retained.artifact_error {
+        result.insert("artifactError".into(), error);
+    }
+    if completed {
+        if result.get("resultsDir").is_none() {
+            result.insert("state".into(), Value::String("evidence-unavailable".into()));
+            result.insert("failure".into(), missing_evidence(&job_id, "artifact_error=null"));
+        }
+        return Ok(Value::Object(result));
+    }
+    // The worker ran and failed; a failed preflight names what the host lacks.
+    let Some(preflight) = retained
+        .manifest
+        .as_ref()
+        .and_then(|value| value.get("preflight"))
+        .filter(|value| value.get("ready").and_then(Value::as_bool) == Some(false))
+    else {
+        return Ok(Value::Object(result));
+    };
+    let listed = |key: &str, separator: &str| match preflight.get(key).and_then(Value::as_array) {
+        Some(items) => items.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(separator),
+        None => String::new(),
+    };
+    // A worker that refused without naming what it lacked is said as such,
+    // not given an invented list.
+    let missing = match listed("missing", ", ") {
+        named if named.is_empty() => "prerequisites the worker did not name".to_string(),
+        named => named,
+    };
+    let remediation = listed("remediation", "; ");
+    let detail = match remediation.is_empty() {
+        true => format!("missing: {missing}"),
+        false => format!("missing: {missing}; remediation: {remediation}"),
+    };
+    let failure = Failure::config("stado.worker", detail);
+    result.insert("preflight".into(), preflight.clone());
+    result.insert(
+        "failure".into(),
+        failure_summary(&failure, format!("Job {job_id} did not execute because the selected host is missing: {missing}.")),
+    );
+    Ok(Value::Object(result))
 }
 
 pub(crate) fn require_immutable_native(
@@ -201,9 +177,9 @@ pub(crate) fn require_immutable_native(
         .pointer("/app/repositories")
         .and_then(Value::as_array)
         .and_then(|repositories| {
-            repositories
-                .iter()
-                .find(|value| value.get("index").and_then(Value::as_u64) == Some(0))
+            repositories.iter().find(|value| {
+                value.get("index").and_then(Value::as_u64).is_some_and(|index| NonZeroU64::new(index).is_none())
+            })
         });
     let clean = primary
         .and_then(|value| value.get("gitSha"))
@@ -261,29 +237,35 @@ pub(crate) fn repository_root(
     Ok(PathBuf::from(root))
 }
 
+/// The model router's address: HTTPS, or HTTP to this machine's loopback
+/// interface, with no credentials, query or fragment. The host is judged by
+/// the parsed URL, so a name that merely begins like a loopback address
+/// (127.attacker.example) is not taken for one and sent the router token.
 pub(crate) fn model_router_url(value: Option<&str>) -> Result<String, Failure> {
-    let clean = value.unwrap_or("").trim();
-    if clean.is_empty() {
-        return Err(Failure::config(
-            "stado.submit",
-            "STADO_MODEL_ROUTER_URL is required",
-        ));
-    }
-    let secure = clean.starts_with("https://");
-    let loopback = clean.starts_with("http://localhost")
-        || clean.starts_with("http://127.")
-        || clean.starts_with("http://[::1]");
-    let authority = clean
-        .split_once("://")
-        .map(|(_, value)| value.split('/').next().unwrap_or(""))
-        .unwrap_or("");
-    if !secure && !loopback {
+    let Some(clean) = value.map(str::trim).filter(|text| !text.is_empty()) else {
+        return Err(Failure::config("stado.submit", "STADO_MODEL_ROUTER_URL is required"));
+    };
+    let parsed = url::Url::parse(clean).map_err(|error| {
+        Failure::config("stado.submit", format!("STADO_MODEL_ROUTER_URL {clean} is not a URL: {error}"))
+    })?;
+    let loopback = match parsed.host() {
+        Some(url::Host::Domain(name)) => name == "localhost",
+        Some(url::Host::Ipv4(address)) => address.is_loopback(),
+        Some(url::Host::Ipv6(address)) => address.is_loopback(),
+        None => false,
+    };
+    let secure = parsed.scheme() == "https";
+    if !secure && !(parsed.scheme() == "http" && loopback) {
         return Err(Failure::config(
             "stado.submit",
             "STADO_MODEL_ROUTER_URL must use HTTPS or loopback HTTP",
         ));
     }
-    if authority.contains('@') || clean.contains('?') || clean.contains('#') {
+    if !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+    {
         return Err(Failure::config(
             "stado.submit",
             "STADO_MODEL_ROUTER_URL must not contain credentials, query parameters, or a fragment",

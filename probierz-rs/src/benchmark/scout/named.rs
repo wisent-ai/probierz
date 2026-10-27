@@ -99,18 +99,10 @@ impl Named {
                 ),
             ));
         }
-        for field in ["verdict", "evidence", "min_evidence", "recent", "baseline"] {
-            if trend.get(field).is_none() {
-                return Err(Failure::config(
-                    POINT,
-                    format!(
-                        "the trend in the evidence file {} has no {field}",
-                        self.file.display()
-                    ),
-                ));
-            }
-        }
-        Ok(trend.clone())
+        super::evidence::checked_trend(
+            trend.clone(),
+            &format!("the evidence file {}", self.file.display()),
+        )
     }
 
     /// The newest `limit` observations, as Trends would list them.

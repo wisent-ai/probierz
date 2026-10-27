@@ -100,13 +100,19 @@ pub(crate) fn path_inside(parent: &Path, child: &Path) -> bool {
 }
 
 pub(crate) fn affected_targets(harness: &Path, files: &[String]) -> Result<Value, Failure> {
+    affected_fields(harness, files).map(Value::Object)
+}
+
+/// [`affected_targets`] as the fields of its answer, so a caller that adds a
+/// field (`ref`) extends a map rather than expecting the answer is one.
+fn affected_fields(harness: &Path, files: &[String]) -> Result<Map<String, Value>, Failure> {
     let app_matches = affected_app_journeys(harness, files)?;
     let mut by_package: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for name in target_list() {
-        by_package
-            .entry(target(name).expect("known").pkg)
-            .or_default()
-            .push(name);
+        let Some(declared) = target(name) else {
+            return Err(fail("run.affected", format!("target {name} is listed but not declared")));
+        };
+        by_package.entry(declared.pkg).or_default().push(name);
     }
     let mut hit = BTreeSet::new();
     let mut cross_cutting = false;
@@ -162,16 +168,22 @@ pub(crate) fn affected_targets(harness: &Path, files: &[String]) -> Result<Value
     } else {
         hit.into_iter().collect()
     };
-    let apps: Vec<Value> = app_matches
+    let apps = app_matches
         .into_iter()
-        .map(|mut entry| {
-            entry.as_object_mut().expect("object").shift_remove("input");
-            entry
+        .map(|entry| match entry {
+            Value::Object(mut fields) => {
+                fields.shift_remove("input");
+                Ok(Value::Object(fields))
+            }
+            other => Err(fail("run.affected", format!("an affected app journey is not an object: {other}"))),
         })
-        .collect();
-    Ok(
-        json!({ "targets": targets, "crossCutting": cross_cutting, "files": classified, "apps": apps }),
-    )
+        .collect::<Result<Vec<Value>, Failure>>()?;
+    Ok(Map::from_iter([
+        ("targets".to_owned(), json!(targets)),
+        ("crossCutting".to_owned(), json!(cross_cutting)),
+        ("files".to_owned(), json!(classified)),
+        ("apps".to_owned(), json!(apps)),
+    ]))
 }
 
 pub(crate) fn changed_files(harness: &Path, reference: &str) -> Result<Vec<String>, Failure> {
@@ -204,13 +216,18 @@ pub(crate) fn changed_files(harness: &Path, reference: &str) -> Result<Vec<Strin
         .collect())
 }
 
+/// The targets the files changed since `reference` reach; with no reference
+/// named (`probierz affected` alone), the change is the working tree's
+/// against `HEAD`, and the answer's `ref` says so.
 pub(crate) fn affected_from_git(harness: &Path, reference: Option<&str>) -> Result<Value, Failure> {
-    let against = reference.unwrap_or("HEAD");
+    let against = match reference {
+        Some(reference) => reference,
+        None => "HEAD",
+    };
     let files = changed_files(harness, against)?;
-    let mut result = affected_targets(harness, &files)?;
     let mut object = Map::new();
     object.insert("ref".into(), Value::String(against.into()));
-    object.extend(result.as_object_mut().expect("object").clone());
+    object.extend(affected_fields(harness, &files)?);
     Ok(Value::Object(object))
 }
 

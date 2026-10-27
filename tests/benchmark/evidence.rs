@@ -48,9 +48,11 @@ fn stderr(output: &Output) -> String {
 }
 
 /// What Trends and Competitors would have answered for `topic`, every figure
-/// measured from the listed observations: `buildable` sets the floor at the
-/// count seen and the earlier window at nothing, so the trend holds; not
-/// buildable sets the floor above what was seen.
+/// a count of the observations listed here: the recent window holds the
+/// listed observations, the earlier window none of them when the trend is
+/// buildable and the same ones when it is not; a buildable trend's floor is
+/// what the recent window saw, and the other's asks for both windows'
+/// observations, more than the recent window holds.
 fn evidence(topic: &str, buildable: bool) -> Value {
     let now = chrono::Utc::now().to_rfc3339();
     let observations: Vec<Value> = TITLES
@@ -60,9 +62,10 @@ fn evidence(topic: &str, buildable: bool) -> Value {
             json!({"id": format!("obs-{index}"), "title": title, "url": format!("https://example.invalid/{index}"), "published_at": now})
         })
         .collect();
+    let earlier: &[Value] = if buildable { &[] } else { &observations };
     let seen = observations.len();
-    let floor = if buildable { seen } else { seen + seen };
-    let baseline = if buildable { seen - seen } else { seen };
+    let baseline = earlier.len();
+    let floor = if buildable { seen } else { seen + baseline };
     let verdict = if buildable {
         "rising"
     } else {
@@ -137,6 +140,23 @@ fn scout_reads_named_evidence_and_refuses_what_the_file_lacks() {
         stderr(&lacking).contains("has no observations"),
         "{}",
         stderr(&lacking)
+    );
+
+    // A floor that is not a whole number was read as none and let the topic
+    // through; it is refused naming the field, and no brief is written.
+    let mut unreadable = evidence(TOPIC, true);
+    unreadable["trend"]["min_evidence"] = json!("a few");
+    write(&file, &unreadable);
+    let unread = scout();
+    assert!(!unread.status.success(), "{}", stderr(&unread));
+    assert!(
+        stderr(&unread).contains("whose min_evidence is not a whole number: \"a few\""),
+        "{}",
+        stderr(&unread)
+    );
+    assert!(
+        !root.join("test-results").join(".scout").exists(),
+        "a trend with an unreadable floor wrote a brief"
     );
 
     write(&file, &evidence(TOPIC, false));

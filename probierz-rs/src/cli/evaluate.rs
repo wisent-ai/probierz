@@ -6,6 +6,27 @@ use clap::Subcommand;
 
 #[derive(Debug, Subcommand)]
 pub enum EvaluateCommand {
+    /// Assess only the owned HTTP target declared in an application manifest.
+    Security {
+        #[arg(long = "app")]
+        app_id: String,
+        /// Exact Brama model route, including unrestricted or abliterated models.
+        #[arg(long, required_unless_present = "deterministic", conflicts_with = "deterministic")]
+        model: Option<String>,
+        /// Run declared checks without contacting a model or reading model credentials.
+        #[arg(long, conflicts_with_all = ["model", "router_url", "agent_id", "router_token_stdin"])]
+        deterministic: bool,
+        /// New immutable JSON evidence report; an existing path is refused.
+        #[arg(long = "out")]
+        output: PathBuf,
+        #[arg(long)]
+        router_url: Option<String>,
+        #[arg(long)]
+        agent_id: Option<String>,
+        /// Read router bearer and agent signing secret as consecutive stdin lines.
+        #[arg(long)]
+        router_token_stdin: bool,
+    },
     /// Render and rubric-score a scientific figure pair.
     Figure {
         #[arg(long)]

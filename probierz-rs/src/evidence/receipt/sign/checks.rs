@@ -16,85 +16,84 @@ pub(super) fn check_artifacts(
 ) -> Result<Map<String, Value>, Failure> {
     let mut scans = Map::new();
     for (source, signed) in source_runs.iter().zip(normalized) {
-        let run_id = signed
-            .get("runId")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        let artifact_root = PathBuf::from(
-            source
-                .get("manifestPath")
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-        );
-        let artifact_root = artifact_root.parent().unwrap_or(Path::new(""));
-        if source
+        let Some(run_id) = signed.get("runId").and_then(Value::as_str) else {
+            errors.push(format!("a run to sign states no runId: {signed}"));
+            continue;
+        };
+        // A run's artifacts lie beside its manifest; a run that records no
+        // manifest, or one in no directory, has no artifacts to check.
+        let Some(manifest) = source.get("manifestPath").and_then(Value::as_str) else {
+            errors.push(format!("{run_id}: the run records no manifestPath"));
+            continue;
+        };
+        let manifest = PathBuf::from(manifest);
+        let Some(artifact_root) = manifest.parent() else {
+            errors.push(format!("{run_id}: manifest {} lies in no directory", manifest.display()));
+            continue;
+        };
+        let protected = source
             .pointer("/protection/plaintextRemoved")
             .and_then(Value::as_bool)
-            == Some(true)
-        {
+            == Some(true);
+        if protected {
             let protected_root =
                 absolute(&harness.join("test-results").join(".protected").join(app_id))?;
-            let bundle = absolute(Path::new(
-                source
-                    .pointer("/protection/file")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default(),
-            ))?;
-            if !bundle.starts_with(&protected_root) || !bundle.is_file() {
-                errors.push(format!(
-                    "{run_id}: protected artifact is missing or escapes its product root"
-                ));
-            } else if sha256_file(&bundle)?
-                != signed
-                    .pointer("/protection/sha256")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-            {
-                errors.push(format!("{run_id}: protected artifact hash mismatch"));
+            match source.pointer("/protection/file").and_then(Value::as_str) {
+                None => errors.push(format!("{run_id}: the protected artifact bundle is not recorded")),
+                Some(file) => {
+                    let bundle = absolute(Path::new(file))?;
+                    if !bundle.starts_with(&protected_root) || !bundle.is_file() {
+                        errors.push(format!(
+                            "{run_id}: protected artifact is missing or escapes its product root"
+                        ));
+                    } else if Some(sha256_file(&bundle)?.as_str())
+                        != signed.pointer("/protection/sha256").and_then(Value::as_str)
+                    {
+                        errors.push(format!("{run_id}: protected artifact hash mismatch"));
+                    }
+                }
             }
         } else {
+            let root = absolute(artifact_root)?;
             for artifact in signed
                 .get("artifacts")
                 .and_then(Value::as_array)
                 .into_iter()
                 .flatten()
             {
-                let relative = artifact
-                    .get("file")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default();
+                let Some(relative) = artifact.get("file").and_then(Value::as_str) else {
+                    errors.push(format!("{run_id}: an artifact names no file: {artifact}"));
+                    continue;
+                };
                 let file = absolute(&artifact_root.join(relative))?;
-                let root = absolute(artifact_root)?;
                 if !file.starts_with(&root) || !file.is_file() {
                     errors.push(format!(
                         "{run_id}: artifact is missing or escapes its run: {relative}"
                     ));
-                } else if sha256_file(&file)?
-                    != artifact
-                        .get("sha256")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default()
+                } else if Some(sha256_file(&file)?.as_str())
+                    != artifact.get("sha256").and_then(Value::as_str)
                 {
                     errors.push(format!("{run_id}: artifact hash mismatch: {relative}"));
                 }
             }
         }
-        let scan = if source
-            .pointer("/protection/plaintextRemoved")
-            .and_then(Value::as_bool)
-            == Some(true)
-        {
+        let scan = if protected {
             source.pointer("/protection/secretScan").cloned()
         } else {
             Some(scan_secrets(artifact_root)?)
         };
-        let normalized_scan = scan.as_ref().map(|scan| json!({
-            "passed": scan.get("passed").and_then(Value::as_bool),
-            "scannedAt": scan.get("scannedAt").cloned().unwrap_or(Value::Null),
-            "scannedFiles": scan.get("scannedFiles").and_then(Value::as_f64).map(js_number),
-            "skippedBinary": scan.get("skippedBinary").and_then(Value::as_f64).map(js_number),
-            "findings": scan.get("findings").cloned().filter(Value::is_array),
-        })).unwrap_or(Value::Null);
+        // The scan as the receipt records it: what the scan stated, `null`
+        // for anything it did not, and `null` for a run with no scan.
+        let normalized_scan = match scan.as_ref() {
+            Some(scan) => json!({
+                "passed": scan.get("passed").and_then(Value::as_bool),
+                "scannedAt": scan.get("scannedAt"),
+                "scannedFiles": scan.get("scannedFiles").and_then(Value::as_f64).map(js_number),
+                "skippedBinary": scan.get("skippedBinary").and_then(Value::as_f64).map(js_number),
+                "findings": scan.get("findings").cloned().filter(Value::is_array),
+            }),
+            None => Value::Null,
+        };
         if scan
             .as_ref()
             .and_then(|scan| scan.get("passed"))
@@ -187,10 +186,10 @@ pub(super) fn check_runs(
         {
             errors.push(format!("{run_id}: artifact hashes incomplete or invalid"));
         }
-        let level = run
-            .get("evidenceLevel")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let Some(level) = run.get("evidenceLevel").and_then(Value::as_str) else {
+            errors.push(format!("{run_id}: states no evidence level"));
+            continue;
+        };
         if crate::gate::evidence_rank(level) < crate::gate::evidence_rank(minimum) {
             errors.push(format!("{run_id}: {level} is below {minimum}"));
         }
@@ -204,10 +203,10 @@ pub(super) fn exact_builds(normalized: &[Value], errors: &mut Vec<String>) -> Ma
         let Some(hash) = run.pointer("/build/sha256").and_then(Value::as_str) else {
             continue;
         };
-        let target = run
-            .get("target")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let Some(target) = run.get("target").and_then(Value::as_str) else {
+            errors.push(format!("a run with build {hash} states no target"));
+            continue;
+        };
         if builds
             .get(target)
             .and_then(Value::as_str)
@@ -240,9 +239,10 @@ pub(super) fn journey_coverage(
         .filter_map(Value::as_str)
         .map(str::to_string)
         .collect();
+    // A receipt that names no required journeys requires none.
     let required: BTreeSet<String> = journeys_csv
-        .unwrap_or_default()
-        .split(',')
+        .into_iter()
+        .flat_map(|csv| csv.split(','))
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .collect();

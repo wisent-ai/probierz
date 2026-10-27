@@ -6,6 +6,9 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
     let mut switches: Vec<&str> = Vec::new();
     // An array the CLI takes as one comma-separated value (`--runs a,b`).
     let mut comma_lists: Vec<&str> = Vec::new();
+    // A field one command spells under its own flag name, where the shared
+    // spelling below would name a flag that command does not declare.
+    let mut own_flags: Vec<(&str, &str)> = Vec::new();
     let command = match name {
         "probierz_list_surfaces" => "list",
         "probierz_list_specs" => {
@@ -44,8 +47,15 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_evaluate_figure" => "evaluate figure",
         "probierz_evaluate_seo" => "evaluate seo",
+        "probierz_evaluate_talk" => "evaluate talk",
+        "probierz_evaluate_security" => "evaluate security",
+        "probierz_security_journal" => {
+            positional.push("path");
+            "journal"
+        }
         "probierz_create_readme_gif" => {
             positional.push("input");
+            own_flags.push(("output", "out"));
             "gif"
         }
         "probierz_affected" => "affected",
@@ -83,7 +93,13 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             positional.push("directory");
             "secrets scan"
         }
-        "probierz_audit" => "audit",
+        "probierz_audit" => {
+            // `audit` takes the application as its positional argument and
+            // the recorded run as `--run`, not `--app` and `--run-id`.
+            positional.push("appId");
+            own_flags.push(("runId", "run"));
+            "audit"
+        }
         "probierz_gate_status" => {
             positional.push("appId");
             "gate status"
@@ -101,6 +117,8 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
         }
         "probierz_repair" => {
             positional.push("appId");
+            // `repair` declares the recorded run as `--run`, not `--run-id`.
+            own_flags.push(("runId", "run"));
             "repair"
         }
         "probierz_author_manifest" => {
@@ -170,14 +188,14 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             continue;
         }
         if key == "env" {
-            if let Some(environment) = value.as_object() {
-                for (name, value) in environment {
-                    let text = value
-                        .as_str()
-                        .map(str::to_string)
-                        .unwrap_or_else(|| value.to_string());
-                    output.push(format!("{name}={text}"));
-                }
+            let environment = value
+                .as_object()
+                .ok_or_else(|| "env must be an object of variable names to text".to_string())?;
+            for (name, value) in environment {
+                let text = value
+                    .as_str()
+                    .ok_or_else(|| format!("env.{name} must be text, not {value}"))?;
+                output.push(format!("{name}={text}"));
             }
             continue;
         }
@@ -189,30 +207,40 @@ pub(crate) fn route(name: &str, args: &Map<String, Value>) -> Result<Vec<String>
             }
             continue;
         }
-        let cli_key = match key.as_str() {
-            "referencePath" => "reference",
-            "candidatePath" => "candidate",
-            "rubricPath" => "rubric",
-            "outputPath" | "output" => "out",
-            "texPreamblePath" => "tex-preamble",
-            "routerBaseUrl" => "router-url",
-            "policyPath" => "policy",
-            "briefPath" => "brief",
-            "productionEvidencePath" => "production-evidence",
-            "privateKeyFile" => "private-key-file",
-            "repositories" => "repo",
-            "withSpecs" => "specs",
-            "appId" => "app",
-            "baseRef" => "base",
-            "leftRunId" => "left",
-            "rightRunId" => "right",
-            "cargoRelease" => "cargo-release",
-            "appRepo" => "app-repo",
-            "noRepair" => "no-repair",
-            "startSeconds" => "start",
-            "durationSeconds" => "duration",
-            "framesPerSecond" => "fps",
-            other => other,
+        let own_flag = own_flags
+            .iter()
+            .find(|(field, _)| *field == key.as_str())
+            .map(|(_, flag)| *flag);
+        let cli_key = match own_flag {
+            Some(flag) => flag,
+            None => match key.as_str() {
+                "referencePath" => "reference",
+                "candidatePath" => "candidate",
+                "slidesPath" => "slides",
+                "scriptPath" => "script",
+                "sourcePaths" => "source",
+                "rubricPath" => "rubric",
+                "outputPath" => "out",
+                "texPreamblePath" => "tex-preamble",
+                "routerBaseUrl" => "router-url",
+                "policyPath" => "policy",
+                "briefPath" => "brief",
+                "productionEvidencePath" => "production-evidence",
+                "privateKeyFile" => "private-key-file",
+                "repositories" => "repo",
+                "withSpecs" => "specs",
+                "appId" => "app",
+                "baseRef" => "base",
+                "leftRunId" => "left",
+                "rightRunId" => "right",
+                "cargoRelease" => "cargo-release",
+                "appRepo" => "app-repo",
+                "noRepair" => "no-repair",
+                "startSeconds" => "start",
+                "durationSeconds" => "duration",
+                "framesPerSecond" => "fps",
+                other => other,
+            },
         };
         if comma_lists.contains(&key.as_str()) {
             let items = value

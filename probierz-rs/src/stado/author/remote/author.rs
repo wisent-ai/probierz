@@ -23,15 +23,29 @@ pub(crate) fn submit_remote_author(
     let selected = host(host_name, "stado.submit")?;
     require_gui_ready(target, &selected)?;
     let application = manifest::load(harness, app_id)?;
-    let configured_router = application
+    // The router the surface's conditions name, else the one this process
+    // is given; a variable that is not Unicode is refused naming it.
+    let declared_router = application
         .document
         .get("surfaces")
         .and_then(|value| value.get(target))
         .and_then(|value| value.get("conditions"))
         .and_then(|value| value.get("STADO_MODEL_ROUTER_URL"))
         .and_then(serde_yaml::Value::as_str)
-        .map(str::to_string)
-        .or_else(|| std::env::var("STADO_MODEL_ROUTER_URL").ok());
+        .map(str::to_string);
+    let configured_router = match declared_router {
+        Some(router) => Some(router),
+        None => match std::env::var("STADO_MODEL_ROUTER_URL") {
+            Ok(router) => Some(router),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(error) => {
+                return Err(Failure::config(
+                    "stado.submit",
+                    format!("STADO_MODEL_ROUTER_URL cannot be read: {error}"),
+                ))
+            }
+        },
+    };
     let router = model_router_url(configured_router.as_deref())?;
     let product_root = repository_root(harness, app_id, app_repo)?;
     let identity = pack_source_identity(harness, app_id, Some(&product_root))?;
@@ -50,10 +64,18 @@ pub(crate) fn submit_remote_author(
         description,
         receipt_id.as_str(),
     );
-    let environment = std::env::var("PROBIERZ_MODEL")
-        .ok()
-        .map(|value| vec![("PROBIERZ_MODEL".to_string(), value)])
-        .unwrap_or_default();
+    // The authoring model this process names is forwarded to the worker; a
+    // process that names none forwards none.
+    let environment = match std::env::var("PROBIERZ_MODEL") {
+        Ok(value) => vec![("PROBIERZ_MODEL".to_string(), value)],
+        Err(std::env::VarError::NotPresent) => Vec::new(),
+        Err(error) => {
+            return Err(Failure::config(
+                "stado.submit",
+                format!("PROBIERZ_MODEL cannot be read: {error}"),
+            ))
+        }
+    };
     let script = run_script(
         target,
         app_id,
@@ -61,7 +83,7 @@ pub(crate) fn submit_remote_author(
         provision.as_ref(),
         &packed.hash,
         selected.platform.as_deref(),
-        "author",
+        ScriptMode::Author,
         Some(author),
         Some(&router),
         false,
@@ -103,32 +125,37 @@ pub(crate) fn submit_remote_author(
         &submission.receipt_dir,
         &inputs,
     )?;
-    let mut result = json!({
-        "host": host_name,
-        "jobId": submission.job_id,
-        "target": target,
-        "appId": app_id,
-        "journey": journey,
-        "area": area,
-        "submitted": submission.job_id.is_some(),
-    });
-    result
-        .as_object_mut()
-        .expect("object")
-        .extend(identity_fields);
+    let mut result = Map::new();
+    result.insert("host".into(), json!(host_name));
+    result.insert("jobId".into(), json!(submission.job_id));
+    result.insert("target".into(), json!(target));
+    result.insert("appId".into(), json!(app_id));
+    result.insert("journey".into(), json!(journey));
+    result.insert("area".into(), json!(area));
+    result.insert("submitted".into(), json!(submission.job_id.is_some()));
+    result.extend(identity_fields);
     let Some(job_id) = submission.job_id else {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("submit-failed".into()));
-        object.insert("failure".into(), submission.failure.unwrap_or(Value::Null));
-        return Ok(result);
+        result.insert("state".into(), Value::String("submit-failed".into()));
+        // A submission that failed without saying why carries no failure.
+        let failure = match submission.failure {
+            Some(failure) => failure,
+            None => Value::Null,
+        };
+        result.insert("failure".into(), failure);
+        return Ok(Value::Object(result));
     };
-    let test_directory = application
+    // Authored specs land in the surface's test directory: the one it
+    // declares, or `tests`, the directory a surface uses when it names none.
+    let declared_tests = application
         .document
         .get("surfaces")
         .and_then(|value| value.get(target))
         .and_then(|value| value.get("testDirectory"))
-        .and_then(serde_yaml::Value::as_str)
-        .unwrap_or("tests");
+        .and_then(serde_yaml::Value::as_str);
+    let test_directory = match declared_tests {
+        Some(directory) => directory,
+        None => "tests",
+    };
     let source_receipt = save_author_submission(
         harness,
         &job_id,
@@ -140,60 +167,46 @@ pub(crate) fn submit_remote_author(
         test_directory,
         &identity,
     )?;
-    result.as_object_mut().expect("object").insert(
+    result.insert(
         "sourceReceipt".into(),
         Value::String(source_receipt.display().to_string()),
     );
     if !watch {
-        let object = result.as_object_mut().expect("object");
-        object.insert("state".into(), Value::String("queued".into()));
-        object.insert("failure".into(), Value::Null);
-        return Ok(result);
+        result.insert("state".into(), Value::String("queued".into()));
+        result.insert("failure".into(), Value::Null);
+        return Ok(Value::Object(result));
     }
     let watched = watch_job(&job_id)?;
-    result
-        .as_object_mut()
-        .expect("object")
-        .extend(watched.as_object().cloned().unwrap_or_default());
-    let state = result
-        .get("state")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    if matches!(state.as_str(), "completed" | "failed") {
+    let left_evidence = watched_left_evidence(&watched);
+    let completed = watched_completed(&watched);
+    if let Value::Object(watched) = watched {
+        result.extend(watched);
+    }
+    if left_evidence {
         let retained = fetch_run_evidence(harness, &job_id)?;
         if let Some(path) = &retained.results_dir {
-            result.as_object_mut().expect("object").insert(
+            result.insert(
                 "resultsDir".into(),
                 Value::String(path.display().to_string()),
             );
         }
         if let Some(error) = &retained.artifact_error {
-            result
-                .as_object_mut()
-                .expect("object")
-                .insert("artifactError".into(), error.clone());
+            result.insert("artifactError".into(), error.clone());
         }
-        if state == "completed" && retained.results_dir.is_none() {
-            let object = result.as_object_mut().expect("object");
-            object.insert("state".into(), Value::String("evidence-unavailable".into()));
-            object.insert(
+        if completed && retained.results_dir.is_none() {
+            result.insert("state".into(), Value::String("evidence-unavailable".into()));
+            result.insert(
                 "failure".into(),
                 missing_evidence(&job_id, "artifact_error=null"),
             );
-        } else if state == "completed" {
+        } else if completed {
             if let Some(Value::Object(authored)) =
                 restore_remote_authoring(harness, &job_id, &retained, Some(app_id), true)?
             {
-                result.as_object_mut().expect("object").extend(authored);
+                result.extend(authored);
             }
-            result.as_object_mut().expect("object").insert(
-                "specDir".into(),
-                registration_directory(target)
-                    .map(Value::from)
-                    .unwrap_or(Value::Null),
-            );
+            result.insert("specDir".into(), json!(registration_directory(target)));
         }
     }
-    Ok(result)
+    Ok(Value::Object(result))
 }

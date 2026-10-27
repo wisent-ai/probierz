@@ -10,7 +10,7 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
         ));
     }
     let file = apps_root(harness_root).join(clean).join("probierz.yaml");
-    if !file.exists() {
+    if !crate::paths::present(&file)? {
         return Err(Failure::config(
             "manifest.load",
             format!("app manifest not found: {}", file.display()),
@@ -19,7 +19,12 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
     let mut document: Value = serde_yaml::from_str(&std::fs::read_to_string(&file)?)?;
     expand_home(&mut document);
     validate(&document, &file)?;
-    let declared = string_of(&document, "appId").unwrap_or_default();
+    let Some(declared) = string_of(&document, "appId") else {
+        return Err(Failure::config(
+            "manifest.load",
+            format!("{} declares no appId, so it is not the manifest of {clean}", file.display()),
+        ));
+    };
     if declared != clean {
         return Err(Failure::config(
             "manifest.load",
@@ -54,6 +59,23 @@ impl Manifest {
                 )
             })
     }
+
+    /// A path a manifest (or a file beside it) writes: absolute after `~/`
+    /// expansion under the home `crate::run::home_dir` names, otherwise
+    /// relative to the manifest's own directory. A `~/` left unexpanded
+    /// named a directory called `~` beside the manifest.
+    pub fn beside(&self, written: &str) -> PathBuf {
+        let expanded = match written.strip_prefix("~/") {
+            Some(rest) => crate::run::home_dir().join(rest),
+            None => PathBuf::from(written),
+        };
+        if expanded.is_absolute() {
+            return expanded;
+        }
+        // The manifest's file name is replaced, so the path lands in its
+        // directory whether that directory is named or is the current one.
+        self.file.with_file_name(expanded)
+    }
 }
 
 /// The app's manifest, or `None` when the app has none yet (its manifest is
@@ -63,7 +85,7 @@ pub fn load_if_declared(harness_root: &Path, app_id: &str) -> Result<Option<Mani
     let file = apps_root(harness_root)
         .join(app_id.trim())
         .join("probierz.yaml");
-    if valid_id(app_id.trim()) && !file.exists() {
+    if valid_id(app_id.trim()) && !crate::paths::present(&file)? {
         return Ok(None);
     }
     load(harness_root, app_id).map(Some)
@@ -107,7 +129,7 @@ pub fn primary_root(manifest: &Manifest) -> Option<PathBuf> {
 /// Every product that declares a manifest, in the order an operator reads.
 pub fn list(harness_root: &Path) -> Result<Vec<AppSummary>, Failure> {
     let root = apps_root(harness_root);
-    if !root.exists() {
+    if !crate::paths::present(&root)? {
         return Ok(Vec::new());
     }
     let mut names: Vec<String> = Vec::new();
@@ -116,7 +138,7 @@ pub fn list(harness_root: &Path) -> Result<Vec<AppSummary>, Failure> {
         if !entry.file_type()?.is_dir() {
             continue;
         }
-        if !entry.path().join("probierz.yaml").exists() {
+        if !crate::paths::present(&entry.path().join("probierz.yaml"))? {
             continue;
         }
         names.push(entry.file_name().to_string_lossy().into_owned());
@@ -137,46 +159,52 @@ pub fn list(harness_root: &Path) -> Result<Vec<AppSummary>, Failure> {
 }
 
 pub(crate) fn sorted_keys(document: &Value, key: &str) -> Vec<String> {
-    let mut keys: Vec<String> = map_of(document, key).map(key_names).unwrap_or_default();
+    // A manifest that declares no mapping under `key` names no keys there.
+    let Some(mapping) = map_of(document, key) else {
+        return Vec::new();
+    };
+    let mut keys = key_names(mapping);
     keys.sort();
     keys
 }
 
 /// The journeys a surface runs, after the first override whose conditions all
-/// match. An unmatched override never contributes.
+/// match. An unmatched override, or one that states no conditions, never
+/// contributes; a surface or override that lists no journeys runs none.
 pub fn surface_journeys(surface: &Value, environment: &BTreeMap<String, String>) -> Vec<String> {
-    for override_entry in sequence_of(surface, "journeyOverrides").unwrap_or(&Vec::new()) {
-        let when = map_of(override_entry, "when");
-        let matches = when
-            .map(|map| {
-                map.iter().all(|(key, value)| {
-                    let name = key.as_str().unwrap_or_default();
-                    let wanted = match value {
-                        Value::String(text) => text.clone(),
-                        Value::Number(number) => number.to_string(),
-                        Value::Bool(flag) => flag.to_string(),
-                        _ => return false,
-                    };
-                    // An unset variable matches no value, not the empty one.
-                    environment.get(name).map(String::as_str) == Some(wanted.as_str())
-                })
-            })
-            .unwrap_or(false);
-        if matches {
-            return sequence_of(override_entry, "journeys")
-                .map(|list| {
-                    list.iter()
-                        .filter_map(|item| item.as_str().map(str::to_string))
-                        .collect()
-                })
-                .unwrap_or_default();
+    if let Some(overrides) = sequence_of(surface, "journeyOverrides") {
+        for override_entry in overrides {
+            let Some(when) = map_of(override_entry, "when") else {
+                continue;
+            };
+            let matches = when.iter().all(|(key, value)| {
+                let Some(name) = key.as_str() else {
+                    return false;
+                };
+                let wanted = match value {
+                    Value::String(text) => text.clone(),
+                    Value::Number(number) => number.to_string(),
+                    Value::Bool(flag) => flag.to_string(),
+                    _ => return false,
+                };
+                // An unset variable matches no value, not the empty one.
+                environment.get(name).map(String::as_str) == Some(wanted.as_str())
+            });
+            if matches {
+                return listed_journeys(override_entry);
+            }
         }
     }
-    sequence_of(surface, "journeys")
-        .map(|list| {
-            list.iter()
-                .filter_map(|item| item.as_str().map(str::to_string))
-                .collect()
-        })
-        .unwrap_or_default()
+    listed_journeys(surface)
+}
+
+/// The journey names `entry` lists under `journeys`.
+fn listed_journeys(entry: &Value) -> Vec<String> {
+    match sequence_of(entry, "journeys") {
+        Some(list) => list
+            .iter()
+            .filter_map(|item| item.as_str().map(str::to_string))
+            .collect(),
+        None => Vec::new(),
+    }
 }

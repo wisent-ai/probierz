@@ -1,6 +1,14 @@
 use crate::evidence::*;
 use serde_json::json;
 
+/// How an asset's redaction was settled, as a registration states it.
+#[derive(serde::Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+enum Redaction {
+    VerifiedRedacted,
+    NotApplicable,
+}
+
 /// Every asset a publication registers, checked one at a time: its kind is
 /// declared, its artifact is the one the run signed, and no artifact is
 /// registered twice. The list comes back sorted by artifact id so two
@@ -14,8 +22,15 @@ pub(crate) fn publication_assets(
     signed_media: &HashMap<&str, &Value>,
 ) -> Result<Vec<Value>, Failure> {
     let mut seen = HashSet::new();
-    let mut publication_assets = Vec::new();
-    for (index, registration) in assets.as_array().unwrap().iter().enumerate() {
+    let mut publication_assets: Vec<(String, Value)> = Vec::new();
+    let rejected = |message: String| {
+        Failure::invalid("evidence.publication", format!("publication rejected: {message}"))
+    };
+    let registrations = assets
+        .as_array()
+        .ok_or_else(|| rejected(format!("assets must be a list, not {assets}")))?;
+    let screen = require_string(policy.get("screenId"), "the journey policy states no screenId")?;
+    for (index, registration) in registrations.iter().enumerate() {
         require(
             registration.is_object(),
             format!("assets.{index} must be an object"),
@@ -60,75 +75,59 @@ pub(crate) fn publication_assets(
                 .is_none_or(|value| value.as_str() == Some(kind)),
             format!("assets.{index}.kind conflicts with signed evidence"),
         )?;
-        let content = registration
-            .get("contentSha256")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        require(
-            is_sha256(content),
-            format!("assets.{index}.contentSha256 is required"),
+        let content = require_string(
+            registration.get("contentSha256"),
+            &format!("assets.{index}.contentSha256 is required"),
         )?;
+        require(is_sha256(content), format!("assets.{index}.contentSha256 is required"))?;
         require(
             media.get("contentSha256").and_then(Value::as_str) == Some(content),
             format!("assets.{index}.contentSha256 does not match the signed receipt"),
         )?;
-        let storage = registration
-            .get("storageUrl")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        require(immutable_storage_url(storage, true), format!("assets.{index}.storageUrl must be immutable HTTPS without credentials, query, or fragment"))?;
-        let redaction = registration
-            .get("redactionStatus")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        require(
-            matches!(redaction, "verified_redacted" | "not_applicable"),
-            format!("assets.{index}.redactionStatus is unsupported"),
-        )?;
+        let storage_message = format!(
+            "assets.{index}.storageUrl must be immutable HTTPS without credentials, query, or fragment"
+        );
+        let storage = require_string(registration.get("storageUrl"), &storage_message)?;
+        require(immutable_storage_url(storage, true), storage_message)?;
+        let unsupported = format!("assets.{index}.redactionStatus is unsupported");
+        let redaction_text = require_string(registration.get("redactionStatus"), &unsupported)?;
+        let redaction = serde_json::from_value::<Redaction>(json!(redaction_text))
+            .map_err(|cause| rejected(format!("{unsupported}: {redaction_text} ({cause})")))?;
         if policy.get("redactionRequired").and_then(Value::as_bool) == Some(true) {
             require(
-                redaction == "verified_redacted",
+                redaction == Redaction::VerifiedRedacted,
                 format!("assets.{index} lacks required redaction verification"),
             )?;
         }
-        let verified_text = registration
-            .get("verifiedAt")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let verified_text = require_string(
+            registration.get("verifiedAt"),
+            &format!("assets.{index}.verifiedAt is required"),
+        )?;
         let verified = parse_iso(verified_text, &format!("assets.{index}.verifiedAt"))?;
-        let captured_text = media
-            .get("capturedAt")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let captured_text = require_string(
+            media.get("capturedAt"),
+            &format!("assets.{index} signed evidence states no capturedAt"),
+        )?;
         let captured = parse_iso(captured_text, &format!("assets.{index}.capturedAt"))?;
         require(
             verified >= captured,
             format!("assets.{index}.verifiedAt predates capture"),
         )?;
-        let asset = json!({
-            "attemptId": attempt_id, "screenId": policy.get("screenId").cloned().unwrap_or(Value::Null), "kind": kind,
+        let fields = json!({
+            "attemptId": attempt_id, "screenId": screen, "kind": kind,
             "storageUrl": storage, "contentSha256": content,
             "bytes": media.get("bytes").and_then(Value::as_f64).map(js_number),
-            "evidenceLevel": evidence, "redactionStatus": redaction, "capturedAt": captured_text, "verifiedAt": verified_text,
+            "evidenceLevel": evidence, "redactionStatus": redaction_text, "capturedAt": captured_text, "verifiedAt": verified_text,
         });
-        let mut with_id = Map::new();
-        with_id.insert(
-            "artifactId".into(),
-            json!(sha256_bytes(canonical(&asset).as_bytes())),
-        );
-        with_id.extend(asset.as_object().cloned().unwrap_or_default());
-        publication_assets.push(Value::Object(with_id));
+        let artifact_id = sha256_bytes(canonical(&fields).as_bytes());
+        // The artifact id leads the asset, then the fields it digests.
+        let mut asset = Map::new();
+        asset.insert("artifactId".into(), json!(artifact_id));
+        if let Value::Object(fields) = fields {
+            asset.extend(fields);
+        }
+        publication_assets.push((artifact_id, Value::Object(asset)));
     }
-    publication_assets.sort_by(|left, right| {
-        left.get("artifactId")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .cmp(
-                right
-                    .get("artifactId")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default(),
-            )
-    });
-    Ok(publication_assets)
+    publication_assets.sort_by(|(left, _), (right, _)| left.cmp(right));
+    Ok(publication_assets.into_iter().map(|(_, asset)| asset).collect())
 }

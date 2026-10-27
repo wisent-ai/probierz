@@ -6,12 +6,17 @@ pub fn create(options: Options) -> Answer {
         return Err(invalid("input video and --out must be different files"));
     }
     let sidecar = PathBuf::from(format!("{}.probierz.json", output.display()));
-    if !options.force && (output.exists() || sidecar.exists()) {
-        let existing = if output.exists() { &output } else { &sidecar };
-        return Err(invalid(format!(
-            "output already exists: {}; pass force=true to replace it",
-            existing.display()
-        )));
+    // An output that cannot be examined is refused with its cause: read as
+    // absent, it was replaced without force.
+    if !options.force {
+        for existing in [&output, &sidecar] {
+            if crate::paths::present(existing)? {
+                return Err(invalid(format!(
+                    "output already exists: {}; pass force=true to replace it",
+                    existing.display()
+                )));
+            }
+        }
     }
 
     let start_seconds = non_negative(options.start_seconds, "startSeconds")?;
@@ -40,11 +45,10 @@ pub fn create(options: Options) -> Answer {
         output_directory.join(format!(".{temporary_stem}.{}.tmp.gif", std::process::id()));
     let temporary_sidecar =
         PathBuf::from(format!("{}.{}.tmp", sidecar.display(), std::process::id()));
-    if temporary.exists() {
-        fs::remove_file(&temporary)?;
-    }
-    if temporary_sidecar.exists() {
-        fs::remove_file(&temporary_sidecar)?;
+    for leftover in [&temporary, &temporary_sidecar] {
+        if crate::paths::present(leftover)? {
+            fs::remove_file(leftover)?;
+        }
     }
 
     let mut command = Command::new(ffmpeg()?);
@@ -88,7 +92,7 @@ pub fn create(options: Options) -> Answer {
         return Err(refused(detail));
     }
 
-    if options.force && output.exists() {
+    if options.force && crate::paths::present(&output)? {
         fs::remove_file(&output)?;
     }
     fs::rename(&temporary, &output)?;
@@ -125,7 +129,7 @@ pub fn create(options: Options) -> Answer {
     let mut manifest_bytes = serde_json::to_vec_pretty(&manifest)?;
     manifest_bytes.push(b'\n');
     write_private(&temporary_sidecar, &manifest_bytes)?;
-    if options.force && sidecar.exists() {
+    if options.force && crate::paths::present(&sidecar)? {
         fs::remove_file(&sidecar)?;
     }
     fs::rename(&temporary_sidecar, &sidecar)?;

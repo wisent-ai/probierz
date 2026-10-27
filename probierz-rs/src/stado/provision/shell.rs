@@ -24,37 +24,31 @@ pub(crate) fn sh(command: &str, args: &[String], cwd: Option<&Path>) -> ProcessO
                 stdout: String::new(),
                 stderr: String::new(),
                 error: Some(error.to_string()),
+                succeeded: false,
             }
         }
     };
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
-    let stdout_reader = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        if let Some(mut stream) = stdout {
-            let _ = stream.read_to_end(&mut bytes);
-        }
-        bytes
-    });
-    let stderr_reader = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        if let Some(mut stream) = stderr {
-            let _ = stream.read_to_end(&mut bytes);
-        }
-        bytes
-    });
-    let waited = stado_wait::begin(
+    let stdout_reader = thread::spawn(move || read_whole(stdout));
+    let stderr_reader = thread::spawn(move || read_whole(stderr));
+    let waited = stado_wait::blocking(
         stado_wait::Kind::Process,
         format!("{command} {}", display_args.join(" ")),
         "this host",
-    )
-    .settle(child.wait());
-    let stdout = stdout_reader.join().unwrap_or_default();
-    let stderr = stderr_reader.join().unwrap_or_default();
-    let (status, error) = match waited {
+        || child.wait(),
+    );
+    let (stdout, stdout_failure) = collected("stdout", stdout_reader.join());
+    let (stderr, stderr_failure) = collected("stderr", stderr_reader.join());
+    let (status, wait_failure) = match waited {
         Ok(status) => (Some(status), None),
         Err(error) => (None, Some(format!("waiting for {command} failed: {error}"))),
     };
+    let failures: Vec<String> = [wait_failure, stdout_failure, stderr_failure]
+        .into_iter()
+        .flatten()
+        .collect();
+    let succeeded = failures.is_empty() && status.is_some_and(|value| value.success());
     ProcessOutput {
         command: command.to_string(),
         args: display_args,
@@ -62,7 +56,30 @@ pub(crate) fn sh(command: &str, args: &[String], cwd: Option<&Path>) -> ProcessO
         signal: status.as_ref().and_then(|value| value.signal()),
         stdout: String::from_utf8_lossy(&stdout).into_owned(),
         stderr: String::from_utf8_lossy(&stderr).into_owned(),
-        error,
+        error: (!failures.is_empty()).then(|| failures.join("; ")),
+        succeeded,
+    }
+}
+
+/// Everything one child stream wrote, or why it could not be read whole.
+fn read_whole(stream: Option<impl Read>) -> std::io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    if let Some(mut stream) = stream {
+        stream.read_to_end(&mut bytes)?;
+    }
+    Ok(bytes)
+}
+
+/// One reader thread's bytes, or the sentence saying why its stream was not
+/// read whole; the sentence reaches the output's `error`.
+fn collected(
+    name: &str,
+    joined: std::thread::Result<std::io::Result<Vec<u8>>>,
+) -> (Vec<u8>, Option<String>) {
+    match joined {
+        Ok(Ok(bytes)) => (bytes, None),
+        Ok(Err(error)) => (Vec::new(), Some(format!("reading {name} failed: {error}"))),
+        Err(_panic) => (Vec::new(), Some(format!("the {name} reader thread panicked"))),
     }
 }
 
@@ -176,7 +193,7 @@ pub(crate) fn require_gui_ready(target: &str, selected: &discovery::Host) -> Ans
         ],
         None,
     );
-    if output.status != Some(0) {
+    if !output.succeeded {
         return Err(remote_failure(
             "stado.preflight",
             &format!("Reading GUI readiness for {registry_target} failed"),

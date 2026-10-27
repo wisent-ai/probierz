@@ -26,29 +26,46 @@ pub(crate) fn declared_surface(
         .filter_map(|(key, _)| key.as_str())
     {
         if !opts.env.contains_key(secret) {
-            if let Ok(value) = std::env::var(secret) {
+            if let Some(value) = process_env(secret)? {
                 opts.env.insert(secret.into(), value);
             }
         }
     }
-    for (target_name, source_name) in value
+    for (key, alias) in value
         .get("env")
         .and_then(serde_yaml::Value::as_mapping)
         .into_iter()
         .flatten()
-        .filter_map(|(key, value)| Some((key.as_str()?, value.as_str()?)))
     {
-        if let Some(value) = opts
-            .env
-            .get(source_name)
-            .cloned()
-            .or_else(|| std::env::var(source_name).ok())
-        {
+        let (Some(target_name), Some(source_name)) = (key.as_str(), alias.as_str()) else {
+            return Err(Failure::config(
+                "run.environment",
+                format!("surface {name} of {app_id}: env entry {key:?}: {alias:?} must map a variable name to a variable name"),
+            ));
+        };
+        let stated = match opts.env.get(source_name) {
+            Some(value) => Some(value.clone()),
+            None => process_env(source_name)?,
+        };
+        if let Some(value) = stated {
             opts.env.insert(source_name.into(), value.clone());
             opts.env.insert(target_name.into(), value);
         }
     }
     Ok((Some(declaration), Some(value)))
+}
+
+/// The process environment's value of `name`: unset is none, and one that is
+/// set but not Unicode is refused naming it rather than read as unset.
+fn process_env(name: &str) -> Result<Option<String>, Failure> {
+    match std::env::var(name) {
+        Ok(value) => Ok(Some(value)),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(error) => Err(Failure::config(
+            "run.environment",
+            format!("{name} cannot be read from the process environment: {error}"),
+        )),
+    }
 }
 
 /// The environment the suite process is started with: the caller's snapshot

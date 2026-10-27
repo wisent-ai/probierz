@@ -1,79 +1,7 @@
-//! What changed: git reads, glob matching and the journeys a set of files affects.
+//! What changed: the journeys a set of files affects, read through the git and
+//! path-pattern readers the pre-push gate and run planning share.
 
 use crate::status::*;
-
-pub(crate) fn git(root: &str, arguments: &[&str]) -> Option<String> {
-    let output =
-        stado_wait::output(Command::new("git").arg("-C").arg(root).args(arguments)).ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    (!text.is_empty()).then_some(text)
-}
-
-/// The non-empty lines git prints, or why it printed none: git that cannot
-/// start or exits non-zero is the cause, never an empty answer.
-pub(crate) fn git_lines(root: &str, arguments: &[&str]) -> Result<Vec<String>, String> {
-    let mut command = Command::new("git");
-    command.arg("-C").arg(root).args(arguments);
-    let output = stado_wait::output(&mut command).map_err(|error| {
-        format!(
-            "git {} in {root} could not run: {error}",
-            arguments.join(" ")
-        )
-    })?;
-    if !output.status.success() {
-        return Err(format!(
-            "git {} in {root} failed ({}): {}",
-            arguments.join(" "),
-            output.status,
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-        .collect())
-}
-
-pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {
-    fn matches(
-        pattern: &[u8],
-        text: &[u8],
-        memo: &mut HashMap<(usize, usize), bool>,
-        pi: usize,
-        ti: usize,
-    ) -> bool {
-        if let Some(answer) = memo.get(&(pi, ti)) {
-            return *answer;
-        }
-        let answer = if pi == pattern.len() {
-            ti == text.len()
-        } else if pattern[pi] == b'*' && pi + 1 < pattern.len() && pattern[pi + 1] == b'*' {
-            matches(pattern, text, memo, pi + 2, ti)
-                || (ti < text.len() && matches(pattern, text, memo, pi, ti + 1))
-        } else if pattern[pi] == b'*' {
-            matches(pattern, text, memo, pi + 1, ti)
-                || (ti < text.len() && text[ti] != b'/' && matches(pattern, text, memo, pi, ti + 1))
-        } else {
-            ti < text.len()
-                && pattern[pi] == text[ti]
-                && matches(pattern, text, memo, pi + 1, ti + 1)
-        };
-        memo.insert((pi, ti), answer);
-        answer
-    }
-    matches(
-        pattern.as_bytes(),
-        text.as_bytes(),
-        &mut HashMap::new(),
-        0,
-        0,
-    )
-}
 
 /// The checkout a manifest repository declares. A repository without one is
 /// refused by name, never measured in whatever directory the process runs in.
@@ -89,55 +17,15 @@ pub(crate) fn repository_root<'a>(app_id: &str, repository: &'a Value) -> Result
         })
 }
 
+/// The journeys `files` touch across every app of the harness, each app's
+/// mappings read by the reader the pre-push gate uses
+/// (`gate::affected_journeys`), so a merge and a push are judged on the same
+/// journeys and a malformed mapping refuses both.
 pub(crate) fn affected_journeys(harness: &Path, files: &[PathBuf]) -> Result<Vec<String>, Failure> {
     let mut affected = BTreeSet::new();
     for app in manifest::list(harness)? {
-        let (_, document) = manifest_object(harness, &app.app_id)?;
-        for repository in document
-            .get("repositories")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
-            // Skipped, its changed files mapped to no journey and the merge
-            // was judged on none of them.
-            let root = repository_root(&app.app_id, repository)?;
-            let root_path = Path::new(root);
-            for file in files {
-                let Ok(relative) = file.strip_prefix(root_path) else {
-                    continue;
-                };
-                let relative = relative
-                    .to_string_lossy()
-                    .replace(std::path::MAIN_SEPARATOR, "/");
-                for mapping in repository
-                    .get("mappings")
-                    .and_then(Value::as_array)
-                    .into_iter()
-                    .flatten()
-                {
-                    let matched = mapping
-                        .get("paths")
-                        .and_then(Value::as_array)
-                        .into_iter()
-                        .flatten()
-                        .filter_map(Value::as_str)
-                        .any(|pattern| glob_matches(pattern, &relative));
-                    if matched {
-                        for journey in mapping
-                            .get("journeys")
-                            .and_then(Value::as_array)
-                            .into_iter()
-                            .flatten()
-                        {
-                            if let Some(journey) = journey.as_str() {
-                                affected.insert(journey.to_string());
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let loaded = manifest::load(harness, &app.app_id)?;
+        affected.extend(crate::gate::affected_journeys(&loaded, files)?);
     }
     Ok(affected.into_iter().collect())
 }

@@ -1,61 +1,44 @@
 use crate::failure::Code;
+use crate::gate::evidence_rank;
 use crate::run::*;
 use serde_json::json;
 
+use super::cell::{arguments, artifact_key, cell_level, declared_env, extend, Arguments};
+
+/// The edition of the matrix report's shape, which its readers compare
+/// before they read it: https://json-schema.org/understanding-json-schema/reference/schema#schema
+const MATRIX_SCHEMA_VERSION: u64 = 1;
+
 pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> Answer {
-    let plan_only = args.iter().any(|arg| arg == "--plan");
-    let release_at = args.iter().position(|arg| arg == "--release");
-    let release = if let Some(index) = release_at {
-        Some(value_after(args, index, "--release")?)
-    } else {
-        None
-    };
+    let Arguments {
+        plan_only,
+        release,
+        mut env,
+    } = arguments(args)?;
     if profile == "release" && !plan_only && release.is_none() {
         return Err(fail(
             "cli.matrix",
             "release matrix execution needs --release <id>",
         ));
     }
-    let mut env = BTreeMap::new();
-    let mut index = 0;
-    while index < args.len() {
-        if args[index] == "--plan" {
-            index += 1;
-            continue;
-        }
-        if args[index] == "--release" {
-            index += 2;
-            continue;
-        }
-        let Some((name, value)) = args[index].split_once('=') else {
-            return Err(fail(
-                "cli.matrix",
-                format!("unexpected matrix argument: {}", args[index]),
-            ));
-        };
-        env.insert(name.into(), value.into());
-        index += 1;
-    }
-
     let plan = plan_matrix(harness, app_id, profile)?;
     if plan_only {
         return print_json(&plan);
     }
-    let effective = release.or_else(|| {
-        plan.get("release")
+    let effective = match release {
+        Some(release) => Some(release),
+        None => plan
+            .get("release")
             .and_then(Value::as_str)
-            .map(str::to_string)
-    });
+            .map(str::to_string),
+    };
     if profile == "release" && effective.is_none() {
         return Err(fail(
             "run.matrix",
             "release matrix execution needs a release ID",
         ));
     }
-    let artifact_key = env
-        .get("PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE")
-        .cloned()
-        .or_else(|| std::env::var("PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE").ok());
+    let artifact_key = artifact_key(&env)?;
     if plan.get("artifactEncryption").and_then(Value::as_str) == Some("required")
         && artifact_key.is_none()
     {
@@ -65,16 +48,42 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         ));
     }
     env.remove("PROBIERZ_ARTIFACT_ENCRYPTION_KEY_FILE");
-    for cell in plan
-        .get("cells")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
+    let required = plan
+        .get("minimumCellEvidence")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            fail(
+                "run.matrix",
+                format!("matrix {profile} plan states no minimumCellEvidence; the manifest profile must state E2 or E3"),
+            )
+        })?;
+    // The one rank the gate, status, receipts and publication read.
+    let required_rank = evidence_rank(required).ok_or_else(|| {
+        fail(
+            "run.matrix",
+            format!("matrix {profile} plan's minimumCellEvidence {required:?} is not an evidence level the gate reads (E followed by its rank)"),
+        )
+    })?;
+    let Some(record) = plan.get("record").and_then(Value::as_bool) else {
+        return Err(fail(
+            "run.matrix",
+            format!("matrix {profile} plan states no record setting"),
+        ));
+    };
+    let remove_plaintext = plan
+        .get("removePlaintextAfterProtection")
+        .and_then(Value::as_bool)
+        == Some(true);
+    let Some(cells) = plan.get("cells").and_then(Value::as_array) else {
+        return Err(fail(
+            "run.matrix",
+            format!("matrix {profile} plan states no cells"),
+        ));
+    };
+    for cell in cells {
         for (name, value) in &env {
             if let Some(axis) = cell
                 .get("axes")
-                .and_then(Value::as_object)
                 .and_then(|axes| axes.get(name))
                 .and_then(Value::as_str)
             {
@@ -104,9 +113,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             run_id,
             Some(profile),
             Some(Path::new(key)),
-            plan.get("removePlaintextAfterProtection")
-                .and_then(Value::as_bool)
-                .unwrap_or(false),
+            remove_plaintext,
         );
         match result {
             Ok(artifact) => (artifact, Value::Null),
@@ -114,20 +121,10 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         }
     };
 
+    let redaction = crate::manifest::Redaction::of_app(harness, Some(app_id))?;
     let mut results = Vec::new();
-    for cell in plan
-        .get("cells")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        let mut cell_env: BTreeMap<String, String> = cell
-            .get("env")
-            .and_then(Value::as_object)
-            .into_iter()
-            .flatten()
-            .filter_map(|(name, value)| Some((name.clone(), value.as_str()?.to_string())))
-            .collect();
+    for cell in cells {
+        let mut cell_env = declared_env(cell)?;
         cell_env.extend(env.clone());
         if let Some(release) = &effective {
             cell_env.insert("PROBIERZ_RELEASE".into(), release.clone());
@@ -142,7 +139,7 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             })?,
             RunOptions {
                 env: cell_env,
-                record: plan.get("record").and_then(Value::as_bool).unwrap_or(true),
+                record,
                 force: false,
                 spec: cell.get("spec").and_then(Value::as_str).map(str::to_string),
                 app_id: Some(app_id.into()),
@@ -150,7 +147,6 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             },
         )?;
         let mut public = cell.clone();
-        let redaction = crate::manifest::Redaction::of_app(harness, Some(app_id))?;
         if let Some(map) = public.get_mut("env").and_then(Value::as_object_mut) {
             for (name, value) in map.iter_mut() {
                 if redaction.covers(name) {
@@ -158,25 +154,18 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
                 }
             }
         }
-        if run.get("skipped").and_then(Value::as_bool) == Some(true)
-            || run.get("canceled").and_then(Value::as_bool) == Some(true)
-        {
-            let canceled = run
-                .get("canceled")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
+        let canceled = run.get("canceled").and_then(Value::as_bool) == Some(true);
+        if canceled || run.get("skipped").and_then(Value::as_bool) == Some(true) {
             let (artifact, protection_error) = protect(&run);
-            public.as_object_mut().expect("object").extend(
+            extend(
+                &mut public,
                 json!({
                     "status": if canceled { "canceled" } else { "blocked" },
                     "run": run,
                     "protectedArtifact": artifact,
                     "protectionError": protection_error,
-                })
-                .as_object()
-                .expect("object")
-                .clone(),
-            );
+                }),
+            )?;
             results.push(public);
             continue;
         }
@@ -184,51 +173,19 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
         let (analysis, completed) =
             analyze_and_complete(run, plan.get("frames").and_then(Value::as_f64))?;
         let (artifact, protection_error) = protect(&completed);
-        let passed = completed
-            .get("passed")
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
+        let passed = completed.get("passed").and_then(Value::as_bool) == Some(true)
             && protection_error.is_null();
-        let level = if !completed
-            .get("passed")
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
-        {
-            "E0"
-        } else if completed
-            .pointer("/conditions/record")
-            .and_then(Value::as_bool)
-            == Some(true)
-            && completed
-                .pointer("/evidence/report")
-                .and_then(Value::as_bool)
-                == Some(true)
-            && completed
-                .pointer("/evidence/analysis")
-                .and_then(Value::as_bool)
-                == Some(true)
-            && completed
-                .pointer("/evidence/capturePresent")
-                .and_then(Value::as_bool)
-                == Some(true)
-        {
-            "E3"
-        } else {
-            "E2"
-        };
-        public.as_object_mut().expect("object").extend(
+        extend(
+            &mut public,
             json!({
                 "status": if passed { "passed" } else { "failed" },
-                "evidenceLevel": level,
+                "evidenceLevel": cell_level(&completed),
                 "run": completed,
                 "analysis": analysis,
                 "protectedArtifact": artifact,
                 "protectionError": protection_error,
-            })
-            .as_object()
-            .expect("object")
-            .clone(),
-        );
+            }),
+        )?;
         results.push(public);
     }
 
@@ -238,33 +195,21 @@ pub fn matrix(harness: &Path, app_id: &str, profile: &str, args: &[String]) -> A
             .filter(|result| result.get("status").and_then(Value::as_str) == Some(status))
             .count()
     };
-    let required = plan
-        .get("minimumCellEvidence")
-        .and_then(Value::as_str)
-        .ok_or_else(|| {
-            fail(
-                "run.matrix",
-                format!("matrix {profile} plan states no minimumCellEvidence; the manifest profile must state E2 or E3"),
-            )
-        })?;
-    let rank = |level: &str| match level {
-        "E0" => 0,
-        "E1" => 1,
-        "E2" => 2,
-        "E3" => 3,
-        _ => -1,
-    };
+    // A cell that was blocked or canceled reached no evidence level, so it
+    // cannot satisfy the plan's minimum.
     let evidence_satisfied = results.iter().all(|result| {
-        rank(
-            result
-                .get("evidenceLevel")
-                .and_then(Value::as_str)
-                .unwrap_or(""),
-        ) >= rank(required)
+        match result
+            .get("evidenceLevel")
+            .and_then(Value::as_str)
+            .and_then(evidence_rank)
+        {
+            Some(rank) => rank >= required_rank,
+            None => false,
+        }
     });
     let passed = count("passed") == results.len() && evidence_satisfied;
     let output = json!({
-        "schemaVersion": 1,
+        "schemaVersion": MATRIX_SCHEMA_VERSION,
         "appId": app_id,
         "profile": profile,
         "release": effective,

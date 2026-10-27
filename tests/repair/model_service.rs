@@ -158,7 +158,8 @@ fn a_brief_was_written(root: &Path) -> bool {
             let name = entry.file_name().to_string_lossy().into_owned();
             name.starts_with("round-") && name.ends_with("-brief.txt")
         }),
-        Err(_) => false,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+        Err(error) => panic!("{} cannot be listed: {error}", repairs.display()),
     }
 }
 
@@ -200,6 +201,29 @@ fn a_repair_with_no_model_service_declared_is_refused_naming_the_setting() {
     assert_eq!(
         detail(&result),
         "STADO_MODEL_ROUTER_URL is required",
+        "{result}"
+    );
+    std::fs::remove_dir_all(&root).expect("remove the harness");
+}
+
+/// A plain-HTTP model service on a host that only begins like this machine's
+/// loopback address. Read by prefix it passed as loopback and was sent the
+/// bearer in clear text; read from the parsed URL it is a foreign host.
+const LOOK_ALIKE_LOOPBACK: &str = "http://127.model-service.invalid";
+
+#[test]
+fn a_plain_http_model_service_that_only_looks_like_loopback_is_refused() {
+    let root = harness("look-alike");
+    let output = repair(&root, |command| {
+        command
+            .env("STADO_MODEL_ROUTER_URL", LOOK_ALIKE_LOOPBACK)
+            .env("STADO_MODEL_ROUTER_TOKEN", BEARER);
+    });
+    let result = answer(&output);
+    assert_eq!(result["ok"], false, "{result}");
+    assert_eq!(
+        detail(&result),
+        "STADO_MODEL_ROUTER_URL must use HTTPS or loopback HTTP",
         "{result}"
     );
     std::fs::remove_dir_all(&root).expect("remove the harness");

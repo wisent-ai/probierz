@@ -252,8 +252,8 @@ pub(crate) fn terminate_tree(pid: u32) {
                 }
             }
             Ok(output) => eprintln!(
-                "probierz: /bin/ps answered {} ({}); only pid {pid} is killed and its children may keep running",
-                output.status,
+                "probierz: /bin/ps {} ({}); only pid {pid} is killed and its children may keep running",
+                crate::failure::ended(&output.status),
                 String::from_utf8_lossy(&output.stderr).trim()
             ),
             Err(error) => eprintln!(
@@ -282,8 +282,8 @@ fn say_unkilled(ids: &str, killed: std::io::Result<std::process::Output>) {
     match killed {
         Ok(output) if output.status.success() => {}
         Ok(output) => eprintln!(
-            "probierz: killing the job's processes {ids} answered {} ({}); some may keep running",
-            output.status,
+            "probierz: killing the job's processes {ids}: kill {} ({}); some may keep running",
+            crate::failure::ended(&output.status),
             String::from_utf8_lossy(&output.stderr).trim()
         ),
         Err(error) => eprintln!("probierz: the job's processes {ids} could not be killed: {error}"),

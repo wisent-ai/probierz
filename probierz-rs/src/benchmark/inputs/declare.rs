@@ -5,7 +5,7 @@
 //! does nothing.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::Deserialize;
 use serde_json::{json, Value as Json};
@@ -42,19 +42,18 @@ pub(crate) struct Contender {
     pub ours: bool,
 }
 
-/// Every suite and contender one manifest declares.
+/// Every suite and contender one manifest declares, and the one contender
+/// that is ours, found once when the declaration is judged.
 #[derive(Debug)]
 pub(crate) struct Declared {
     pub suites: BTreeMap<String, PathBuf>,
     pub contenders: BTreeMap<String, Contender>,
+    ours: Contender,
 }
 
 impl Declared {
     pub fn ours(&self) -> &Contender {
-        self.contenders
-            .values()
-            .find(|contender| contender.ours)
-            .expect("declared() refuses a manifest without exactly one ours")
+        &self.ours
     }
 
     pub fn suite(&self, id: &str) -> Result<&PathBuf, Failure> {
@@ -128,20 +127,6 @@ fn refuse(manifest: &Manifest, what: impl std::fmt::Display) -> Failure {
     )
 }
 
-/// A path in the manifest is absolute after `~/` expansion, or relative to
-/// the manifest's own directory.
-fn located(manifest: &Manifest, written: &str) -> PathBuf {
-    let path = Path::new(written);
-    if path.is_absolute() {
-        return path.to_path_buf();
-    }
-    manifest
-        .file
-        .parent()
-        .expect("a manifest file sits in its app directory")
-        .join(path)
-}
-
 pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
     let section = manifest.document.get("benchmark").ok_or_else(|| {
         refuse(
@@ -169,7 +154,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
     let suites = section
         .suites
         .iter()
-        .map(|(id, file)| (id.clone(), located(manifest, file)))
+        .map(|(id, file)| (id.clone(), manifest.beside(file)))
         .collect();
     let contenders: BTreeMap<String, Contender> = section
         .contenders
@@ -177,7 +162,7 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
         .map(|(id, declaration)| {
             let contender = Contender {
                 id: id.clone(),
-                program: located(manifest, &declaration.program),
+                program: manifest.beside(&declaration.program),
                 args: declaration.args,
                 env: declaration.env,
                 ours: declaration.ours,
@@ -185,21 +170,18 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
             (id, contender)
         })
         .collect();
-    let ours: Vec<&str> = contenders
-        .values()
-        .filter(|contender| contender.ours)
-        .map(|contender| contender.id.as_str())
-        .collect();
-    if ours.len() != 1 {
+    let ours: Vec<&Contender> = contenders.values().filter(|contender| contender.ours).collect();
+    let [ours] = ours.as_slice() else {
         let found = if ours.is_empty() {
             "none".to_string()
         } else {
-            ours.join(", ")
+            ours.iter().map(|contender| contender.id.as_str()).collect::<Vec<_>>().join(", ")
         };
         return Err(refuse(
             manifest,
             format!("exactly one benchmark contender must declare ours: true; found {found}"),
         ));
-    }
-    Ok(Declared { suites, contenders })
+    };
+    let ours = (*ours).clone();
+    Ok(Declared { suites, contenders, ours })
 }

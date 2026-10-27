@@ -1,5 +1,6 @@
 //! What the four commands do, and what they refuse.
 
+use std::num::NonZeroUsize;
 use std::path::Path;
 
 use serde_json::{json, Value};
@@ -8,6 +9,7 @@ use crate::failure::{Answer, Failure};
 
 use super::store::lock;
 use super::store::{append, envelope_from_flags, envelope_problem, field, folded, read_envelope};
+use super::store::{shown, state, Filter};
 use super::{
     actor, identity, now, register_file, INCIDENT_SCHEMA, REOPENING_SCHEMA, RESOLUTION_SCHEMA,
 };
@@ -37,10 +39,10 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
     let carried = match recorded.envelope {
         Some(source) => {
             let named = [
-                recorded.service.map(|_| "--service"),
-                recorded.failure_point.map(|_| "--failure-point"),
-                recorded.error_code.map(|_| "--code"),
-                recorded.detail.map(|_| "--detail"),
+                recorded.service.is_some().then_some("--service"),
+                recorded.failure_point.is_some().then_some("--failure-point"),
+                recorded.error_code.is_some().then_some("--code"),
+                recorded.detail.is_some().then_some("--detail"),
             ];
             let also: Vec<&str> = named.into_iter().flatten().collect();
             if !also.is_empty() {
@@ -62,7 +64,7 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
         ),
     };
     let entry = record_envelope(harness, recorded.claim, carried, recorded.run_id)?;
-    let incident_id = field(&entry, "incident_id");
+    let incident_id = shown(&entry, "incident_id");
     if json_output {
         return print_json(&entry);
     }
@@ -126,40 +128,43 @@ pub fn list(harness: &Path, state: &str, limit: usize, json_output: bool) -> Ans
     for row in &rows {
         println!(
             "{}  {}  {}  {}",
-            field(row, "incident_id"),
-            field(row, "recorded_at"),
-            field(row, "state"),
-            field(row, "claim"),
+            shown(row, "incident_id"),
+            shown(row, "recorded_at"),
+            shown(row, "state"),
+            shown(row, "claim"),
         );
     }
     Ok(())
 }
 
-pub(super) fn list_rows(harness: &Path, state: &str, limit: usize) -> Result<Vec<Value>, Failure> {
+pub(super) fn list_rows(harness: &Path, state_named: &str, limit: usize) -> Result<Vec<Value>, Failure> {
     let _lock = lock(harness)?;
-    if !matches!(state, "open" | "resolved" | "all") {
-        return Err(Failure::invalid(
+    let filter: Filter = serde_json::from_value(json!(state_named)).map_err(|error| {
+        Failure::invalid(
             "incident.list",
-            format!("--state is open, resolved or all, not {state}"),
-        ));
-    }
-    if limit == 0 {
+            format!("--state is open, resolved or all, not {state_named}: {error}"),
+        )
+    })?;
+    let Some(limit) = NonZeroUsize::new(limit) else {
         return Err(Failure::invalid(
             "incident.list",
             "--limit needs a positive number",
         ));
+    };
+    let mut kept = Vec::new();
+    for row in folded(harness)? {
+        if filter.keeps(state(&row)?) {
+            kept.push(row);
+        }
     }
-    Ok(folded(harness)?
-        .into_iter()
-        .filter(|row| state == "all" || field(row, "state") == state)
-        .take(limit)
-        .collect())
+    kept.truncate(limit.get());
+    Ok(kept)
 }
 
 fn one_unlocked(harness: &Path, id: &str) -> Result<Value, Failure> {
     folded(harness)?
         .into_iter()
-        .find(|row| field(row, "incident_id") == id)
+        .find(|row| field(row, "incident_id") == Some(id))
         .ok_or_else(|| {
             Failure::invalid(
                 "incident.read",
@@ -178,20 +183,20 @@ pub fn show(harness: &Path, id: &str, json_output: bool) -> Answer {
     if json_output {
         return print_json(&row);
     }
-    println!("{} {}", field(&row, "incident_id"), field(&row, "state"));
+    println!("{} {}", shown(&row, "incident_id"), shown(&row, "state"));
     println!(
         "recorded {} by {}",
-        field(&row, "recorded_at"),
-        field(&row, "actor")
+        shown(&row, "recorded_at"),
+        shown(&row, "actor")
     );
-    println!("claim    {}", field(&row, "claim"));
-    println!("detail   {}", field(&row["envelope"], "detail"));
+    println!("claim    {}", shown(&row, "claim"));
+    println!("detail   {}", shown(&row["envelope"], "detail"));
     if let Some(resolution) = row.get("resolution") {
         println!(
             "resolved {} by {}: {}",
-            field(resolution, "resolved_at"),
-            field(resolution, "actor"),
-            field(resolution, "note"),
+            shown(resolution, "resolved_at"),
+            shown(resolution, "actor"),
+            shown(resolution, "note"),
         );
     }
     Ok(())
@@ -231,8 +236,8 @@ pub(super) fn resolve_entry(
             "incident.resolve",
             format!(
                 "{id} was resolved at {} by {}",
-                field(resolution, "resolved_at"),
-                field(resolution, "actor"),
+                shown(resolution, "resolved_at"),
+                shown(resolution, "actor"),
             ),
         ));
     }

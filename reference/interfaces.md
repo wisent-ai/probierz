@@ -42,14 +42,14 @@ Every way into Probierz, and what each one is allowed to do.
   path and actual cause. Evidence directory and entry-read failures also name
   the affected path instead of silently excluding runs; only a missing
   evidence directory or manifest counts as absent.
-  `tests/gate/run-evidence.rs` exercises the real filesystem reader and scan
-  using `PROBIERZ_TEST_RUN_MANIFEST` and `PROBIERZ_TEST_SOURCE_REVISION`.
-  Run `gate_evidence_preserves_read_failures_and_recovers` in the binary test
-  target with a runner that binds the source revision to that executable.
-  It retains malformed-manifest, non-directory root and direct read-failure
-  causes, verifies preservation and recovery, and writes evidence under
-  `probierz-rs/target/real-tests/gate-evidence/`. Full CLI gate evaluation and
-  graphical qualification remain separate from this filesystem journey.
+  `tests/gate/run-evidence.rs` covers the filesystem reader using `PROBIERZ_TEST_RUN_MANIFEST`
+  and `PROBIERZ_TEST_SOURCE_REVISION`; it retains causes and recovery under
+  `probierz-rs/target/real-tests/gate-evidence/`, not full CLI or GUI qualification.
+  Gate evaluation requires the chosen policy mapping and explicit `minimumEvidence: E<n>`.
+  Optional lists contain non-empty text and flags are booleans; malformed values refuse.
+  Run artifacts and signed-receipt lists must be arrays. `tests/gate/policy.rs`, in
+  `gate_group`, uses genuine qualifying evidence, refuses missing policies in both modes,
+  preserves activation (unreadable activation fails the journey), restores and requalifies.
 - **Matrix refusals:** a completed matrix that fails its verdict returns a
   `refused` failure with its complete cell results, evidence requirement and
   summary. `probierz_run_matrix` does not terminate the MCP server when a
@@ -62,7 +62,7 @@ Every way into Probierz, and what each one is allowed to do.
   status report and, when the app is not eligible to merge, refuses with the
   complete `mergeEligibility` object, every blocking reason included.
   `probierz accessibility`, `probierz repair`, `probierz evaluate figure`,
-  `probierz evaluate seo`, `probierz author spec` and `probierz author manifest`
+  `probierz evaluate seo`, `probierz evaluate talk`, `probierz author spec` and `probierz author manifest`
   print their result and, when it did not pass, refuse with the whole result.
   All of them are classified as `refused` and return the refusal instead of
   ending the process, so the in-process MCP tools that run them answer with an
@@ -200,8 +200,9 @@ Every way into Probierz, and what each one is allowed to do.
   of the same name run inside the server's process, and only an asynchronous
   run is a child process so its process tree can be cancelled. Tool
   descriptions preserve the read-only versus mutation boundary;
-  `probierz_evaluate_figure` and `probierz_evaluate_seo` use the same evaluators
-  and evidence contracts as the CLI.
+  `probierz_evaluate_figure`, `probierz_evaluate_seo` and
+  `probierz_evaluate_talk` use the same evaluators and evidence contracts as
+  the CLI.
   An asynchronous job cannot pass when its child exits unsuccessfully, even
   if the child wrote a JSON report claiming success. The job retains that
   report alongside the failed exit or signal and stderr. Invalid JSON retains

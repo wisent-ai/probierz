@@ -39,21 +39,36 @@ fn read_brief(file: &Path) -> Result<Json, Failure> {
     Ok(brief)
 }
 
+/// A text field `what` of the brief or of Stado's answer, refused naming it
+/// when it is absent, not text or empty: an empty product id, checkout or
+/// suite would create, declare and draft for nothing.
+fn named<'a>(value: &'a Json, what: &str) -> Result<&'a str, Failure> {
+    value
+        .as_str()
+        .filter(|text| !text.trim().is_empty())
+        .ok_or_else(|| Failure::invalid(POINT, format!("{what} is not a non-empty text: {value}")))
+}
+
+/// The first entry of the list `what`, refused naming it when the list is
+/// absent or empty.
+fn first<'a>(value: &'a Json, what: &str) -> Result<&'a Json, Failure> {
+    value
+        .as_array()
+        .and_then(|list| list.split_first())
+        .map(|(first, _rest)| first)
+        .ok_or_else(|| Failure::invalid(POINT, format!("{what} names no entry: {value}")))
+}
+
 /// The manifest of the new product over the checkout Stado made, written
 /// only when there is none, and loaded through the ordinary manifest judge.
 fn manifest_of(harness: &Path, id: &str, checkout: &str) -> Result<manifest::Manifest, Failure> {
-    let file = manifest::apps_root(harness).join(id).join("probierz.yaml");
+    let directory = manifest::apps_root(harness).join(id);
+    let file = directory.join("probierz.yaml");
     if !file.exists() {
-        let root = match std::env::var("HOME").ok().and_then(|home| {
-            Path::new(checkout)
-                .strip_prefix(home)
-                .ok()
-                .map(Path::to_path_buf)
-        }) {
-            Some(relative) => format!("~/{}", relative.display()),
-            None => checkout.to_string(),
-        };
-        std::fs::create_dir_all(file.parent().expect("a manifest sits in its app directory"))?;
+        // The checkout is written under `~/` like every manifest path; a
+        // HOME that cannot be read is refused rather than writing it whole.
+        let root = place::written(Path::new(checkout))?;
+        std::fs::create_dir_all(&directory)?;
         std::fs::write(
             &file,
             format!("schemaVersion: 1\nappId: {id}\nproductId: {id}\nowner: {id} maintainers\nrepositories:\n  - root: {root}\n    mappings: []\nsurfaces: {{}}\njourneys: {{}}\n"),
@@ -71,10 +86,7 @@ pub(crate) fn adopt(
 ) -> Answer {
     let brief = read_brief(brief_file)?;
     let creation = &brief["creation"];
-    let id = creation["product"]["id"]
-        .as_str()
-        .unwrap_or_default()
-        .to_string();
+    let id = named(&creation["product"]["id"], "the brief's creation.product.id")?.to_string();
     if !allow_create {
         return Err(Failure::invalid(
             POINT,
@@ -103,13 +115,14 @@ pub(crate) fn adopt(
         return Err(Failure::new(
             POINT,
             Code::Unavailable,
-            format!("stado product create left {id} {}: {}; `stado product create --resume {} --allow-create` continues it", created["state"], created["error"], creation["request_id"].as_str().unwrap_or_default()),
+            format!("stado product create left {id} {}: {}; `stado product create --resume {} --allow-create` continues it", created["state"], created["error"], creation["request_id"]),
         ));
     }
-    let checkout = created["checkouts"][0]["path"]
-        .as_str()
-        .unwrap_or_default()
-        .to_string();
+    let checkout = named(
+        &first(&created["checkouts"], "stado product create's checkouts")?["path"],
+        "the first checkout's path",
+    )?
+    .to_string();
     let manifest = manifest_of(harness, &id, &checkout)?;
     let mut declare = Command::new(STADO_BIN);
     declare.args(["product", "registry", "set", &id]);
@@ -121,13 +134,16 @@ pub(crate) fn adopt(
         .arg(brief["benchmark"].to_string());
     stado(&mut declare)?;
     let record = catalog::record(&id)?;
-    let suite_id = brief["benchmark"]["suites"][0]
-        .as_str()
-        .unwrap_or_default()
-        .to_string();
-    let suite = match place::suite_file(&manifest, &suite_id) {
-        Ok(file) => json!({"suite": suite_id, "file": file, "drafted": false}),
-        Err(_) => author::suite_of(harness, &id, &suite_id, cases, rounds)?,
+    let suite_id = named(
+        first(&brief["benchmark"]["suites"], "the brief's benchmark.suites")?,
+        "the brief's first benchmark suite",
+    )?
+    .to_string();
+    // A suite the manifest already declares is kept; only an undeclared one
+    // is drafted. Any other failure of reading it is no reason to draft.
+    let suite = match place::declared_suite(&manifest, &suite_id) {
+        Some(file) => json!({"suite": suite_id, "file": file, "drafted": false}),
+        None => author::suite_of(harness, &id, &suite_id, cases, rounds)?,
     };
     print_json(&json!({
         "brief": brief_file,

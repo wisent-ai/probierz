@@ -32,37 +32,55 @@ pub(crate) fn analyze_run(
             ));
         }
     }
+    // A caller that names no tool has the report's own shape name it: a
+    // probierz report carries its `probierz` block and `tests` list.
     let canonical =
         report.get("probierz").is_some() && report.get("tests").and_then(Value::as_array).is_some();
-    let mut summary = normalize_wdio(
-        &report,
-        tool.unwrap_or(if canonical { "probierz" } else { "wdio" }),
-    );
-    let report_media = summary
-        .as_object_mut()
-        .expect("object")
-        .remove("reportMedia")
-        .and_then(|value| value.as_array().cloned())
-        .unwrap_or_default();
+    let tool = match tool {
+        Some(tool) => tool,
+        None if canonical => "probierz",
+        None => "wdio",
+    };
+    let mut summary = normalize_wdio(&report, tool);
+    // normalize_wdio always lists the report's media, so a summary without
+    // that list is refused rather than read as having none.
+    let report_media = match summary.as_object_mut().and_then(|summary| summary.remove("reportMedia")) {
+        Some(Value::Array(media)) => media,
+        other => {
+            return Err(fail(
+                "run.analyze",
+                format!("the normalized report carries no media list: {other:?}"),
+            ))
+        }
+    };
     let mut media = Vec::new();
     for item in report_media {
         let Some(file) = item.get("file").and_then(Value::as_str) else {
             continue;
         };
         let path = PathBuf::from(file);
-        let kind = item.get("kind").and_then(Value::as_str).unwrap_or("");
+        // Media whose report names no kind is listed with none (`null`).
+        let kind = item.get("kind").and_then(Value::as_str);
         let mut entry = Map::new();
         entry.insert("file".into(), Value::String(file.into()));
-        entry.insert("kind".into(), Value::String(kind.into()));
+        entry.insert("kind".into(), json!(kind));
         if let Some(content_type) = item.get("contentType").filter(|value| !value.is_null()) {
             entry.insert("contentType".into(), content_type.clone());
         }
-        if path.exists() {
-            entry.insert("sizeKb".into(), json!(size_kb(&path)));
-        } else {
-            entry.insert("missing".into(), Value::Bool(true));
+        // A file that cannot be examined is said with its cause, not listed
+        // as missing.
+        match crate::paths::present(&path) {
+            Ok(true) => {
+                entry.insert("sizeKb".into(), json!(size_kb(&path)));
+            }
+            Ok(false) => {
+                entry.insert("missing".into(), Value::Bool(true));
+            }
+            Err(cause) => {
+                entry.insert("unexaminable".into(), Value::String(cause.to_string()));
+            }
         }
-        if kind == "video" {
+        if kind == Some("video") {
             // Frames are extracted only when a positive count was stated; a
             // plan or command that states none asks for none.
             let extraction = frames.filter(|count| count.is_normal() && count.is_sign_positive());
@@ -131,39 +149,43 @@ pub(crate) fn analyze_run(
                 .map(PathBuf::from),
         )
         .collect();
-    let inventory: Vec<Value> = artifacts_dir
-        .map(|artifacts| {
-            walk(artifacts, false)
-                .into_iter()
-                .filter(|file| file != report_path && !known.contains(file))
-                .map(|file| json!({ "file": file, "sizeKb": size_kb(&file) }))
-                .collect()
-        })
-        .unwrap_or_default();
-    let mut output = summary.as_object().expect("object").clone();
-    output.insert(
-        "runId".into(),
-        report_run
-            .map(|value| Value::String(value.into()))
-            .unwrap_or(Value::Null),
-    );
+    let inventory: Vec<Value> = match artifacts_dir {
+        Some(artifacts) => walk(artifacts, false)
+            .into_iter()
+            .filter(|file| file != report_path && !known.contains(file))
+            .map(|file| json!({ "file": file, "sizeKb": size_kb(&file) }))
+            .collect(),
+        None => Vec::new(),
+    };
+    let mut output = match summary {
+        Value::Object(summary) => summary,
+        other => return Err(fail("run.analyze", format!("the normalized report is not an object: {other}"))),
+    };
+    // A report that names no run, no artifacts directory, no timeline or no
+    // diagnostics carries `null` for it; capture errors it does not list are
+    // none.
+    output.insert("runId".into(), json!(report_run));
     output.insert("reportPath".into(), json!(report_path));
-    output.insert(
-        "artifactsDir".into(),
-        artifacts_dir.map(|path| json!(path)).unwrap_or(Value::Null),
-    );
-    output.insert(
-        "captureErrors".into(),
-        report
-            .pointer("/probierz/captureErrors")
-            .filter(|value| value.is_array())
-            .cloned()
-            .unwrap_or_else(|| json!([])),
-    );
+    output.insert("artifactsDir".into(), json!(artifacts_dir));
+    let capture_errors = match report.pointer("/probierz/captureErrors") {
+        Some(errors @ Value::Array(_)) => errors.clone(),
+        None | Some(Value::Null) => json!([]),
+        Some(other) => {
+            return Err(fail(
+                "run.analyze",
+                format!("the report's captureErrors are not a list: {other}"),
+            ))
+        }
+    };
+    output.insert("captureErrors".into(), capture_errors);
     output.insert("media".into(), Value::Array(media));
     output.insert("artifacts".into(), Value::Array(inventory));
-    output.insert("timeline".into(), timeline.as_ref().map(|timeline| json!({ "path": timeline_path, "counts": timeline["counts"], "diagnostics": timeline["diagnostics"] })).unwrap_or(Value::Null));
-    output.insert("diagnostics".into(), diagnostics.unwrap_or(Value::Null));
+    let timeline_summary = match timeline.as_ref() {
+        Some(timeline) => json!({ "path": timeline_path, "counts": timeline["counts"], "diagnostics": timeline["diagnostics"] }),
+        None => Value::Null,
+    };
+    output.insert("timeline".into(), timeline_summary);
+    output.insert("diagnostics".into(), json!(diagnostics));
     Ok(Value::Object(output))
 }
 

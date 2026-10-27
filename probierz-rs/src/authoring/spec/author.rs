@@ -53,11 +53,21 @@ pub fn install_accepted_spec(
         })?;
     if !declared.iter().any(|value| value.as_str() == Some(journey)) {
         declared.push(YamlValue::from(journey));
-        declared.sort_by(|left, right| {
-            left.as_str()
-                .unwrap_or_default()
-                .cmp(right.as_str().unwrap_or_default())
-        });
+        // Journeys are names; one that is not is refused naming it, not
+        // sorted as an empty name and written back.
+        let mut names = declared
+            .iter()
+            .map(|value| {
+                value.as_str().map(str::to_string).ok_or_else(|| {
+                    Failure::config(
+                        "author-spec.accept",
+                        format!("surface {target} declares a journey that is not a name: {value:?}"),
+                    )
+                })
+            })
+            .collect::<Result<Vec<String>, Failure>>()?;
+        names.sort();
+        *declared = names.into_iter().map(YamlValue::from).collect();
     }
     if !mapping_paths.is_empty() {
         let repositories = document

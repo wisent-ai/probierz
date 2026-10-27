@@ -55,9 +55,8 @@ pub(crate) fn collect_platform_diagnostics(
         });
     let unreadable_start =
         |error: &String| json!({ "supported": true, "file": null, "ok": false, "error": error });
-    let (command, args, file) =
-        if matches!(target, "desktop:mac" | "desktop:cua") && process_name.is_some() {
-            let name = process_name.expect("checked");
+    let (command, args, file) = match (target, process_name) {
+        ("desktop:mac" | "desktop:cua", Some(name)) => {
             let since = match &since {
                 Ok(since) => since.clone(),
                 Err(error) => return unreadable_start(error),
@@ -75,8 +74,8 @@ pub(crate) fn collect_platform_diagnostics(
                 ],
                 directory.join("macos-unified.log"),
             )
-        } else if target == "mobile:ios" && process_name.is_some() {
-            let name = process_name.expect("checked");
+        }
+        ("mobile:ios", Some(name)) => {
             let since = match &since {
                 Ok(since) => since.clone(),
                 Err(error) => return unreadable_start(error),
@@ -98,7 +97,8 @@ pub(crate) fn collect_platform_diagnostics(
                 ],
                 directory.join("ios-simulator.log"),
             )
-        } else if target == "mobile:android" {
+        }
+        ("mobile:android", _process) => {
             let mut args = Vec::new();
             if let Some(device) = env.get("ANDROID_DEVICE") {
                 args.extend(["-s".into(), device.clone()]);
@@ -110,9 +110,9 @@ pub(crate) fn collect_platform_diagnostics(
                 "threadtime".into(),
             ]);
             ("adb", args, directory.join("android-logcat.log"))
-        } else {
-            return json!({ "supported": false, "file": null });
-        };
+        }
+        _unsupported => return json!({ "supported": false, "file": null }),
+    };
     let result = capture(command, &args, None, None);
     let output = redact_diagnostic(&text(&result.stdout), redaction);
     let error = redact_diagnostic(&text(&result.stderr), redaction);

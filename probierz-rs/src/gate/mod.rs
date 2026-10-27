@@ -7,6 +7,7 @@
 //! | part | what it owns |
 //! |---|---|
 //! | [`config`] | the gate's arguments, its stored configuration and the readers around both |
+//! | [`flags`] | the one read of a yes-or-no evidence field: JSON `true` and nothing else |
 //! | [`verdict`] | the evidence a gate reads, the decision it makes, and the commands that carry it |
 //! | [`audit`] | the access record every evaluation leaves behind |
 //! | [`prepush`] | the pre-push gate and the hook that runs it |
@@ -33,10 +34,12 @@ pub(crate) use crate::manifest;
 
 mod audit;
 mod config;
+mod flags;
 mod prepush;
 mod verdict;
 
 pub(crate) use audit::*;
 pub use config::*;
+pub(crate) use flags::*;
 pub use prepush::*;
 pub use verdict::*;

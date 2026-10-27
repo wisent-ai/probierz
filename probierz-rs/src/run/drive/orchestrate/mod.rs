@@ -1,6 +1,7 @@
 //! Fanning out runs: the CI pass over the affected targets, the declared
 //! matrix a profile expands into, and the dispatch that runs each cell.
 
+mod cell;
 mod ci;
 mod dispatch;
 mod plan;

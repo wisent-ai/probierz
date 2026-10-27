@@ -19,12 +19,29 @@ pub(crate) use crate::failure::{Answer, Code, Failure};
 mod load;
 mod records;
 mod redaction;
+mod seo_mode;
 mod validate;
 
 pub use load::*;
 pub use records::*;
 pub use redaction::Redaction;
+pub use seo_mode::SeoMode;
 pub use validate::*;
+
+/// The refusal of a manifest that does not hold what `what` says it must.
+pub(crate) fn invalid(file: &Path, what: &str) -> Failure {
+    Failure::new(
+        "manifest.validate",
+        Code::Config,
+        format!("invalid app manifest: {} {what}", file.display()),
+    )
+}
+
+/// The part of a manifest a rule requires, or the refusal naming it: the
+/// value a check found is the value used, never checked and then expected.
+pub(crate) fn present<T>(value: Option<T>, file: &Path, what: &str) -> Result<T, Failure> {
+    value.ok_or_else(|| invalid(file, what))
+}
 
 /// Declare `journey` in `document` when it is not declared yet, owned by the
 /// manifest's own owner; `point` names the operation for a refusal. A

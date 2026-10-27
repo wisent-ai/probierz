@@ -202,7 +202,7 @@ pub(crate) fn run_authored_spec(
             "status": JsonValue::Null,
             "runId": JsonValue::Null,
             "exitCode": output.status.code(),
-            "failures": [format!("the run printed no result ({}): {}", output.status, String::from_utf8_lossy(&output.stderr))],
+            "failures": [format!("the run printed no result ({}): {}", crate::failure::ended(&output.status), String::from_utf8_lossy(&output.stderr))],
         }));
     }
     let value: JsonValue = serde_json::from_slice(&output.stdout)?;

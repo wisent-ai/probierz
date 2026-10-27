@@ -65,8 +65,8 @@ fn launchd(predecessor: &str) {
         Some(Ok(output)) if output.status.success() => {}
         Some(Ok(output)) => {
             eprintln!(
-                "probierz intake: launchctl bootout {target} ended {}: {}",
-                output.status,
+                "probierz intake: launchctl bootout {target} {}: {}",
+                crate::failure::ended(&output.status),
                 String::from_utf8_lossy(&output.stderr).trim()
             );
             return;

@@ -66,14 +66,18 @@ impl Redaction {
     }
 
     /// The redaction of `app_id`'s manifest under `harness`, or the
-    /// undeclared one when there is no app or no manifest for it.
+    /// undeclared one when there is no app or it has no manifest yet. A
+    /// manifest that is there and cannot be loaded is refused with its cause
+    /// (the one reading [`load_if_declared`] gives), never read as absent.
     pub fn of_app(harness: &Path, app_id: Option<&str>) -> Result<Redaction, Failure> {
-        match app_id {
-            Some(app) if apps_root(harness).join(app).join("probierz.yaml").exists() => {
-                Ok(Redaction::declared(&load(harness, app)?))
-            }
-            _ => Ok(Redaction::undeclared()),
-        }
+        let declared = match app_id {
+            Some(app) => load_if_declared(harness, app)?,
+            None => None,
+        };
+        Ok(match declared {
+            Some(manifest) => Redaction::declared(&manifest),
+            None => Redaction::undeclared(),
+        })
     }
 
     /// The redaction a run recorded in its run manifest (`redaction`), so a
@@ -186,10 +190,7 @@ impl Redaction {
         for (name, secret) in &self.secrets {
             safe = safe.replace(secret, &format!("[REDACTED:{name}]"));
         }
-        let assignment = Regex::new(
-            r"(?P<whole>\b(?P<name>[A-Za-z][A-Za-z0-9_.-]*)(?P<separator>\s*[=:]\s*)[^\s,;]+)",
-        )
-        .expect("the assignment pattern compiles");
+        let assignment = &*ASSIGNMENT;
         safe = assignment
             .replace_all(&safe, |found: &Captures<'_>| {
                 if self.covers(&found["name"]) {
@@ -199,8 +200,7 @@ impl Redaction {
                 }
             })
             .into_owned();
-        let field = Regex::new(r#"(?P<whole>"(?P<name>[^"]*)"(?P<separator>\s*:\s*)"[^"]*")"#)
-            .expect("the field pattern compiles");
+        let field = &*FIELD;
         field
             .replace_all(&safe, |found: &Captures<'_>| {
                 if self.covers(&found["name"]) {
@@ -215,3 +215,16 @@ impl Redaction {
             .into_owned()
     }
 }
+
+/// A `NAME=value` or `NAME: value` assignment, compiled once for every text
+/// a run redacts.
+static ASSIGNMENT: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"(?P<whole>\b(?P<name>[A-Za-z][A-Za-z0-9_.-]*)(?P<separator>\s*[=:]\s*)[^\s,;]+)")
+        .expect("the assignment pattern compiles")
+});
+
+/// A `"name": "value"` JSON field, compiled once.
+static FIELD: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r#"(?P<whole>"(?P<name>[^"]*)"(?P<separator>\s*:\s*)"[^"]*")"#)
+        .expect("the field pattern compiles")
+});

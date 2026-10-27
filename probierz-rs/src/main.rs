@@ -18,6 +18,7 @@ mod discovery;
 mod failure;
 mod json_file;
 mod manifest;
+mod paths;
 // PortAuthoring: authoring, evaluation, and identity
 mod authoring;
 // ReadmeGif
@@ -89,9 +90,9 @@ fn main() {
 /// failure's structured line so the caller reads the same words a shell
 /// would have read on stderr.
 pub(crate) fn run_in_process(harness: &Path, arguments: &[String]) -> Result<String, String> {
-    let mut argv = Vec::with_capacity(arguments.len() + 1);
-    argv.push("probierz".to_string());
-    argv.extend(arguments.iter().cloned());
+    let argv: Vec<String> = std::iter::once("probierz".to_string())
+        .chain(arguments.iter().cloned())
+        .collect();
     let parsed = cli::Cli::try_parse_from(&argv).map_err(|error| error.to_string())?;
     let (answer, output) = capture::captured(|| dispatch::dispatch(harness, parsed.command));
     match answer {
@@ -111,34 +112,48 @@ pub(crate) fn run_in_process(harness: &Path, arguments: &[String]) -> Result<Str
 /// another product's journeys, so an unusable root is refused rather than
 /// replaced.
 fn resolve_harness(explicit: Option<&Path>) -> Result<PathBuf, Failure> {
-    let candidates: Vec<PathBuf> = match explicit {
+    let mut candidates: Vec<PathBuf> = match explicit {
         Some(path) => vec![path.to_path_buf()],
         None => {
             let built_in = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .parent()
                 .map(Path::to_path_buf);
             let mut list = Vec::new();
-            if let Ok(from_env) = std::env::var("PROBIERZ_HARNESS_DIR") {
-                if !from_env.trim().is_empty() {
-                    list.push(PathBuf::from(from_env));
+            match std::env::var("PROBIERZ_HARNESS_DIR") {
+                Ok(from_env) if !from_env.trim().is_empty() => list.push(PathBuf::from(from_env)),
+                Ok(_blank) | Err(std::env::VarError::NotPresent) => {}
+                Err(error) => {
+                    return Err(Failure::config(
+                        "harness.resolve",
+                        format!("PROBIERZ_HARNESS_DIR cannot be read: {error}"),
+                    ))
                 }
             }
             if let Some(root) = built_in {
                 list.push(root);
             }
-            list.push(std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
             list
         }
     };
     for candidate in &candidates {
-        if candidate.join("apps").is_dir() {
+        if holds_apps(candidate)? {
             return Ok(candidate.clone());
+        }
+    }
+    // The working directory is the last candidate, read only when the others
+    // hold no apps/; one that cannot be read is named in the refusal.
+    let mut unreadable = String::new();
+    if explicit.is_none() {
+        match std::env::current_dir() {
+            Ok(working) if holds_apps(&working)? => return Ok(working),
+            Ok(working) => candidates.push(working),
+            Err(error) => unreadable = format!("; the working directory cannot be read: {error}"),
         }
     }
     Err(Failure::config(
         "harness.resolve",
         format!(
-            "no harness root with an apps/ directory among: {}",
+            "no harness root with an apps/ directory among: {}{unreadable}",
             candidates
                 .iter()
                 .map(|path| path.display().to_string())
@@ -146,4 +161,19 @@ fn resolve_harness(explicit: Option<&Path>) -> Result<PathBuf, Failure> {
                 .join(", ")
         ),
     ))
+}
+
+/// Whether `root` carries an `apps/` directory. One whose `apps` cannot be
+/// examined is refused naming it: read as absent, the search moved on to the
+/// next candidate and answered about another checkout's journeys.
+fn holds_apps(root: &Path) -> Result<bool, Failure> {
+    let apps = root.join("apps");
+    match std::fs::metadata(&apps) {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(Failure::config(
+            "harness.resolve",
+            format!("{} cannot be examined: {error}", apps.display()),
+        )),
+    }
 }

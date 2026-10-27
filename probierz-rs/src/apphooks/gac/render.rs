@@ -141,7 +141,7 @@ try {
             "apphook.gac.blender",
             Code::Refused,
             if detail.is_empty() {
-                format!("Blender session exited with {}", output.status)
+                format!("Blender session {}", crate::failure::ended(&output.status))
             } else {
                 detail
             },

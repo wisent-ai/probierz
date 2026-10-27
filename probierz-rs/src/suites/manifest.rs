@@ -6,7 +6,7 @@
 //! pipeline's vocabulary (`darwin-arm64`, `linux-x64`), so the one running
 //! this binary is named in those words from the compiler's own constants.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use serde_json::{json, Value};
 
@@ -113,6 +113,13 @@ fn string_list(value: &Value, what: &str, gate: &str, path: &Path) -> Result<Vec
         .collect()
 }
 
+fn checkout_relative(path: &str) -> bool {
+    !path.is_empty()
+        && Path::new(path)
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
+}
+
 /// Every gate of kind `test` the manifest declares for this platform.
 pub(crate) fn test_gates(repo: &Path) -> Result<Vec<TestGate>, Failure> {
     let manifest = read_manifest(repo)?;
@@ -161,6 +168,20 @@ pub(crate) fn test_gates(repo: &Path) -> Result<Vec<TestGate>, Failure> {
                     ),
                 )
             })?;
+        let mut name_parts = Path::new(name).components();
+        name_parts.next();
+        if !checkout_relative(name) || name_parts.next().is_some() {
+            return Err(Failure::config(
+                "suites.manifest",
+                format!("{}: gate {name:?} must have a single path-safe name", path.display()),
+            ));
+        }
+        if gates.iter().any(|existing: &TestGate| existing.name == name) {
+            return Err(Failure::config(
+                "suites.manifest",
+                format!("{}: gate {name:?} is declared more than once", path.display()),
+            ));
+        }
         let argv = match gate.get("argv") {
             Some(argv) => string_list(argv, "argv", name, &path)?,
             None => {
@@ -180,6 +201,17 @@ pub(crate) fn test_gates(repo: &Path) -> Result<Vec<TestGate>, Failure> {
             Some(reports) => string_list(reports, "reports", name, &path)?,
             None => Vec::new(),
         };
+        for report in &reports {
+            if !checkout_relative(report) {
+                return Err(Failure::config(
+                    "suites.manifest",
+                    format!(
+                        "{}: gate {name:?} report {report:?} must be checkout-relative without parent traversal",
+                        path.display()
+                    ),
+                ));
+            }
+        }
         gates.push(TestGate {
             platform: platform.clone(),
             name: name.to_string(),

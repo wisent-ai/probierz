@@ -34,20 +34,32 @@ pub(in crate::benchmark::autonomy) fn run(program: &Path, args: &[String], harne
             "refusal": format!("could not start: {error}"),
         }),
         Ok(output) => {
-            let answer: Json = serde_json::from_slice(&output.stdout).unwrap_or(Json::Null);
+            // A command that printed no JSON answer keeps what it printed and
+            // why it is not JSON beside an absent answer.
+            let (answer, unreadable) = match serde_json::from_slice::<Json>(&output.stdout) {
+                Ok(answer) => (answer, Json::Null),
+                Err(error) => (
+                    Json::Null,
+                    json!(format!(
+                        "stdout is not JSON ({error}): {}",
+                        String::from_utf8_lossy(&output.stdout).trim()
+                    )),
+                ),
+            };
             json!({
                 "program": program.to_string_lossy(),
                 "args": args,
                 "exit": output.status.code(),
                 "ok": output.status.success(),
                 "answer": answer,
+                "answerUnreadable": unreadable,
                 "refusal": String::from_utf8_lossy(&output.stderr).trim().to_string(),
             })
         }
     }
 }
 
-/// Whether a step's command exited successfully.
+/// Whether a step's command exited successfully, as `run` recorded it.
 pub(super) fn ok(step: &Json) -> bool {
-    step["ok"].as_bool().unwrap_or(false)
+    step["ok"].as_bool() == Some(true)
 }

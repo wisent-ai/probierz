@@ -2,27 +2,19 @@
 
 use crate::status::*;
 
+/// `E0` for a run that did not pass; `E3` for a passed run whose record
+/// states every one of recording, report, analysis and capture true; `E2`
+/// otherwise. A field the run does not state counts as not reached.
 pub(crate) fn evidence_level(run: &Value) -> &'static str {
     if run.get("status").and_then(Value::as_str) != Some("passed") {
         return "E0";
     }
-    let recorded = run
-        .pointer("/conditions/record")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let report = run
-        .pointer("/evidence/report")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let analysis = run
-        .pointer("/evidence/analysis")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let capture = run
-        .pointer("/evidence/capturePresent")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    if recorded && report && analysis && capture {
+    let stated = |pointer: &str| run.pointer(pointer).and_then(Value::as_bool) == Some(true);
+    if stated("/conditions/record")
+        && stated("/evidence/report")
+        && stated("/evidence/analysis")
+        && stated("/evidence/capturePresent")
+    {
         "E3"
     } else {
         "E2"

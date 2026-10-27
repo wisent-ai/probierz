@@ -41,11 +41,14 @@ pub(crate) fn redact_diagnostic(value: &str, redaction: &manifest::Redaction) ->
         .into_owned()
 }
 
+/// simctl's own name for whichever simulator is booted.
+const BOOTED: &str = "booted";
+
 pub(crate) fn simulator_identifier(requested: Option<&str>) -> String {
-    let requested = requested.unwrap_or("booted");
-    if requested == "booted" {
-        return requested.into();
-    }
+    // A run that names no simulator, or names the booted one, uses simctl's alias.
+    let Some(requested) = requested.filter(|requested| *requested != BOOTED) else {
+        return BOOTED.into();
+    };
     let document = simctl_devices();
     let candidates: Vec<&Value> = document
         .get("devices")
@@ -59,14 +62,17 @@ pub(crate) fn simulator_identifier(requested: Option<&str>) -> String {
                 || device.get("name").and_then(Value::as_str) == Some(requested)
         })
         .collect();
-    candidates
+    let chosen = candidates
         .iter()
         .find(|device| device.get("state").and_then(Value::as_str) == Some("Booted"))
-        .copied()
-        .or_else(|| candidates.first().copied())
-        .and_then(|device| device.get("udid").and_then(Value::as_str))
-        .unwrap_or(requested)
-        .to_string()
+        .or(candidates.first())
+        .copied();
+    match chosen.and_then(|device| device.get("udid").and_then(Value::as_str)) {
+        Some(udid) => udid.to_string(),
+        // A simulator simctl does not list goes to simctl as the run named it,
+        // and simctl refuses it by that name.
+        None => requested.to_string(),
+    }
 }
 
 pub(crate) fn write_secure_text(path: &Path, value: &str) -> std::io::Result<()> {

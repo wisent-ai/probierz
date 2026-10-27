@@ -99,3 +99,6 @@ fn gate_uninstall_refuses_a_hook_it_did_not_write() {
     );
     assert!(hook.exists(), "the foreign hook is gone");
 }
+
+#[path = "policy.rs"]
+mod policy;

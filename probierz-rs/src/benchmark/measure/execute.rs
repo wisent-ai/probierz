@@ -55,7 +55,11 @@ pub(crate) fn ready(contender: &Contender) -> Result<(), Failure> {
             ),
         )
     })?;
-    if !metadata.is_file() || metadata.permissions().mode() & 0o111 == 0 {
+    // Executable by anyone: the owner, group or other execute bit is set,
+    // so clearing them changes the mode.
+    let execute = u32::from(libc::S_IXUSR | libc::S_IXGRP | libc::S_IXOTH);
+    let mode = metadata.permissions().mode();
+    if !metadata.is_file() || mode & !execute == mode {
         return Err(Failure::new(
             "benchmark.contender",
             Code::Prerequisite,
@@ -108,14 +112,10 @@ fn broken(duration_ms: u64, ended: String, reason: String) -> Attempt {
     }
 }
 
-/// The last characters of a stream, enough to say why a contender broke.
-fn tail(bytes: &[u8]) -> String {
-    let text = String::from_utf8_lossy(bytes);
-    let trimmed = text.trim();
-    match trimmed.char_indices().rev().nth(400) {
-        Some((start, _)) => trimmed[start..].to_string(),
-        None => trimmed.to_string(),
-    }
+/// What a stream said, whole: a cut at a length nobody declared dropped the
+/// line that said why the contender broke whenever it came early.
+fn said(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).trim().to_string()
 }
 
 pub(crate) fn attempt(
@@ -143,6 +143,10 @@ pub(crate) fn attempt(
             command.env(name, value);
         }
     }
+    // Encoded before the contender starts, so a task that cannot be encoded
+    // never leaves a started contender behind.
+    let task_bytes = serde_json::to_vec(&task)?;
+    let label = format!("contender {} ({})", contender.id, contender.program.display());
     let started = Instant::now();
     let mut child = command.spawn().map_err(|error| {
         Failure::new(
@@ -155,17 +159,30 @@ pub(crate) fn attempt(
             ),
         )
     })?;
-    let mut stdin = child.stdin.take().expect("stdin was piped");
-    let written = stdin.write_all(serde_json::to_vec(&task)?.as_slice());
-    drop(stdin);
-    let output = stado_wait::child_output(
-        child,
-        format!(
-            "contender {} ({})",
-            contender.id,
-            contender.program.display()
-        ),
-    )?;
+    let Some(mut stdin) = child.stdin.take() else {
+        // No handle to hand it the task: the contender is waited for, so it
+        // is not left running, and the attempt is refused with how it ended.
+        let reaped = stado_wait::child_output(child, label)?;
+        return Err(Failure::new(
+            "benchmark.contender",
+            Code::Unknown,
+            format!(
+                "contender {} started without a stdin pipe to receive its task; it {}",
+                contender.id,
+                ended(&reaped.status)
+            ),
+        ));
+    };
+    // The task is written from its own thread while the contender's output is
+    // read: written first, a contender that answers before reading all of a
+    // large task filled its output pipe and both waited forever.
+    let writer = std::thread::spawn(move || stdin.write_all(&task_bytes));
+    let output = stado_wait::child_output(child, label)?;
+    // A writer that panicked is this process's own fault: its panic goes on.
+    let written = match writer.join() {
+        Ok(written) => written,
+        Err(payload) => std::panic::resume_unwind(payload),
+    };
     let duration_ms = started.elapsed().as_millis() as u64;
     let ended = ended(&output.status);
     if let Err(error) = written {
@@ -176,7 +193,7 @@ pub(crate) fn attempt(
         ));
     }
     if !output.status.success() {
-        let reason = format!("the contender {ended}; stderr: {}", tail(&output.stderr));
+        let reason = format!("the contender {ended}; stderr: {}", said(&output.stderr));
         return Ok(broken(duration_ms, ended, reason));
     }
     let answer: Answer = match serde_json::from_slice(&output.stdout) {
@@ -184,7 +201,7 @@ pub(crate) fn attempt(
         Err(error) => {
             let reason = format!(
                 "stdout is not a {RESULT_SCHEMA} document: {error}; stdout: {}",
-                tail(&output.stdout)
+                said(&output.stdout)
             );
             return Ok(broken(duration_ms, ended, reason));
         }

@@ -6,8 +6,8 @@
 //! review it. Their verdict does not close the case. Probierz then records a
 //! new run of the whole suite itself, and only that run's standing decides:
 //! the case is accepted when ours wins or ties it, and the catalog roadmap is
-//! brought in line with that run, which withdraws the item of a case ours now
-//! wins. A pursuit that reports success while the new run still loses the case
+//! brought in line with that run, which records the item of a case ours now
+//! wins as delivered, with that run as its decision. A pursuit that reports success while the new run still loses the case
 //! is refused, so no agent's own claim closes a loss.
 
 use std::path::{Path, PathBuf};
@@ -24,6 +24,7 @@ use crate::manifest;
 
 const POINT: &str = "benchmark.pursue";
 const JEDEN_BIN: &str = "jeden";
+// Jeden's request edition: https://jeden.wisent.com/docs/cli/pursue
 const REQUEST_SCHEMA_VERSION: u32 = 1;
 
 /// Hand one lost case of the newest run to Jeden, then decide it with a run
@@ -37,7 +38,7 @@ pub(crate) fn pursue(
 ) -> Answer {
     if !budget_usd
         .parse::<f64>()
-        .is_ok_and(|budget| budget.is_finite() && budget > 0.0)
+        .is_ok_and(|budget| budget.is_normal() && budget.is_sign_positive())
     {
         return Err(Failure::invalid(
             POINT,
@@ -96,23 +97,28 @@ pub(crate) fn pursue(
                 },
             )
         })?;
-    let checkout = commands::source(&ours)["repository"]
+    let repository = commands::source(&ours)?["repository"]
         .as_str()
         .map(PathBuf::from)
-        .and_then(|path| path.canonicalize().ok())
         .ok_or_else(|| {
             Failure::config(
                 POINT,
                 format!("our contender {} at {} is not in a git checkout; a pursuit changes our product in its checkout", ours.id, ours.program.display()),
             )
         })?;
+    let checkout = repository.canonicalize().map_err(|error| {
+        Failure::config(
+            POINT,
+            format!(
+                "our contender's checkout {} cannot be resolved: {error}",
+                repository.display()
+            ),
+        )
+    })?;
     let objective = objective(app_id, suite_id, &run_id, &ours.id, &file, case, &loss)?;
     let request_id = identifier(&format!("{run_id}-{case_id}"));
-    let directory = harness
-        .join("test-results")
-        .join(".benchmark")
-        .join(app_id)
-        .join("pursuits");
+    let records = harness.join("test-results").join(".benchmark").join(app_id);
+    let directory = records.join("pursuits");
     std::fs::create_dir_all(&directory)?;
     let request_file = directory.join(format!("{request_id}.json"));
     if !request_file.exists() {
@@ -122,7 +128,7 @@ pub(crate) fn pursue(
             "initiative_id": identifier(&format!("benchmark-{app_id}-{suite_id}-{case_id}")),
             "objective": objective,
             "cwd": checkout,
-            "evidence_refs": [harness.join("test-results").join(".benchmark").join(app_id).join(format!("{run_id}.json"))],
+            "evidence_refs": [records.join(format!("{run_id}.json"))],
             "budget_usd": budget_usd,
             "allow_write": true,
             "allow_command": true,
@@ -189,7 +195,7 @@ pub(crate) fn pursue(
         Code::Refused,
         format!(
             "Jeden's pursuit {request_id} reported success, but run {}, recorded after it, still shows case {case_id} {decided}; the roadmap item stays",
-            run["runId"].as_str().unwrap_or_default()
+            run["runId"]
         ),
     ))
 }
@@ -221,15 +227,11 @@ fn objective(
         .flatten()
         .filter_map(Json::as_str)
         .collect();
+    // An unmeasured value is said as null, as the run records it.
     let measured = |value: &Json| {
         format!(
             "pass rate {} and p50 {} ms",
-            value["passRate"]
-                .as_f64()
-                .map_or("unmeasured".to_string(), |rate| rate.to_string()),
-            value["p50Ms"]
-                .as_u64()
-                .map_or("unmeasured".to_string(), |ms| ms.to_string())
+            value["passRate"], value["p50Ms"]
         )
     };
     Ok(format!(
@@ -283,13 +285,13 @@ fn jeden(request: &Path) -> Result<Json, Failure> {
                 format!("{JEDEN_BIN} could not start ({error}); `stado product install jeden --surface cli` installs it"),
             )
         })?;
-    serde_json::from_slice(&output.stdout).map_err(|_| {
+    serde_json::from_slice(&output.stdout).map_err(|error| {
         Failure::new(
             POINT,
             Code::Unavailable,
             format!(
-                "{JEDEN_BIN} pursue exited {} without a response document: {}",
-                output.status,
+                "{JEDEN_BIN} pursue {} without a response document ({error}): {}",
+                crate::failure::ended(&output.status),
                 String::from_utf8_lossy(&output.stderr).trim()
             ),
         )

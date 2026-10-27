@@ -54,6 +54,7 @@ fn gate<'a>(record: &'a Value, name: &str) -> &'a Value {
 
 fn git(repo: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .arg("-C")
         .arg(repo)
         .args(args)
@@ -91,9 +92,7 @@ struct Case {
 
 impl Case {
     fn new() -> Self {
-        let base = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("target")
-            .join("suites-journey");
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
         std::fs::create_dir_all(&base).unwrap();
         let owned = tempfile::tempdir_in(&base).unwrap();
         let root = owned.path().to_path_buf();
@@ -208,4 +207,87 @@ fn a_checkout_s_own_suites_are_run_and_kept() {
         "{}",
         said(&missing)
     );
+    for (quality, cause) in [
+        (
+            json!([{"kind": "test", "name": "../escaped", "argv": ["git", "status"]}]),
+            "must have a single path-safe name",
+        ),
+        (
+            json!([{"kind": "test", "name": "escaped", "argv": ["git", "status"],
+                "reports": ["../escaped"]}]),
+            "must be checkout-relative without parent traversal",
+        ),
+        (
+            json!([
+                {"kind": "test", "name": "duplicate", "argv": ["git", "status"]},
+                {"kind": "test", "name": "duplicate", "argv": ["git", "status"]},
+            ]),
+            "is declared more than once",
+        ),
+    ] {
+        let manifest = json!({
+            "product": PRODUCT,
+            "platforms": { platform(): { "quality": quality } },
+        });
+        std::fs::write(
+            case.checkout.join(".wisent-release.json"),
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+        let refused = case.probierz(&["run", &target]);
+        assert!(!refused.status.success(), "{}", said(&refused));
+        assert!(said(&refused).contains(cause), "{}", said(&refused));
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_symlink_report_refuses_collection_but_keeps_the_run() {
+    use std::os::unix::net::UnixListener;
+
+    let case = Case::new();
+    let manifest = json!({
+        "product": PRODUCT,
+        "platforms": { platform(): { "quality": [{
+            "kind": "test",
+            "name": "socket-report",
+            "argv": ["git", "status", "--short"],
+            "reports": ["report.sock"],
+        }, {
+            "kind": "test",
+            "name": "following-gate",
+            "argv": ["git", "rev-parse", "HEAD"],
+        }] } },
+    });
+    std::fs::write(
+        case.checkout.join(".wisent-release.json"),
+        serde_json::to_vec_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+    git(&case.checkout, &["add", ".wisent-release.json"]);
+    git(&case.checkout, &["commit", "--quiet", "--message", "declare socket report"]);
+    let _socket = UnixListener::bind(case.root.join("s")).unwrap();
+    std::os::unix::fs::symlink(case.root.join("s"), case.checkout.join("report.sock")).unwrap();
+
+    let run = case.probierz(&["run", &case.target()]);
+    assert!(!run.status.success(), "{}", said(&run));
+    let record: Value = serde_json::from_slice(&run.stdout).unwrap();
+    assert_eq!(record["verdict"], "failed");
+    let outcome = gate(&record, "socket-report");
+    assert!(outcome["exitCode"].is_number(), "the suite itself completed");
+    assert_eq!(outcome["passed"], false);
+    let report = outcome["reports"].as_array().unwrap().first().unwrap();
+    let destination = Path::new(record["directory"].as_str().unwrap())
+        .join("socket-report/reports/report.sock");
+    assert_eq!(report["destination"], destination.to_str().unwrap());
+    assert!(report["error"].as_str().unwrap().contains("symbolic link"));
+    assert_eq!(gate(&record, "following-gate")["passed"], true);
+    assert!(said(&run).contains(record["directory"].as_str().unwrap()));
+
+    let after = case.probierz(&["check", &case.target()]);
+    assert!(after.status.success(), "{}", said(&after));
+    let after: Value = serde_json::from_slice(&after.stdout).unwrap();
+    assert_eq!(after["lastRun"]["directory"], record["directory"]);
+    assert_eq!(gate(&after["lastRun"], "socket-report")["passed"], false);
+    assert_eq!(gate(&after["lastRun"], "following-gate")["passed"], true);
 }

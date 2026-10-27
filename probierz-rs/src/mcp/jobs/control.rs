@@ -21,21 +21,37 @@ pub(crate) struct Control {
     pub(crate) jobs: Mutex<HashMap<String, Arc<Mutex<Job>>>>,
 }
 
+/// `mutex` locked, or the refusal naming what it guards: a lock is only
+/// refused when an earlier control call panicked while holding it, and the
+/// poison error carries nothing beyond that.
+fn locked<'a, T>(mutex: &'a Mutex<T>, what: &str) -> Result<std::sync::MutexGuard<'a, T>, String> {
+    mutex.lock().map_err(|_poisoned| {
+        format!("{what} is unavailable: an earlier control call panicked while holding it")
+    })
+}
+
 impl Control {
     pub(crate) fn start(self: &Arc<Self>, args: &Map<String, Value>) -> Result<Value, String> {
         let target = non_empty(args.get("target"), "target")?.to_string();
+        // A run names the app it tests; without one it tests Probierz itself.
+        let app_id = match args.get("appId") {
+            None => "probierz".to_owned(),
+            Some(Value::String(app_id)) => app_id.clone(),
+            Some(other) => return Err(format!("appId must be text, not {other}")),
+        };
+        let record = match args.get("record") {
+            None => false,
+            Some(Value::Bool(record)) => *record,
+            Some(other) => return Err(format!("record must be true or false, not {other}")),
+        };
         let run_id = new_run_id();
         let job = Arc::new(Mutex::new(Job {
             run_id: run_id.clone(),
             status: "queued",
             target,
-            app_id: args
-                .get("appId")
-                .and_then(Value::as_str)
-                .unwrap_or("probierz")
-                .to_string(),
+            app_id,
             spec: args.get("spec").and_then(Value::as_str).map(str::to_string),
-            record: args.get("record").and_then(Value::as_bool).unwrap_or(false),
+            record,
             created_at: now_iso(),
             started_at: None,
             completed_at: None,
@@ -44,16 +60,8 @@ impl Control {
             cancel_requested: false,
             child: None,
         }));
-        let answer = {
-            let job = job
-                .lock()
-                .map_err(|_| "control state unavailable".to_string())?;
-            public_job(&job)
-        };
-        self.jobs
-            .lock()
-            .map_err(|_| "control state unavailable".to_string())?
-            .insert(run_id, Arc::clone(&job));
+        let answer = public_job(&locked(&job, "the new job's state")?);
+        locked(&self.jobs, "the job table")?.insert(run_id, Arc::clone(&job));
 
         let control_args = args.clone();
         thread::spawn(move || execute_job(job, control_args));
@@ -61,9 +69,7 @@ impl Control {
     }
 
     pub(crate) fn job(&self, run_id: &str) -> Result<Arc<Mutex<Job>>, String> {
-        self.jobs
-            .lock()
-            .map_err(|_| "control state unavailable".to_string())?
+        locked(&self.jobs, "the job table")?
             .get(run_id)
             .cloned()
             .ok_or_else(|| format!("unknown runId: {run_id}"))
@@ -72,12 +78,7 @@ impl Control {
     pub(crate) fn status(&self, args: &Map<String, Value>) -> Result<Value, String> {
         let run_id = non_empty(args.get("runId"), "runId")?;
         let job = self.job(run_id)?;
-        let answer = {
-            let job = job
-                .lock()
-                .map_err(|_| "control state unavailable".to_string())?;
-            public_job(&job)
-        };
+        let answer = public_job(&locked(&job, &format!("job {run_id}"))?);
         Ok(answer)
     }
 
@@ -85,24 +86,13 @@ impl Control {
         let run_id = non_empty(args.get("runId"), "runId")?;
         let job = self.job(run_id)?;
         let (answer, child) = {
-            let mut job = job
-                .lock()
-                .map_err(|_| "control state unavailable".to_string())?;
-            if matches!(job.status, "passed" | "failed" | "blocked" | "canceled") {
-                let mut answer = public_job(&job);
-                answer
-                    .as_object_mut()
-                    .expect("job answer")
-                    .insert("cancelRequested".into(), Value::Bool(false));
-                return Ok(answer);
+            let mut job = locked(&job, &format!("job {run_id}"))?;
+            // A job that has completed, however it ended, has nothing left to cancel.
+            if job.completed_at.is_some() {
+                return answered(public_job(&job), "cancelRequested", Value::Bool(false));
             }
             job.cancel_requested = true;
-            let mut answer = public_job(&job);
-            answer
-                .as_object_mut()
-                .expect("job answer")
-                .insert("cancelRequested".into(), Value::Bool(true));
-            (answer, job.child.clone())
+            (answered(public_job(&job), "cancelRequested", Value::Bool(true))?, job.child.clone())
         };
         if let Some(child) = child {
             terminate_tree(child);
@@ -113,15 +103,8 @@ impl Control {
     pub(crate) fn result(&self, args: &Map<String, Value>) -> Result<Value, String> {
         let run_id = non_empty(args.get("runId"), "runId")?;
         let job = self.job(run_id)?;
-        let job = job
-            .lock()
-            .map_err(|_| "control state unavailable".to_string())?;
-        let mut answer = public_job(&job);
-        answer
-            .as_object_mut()
-            .expect("job answer")
-            .insert("result".into(), job.result.clone().unwrap_or(Value::Null));
-        Ok(answer)
+        let job = locked(&job, &format!("job {run_id}"))?;
+        answered(public_job(&job), "result", json!(job.result))
     }
 
     pub(crate) fn list_artifacts(&self, args: &Map<String, Value>) -> Result<Value, String> {
@@ -160,7 +143,7 @@ impl Control {
     pub(crate) fn get_artifact(&self, args: &Map<String, Value>) -> Result<Value, String> {
         let run_id = non_empty(args.get("runId"), "runId")?;
         let relative = non_empty(args.get("file"), "file")
-            .map_err(|_| "file must be a non-empty relative path".to_string())?;
+            .map_err(|error| format!("file must be a non-empty relative path: {error}"))?;
         let job = self.job(run_id)?;
         let root = artifact_root(&job)?;
         let relative_path = Path::new(relative);
@@ -198,24 +181,38 @@ impl Control {
         }))
     }
 
+    /// Cancels every job that has not finished, even when a panic poisoned
+    /// the job table or a job: shutdown must leave no run behind.
     pub(crate) fn shutdown(&self) {
-        let jobs = self
-            .jobs
-            .lock()
-            .map(|jobs| jobs.values().cloned().collect::<Vec<_>>())
-            .unwrap_or_default();
+        let jobs = match self.jobs.lock() {
+            Ok(jobs) => jobs.values().cloned().collect::<Vec<_>>(),
+            Err(poisoned) => poisoned.into_inner().values().cloned().collect::<Vec<_>>(),
+        };
         for job in jobs {
-            let child = job.lock().ok().and_then(|mut job| {
-                if matches!(job.status, "queued" | "running") {
-                    job.cancel_requested = true;
-                    job.child.clone()
-                } else {
-                    None
-                }
-            });
-            if let Some(child) = child {
+            let mut job = match job.lock() {
+                Ok(job) => job,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            if job.completed_at.is_some() {
+                continue;
+            }
+            job.cancel_requested = true;
+            if let Some(child) = job.child.clone() {
+                drop(job);
                 terminate_tree(child);
             }
         }
+    }
+}
+
+/// `answer`, one job as `public_job` writes it, with `field` set to `value`.
+/// A job written as anything but an object is refused naming what it was.
+fn answered(answer: Value, field: &str, value: Value) -> Result<Value, String> {
+    match answer {
+        Value::Object(mut object) => {
+            object.insert(field.into(), value);
+            Ok(Value::Object(object))
+        }
+        other => Err(format!("a job was answered as {other}, not an object, so its {field} cannot be set")),
     }
 }

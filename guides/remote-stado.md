@@ -91,10 +91,15 @@ probierz remote cancel <jobId> \
 ```
 
 Stado's machine cancellation API accepts the job ID only. Probierz retains the
-required reason locally with the original job, exact cancellation receipt,
-canonical log pages, and available worker evidence. Each request uses a distinct
+required reason locally with the original job, exact cancellation receipt, the
+whole canonical log (one `stado machine logs <jobId>` read, from its start to
+its end), and available worker evidence. Each request uses a distinct
 `test-results/.remote/cancellations/<jobId>/<attemptId>/` directory; downloaded
-worker artifacts remain under `test-results/.remote/<jobId>/`. A successful
+worker artifacts remain under `test-results/.remote/<jobId>/`. Whether the job
+can still move is Stado's `terminal` field on the job, never a list of state
+names; a status or receipt without the job, its state or that field is a failed
+read. The worker evidence is the one `.tar.gz` archive the job retained; a job
+that retained several is refused naming them. A successful
 cancellation command exits zero when cancellation receipts, logs, and any
 required worker artifacts were retained. The cancelled evaluation itself still
 has `state: "cancelled"`, `passed: false`, and its failure details. A failed

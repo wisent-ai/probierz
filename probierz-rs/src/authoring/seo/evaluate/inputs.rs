@@ -9,12 +9,8 @@
 
 use super::*;
 
-/// Modes an evaluation may run in. `production` additionally requires
-/// Search Console and CrUX evidence.
-const MODES: [&str; 4] = ["pull-request", "release", "nightly", "production"];
-
 /// Schema version this evaluation understands for both documents.
-const SCHEMA_VERSION: u64 = 1;
+const SCHEMA_VERSION: u64 = 1; // https://github.com/wisent-ai/probierz/blob/main/reference/seo-contract.md
 
 /// The application whose pages are evaluated. Every application in
 /// this harness declares its SEO contract under the `web` surface.
@@ -29,9 +25,10 @@ pub(crate) struct Contract {
     pub(crate) policy_path: PathBuf,
     pub(crate) brief: JsonValue,
     pub(crate) brief_path: PathBuf,
-    /// The application manifest's `seo` section, which says whether
-    /// this mode requires a signature.
+    /// The application manifest's `seo` section.
     pub(crate) seo: YamlValue,
+    /// Whether this mode's profile requires a signed report, as it states.
+    signature_required: bool,
     pub(crate) loaded: manifest::Manifest,
 }
 
@@ -44,13 +41,11 @@ impl Contract {
         policy_file: Option<&Path>,
         brief_file: Option<&Path>,
     ) -> Result<Self, Failure> {
-        if !MODES.contains(&mode) {
+        // The modes are manifest::SeoMode's; its refusal lists them.
+        if let Err(refusal) = manifest::SeoMode::parse(&YamlValue::from(mode)) {
             return Err(Failure::invalid(
                 "seo-evaluate",
-                format!(
-                    "invalid SEO contract: mode must be one of {}",
-                    MODES.join(", ")
-                ),
+                format!("invalid SEO contract: mode {refusal}"),
             ));
         }
         let canonical = canonical_base_url(base_url)?;
@@ -69,14 +64,41 @@ impl Contract {
                 )
             })?
             .clone();
-
+        // The mode's profile states whether its report must be signed; a
+        // mode the manifest declares no profile for is refused, not unsigned.
+        let signature_required = match seo
+            .get("profiles")
+            .and_then(|profiles| profiles.get(mode))
+            .and_then(|profile| profile.get("requireSignature"))
+            .and_then(YamlValue::as_bool)
+        {
+            Some(required) => required,
+            None => {
+                return Err(Failure::config(
+                    "seo-evaluate",
+                    format!(
+                        "invalid SEO contract: {} seo.profiles.{mode}.requireSignature must be stated as a boolean",
+                        loaded.file.display()
+                    ),
+                ))
+            }
+        };
         let policy_path = resolved_contract_file(
             harness,
             policy_file,
             seo.get("policy").and_then(YamlValue::as_str),
             "SEO policy",
         )?;
-        let brief_env = std::env::var("PROBIERZ_LANDING_BRIEF").ok();
+        let brief_env = match std::env::var("PROBIERZ_LANDING_BRIEF") {
+            Ok(path) => Some(path),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(error) => {
+                return Err(Failure::config(
+                    "seo-evaluate",
+                    format!("PROBIERZ_LANDING_BRIEF cannot be read: {error}"),
+                ))
+            }
+        };
         let brief_path = resolved_contract_file(
             harness,
             brief_file,
@@ -120,6 +142,7 @@ impl Contract {
             brief,
             brief_path,
             seo,
+            signature_required,
             loaded,
         })
     }
@@ -151,12 +174,7 @@ impl Contract {
 
     /// Whether this mode's profile requires a signed report.
     pub(crate) fn signature_required(&self) -> bool {
-        self.seo
-            .get("profiles")
-            .and_then(|value| value.get(&self.mode))
-            .and_then(|value| value.get("requireSignature"))
-            .and_then(YamlValue::as_bool)
-            .unwrap_or(false)
+        self.signature_required
     }
 }
 
@@ -194,15 +212,21 @@ impl ModelSettings {
         .map_err(|detail| Failure::config("seo-evaluate", detail))?;
 
         // The agent identity signs requests for Brama; another
-        // OpenAI-compatible provider takes the bearer alone.
-        let agent_id = contract.optional_setting(agent_id, "PROBIERZ_MODEL_AGENT_ID");
-        let agent_secret = contract.optional_setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET");
-        if agent_id.is_empty() != agent_secret.is_empty() {
-            return Err(Failure::config(
-                "seo-evaluate",
-                "agent identity needs both an agent ID and an agent secret",
-            ));
-        }
+        // OpenAI-compatible provider takes the bearer alone, which
+        // invoke_seo_model reads from an empty identity pair.
+        let (agent_id, agent_secret) = match (
+            contract.optional_setting(agent_id, "PROBIERZ_MODEL_AGENT_ID"),
+            contract.optional_setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET"),
+        ) {
+            (Some(agent_id), Some(agent_secret)) => (agent_id, agent_secret),
+            (None, None) => (String::new(), String::new()),
+            _ => {
+                return Err(Failure::config(
+                    "seo-evaluate",
+                    "agent identity needs both an agent ID and an agent secret",
+                ))
+            }
+        };
         Ok(Self {
             primary,
             secondary,
@@ -227,13 +251,13 @@ impl Contract {
         .map_err(|detail| Failure::config("seo-evaluate", detail))
     }
 
-    /// An optional setting, resolved like [`Contract::setting`]; empty when
+    /// An optional setting, resolved like [`Contract::setting`]; none when
     /// neither the argument nor the surface names it.
-    pub(crate) fn optional_setting(&self, explicit: Option<&str>, name: &str) -> String {
+    pub(crate) fn optional_setting(&self, explicit: Option<&str>, name: &str) -> Option<String> {
         explicit
             .map(|value| value.trim().to_string())
             .or_else(|| selected_setting(Some(&self.loaded), Some(SURFACE), name, None))
-            .unwrap_or_default()
+            .filter(|value| !value.is_empty())
     }
 }
 

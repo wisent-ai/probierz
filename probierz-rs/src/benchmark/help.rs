@@ -62,7 +62,9 @@ without Trends and Competitors, `--evidence <file>` names one JSON file
 holding what they would have answered for the topic: `trend` (topic,
 verdict, evidence, min_evidence, recent, baseline), `observations` and
 `candidates`; a part that is missing, a trend of another topic, or a file
-that cannot be read is refused by name. `adopt` acts on
+that cannot be read is refused by name. A trend, from Trends or from the
+file, whose verdict is not text or whose evidence, min_evidence, recent or
+baseline is not a whole number is refused naming the field. `adopt` acts on
 a brief: `stado product create` makes the private repository, its checkout
 and a preview catalog record, the catalog names the rivals and the benchmark,
 and Probierz declares the manifest and drafts the suite.

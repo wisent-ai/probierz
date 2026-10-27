@@ -1,14 +1,10 @@
 use crate::gate::*;
-pub(crate) fn mode_policy<'a>(app: &'a manifest::Manifest, mode: &str) -> Option<&'a Yaml> {
-    yaml_get(
-        &app.document,
-        if mode == "release" {
-            "releasePolicy"
-        } else {
-            "pullRequestPolicy"
-        },
-    )
-}
+
+#[path = "policy.rs"]
+mod policy;
+
+/// The verdict document version: <https://probierz.wisent.com/docs/cli/gate/evaluate>.
+const VERDICT_SCHEMA_VERSION: u64 = 2;
 
 pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, Failure> {
     if args.app_id.is_empty() || !matches!(args.mode.as_str(), "pull-request" | "release") {
@@ -18,34 +14,22 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
         ));
     }
     let app = manifest::load(harness, &args.app_id)?;
-    let empty_policy = Yaml::Mapping(Default::default());
-    let policy = mode_policy(&app, &args.mode).unwrap_or(&empty_policy);
-    let minimum_evidence =
-        yaml_string(yaml_get(policy, "minimumEvidence")).unwrap_or_else(|| "E3".to_string());
-    let required_rank = evidence_rank(&minimum_evidence).ok_or_else(|| {
-        Failure::config(
-            "gate.evaluate",
-            format!("unsupported gate evidence level: {minimum_evidence}"),
-        )
-    })?;
-    let required_targets = yaml_strings(yaml_get(policy, "requiredTargets"));
-    let required_journeys = yaml_strings(yaml_get(policy, "requiredJourneys"));
-    let matrix_profile = yaml_string(yaml_get(policy, "requiredMatrixProfile"));
-    let require_protected = yaml_bool(yaml_get(policy, "requireProtectedArtifacts"));
-    let require_secret_scan = yaml_bool(yaml_get(policy, "requireSecretScan"));
-    let run_ids: Vec<String> = args
-        .runs
-        .as_deref()
-        .unwrap_or("")
-        .split(',')
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-        .collect();
+    let policy = policy::Policy::read(&app, &args.mode)?;
+    let (minimum_evidence, required_rank) = policy.minimum_evidence()?;
+    let required_targets = policy.texts("requiredTargets")?;
+    let required_journeys = policy.texts("requiredJourneys")?;
+    let matrix_profile = policy.text("requiredMatrixProfile")?;
+    let require_protected = policy.flag("requireProtectedArtifacts")?;
+    let require_secret_scan = policy.flag("requireSecretScan")?;
+    let run_ids: Vec<String> = match args.runs.as_deref() {
+        Some(runs) => runs.split(',').filter(|value| !value.is_empty()).map(str::to_string).collect(),
+        None => Vec::new(),
+    };
     let mut errors = Vec::new();
     if args.expected_harness_sha.is_empty() {
         errors.push("expected harness source SHA-256 is required".to_string());
     }
-    if args.expected_source_sha.as_deref().unwrap_or("").is_empty() {
+    if !args.expected_source_sha.as_deref().is_some_and(|value| !value.is_empty()) {
         errors.push("expected app source SHA-256 is required".to_string());
     }
     if run_ids.is_empty() {
@@ -83,7 +67,12 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
         .filter_map(|run| string_property(&run.source, "sha256"))
         .filter(|value| !value.is_empty())
         .collect();
-    if !runs.is_empty() && source_hashes.len() != 1 {
+    let mut sources = source_hashes.iter();
+    let source_sha = match (sources.next(), sources.next()) {
+        (Some(hash), None) => Value::String(hash.clone()),
+        _ => Value::Null,
+    };
+    if !runs.is_empty() && source_sha.is_null() {
         errors.push(format!(
             "runs do not identify one exact app source ({} source hashes)",
             source_hashes.len()
@@ -151,16 +140,6 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
             string_property(&run.harness, "sha256").as_deref()
                 == Some(args.expected_harness_sha.as_str())
         });
-    let source_sha = if source_hashes.len() == 1 {
-        source_hashes
-            .iter()
-            .next()
-            .cloned()
-            .map(Value::String)
-            .unwrap_or(Value::Null)
-    } else {
-        Value::Null
-    };
     let mut levels = Map::new();
     for run in &runs {
         levels.insert(
@@ -169,15 +148,15 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
         );
     }
     let result = object([
-        ("schemaVersion", Value::from(2)),
+        ("schemaVersion", Value::from(VERDICT_SCHEMA_VERSION)),
         ("appId", Value::String(args.app_id.clone())),
         ("mode", Value::String(args.mode.clone())),
         (
             "release",
-            args.release
-                .clone()
-                .map(Value::String)
-                .unwrap_or(Value::Null),
+            match &args.release {
+                Some(release) => Value::String(release.clone()),
+                None => Value::Null,
+            },
         ),
         (
             "expectedHarnessSha",
@@ -189,10 +168,10 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
         ),
         (
             "expectedSourceSha",
-            expected_source
-                .filter(|value| !value.is_empty())
-                .map(|value| Value::String(value.to_string()))
-                .unwrap_or(Value::Null),
+            match expected_source.filter(|value| !value.is_empty()) {
+                Some(source) => Value::String(source.to_string()),
+                None => Value::Null,
+            },
         ),
         (
             "policy",
@@ -202,7 +181,10 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
                 ("requiredJourneys", strings(&required_journeys)),
                 (
                     "requiredMatrixProfile",
-                    matrix_profile.map(Value::String).unwrap_or(Value::Null),
+                    match matrix_profile {
+                        Some(profile) => Value::String(profile),
+                        None => Value::Null,
+                    },
                 ),
                 ("requireProtectedArtifacts", Value::Bool(require_protected)),
                 ("requireSecretScan", Value::Bool(require_secret_scan)),
@@ -258,10 +240,10 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
         object([
             (
                 "release",
-                args.release
-                    .clone()
-                    .map(Value::String)
-                    .unwrap_or(Value::Null),
+                match &args.release {
+                    Some(release) => Value::String(release.clone()),
+                    None => Value::Null,
+                },
             ),
             (
                 "expectedHarnessSha",
@@ -273,10 +255,10 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
             ),
             (
                 "expectedSourceSha",
-                expected_source
-                    .filter(|value| !value.is_empty())
-                    .map(|value| Value::String(value.to_string()))
-                    .unwrap_or(Value::Null),
+                match expected_source.filter(|value| !value.is_empty()) {
+                    Some(source) => Value::String(source.to_string()),
+                    None => Value::Null,
+                },
             ),
             ("runs", Value::from(runs.len())),
             ("errors", Value::from(errors.len())),

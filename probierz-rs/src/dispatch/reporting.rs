@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use crate::cli::reporting::{dashboard_limit, GateCommand, IntakeCommand, ReportingCommand};
+use crate::cli::reporting::{newest, GateCommand, IntakeCommand, ReportingCommand};
 use crate::failure::Answer;
 use crate::{adoption, gate, incidents, run, status};
 
@@ -20,11 +20,9 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             &app_id,
             target.as_deref(),
             journey.as_deref(),
-            limit.unwrap_or(usize::MAX),
+            newest(limit),
         ),
-        ReportingCommand::Dashboard { app_id, limit } => {
-            status::dashboard(harness, &app_id, dashboard_limit(limit.as_deref()))
-        }
+        ReportingCommand::Dashboard { app_id, limit } => status::dashboard(harness, &app_id, newest(limit)),
         ReportingCommand::Status { app_id, base, json } => {
             status::status(harness, &app_id, base.as_deref(), !json)
         }
@@ -41,7 +39,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             service,
             limit,
             json,
-        } => status::failures(service.as_deref(), limit.unwrap_or(usize::MAX), json),
+        } => status::failures(service.as_deref(), newest(limit), json),
         ReportingCommand::Incident { command } => incidents::dispatch(harness, command),
         ReportingCommand::Benchmark { command } => crate::benchmark::dispatch(harness, command),
         // PortGate: merge and release gates

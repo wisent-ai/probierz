@@ -33,7 +33,9 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
                 ),
             )
         })?;
-    let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
+    // Read before anything is seeded, so a missing email never strands a seed.
+    let email = configured(&scoped, "OKO_E2E_EMAIL")?.to_string();
     let run_hash = hash12(run_id);
     let org_id = deterministic_uuid(&["oko-e2e-org", run_id]);
     let org_slug = format!("{ORG_PREFIX}{run_hash}");
@@ -86,7 +88,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
         )?;
 
         let slack_state = if seed_slack {
-            let channel = source.get("OKO_E2E_SLACK_CHANNEL").expect("required");
+            let channel = configured(source, "OKO_E2E_SLACK_CHANNEL")?;
             let bot_context = format!("Oko strategy review for isolated run {run_id}.");
             let reply_text = format!(
                 "Decision: accept the deterministic correction for {run_id}. Set the north-star statement to \"Probierz Slack feedback applied [{run_id}]\" because every release needs traceable product evidence."
@@ -156,7 +158,7 @@ pub(crate) fn oko_seed(source: &BTreeMap<String, String>) -> Result<Value, Failu
             "orgSlug": org_slug,
             "accountCreated": created,
             "stateFile": path,
-            "env": { "OKO_E2E_EMAIL": scoped.get("OKO_E2E_EMAIL").expect("scoped") }
+            "env": { "OKO_E2E_EMAIL": email }
         })),
         Err(mut error) => {
             let mut rollback_errors = Vec::new();

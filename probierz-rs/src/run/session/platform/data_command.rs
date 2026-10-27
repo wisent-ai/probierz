@@ -34,11 +34,18 @@ pub(crate) fn run_data_command(
     let Some(command) = config.get("command").and_then(serde_yaml::Value::as_str) else {
         return json!({ "ok": false, "error": "invalid data command configuration" });
     };
-    let cwd = config
-        .get("cwd")
-        .and_then(serde_yaml::Value::as_str)
-        .map(|cwd| normalize_path(&harness.join(cwd)))
-        .unwrap_or_else(|| harness.to_path_buf());
+    // A data command runs in the harness unless it names its own directory,
+    // relative to the harness; a `cwd` that is not a path is refused rather
+    // than run in the harness as if none had been named.
+    let cwd = match config.get("cwd") {
+        None => harness.to_path_buf(),
+        Some(value) => match value.as_str() {
+            Some(cwd) => normalize_path(&harness.join(cwd)),
+            None => {
+                return json!({ "ok": false, "error": format!("data command cwd must be a path, not {value:?}") })
+            }
+        },
+    };
     let execution = capture(command, &args, Some(&cwd), Some(env));
     let safe_out = redaction.text(&text(&execution.stdout));
     let safe_err = redaction.text(&text(&execution.stderr));
@@ -83,14 +90,12 @@ pub(crate) fn run_data_command(
         });
     }
     let stdout_text = text(&execution.stdout);
-    let lines: Vec<&str> = stdout_text
-        .lines()
-        .filter(|line| !line.is_empty())
-        .collect();
-    if lines.is_empty() {
+    // A command that printed nothing answers no result; otherwise its last
+    // non-empty line is the JSON it answers with.
+    let Some(last) = stdout_text.lines().filter(|line| !line.is_empty()).last() else {
         return json!({ "ok": true, "result": null });
-    }
-    match serde_json::from_str::<Value>(lines.last().expect("not empty")) {
+    };
+    match serde_json::from_str::<Value>(last) {
         Ok(result) => json!({ "ok": true, "result": result }),
         Err(error) => json!({
             "ok": false,

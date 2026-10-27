@@ -72,6 +72,7 @@ apps/jeden-desktop/*
 
 # Rust build output
 probierz-rs/target/
+.build/
 
 # scratch downloads and captures
 tmp/

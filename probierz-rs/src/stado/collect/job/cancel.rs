@@ -6,13 +6,12 @@ pub(crate) fn cancel_remote_run(
     host_name: &str,
     reason: &str,
 ) -> Result<Value, Failure> {
-    let job_id = job_id.unwrap_or("");
-    if !canonical_job_id(job_id) {
+    let Some(job_id) = job_id.filter(|id| canonical_job_id(id)) else {
         return Err(Failure::config(
             "stado.watch",
             "Cancelling remote evidence needs a canonical Stado job ID.",
         ));
-    }
+    };
     host(host_name, "stado.watch")?;
     let reason = reason.trim();
     if reason.is_empty() || reason.contains('\0') {
@@ -25,7 +24,7 @@ pub(crate) fn cancel_remote_run(
     let attempt_id = format!(
         "{}-{}",
         requested.format("%Y%m%d%H%M%S%3f"),
-        &nonce("cancel")[..8]
+        nonce("cancel")
     );
     let cancellation_root = harness
         .join("test-results")
@@ -38,7 +37,6 @@ pub(crate) fn cancel_remote_run(
     write_json(
         &request_path,
         &json!({
-            "schemaVersion": 1,
             "jobId": job_id,
             "host": host_name,
             "reason": reason,
@@ -60,27 +58,24 @@ pub(crate) fn cancel_remote_run(
         true,
         true,
     )?;
-    let before_payload: Value = serde_json::from_str(&before.stdout).map_err(|_| {
+    let before_payload: Value = serde_json::from_str(&before.stdout).map_err(|error| {
         remote_failure(
             "stado.watch",
-            &format!("Reading the original state for job {job_id} returned invalid metadata"),
+            &format!("Reading the original state for job {job_id} returned invalid metadata ({error})"),
             &before,
         )
     })?;
-    let original_job = before_payload
-        .pointer("/result/job")
-        .cloned()
-        .unwrap_or(Value::Null);
-    if before.status != Some(0)
-        || before_payload.get("ok").and_then(Value::as_bool) != Some(true)
-        || original_job.is_null()
-    {
+    let (true, Some(true), Some(original_job)) = (
+        before.succeeded,
+        before_payload.get("ok").and_then(Value::as_bool),
+        before_payload.pointer("/result/job").cloned(),
+    ) else {
         return Err(remote_failure(
             "stado.watch",
             &format!("Reading the original state for job {job_id} failed"),
             &before,
         ));
-    }
+    };
     let cancellation = sh(
         STADO_BIN,
         &["machine".into(), "cancel".into(), job_id.into()],
@@ -94,41 +89,38 @@ pub(crate) fn cancel_remote_run(
         true,
         true,
     )?;
-    let cancellation_payload: Value = serde_json::from_str(&cancellation.stdout).map_err(|_| {
+    let cancellation_payload: Value = serde_json::from_str(&cancellation.stdout).map_err(|error| {
         remote_failure(
             "stado.watch",
-            &format!("Cancelling job {job_id} returned an invalid receipt"),
+            &format!("Cancelling job {job_id} returned an invalid receipt ({error})"),
             &cancellation,
         )
     })?;
-    let job = cancellation_payload
-        .pointer("/result/job")
-        .cloned()
-        .unwrap_or(Value::Null);
-    if cancellation.status != Some(0)
-        || cancellation_payload.get("ok").and_then(Value::as_bool) != Some(true)
-        || job.is_null()
-    {
+    // The receipt's job, its state and whether it can still move are read
+    // together; a receipt without any of them is a failed cancellation.
+    let (true, Some(true), Some(job), Some(said), Some(terminal)) = (
+        cancellation.succeeded,
+        cancellation_payload.get("ok").and_then(Value::as_bool),
+        cancellation_payload.pointer("/result/job").cloned(),
+        cancellation_payload
+            .pointer("/result/job/state")
+            .and_then(Value::as_str)
+            .filter(|said| !said.is_empty()),
+        cancellation_payload
+            .pointer("/result/job/terminal")
+            .and_then(Value::as_bool),
+    ) else {
         return Err(remote_failure(
             "stado.watch",
             &format!("Cancelling job {job_id} failed"),
             &cancellation,
         ));
-    }
+    };
+    let state = said.to_ascii_lowercase();
     let (log_path, log_receipts, log_failure) = capture_remote_logs(job_id, &directory)?;
-    let state = job
-        .get("state")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_ascii_lowercase();
     let mut retained = None;
     let mut evidence_failure = None;
-    if job.get("started_at").is_some_and(|value| !value.is_null())
-        && matches!(
-            state.as_str(),
-            "cancelled" | "completed" | "uploaded" | "failed"
-        )
-    {
+    if job.get("started_at").is_some_and(|value| !value.is_null()) && terminal {
         match fetch_run_evidence(harness, job_id) {
             Ok(value) => retained = Some(value),
             Err(failure) => {
@@ -156,14 +148,7 @@ pub(crate) fn cancel_remote_run(
     let evaluation_failure = if cancelled {
         terminal_failure(job_id, &state, &job)
     } else {
-        let message = format!(
-            "Job {job_id} is {} and was not cancelled.",
-            if state.is_empty() {
-                "in an unknown state"
-            } else {
-                &state
-            }
-        );
+        let message = format!("Job {job_id} is {state} and was not cancelled.");
         failure_summary(
             &Failure::new("stado.worker", Code::Unknown, &message),
             message,
@@ -196,8 +181,12 @@ pub(crate) fn cancel_remote_run(
         "attemptId": attempt_id,
         "originalJob": original_job,
         "job": job,
-        "source": original_job.pointer("/resolved_input_artifacts/source").cloned()
-            .or_else(|| job.pointer("/resolved_input_artifacts/source").cloned()).unwrap_or(Value::Null),
+        "source": Value::from(
+            original_job
+                .pointer("/resolved_input_artifacts/source")
+                .or_else(|| job.pointer("/resolved_input_artifacts/source"))
+                .cloned(),
+        ),
         "cancellationDir": directory,
         "requestPath": request_path,
         "statusBeforePath": before_path,

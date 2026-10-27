@@ -20,6 +20,26 @@ impl Identity {
     }
 }
 
+/// Whether `key` holds non-empty text in `value`.
+fn stated(value: &Value, key: &str) -> bool {
+    string_of(value, key).is_some_and(|text| !text.is_empty())
+}
+
+/// The refusal `require` gives, for a fault found without a condition.
+fn invalid(file: &Path, what: &str) -> Failure {
+    Failure::new(
+        "manifest.validate",
+        Code::Config,
+        format!("invalid app manifest: {} {what}", file.display()),
+    )
+}
+
+/// A journey's name: its key, which a manifest writes as text.
+fn journey_name<'a>(key: &'a Value, file: &Path) -> Result<&'a str, Failure> {
+    key.as_str()
+        .ok_or_else(|| invalid(file, &format!("a journey is keyed by {key:?}, not a name")))
+}
+
 /// Every journey a manifest declares, and what its drivers can actually do.
 pub(crate) fn validate_journeys(
     document: &Value,
@@ -28,57 +48,38 @@ pub(crate) fn validate_journeys(
     journeys: &serde_yaml::Mapping,
 ) -> Answer {
     for (journey_key, journey) in journeys {
-        let name = journey_key.as_str().unwrap_or_default();
+        let name = journey_name(journey_key, file)?;
         require(
             journey.as_mapping().is_some(),
             file,
             &format!("journey {name} must be an object"),
         )?;
-        require(
-            !string_of(journey, "owner").unwrap_or_default().is_empty(),
-            file,
-            &format!("journey {name} owner is required"),
-        )?;
+        require(stated(journey, "owner"), file, &format!("journey {name} owner is required"))?;
         // No cutoff is required: `probierz run` waits for a suite to its own
         // end, and a `timeoutMs` a manifest still carries is read by nothing.
-        let identity = serde_yaml::from_value::<Identity>(journey.clone());
-        if let Err(error) = &identity {
+        let has_identity = serde_yaml::from_value::<Identity>(journey.clone())
+            .map_err(|error| invalid(file, &format!("journey {name} identity does not parse: {error}")))?
+            .declared();
+        let first_use = name == "onboarding-first-use";
+        if first_use || has_identity {
+            require(stated(journey, "journeyId"), file, &format!("journey {name} journeyId is required"))?;
             require(
-                false,
-                file,
-                &format!("journey {name} identity does not parse: {error}"),
-            )?;
-        }
-        let has_identity = identity.is_ok_and(|identity| identity.declared());
-        if name == "onboarding-first-use" || has_identity {
-            require(
-                !string_of(journey, "journeyId")
-                    .unwrap_or_default()
-                    .is_empty(),
-                file,
-                &format!("journey {name} journeyId is required"),
-            )?;
-            require(
-                !string_of(journey, "journeyVersion")
-                    .unwrap_or_default()
-                    .is_empty(),
+                stated(journey, "journeyVersion"),
                 file,
                 &format!("journey {name} journeyVersion is required"),
             )?;
             require(
-                is_uuid(string_of(journey, "journeyVersionId").unwrap_or_default()),
+                string_of(journey, "journeyVersionId").is_some_and(is_uuid),
                 file,
                 &format!("journey {name} journeyVersionId must be a UUID"),
             )?;
             require(
-                !string_of(journey, "firstSuccessFact")
-                    .unwrap_or_default()
-                    .is_empty(),
+                stated(journey, "firstSuccessFact"),
                 file,
                 &format!("journey {name} firstSuccessFact is required"),
             )?;
         }
-        if name == "onboarding-first-use" {
+        if first_use {
             require(
                 map_of(journey, "publication").is_some(),
                 file,
@@ -87,31 +88,32 @@ pub(crate) fn validate_journeys(
         }
         if let Some(publication) = journey.get("publication") {
             require(
-                has_identity || name == "onboarding-first-use",
+                has_identity || first_use,
                 file,
                 &format!("journey {name} publication requires immutable journey identity"),
             )?;
             require(
-                !string_of(document, "productId")
-                    .unwrap_or_default()
-                    .is_empty(),
+                stated(document, "productId"),
                 file,
                 &format!("journey {name} publication requires productId"),
             )?;
             require(
-                !string_of(publication, "screenId")
-                    .unwrap_or_default()
-                    .is_empty(),
+                stated(publication, "screenId"),
                 file,
                 &format!("journey {name} publication.screenId is required"),
             )?;
-            let kinds: Vec<String> = sequence_of(publication, "artifactKinds")
-                .map(|list| {
-                    list.iter()
-                        .filter_map(|item| item.as_str().map(str::to_string))
-                        .collect()
-                })
-                .unwrap_or_default();
+            // Artifact kinds are names; a kind that is not one is refused, not
+            // left out of the list it is checked against.
+            let mut kinds: Vec<String> = Vec::new();
+            for item in sequence_of(publication, "artifactKinds").into_iter().flatten() {
+                let kind = item.as_str();
+                require(
+                    kind.is_some(),
+                    file,
+                    &format!("journey {name} publication artifact kind {item:?} is not a name"),
+                )?;
+                kinds.extend(kind.map(str::to_string));
+            }
             require(
                 !kinds.is_empty(),
                 file,
@@ -130,8 +132,13 @@ pub(crate) fn validate_journeys(
                     &format!("journey {name} publication artifact kind {kind} is unsupported"),
                 )?;
             }
+            // Publication needs at least E2 evidence and can ask for no more
+            // than E3, the ranks the gate reads.
+            let rank = string_of(publication, "minimumEvidence").and_then(crate::gate::evidence_rank);
             require(
-                matches!(string_of(publication, "minimumEvidence"), Some("E2" | "E3")),
+                rank.is_some()
+                    && rank >= crate::gate::evidence_rank("E2")
+                    && rank <= crate::gate::evidence_rank("E3"),
                 file,
                 &format!("journey {name} publication.minimumEvidence must be E2 or E3"),
             )?;
@@ -149,12 +156,11 @@ pub(crate) fn validate_journeys(
     // A journey may only claim a recording when at least one driver serving it
     // can make one.
     for (journey_key, journey) in journeys {
-        let name = journey_key.as_str().unwrap_or_default();
+        let name = journey_name(journey_key, file)?;
         let claims_recording = journey
             .get("publication")
             .and_then(|publication| sequence_of(publication, "artifactKinds"))
-            .map(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("recording")))
-            .unwrap_or(false);
+            .is_some_and(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("recording")));
         if !claims_recording {
             continue;
         }
@@ -162,8 +168,7 @@ pub(crate) fn validate_journeys(
             .iter()
             .filter(|(_, surface)| {
                 sequence_of(surface, "journeys")
-                    .map(|list| list.iter().any(|entry| entry.as_str() == Some(name)))
-                    .unwrap_or(false)
+                    .is_some_and(|list| list.iter().any(|entry| entry.as_str() == Some(name)))
             })
             .filter_map(|(target, _)| target.as_str().map(str::to_string))
             .collect();

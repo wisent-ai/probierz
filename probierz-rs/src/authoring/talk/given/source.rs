@@ -92,10 +92,23 @@ fn pdf_text(path: &Path, bytes: &[u8]) -> Result<String, Failure> {
                 ),
             )
         })?;
-    let written = writer.join().map_err(|_| {
+    let written = writer.join().map_err(|panic| {
+        // A panic hands back a String when it formatted its message and a
+        // &'static str when it was a literal (std::thread::Result).
+        let said = match (
+            panic.downcast_ref::<String>(),
+            panic.downcast_ref::<&'static str>(),
+        ) {
+            (Some(text), _) => text.clone(),
+            (None, Some(text)) => (*text).to_string(),
+            (None, None) => "a panic payload that carries no text".to_string(),
+        };
         Failure::config(
             "evaluate.talk",
-            format!("writing --source {} to pdftotext panicked", path.display()),
+            format!(
+                "writing --source {} to pdftotext panicked: {said}",
+                path.display()
+            ),
         )
     })?;
     if !output.status.success() {

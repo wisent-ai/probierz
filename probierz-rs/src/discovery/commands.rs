@@ -164,7 +164,8 @@ fn constrained_stado_host(name: &str) -> Option<Host> {
             "false" => serde_json::Value::Bool(false),
             other => match other.parse::<f64>() {
                 Ok(number) => serde_json::json!(number),
-                Err(_) => serde_json::Value::String(other.to_string()),
+                // The selector's rule: a value that is no number is text.
+                Err(_not_a_number) => serde_json::Value::String(other.to_string()),
             },
         };
         request.insert(key.to_string(), value);

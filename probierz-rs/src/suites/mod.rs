@@ -54,7 +54,14 @@ pub(crate) fn check(harness: &Path, repo: &Path) -> Answer {
     let gates = manifest::test_gates(repo)?;
     let product = manifest::product_name(repo)?;
     let root = runs_root(harness, &product)?;
-    let last = if root.exists() {
+    // A runs folder that cannot be examined is not one with no runs.
+    let kept = root.try_exists().map_err(|error| {
+        Failure::unavailable(
+            "suites.record",
+            format!("the kept runs {} cannot be examined: {error}", root.display()),
+        )
+    })?;
+    let last = if kept {
         Some(record::newest(&root)?)
     } else {
         None

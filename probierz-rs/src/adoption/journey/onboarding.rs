@@ -23,7 +23,8 @@ pub(crate) fn onboarding_flags(
     let mut source = None;
     let mut replace = false;
     let mut json = false;
-    for (index, argument) in arguments.iter().enumerate() {
+    let mut words = arguments.iter();
+    while let Some(argument) = words.next() {
         match argument.as_str() {
             "--reset" => {
                 if reset {
@@ -47,14 +48,12 @@ pub(crate) fn onboarding_flags(
                 if source.is_some() {
                     return Err(invocation_error("--source may be supplied only once"));
                 }
-                let value = arguments.get(index + 1).map(String::as_str);
-                if value.is_none_or(|value| value.is_empty() || value.starts_with("--")) {
-                    return Err(invocation_error("--source needs a repository path"));
+                match words.next() {
+                    Some(value) if !value.is_empty() && !value.starts_with("--") => {
+                        source = Some(PathBuf::from(value));
+                    }
+                    _no_path => return Err(invocation_error("--source needs a repository path")),
                 }
-                source = value.map(PathBuf::from);
-            }
-            _value if index > 0 && arguments[index - 1] == "--source" => {
-                continue;
             }
             value => {
                 return Err(invocation_error(format!(
@@ -97,14 +96,14 @@ pub(crate) fn run_onboarding(
         write_initial_progress(&definition)?;
     }
 
-    if adoption
+    let adopted = adoption
         .as_ref()
-        .is_some_and(|value| value.get("status").and_then(Value::as_str) != Some("conflict"))
-    {
-        let adopted = adoption.as_ref().expect("checked");
-        let mut adopted_progress = match read_progress()? {
-            Some(progress) => progress,
-            None => json!({}),
+        .filter(|value| value.get("status").and_then(Value::as_str) != Some("conflict"));
+    if let Some(adopted) = adopted {
+        // The progress was written above when it was missing; one that is
+        // gone again is refused, not restarted from an empty document.
+        let Some(mut adopted_progress) = read_progress()? else {
+            return Err(fail("onboarding.state", "onboarding progress disappeared before adoption was recorded"));
         };
         let object = adopted_progress
             .as_object_mut()
@@ -197,7 +196,7 @@ pub(crate) fn run_onboarding(
         } else {
             println!(
                 "Existing project {}: {} imported, {} unchanged, {} removed.",
-                adoption["status"].as_str().unwrap_or_default(),
+                adoption["status"],
                 adoption["imported"],
                 adoption["unchanged"],
                 adoption["removed"]
@@ -206,18 +205,14 @@ pub(crate) fn run_onboarding(
         }
         println!();
     }
-    for (index, screen) in screens.iter().enumerate() {
-        let title = screen
-            .pointer("/presentation/title")
-            .or_else(|| screen.get("title_key"))
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        let body = screen
-            .pointer("/presentation/body")
-            .or_else(|| screen.get("body_key"))
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        println!("{}/{}  {title}", index + 1, screens.len());
+    for (number, screen) in (std::num::NonZeroUsize::MIN.get()..).zip(screens.iter()) {
+        let text = |presented: &str, key: &str| {
+            screen.pointer(presented).or_else(|| screen.get(key)).and_then(Value::as_str).ok_or_else(|| {
+                fail("onboarding.definition", format!("onboarding screen {number} names no {key}: {screen}"))
+            })
+        };
+        let (title, body) = (text("/presentation/title", "title_key")?, text("/presentation/body", "body_key")?);
+        println!("{number}/{}  {title}", screens.len());
         println!("       {body}");
         if let Some(command) = screen
             .pointer("/presentation/command")
@@ -227,9 +222,9 @@ pub(crate) fn run_onboarding(
         }
         println!();
     }
-    let fact = definition["first_success_fact"]
-        .as_str()
-        .unwrap_or_default();
+    let Some(fact) = definition["first_success_fact"].as_str() else {
+        return Err(fail("onboarding.definition", "the onboarding journey names no first_success_fact"));
+    };
     if done {
         println!("First-run journey already complete: {fact} was observed on an earlier run.");
     } else {
@@ -238,41 +233,41 @@ pub(crate) fn run_onboarding(
     Ok(accepted)
 }
 
-/// Progress recording must never interfere with the evidence operation that calls it.
+/// Progress recording must never interfere with the evidence operation that
+/// calls it, so a progress that cannot be recorded is said on stderr, with
+/// its cause, rather than failing that operation or vanishing.
 pub fn record_passing_quality_evidence_written() {
-    let _ = (|| -> Result<(), Failure> {
-        let mut progress = match read_progress()? {
-            Some(progress) => progress,
-            None => json!({}),
-        };
-        if progress.get("status").and_then(Value::as_str) == Some("completed") {
-            return Ok(());
-        }
-        let definition = onboarding_definition();
-        let object = progress
-            .as_object_mut()
-            .ok_or_else(|| fail("onboarding.state", "onboarding progress is not an object"))?;
-        object.insert("product_id".to_string(), definition["product_id"].clone());
-        object.insert("journey_id".to_string(), definition["journey_id"].clone());
-        object.insert(
-            "journey_version".to_string(),
-            definition["journey_version"].clone(),
-        );
-        object.insert("status".to_string(), Value::String("completed".to_string()));
-        let evidence = object
-            .entry("evidence".to_string())
-            .or_insert_with(|| json!({}));
-        let evidence = evidence
-            .as_object_mut()
-            .ok_or_else(|| fail("onboarding.state", "onboarding evidence is not an object"))?;
-        evidence.insert(
-            definition["first_success_fact"]
-                .as_str()
-                .unwrap_or_default()
-                .to_string(),
-            Value::Bool(true),
-        );
-        object.insert("completed_at".to_string(), Value::String(now_iso()));
-        write_progress(&progress)
-    })();
+    if let Err(failure) = passing_quality_evidence_written() {
+        eprintln!("probierz: onboarding progress was not recorded ({}): {}", failure.point, failure.detail);
+    }
+}
+
+fn passing_quality_evidence_written() -> Result<(), Failure> {
+    let mut progress = match read_progress()? {
+        Some(progress) => progress,
+        // No onboarding was ever started here: the passing evidence is the
+        // first progress this project has.
+        None => json!({}),
+    };
+    if progress.get("status").and_then(Value::as_str) == Some("completed") {
+        return Ok(());
+    }
+    let definition = onboarding_definition();
+    let Some(fact) = definition["first_success_fact"].as_str() else {
+        return Err(fail("onboarding.definition", "the onboarding journey names no first_success_fact"));
+    };
+    let object = progress
+        .as_object_mut()
+        .ok_or_else(|| fail("onboarding.state", "onboarding progress is not an object"))?;
+    object.insert("product_id".to_string(), definition["product_id"].clone());
+    object.insert("journey_id".to_string(), definition["journey_id"].clone());
+    object.insert("journey_version".to_string(), definition["journey_version"].clone());
+    object.insert("status".to_string(), Value::String("completed".to_string()));
+    let evidence = object.entry("evidence".to_string()).or_insert_with(|| json!({}));
+    let evidence = evidence
+        .as_object_mut()
+        .ok_or_else(|| fail("onboarding.state", "onboarding evidence is not an object"))?;
+    evidence.insert(fact.to_string(), Value::Bool(true));
+    object.insert("completed_at".to_string(), Value::String(now_iso()));
+    write_progress(&progress)
 }

@@ -131,7 +131,7 @@ pub(crate) fn report_path(
     if report.extension().and_then(OsStr::to_str) != Some("json") {
         return Err(Failure::invalid("evaluate.talk", "--out must end in .json"));
     }
-    if report.exists() {
+    if crate::paths::present(&report)? {
         return Err(Failure::invalid(
             "evaluate.talk",
             format!(

@@ -1,6 +1,9 @@
 use crate::gate::*;
+use crate::paths::present;
+use std::path::PathBuf;
+
 pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
-    let repo = args.repo.clone().unwrap_or(std::env::current_dir()?);
+    let repo = repository(&args.repo)?;
     let mut base = args.base.clone();
     let mut head = args.head.clone();
     if args.hook {
@@ -27,19 +30,23 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
         &args.ci_args,
     )?;
     if args.hook && !args.json {
-        let ok = truthy(property(&result, "ok"));
-        let app_id = string_property(&result, "appId").unwrap_or_default();
-        let note = string_property(&result, "note")
-            .map(|note| format!(" ({note})"))
-            .unwrap_or_default();
+        let ok = passed(&result);
+        let app_id = string_property(&result, "appId")
+            .ok_or_else(|| Failure::invalid("gate.prepush", format!("the gate answered no appId: {result}")))?;
+        let note = match string_property(&result, "note") {
+            Some(note) => format!(" ({note})"),
+            None => String::new(),
+        };
         println!(
             "prepush-gate {app_id}: {}{note}",
             if ok { "ALLOWED" } else { "BLOCKED" }
         );
-        for error in
-            value_strings(property(&result, "verdict").and_then(|value| property(value, "errors")))
-        {
-            println!("  - {error}");
+        if let Some(verdict) = property(&result, "verdict") {
+            for error in value_strings(property(verdict, "errors"), "prepush verdict.errors")
+                .map_err(|detail| Failure::config("gate.prepush", detail))?
+            {
+                println!("  - {error}");
+            }
         }
         if let Some(reason) = string_property(&result, "reason") {
             println!("  - {reason}");
@@ -47,7 +54,7 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
     } else {
         print_json(&result)?;
     }
-    if !truthy(property(&result, "ok")) {
+    if !passed(&result) {
         return Err(Failure::new(
             "gate.prepush",
             crate::failure::Code::Refused,
@@ -57,31 +64,50 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
     Ok(())
 }
 
+/// Whether the gate's verdict lets the push through: only an `ok` that is
+/// the boolean true. `truthy` read any non-empty string, the text "false"
+/// among them, and any non-zero number as a pass, so a verdict written in
+/// the wrong type let a push through the release gate.
+fn passed(result: &Value) -> bool {
+    property(result, "ok").and_then(Value::as_bool) == Some(true)
+}
+
+/// The working tree a gate command acts on: `--repo` when given, the
+/// directory the command runs in otherwise, as the flag documents.
+fn repository(declared: &Option<PathBuf>) -> Result<PathBuf, Failure> {
+    match declared {
+        Some(repo) => Ok(repo.clone()),
+        None => Ok(std::env::current_dir()?),
+    }
+}
+
 pub(crate) fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\"'\"'"))
 }
 
-pub(crate) fn present(file: &Path) -> bool {
-    fs::symlink_metadata(file).is_ok()
-}
-
-pub(crate) fn managed(file: &Path, legacy_command: &str, rust_command: &str) -> bool {
-    fs::read_to_string(file)
-        .map(|content| {
-            content.contains(MANAGED_MARKER)
-                || (content.contains(legacy_command) && content.contains("--hook --app"))
-                || (content.contains(rust_command)
-                    && content.contains("gate-prepush")
-                    && content.contains("--hook"))
-        })
-        .unwrap_or(false)
+/// Whether the hook at `file` is one gate install wrote. A hook that cannot
+/// be read is refused naming it: read as "not ours", uninstall refused to
+/// touch it and install moved it aside, both for a cause nobody saw.
+pub(crate) fn managed(
+    file: &Path,
+    legacy_command: &str,
+    rust_command: &str,
+) -> Result<bool, Failure> {
+    let content = fs::read_to_string(file).map_err(|error| {
+        Failure::config("gate.hook", format!("{} cannot be read: {error}", file.display()))
+    })?;
+    Ok(content.contains(MANAGED_MARKER)
+        || (content.contains(legacy_command) && content.contains("--hook --app"))
+        || (content.contains(rust_command)
+            && content.contains("gate-prepush")
+            && content.contains("--hook")))
 }
 
 pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
     manifest::load(harness, &args.app_id)?;
-    let repo = args.repo.clone().unwrap_or(std::env::current_dir()?);
+    let repo = repository(&args.repo)?;
     let hooks = repo.join(".git").join("hooks");
-    if !hooks.exists() {
+    if !present(&hooks)? {
         return Err(Failure::config(
             "gate.install",
             format!("not a git working tree: {}", repo.display()),
@@ -96,10 +122,13 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
         .join("prepush-gate.mjs")
         .to_string_lossy()
         .into_owned();
-    if present(&backup) && managed(&backup, &legacy_command, &rust_command) {
+    if present(&backup)? && managed(&backup, &legacy_command, &rust_command)? {
         fs::remove_file(&backup)?;
     }
-    if present(&target) && !present(&backup) && !managed(&target, &legacy_command, &rust_command) {
+    if present(&target)?
+        && !present(&backup)?
+        && !managed(&target, &legacy_command, &rust_command)?
+    {
         fs::rename(&target, &backup)?;
     }
     let script = format!(
@@ -110,13 +139,16 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
     );
     fs::create_dir_all(&hooks)?;
     fs::write(&target, script)?;
-    fs::set_permissions(&target, fs::Permissions::from_mode(0o755))?;
+    // git runs the hook: its owner may change it, and everyone may read and
+    // run it, as git installs its own sample hooks.
+    let runnable = libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH;
+    fs::set_permissions(&target, fs::Permissions::from_mode(u32::from(runnable)))?;
     print_json(&object([
         (
             "installed",
             Value::String(target.to_string_lossy().into_owned()),
         ),
-        ("chained", Value::Bool(backup.exists())),
+        ("chained", Value::Bool(present(&backup)?)),
         ("appId", Value::String(args.app_id.clone())),
     ]))
 }
@@ -126,9 +158,9 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
 /// put back. A `pre-push` this command did not write is refused by name and
 /// left alone; a tree with no managed hook is reported unchanged.
 pub fn uninstall(harness: &Path, args: &InstallArgs) -> Answer {
-    let repo = args.repo.clone().unwrap_or(std::env::current_dir()?);
+    let repo = repository(&args.repo)?;
     let hooks = repo.join(".git").join("hooks");
-    if !hooks.exists() {
+    if !present(&hooks)? {
         return Err(Failure::config(
             "gate.uninstall",
             format!("not a git working tree: {}", repo.display()),
@@ -142,7 +174,8 @@ pub fn uninstall(harness: &Path, args: &InstallArgs) -> Answer {
         .join("prepush-gate.mjs")
         .to_string_lossy()
         .into_owned();
-    if present(&target) && !managed(&target, &legacy_command, &rust_command) {
+    let removed = present(&target)?;
+    if removed && !managed(&target, &legacy_command, &rust_command)? {
         return Err(Failure::config(
             "gate.uninstall",
             format!(
@@ -151,11 +184,10 @@ pub fn uninstall(harness: &Path, args: &InstallArgs) -> Answer {
             ),
         ));
     }
-    let removed = present(&target);
     if removed {
         fs::remove_file(&target)?;
     }
-    let restored = present(&backup);
+    let restored = present(&backup)?;
     if restored {
         fs::rename(&backup, &target)?;
     }

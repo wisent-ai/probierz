@@ -42,7 +42,20 @@ pub(crate) fn run(repo: &Path, selected: &Selected, root: &Path) -> Result<Recor
     let directory = record::create_run_directory(root, &started_at, &source.short_revision)?;
     let mut gates = Vec::new();
     for gate in &selected.gates {
-        gates.push(run_gate(&repo, gate, &directory)?);
+        let outcome = match run_gate(&repo, gate, &directory) {
+            Ok(outcome) => outcome,
+            Err(error) => json!({
+                "name": gate.name,
+                "argv": gate.argv,
+                "cwd": repo,
+                "passed": false,
+                "error": error.to_string(),
+                "stdout": directory.join(&gate.name).join("stdout.log"),
+                "stderr": directory.join(&gate.name).join("stderr.log"),
+                "reports": [],
+            }),
+        };
+        gates.push(outcome);
     }
     let gate_count = gates.len();
     let failed_count = gates.iter().filter(|outcome| !passed(outcome)).count();
@@ -67,9 +80,9 @@ pub(crate) fn run(repo: &Path, selected: &Selected, root: &Path) -> Result<Recor
     })
 }
 
-/// One gate: spawned in the checkout with its streams on files, waited for to
-/// its own end, its reports copied beside them. A gate that cannot start is
-/// recorded with the error and counts as failed.
+/// One gate: spawn in the checkout with its streams on files, wait for its
+/// end, and copy its reports beside them. Setup, process and report errors
+/// become failed gate evidence rather than hiding the rest of the run.
 fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Failure> {
     let gate_dir = directory.join(&gate.name);
     std::fs::create_dir_all(&gate_dir).map_err(|error| {
@@ -80,8 +93,18 @@ fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Fai
     })?;
     let stdout_path = gate_dir.join("stdout.log");
     let stderr_path = gate_dir.join("stderr.log");
-    let stdout = File::create(&stdout_path)?;
-    let stderr = File::create(&stderr_path)?;
+    let stdout = File::create(&stdout_path).map_err(|error| {
+        Failure::config(
+            "suites.run",
+            format!("{} could not be opened for stdout: {error}", stdout_path.display()),
+        )
+    })?;
+    let stderr = File::create(&stderr_path).map_err(|error| {
+        Failure::config(
+            "suites.run",
+            format!("{} could not be opened for stderr: {error}", stderr_path.display()),
+        )
+    })?;
     let started_at = now_iso();
     let started = Instant::now();
     let Some((program, arguments)) = gate.argv.split_first() else {
@@ -114,7 +137,7 @@ fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Fai
         }
     };
     let pid = child.id();
-    let waited = stado_wait::child_output(
+    let waited = match stado_wait::child_output(
         child,
         format!(
             "waiting for suite {} ({}) in {}",
@@ -122,19 +145,26 @@ fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Fai
             gate.argv.join(" "),
             repo.display()
         ),
-    )
-    .map_err(|error| {
-        Failure::unavailable(
-            "suites.run",
-            format!(
-                "waiting for suite {} process {pid} failed: {error}",
-                gate.name
-            ),
-        )
-    })?;
+    ) {
+        Ok(waited) => waited,
+        Err(error) => {
+            return Ok(json!({
+                "name": gate.name,
+                "argv": gate.argv,
+                "cwd": repo,
+                "startedAt": started_at,
+                "durationSeconds": started.elapsed().as_secs_f64(),
+                "passed": false,
+                "error": format!("waiting for suite {} process {pid} failed: {error}", gate.name),
+                "stdout": stdout_path,
+                "stderr": stderr_path,
+                "reports": [],
+            }));
+        }
+    };
     let duration = started.elapsed().as_secs_f64();
     let status = waited.status;
-    let reports = copy_reports(repo, gate, &gate_dir)?;
+    let reports = copy_reports(repo, gate, &gate_dir);
     Ok(json!({
         "name": gate.name,
         "argv": gate.argv,
@@ -143,7 +173,7 @@ fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Fai
         "durationSeconds": duration,
         "exitCode": status.code(),
         "signal": signal_of(&status),
-        "passed": status.success(),
+        "passed": status.success() && reports.iter().all(|report| report.get("error").is_none()),
         "stdout": stdout_path,
         "stderr": stderr_path,
         "reports": reports,
@@ -162,22 +192,22 @@ fn signal_of(_status: &std::process::ExitStatus) -> Option<i32> {
 }
 
 /// Every report path the gate declares, copied into the gate's directory as
-/// the suite left it; a declared report that is not there is recorded as
-/// missing, not invented.
-fn copy_reports(repo: &Path, gate: &TestGate, gate_dir: &Path) -> Result<Vec<Value>, Failure> {
+/// the suite left it. Missing and unreadable reports remain distinct, and a
+/// failed copy does not erase the evidence from earlier reports.
+fn copy_reports(repo: &Path, gate: &TestGate, gate_dir: &Path) -> Vec<Value> {
     let mut copied = Vec::new();
     for declared in &gate.reports {
-        let source = repo.join(declared);
         let target = gate_dir.join("reports").join(declared);
-        if !source.exists() {
-            copied.push(json!({"declared": declared, "present": false}));
-            continue;
+        match record::copy_report(repo, declared, &target) {
+            Ok(false) => copied.push(json!({"declared": declared, "present": false})),
+            Ok(true) => copied.push(json!({
+                "declared": declared, "present": true, "copied": target,
+            })),
+            Err(error) => copied.push(json!({
+                "declared": declared, "destination": target,
+                "error": error.to_string(),
+            })),
         }
-        if let Some(parent) = target.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        record::copy_tree(&source, &target)?;
-        copied.push(json!({"declared": declared, "present": true, "copied": target}));
     }
-    Ok(copied)
+    copied
 }

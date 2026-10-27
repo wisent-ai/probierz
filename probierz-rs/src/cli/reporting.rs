@@ -5,6 +5,8 @@
 //! the same question at two ranges — what arrived from a running application,
 //! and what a person or an agent recorded as an attempt that did not hold.
 
+use std::num::NonZeroUsize;
+
 use clap::Subcommand;
 
 use crate::{gate, incidents, run_flags_help};
@@ -30,7 +32,9 @@ pub enum ReportingCommand {
     /// Product/version/journey evidence projection.
     Dashboard {
         app_id: String,
-        limit: Option<String>,
+        /// Newest runs to read; every run when omitted.
+        #[arg(long, value_parser = positive_history_limit)]
+        limit: Option<usize>,
     },
     /// Journey coverage, freshness against a base ref, and merge eligibility.
     Status {
@@ -66,7 +70,7 @@ pub enum ReportingCommand {
         #[arg(long)]
         service: Option<String>,
         /// Newest envelopes to print; every envelope when omitted.
-        #[arg(long)]
+        #[arg(long, value_parser = positive_history_limit)]
         limit: Option<usize>,
         #[arg(long)]
         json: bool,
@@ -194,21 +198,19 @@ pub enum IntakeCommand {
     },
 }
 
+/// A count of rows or repetitions: a whole number above zero. Anything else
+/// is refused naming it, never rounded or clamped into one.
 pub fn positive_history_limit(value: &str) -> Result<usize, String> {
-    let parsed = value
-        .parse::<f64>()
-        .map_err(|_| "--limit needs a positive number".to_string())?;
-    if !parsed.is_finite() || parsed <= 0.0 {
-        return Err("--limit needs a positive number".to_string());
-    }
-    Ok((parsed.floor() as usize).max(1))
+    value
+        .parse::<NonZeroUsize>()
+        .map(NonZeroUsize::get)
+        .map_err(|error| format!("needs a whole number above zero, not {value:?}: {error}"))
 }
 
-/// The dashboard's run limit: every run unless a positive limit is given.
-pub fn dashboard_limit(value: Option<&str>) -> usize {
-    value
-        .and_then(|value| value.parse::<f64>().ok())
-        .filter(|value| value.is_finite() && *value != 0.0)
-        .map(|value| value.max(1.0).floor() as usize)
-        .unwrap_or(usize::MAX)
+/// The rows a `--limit` reads: that many, or every one when it was omitted.
+pub fn newest(limit: Option<usize>) -> usize {
+    match limit {
+        Some(limit) => limit,
+        None => usize::MAX,
+    }
 }

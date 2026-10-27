@@ -125,24 +125,22 @@ pub(crate) fn normalized_status(manifest: &Value) -> String {
 /// The tests a run recorded, from its analysis or else its report: one per
 /// title, in first-seen order, carrying the last record of each. A status or
 /// duration the record did not state is null, never a failure or a zero, and
-/// a record without a title is not a test. An analysis or report that is
-/// there but cannot be read is the failure naming it.
+/// a record without a title is not a test. Only the analysis and report the
+/// manifest names are read: a run that recorded none has none, and no file
+/// is guessed beside the run. One that is named but cannot be read is the
+/// failure naming it.
 pub(crate) fn tests_from(
-    run_directory: &Path,
+    _run_directory: &Path,
     manifest_value: &Value,
 ) -> Result<Vec<Value>, Failure> {
-    let analysis_path = manifest_value
-        .get("analysisPath")
-        .and_then(Value::as_str)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| run_directory.join("analysis.json"));
-    let report_path = manifest_value
-        .pointer("/paths/reportPath")
-        .and_then(Value::as_str)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| run_directory.join("report.json"));
-    let analysis = crate::json_file::read(&analysis_path)?;
-    let report = crate::json_file::read(&report_path)?;
+    let analysis = match manifest_value.get("analysisPath").and_then(Value::as_str) {
+        Some(path) => crate::json_file::read(Path::new(path))?,
+        None => None,
+    };
+    let report = match manifest_value.pointer("/paths/reportPath").and_then(Value::as_str) {
+        Some(path) => crate::json_file::read(Path::new(path))?,
+        None => None,
+    };
     let source = analysis
         .as_ref()
         .and_then(|value| value.get("tests"))

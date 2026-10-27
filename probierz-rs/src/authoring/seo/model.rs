@@ -12,9 +12,19 @@ pub(crate) fn invoke_seo_model(
     deterministic: &JsonValue,
     adjudication: Option<&JsonValue>,
 ) -> Result<JsonValue, Failure> {
-    let compact = adjudication.cloned().unwrap_or_else(|| json!({
-        "approvedBrief": brief, "routes": policy["routes"], "pageEvidence": evidence, "deterministic": deterministic
-    })).to_string();
+    // An adjudication judges the two evaluations it was given; an evaluation
+    // judges the brief, routes and page evidence.
+    let compact = match adjudication {
+        Some(adjudication) => adjudication.clone(),
+        None => json!({
+            "approvedBrief": brief, "routes": policy["routes"], "pageEvidence": evidence, "deterministic": deterministic
+        }),
+    }
+    .to_string();
+    let role = match adjudication {
+        Some(_) => "You are the adjudicator for two independent Probierz SEO content evaluations.",
+        None => "You are an independent Probierz SEO content evaluator.",
+    };
     // The evidence bound is the policy's stated `maxEvidenceCharacters`;
     // a policy that states none sends the evidence whole.
     if let Some(maximum) = policy
@@ -40,8 +50,7 @@ pub(crate) fn invoke_seo_model(
     let mut request = json!({
         "model": model,
         "messages": [
-            { "role": "system", "content": format!("{}\n{}\nCall record_seo_content_evaluation exactly once and return no prose outside the tool call.",
-                if adjudication.is_some() { "You are the adjudicator for two independent Probierz SEO content evaluations." } else { "You are an independent Probierz SEO content evaluator." },
+            { "role": "system", "content": format!("{role}\n{}\nCall record_seo_content_evaluation exactly once and return no prose outside the tool call.",
                 instructions.join("\n")) },
             { "role": "user", "content": [{ "type": "text", "text": compact }] }
         ],
@@ -68,7 +77,9 @@ pub(crate) fn invoke_seo_model(
             ),
         )
     })?;
-    if !(200..400).contains(&status) {
+    let answered = http::StatusCode::from_u16(status)
+        .is_ok_and(|code| code.is_success() || code.is_redirection());
+    if !answered {
         return Err(Failure::unavailable(
             "seo-evaluate.model",
             router_refusal(status, &payload, &raw),
@@ -79,9 +90,7 @@ pub(crate) fn invoke_seo_model(
     if evaluation
         .get("summary")
         .and_then(JsonValue::as_str)
-        .unwrap_or_default()
-        .trim()
-        .is_empty()
+        .is_none_or(|summary| summary.trim().is_empty())
     {
         return Err(Failure::config(
             "seo-evaluate.model",
@@ -91,10 +100,10 @@ pub(crate) fn invoke_seo_model(
     Ok(json!({
         "modelRequested": model,
         "responseSha256": crate::evidence::sha256_bytes(raw.as_bytes()),
-        "modelReturned": payload.get("model").cloned().unwrap_or(JsonValue::Null),
+        "modelReturned": payload.get("model"),
         "requestSha256": request_sha,
         "rubricSha256": crate::evidence::sha256_bytes(json!({ "dimensions": policy["dimensions"], "instructions": policy["modelInstructions"] }).to_string().as_bytes()),
-        "usage": payload.get("usage").cloned().unwrap_or(JsonValue::Null),
+        "usage": payload.get("usage"),
         "evaluation": evaluation
     }))
 }
@@ -112,7 +121,7 @@ pub(crate) fn canonical_json(value: &JsonValue) -> String {
                     .into_iter()
                     .map(|(key, value)| format!(
                         "{}:{}",
-                        serde_json::to_string(key).unwrap_or_default(),
+                        JsonValue::String(key.to_string()),
                         canonical_json(value)
                     ))
                     .collect::<Vec<_>>()
@@ -133,20 +142,20 @@ pub(crate) fn canonical_json(value: &JsonValue) -> String {
 
 pub(crate) fn sign_seo_payload(payload: &JsonValue, key: &[u8]) -> Result<JsonValue, Failure> {
     let text = String::from_utf8_lossy(key);
-    let signing = if text.contains("BEGIN") {
-        SigningKey::from_pkcs8_pem(text.trim()).map_err(|error| {
+    // A PEM key announces itself with its BEGIN line; anything else is DER.
+    let signing = match text.contains("BEGIN") {
+        true => SigningKey::from_pkcs8_pem(text.trim()).map_err(|error| {
             Failure::config(
                 "seo-evaluate.sign",
                 format!("invalid Ed25519 private key: {error}"),
             )
-        })?
-    } else {
-        SigningKey::from_pkcs8_der(key).map_err(|error| {
+        })?,
+        false => SigningKey::from_pkcs8_der(key).map_err(|error| {
             Failure::config(
                 "seo-evaluate.sign",
                 format!("invalid Ed25519 private key: {error}"),
             )
-        })?
+        })?,
     };
     let public = signing.verifying_key();
     let canonical = canonical_json(payload);

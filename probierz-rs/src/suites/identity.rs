@@ -33,10 +33,10 @@ fn git(repo: &Path, args: &[&str]) -> Result<String, Failure> {
         return Err(Failure::config(
             "suites.identity",
             format!(
-                "git {} in {} ended with {}: {}",
+                "git {} in {} {}: {}",
                 args.join(" "),
                 repo.display(),
-                output.status,
+                crate::failure::ended(&output.status),
                 String::from_utf8_lossy(&output.stderr).trim()
             ),
         ));

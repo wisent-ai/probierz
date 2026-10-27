@@ -24,33 +24,6 @@ impl Driver {
         })
     }
 
-    pub fn focus_sidebar(&self, pid: u32, window_id: u64, fraction: f64) -> Result<(), String> {
-        let bounds = self.window_bounds(pid, window_id)?;
-        self.click_screen(
-            pid,
-            bounds.x + bounds.width * fraction,
-            bounds.y + bounds.height * 0.5,
-        )?;
-        Ok(())
-    }
-
-    pub fn select_sidebar_row(
-        &self,
-        pid: u32,
-        window_id: u64,
-        row_index: usize,
-    ) -> Result<(), String> {
-        self.focus_sidebar(pid, window_id, 0.12)?;
-        for _ in 0..20 {
-            self.press_key(pid, Some(window_id), "up")?;
-        }
-        for _ in 0..row_index {
-            self.press_key(pid, Some(window_id), "down")?;
-        }
-        self.press_key(pid, Some(window_id), "return")?;
-        Ok(())
-    }
-
     pub(crate) fn element_request(
         &self,
         pid: u32,
@@ -81,7 +54,9 @@ impl Driver {
         let mut candidates: Vec<Value> = self
             .list_windows(Some(pid))?
             .into_iter()
-            .filter(|window| window.get("layer").and_then(Value::as_i64) == Some(0))
+            .filter(|window| {
+                window.get("layer").and_then(Value::as_i64) == Some(NORMAL_WINDOW_LEVEL)
+            })
             .collect();
         candidates.sort_by(|left, right| {
             let left_titled = left
@@ -112,7 +87,7 @@ impl Driver {
             self.probe_permissions()?;
             return Ok(());
         }
-        let parent = self.socket.parent().unwrap_or_else(|| Path::new("."));
+        let parent = self.socket_directory()?;
         fs::create_dir_all(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
         let daemon_log = parent.join("probierz-daemon.log");
         // The launch is diagnosed from this log; one left by an earlier daemon
@@ -182,11 +157,13 @@ impl Driver {
                 self.socket.display()
             )
         })?;
-        let permissions = payload.get("permissions").unwrap_or(&payload);
-        let accessibility = payload
-            .pointer("/permissions/accessibility")
-            .or_else(|| payload.get("accessibility"))
-            .and_then(Value::as_bool);
+        // The answer nests its flags under `permissions`, or carries them at
+        // the top level; the accessibility flag is read from that same object.
+        let permissions = match payload.get("permissions") {
+            Some(nested) => nested,
+            None => &payload,
+        };
+        let accessibility = permissions.get("accessibility").and_then(Value::as_bool);
         match accessibility {
             Some(true) => Ok(permissions.clone()),
             Some(false) => Err(format!(
@@ -200,3 +177,7 @@ impl Driver {
         }
     }
 }
+
+/// The layer CuaDriver reports for an app's ordinary windows, as Core Graphics
+/// numbers it (`kCGWindowLayer`).
+const NORMAL_WINDOW_LEVEL: i64 = 0; // https://github.com/phracker/MacOSX-SDKs/blob/master/MacOSX10.8.sdk/System/Library/Frameworks/CoreGraphics.framework/Versions/A/Headers/CGWindowLevel.h ("#define kCGNormalWindowLevel CGWindowLevelForKey(kCGNormalWindowLevelKey) /* 0 */")

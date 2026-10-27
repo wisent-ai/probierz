@@ -1,4 +1,22 @@
 use crate::stado::*;
+
+/// `--cargo-release`: the binary `--binary` names, or the one named after the
+/// app; the manifest `--cargo-manifest` names, or the repository root's
+/// `Cargo.toml`. The two flags exist to override exactly these.
+fn cargo_release(app_id: &str, binary: Option<&String>, manifest: Option<&String>) -> Provision {
+    Provision::CargoRelease {
+        app_id: app_id.to_string(),
+        binary: match binary {
+            Some(binary) => binary.clone(),
+            None => app_id.to_string(),
+        },
+        manifest_path: match manifest {
+            Some(manifest) => manifest.clone(),
+            None => "Cargo.toml".to_string(),
+        },
+    }
+}
+
 pub(crate) fn select_run_provision(
     args: &RunArgs,
     app_id: &str,
@@ -31,14 +49,7 @@ pub(crate) fn select_run_provision(
     if args.cargo_release {
         candidates.push((
             "--cargo-release",
-            Provision::CargoRelease {
-                app_id: app_id.to_string(),
-                binary: args.binary.clone().unwrap_or_else(|| app_id.to_string()),
-                manifest_path: args
-                    .cargo_manifest
-                    .clone()
-                    .unwrap_or_else(|| "Cargo.toml".to_string()),
-            },
+            cargo_release(app_id, args.binary.as_ref(), args.cargo_manifest.as_ref()),
         ));
     }
     if let Some(Some(path)) = &args.app_bundle_path {
@@ -125,14 +136,7 @@ pub(crate) fn select_author_provision(
     if args.cargo_release {
         candidates.push((
             "--cargo-release",
-            Provision::CargoRelease {
-                app_id: app_id.to_string(),
-                binary: args.binary.clone().unwrap_or_else(|| app_id.to_string()),
-                manifest_path: args
-                    .cargo_manifest
-                    .clone()
-                    .unwrap_or_else(|| "Cargo.toml".to_string()),
-            },
+            cargo_release(app_id, args.binary.as_ref(), args.cargo_manifest.as_ref()),
         ));
     }
     if let Some(Some(path)) = &args.app_bundle_path {
@@ -190,7 +194,7 @@ pub(crate) fn validate_provision_candidates(
     has_manifest: bool,
     cargo_release: bool,
 ) -> Result<(), Failure> {
-    if candidates.len() > 1 {
+    if let [_, _, ..] = candidates {
         let flags = candidates
             .iter()
             .map(|(flag, _)| *flag)

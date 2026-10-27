@@ -48,6 +48,8 @@ pub enum InspectCommand {
     Cmd { target: String },
     /// The run hosts this harness can use: local and the Stado providers.
     Hosts,
+    /// Read a retained security operation journal without running any checks.
+    Journal { path: PathBuf },
     // PortAuthoring: authoring, evaluation, and identity
     /// Exact path-independent harness and application source identity.
     Identity { app_id: String },
