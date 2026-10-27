@@ -360,6 +360,7 @@ surfaces:
     spec: "*"
     journeys:
     - host-dynamic-capacity
+    - onboarding-first-use
     - hosts-screen
     - releases-screen
     - service-convergence
@@ -385,6 +386,10 @@ surfaces:
         PROBIERZ_JOURNEY: hosts-screen
       journeys:
       - hosts-screen
+    - when:
+        PROBIERZ_JOURNEY: onboarding-first-use
+      journeys:
+      - onboarding-first-use
     - when:
         PROBIERZ_JOURNEY: services-screen
       journeys:

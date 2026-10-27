@@ -74,6 +74,9 @@ apps/jeden-desktop/*
 probierz-rs/target/
 .build/
 
+# the commit-review tool stages its scratch copy of the index here
+/.build/
+
 # scratch downloads and captures
 tmp/
 .artifacts/
