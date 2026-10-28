@@ -1,6 +1,9 @@
 use crate::apphooks::*;
 use serde_json::json;
 
+mod expect;
+use expect::{capacity_sum, seeded, slack_field};
+
 /// The organization the fixture state names. A state without one used to
 /// read as "", so the writer PATCHed `org_id=eq.` - no row - and still
 /// recorded the statement as written, and the verifier read empty tables.
@@ -64,13 +67,13 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
     let decision = feedback_decision(run_id);
     let slack_state = state.get("slack").expect("checked");
     let feedback_source = json!({
-        "org_id": state.get("orgId").cloned().unwrap_or(Value::Null),
-        "channel_id": slack_state.get("channel").cloned().unwrap_or(Value::Null),
-        "message_ts": slack_state.get("replyTs").cloned().unwrap_or(Value::Null),
-        "thread_ts": slack_state.get("parentTs").cloned().unwrap_or(Value::Null),
-        "author_id": slack_state.get("replyAuthorId").cloned().unwrap_or(Value::Null),
-        "message_text": slack_state.get("replyText").cloned().unwrap_or(Value::Null),
-        "bot_context": slack_state.get("botContext").cloned().unwrap_or(Value::Null)
+        "org_id": fixture_org_id(&state)?,
+        "channel_id": slack_field(slack_state, "channel")?,
+        "message_ts": slack_field(slack_state, "replyTs")?,
+        "thread_ts": slack_field(slack_state, "parentTs")?,
+        "author_id": slack_field(slack_state, "replyAuthorId")?,
+        "message_text": slack_field(slack_state, "replyText")?,
+        "bot_context": slack_field(slack_state, "botContext")?
     });
     supabase(
         source,
@@ -86,13 +89,12 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
             "author_id": feedback_source["author_id"],
             "message_text": feedback_source["message_text"],
             "bot_context": feedback_source["bot_context"],
-            "status": "pending",
-            "attempt_count": 1,
-            "last_attempt_at": Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
-            "last_error": ""
+            // Pending and not yet attempted: the attempt count and the
+            // last error are the table's declared defaults.
+            "status": "pending"
         })),
     )?;
-    for _ in 0..2 {
+    let apply = || {
         supabase(
             source,
             "/rest/v1/rpc/oko_apply_strategic_feedback",
@@ -103,12 +105,21 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
                 "p_decision": decision,
                 "p_decision_id": state["feedback"]["decisionId"]
             })),
-        )?;
-    }
-    let marker = decision
-        .pointer("/mutations/0/stringValue")
-        .cloned()
-        .unwrap_or(Value::Null);
+        )
+    };
+    apply()?;
+    // The same decision applied again: one decision row afterwards proves
+    // the RPC is idempotent.
+    apply()?;
+    let marker = match decision.pointer("/mutations/0/stringValue") {
+        Some(marker) => marker.clone(),
+        None => {
+            return Err(Failure::config(
+                "apphook.oko.feedback",
+                format!("the feedback decision for run {run_id} states no first mutation stringValue to expect: {decision}"),
+            ));
+        }
+    };
     state["feedback"]["applied"] = json!(true);
     state["feedback"]["appliedAt"] = json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true));
     state["strategy"]["expectedStatement"] = marker.clone();
@@ -117,7 +128,7 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
         "orgId": state["orgId"],
         "decisionId": state["feedback"]["decisionId"],
         "marker": marker,
-        "duplicateAttempts": 2
+        "reapplied": true
     }))
 }
 
@@ -163,32 +174,25 @@ pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Va
     let initiatives = table_rows(initiatives, "company_initiatives")?;
     let decisions = table_rows(decisions, "company_decisions")?;
     let events = table_rows(events, "oko_strategic_feedback_events")?;
-    let capacity: f64 = initiatives
-        .iter()
-        .map(|item| {
-            item.get("capacity_percent")
-                .and_then(Value::as_f64)
-                .unwrap_or(0.0)
-        })
-        .sum();
+    let capacity = capacity_sum(&initiatives, "capacity_percent", "the company_initiatives row")?;
+    let seeded = seeded(&state)?;
     let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
     let expected_statement = state
         .pointer("/strategy/expectedStatement")
         .or_else(|| state.pointer("/strategy/initial/northStar/statement"));
-    let feedback_applied = state
-        .pointer("/feedback/applied")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
+    let feedback_applied = state.pointer("/feedback/applied").and_then(Value::as_bool).ok_or_else(|| {
+        Failure::config("apphook.oko.state", "the Oko fixture state says neither way whether feedback was applied")
+    })?;
     let decision_id = state.pointer("/feedback/decisionId");
     let checks = json!({
-        "context": contexts.len() == 1,
+        "context": matches!(contexts.as_slice(), [_]),
         "statement": contexts.first().and_then(|item| item.get("north_star_statement")) == expected_statement,
-        "metrics": metrics.len() == 4,
-        "initiatives": initiatives.len() == 13,
-        "capacity": (capacity - 100.0).abs() < 0.0001,
+        "metrics": metrics.len() == seeded.metrics,
+        "initiatives": initiatives.len() == seeded.initiatives,
+        "capacity": capacity == seeded.capacity,
         "baselineDecision": decisions.iter().any(|item| item.get("id").and_then(Value::as_str) == Some(&deterministic_uuid(&["oko-e2e", run_id, "decision", "0"]))),
-        "feedbackDecision": !feedback_applied || decisions.iter().filter(|item| item.get("id") == decision_id).count() == 1,
-        "feedbackEvent": !feedback_applied || (events.len() == 1 && events[0].get("status").and_then(Value::as_str) == Some("processed"))
+        "feedbackDecision": !feedback_applied || matches!(decisions.iter().filter(|item| item.get("id") == decision_id).collect::<Vec<_>>().as_slice(), [_]),
+        "feedbackEvent": !feedback_applied || matches!(events.as_slice(), [event] if event.get("status").and_then(Value::as_str) == Some("processed"))
     });
     let failed: Vec<&str> = checks
         .as_object()
@@ -228,10 +232,7 @@ pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Fa
         .and_then(|state| state.get("slack"))
         .filter(|value| !value.is_null())
     {
-        let channel = slack_state
-            .get("channel")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let channel = slack_field(slack_state, "channel")?;
         if let Some(reply_ts) = slack_state.get("replyTs").and_then(Value::as_str) {
             slack(
                 source,
@@ -250,12 +251,12 @@ pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Fa
         }
     }
     let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
-    let org_id = state
-        .as_ref()
-        .and_then(|state| state.get("orgId"))
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .unwrap_or_else(|| deterministic_uuid(&["oko-e2e-org", run_id]));
+    let org_id = match &state {
+        Some(state) => fixture_org_id(state)?,
+        // No state file: setup ended before writing one, and the organization
+        // it creates is the one this run's id names.
+        None => deterministic_uuid(&["oko-e2e-org", run_id]),
+    };
     delete_organization(source, &org_id)?;
     let user_id = state
         .as_ref()
