@@ -129,7 +129,7 @@ pub fn repair_failed_run(
                 patch_paths(patch)?;
                 fs::write(repair_dir.join(format!("round-{round}.patch")), patch)
                     .map_err(|error| error.to_string())?;
-                let suffix = format!("{}-{round}", run_id.chars().take(20).collect::<String>())
+                let suffix = format!("{run_id}-{round}")
                     .chars()
                     .map(|character| {
                         if character.is_ascii_alphanumeric() || character == '-' {
@@ -139,16 +139,13 @@ pub fn repair_failed_run(
                         }
                     })
                     .collect::<String>();
-                let message = format!(
-                    "Repair Probierz run {run_id}: {}",
-                    decision
-                        .get("reason")
-                        .and_then(JsonValue::as_str)
-                        .unwrap_or_default()
-                        .chars()
-                        .take(120)
-                        .collect::<String>()
-                );
+                // The worker's decision states its reason (a decision without
+                // one was refused when it was read); the commit carries it whole.
+                let reason = decision
+                    .get("reason")
+                    .and_then(JsonValue::as_str)
+                    .ok_or_else(|| "the product_patch decision carries no reason".to_string())?;
+                let message = format!("Repair Probierz run {run_id}: {reason}");
                 let published = publish_repair_branch(&repo_root, &suffix, &message, |worktree| {
                     checked_process(
                         OsStr::new("git"),
@@ -217,7 +214,7 @@ pub fn repair_failed_run(
                     )
                 })?
                 .to_path_buf();
-            let suffix = format!("{}-spec", run_id.chars().take(20).collect::<String>())
+            let suffix = format!("{run_id}-spec")
                 .chars()
                 .map(|character| {
                     if character.is_ascii_alphanumeric() || character == '-' {

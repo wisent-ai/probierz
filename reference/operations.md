@@ -17,7 +17,9 @@ reaches for, and how it behaves when something fails.
   `STADO_MODEL_ROUTER_TOKEN` and leave both identity variables unset: local
   authoring, figure evaluation and SEO evaluation then send unsigned requests to
   that provider. Setting only one of the identity pair is refused. Figure evaluation
-  also requires `PROBIERZ_FIGURE_VISION_MODEL` or `--model`. Remote Stado jobs set
+  also requires `PROBIERZ_FIGURE_VISION_MODEL` or `--model`, and the render
+  resolution and size as `PROBIERZ_FIGURE_RENDER_DENSITY` and
+  `PROBIERZ_FIGURE_RENDER_MAX_EDGE`. Remote Stado jobs set
   the Probierz identity and materialize the token and signing secret from the
   scoped `probierz-model-router` and `probierz-agent-auth` references instead
   of embedding credentials in the job payload.

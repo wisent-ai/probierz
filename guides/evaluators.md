@@ -11,6 +11,8 @@ model.
 STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_FIGURE_VISION_MODEL='<vision-model-id>' \
+PROBIERZ_FIGURE_RENDER_DENSITY='<dots-per-inch>' \
+PROBIERZ_FIGURE_RENDER_MAX_EDGE='<pixels>' \
 probierz evaluate figure \
   --reference /absolute/path/intermediate.svg \
   --candidate /absolute/path/final.tex \
@@ -23,7 +25,11 @@ probierz evaluate figure \
 dimension met or not met, with evidence and the issues it found; there are no
 weights, per-dimension minimums or overall score, and a rubric that still
 carries `weight`, `minimum` or `overallMinimum` is refused naming the field.
-`--model` overrides `PROBIERZ_FIGURE_VISION_MODEL`. Exit status is 0 only when
+`--model` overrides `PROBIERZ_FIGURE_VISION_MODEL`. `PROBIERZ_FIGURE_RENDER_DENSITY`
+(the resolution a TeX or PDF page is rasterized at) and
+`PROBIERZ_FIGURE_RENDER_MAX_EDGE` (the longest edge, in pixels, of the PNG the
+model is shown; a smaller render is not enlarged) are required positive whole
+numbers; a missing or malformed one is refused naming it. Exit status is 0 only when
 there are no deterministic or model blockers and every criterion is met; each
 unmet criterion is a `criterion_unmet:<dimension>` blocker carrying the issues
 the model named. The one deterministic blocker is content that reaches a canvas

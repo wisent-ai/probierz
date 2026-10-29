@@ -208,10 +208,14 @@ pub(crate) fn render_figure(
     } else if extension == "pdf" {
         page = true;
     }
+    // How finely a page is rasterized and the longest edge the grader is
+    // shown are the run's to state: no resolution or size is chosen here.
+    let density = render_setting("PROBIERZ_FIGURE_RENDER_DENSITY")?;
+    let max_edge = render_setting("PROBIERZ_FIGURE_RENDER_MAX_EDGE")?;
     let png = work.join(format!("{name}.png"));
     let mut arguments = Vec::new();
     if page {
-        arguments.extend(["-density".to_string(), "180".to_string()]);
+        arguments.extend(["-density".to_string(), density.to_string()]);
     }
     arguments.push(if page {
         format!("{}[0]", source.display())
@@ -227,7 +231,7 @@ pub(crate) fn render_figure(
         "off".to_string(),
         "+repage".to_string(),
         "-resize".to_string(),
-        "2048x2048>".to_string(),
+        format!("{max_edge}x{max_edge}>"),
         png.to_string_lossy().into_owned(),
     ]);
     figure_process("magick", &arguments, None)?;
@@ -235,4 +239,18 @@ pub(crate) fn render_figure(
         return Err(format!("magick did not produce {}", png.display()));
     }
     Ok(png)
+}
+
+/// A positive whole number the run's environment states for figure
+/// rendering, or the refusal naming the variable and what it holds.
+fn render_setting(name: &str) -> Result<u32, String> {
+    let raw = std::env::var(name).map_err(|error| {
+        format!("{name} is required to render a figure for grading ({error}); state it in the run's environment")
+    })?;
+    match raw.trim().parse::<u32>() {
+        Ok(value) if value > 0 => Ok(value),
+        _ => Err(format!(
+            "{name} must be a positive whole number, not {raw:?}"
+        )),
+    }
 }
