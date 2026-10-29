@@ -52,9 +52,7 @@ fn gate_evidence_preserves_read_failures_and_recovers() {
     let retained = directory.join("retained-evidence");
     fs::rename(&evidence, &retained).unwrap();
     fs::write(&evidence, &original).unwrap();
-    let cause = fs::read_dir(&evidence)
-        .err()
-        .expect("file is not a directory");
+    let cause = fs::read_dir(&evidence).expect_err("file is not a directory");
     let traversal_error = all_runs(&directory, &app).unwrap_err();
     assert!(traversal_error.contains(&evidence.display().to_string()));
     assert!(traversal_error.contains(&cause.to_string()));

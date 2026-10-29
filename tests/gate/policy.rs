@@ -219,7 +219,7 @@ fn gate_policy_refuses_missing_or_malformed_requirements_and_recovers() {
     no_minimum
         .as_mapping_mut()
         .expect("policy mapping")
-        .remove(&Value::String("minimumEvidence".into()));
+        .remove("minimumEvidence");
     refuse_mode(
         "missing-release-minimum",
         "releasePolicy",

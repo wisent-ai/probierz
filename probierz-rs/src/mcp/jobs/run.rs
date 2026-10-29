@@ -8,7 +8,7 @@ pub(crate) fn new_run_id() -> String {
     let uuid = hex::encode(bytes);
     format!(
         "{}-{}-{}-{}-{}-{}",
-        now_iso().replace(':', "-").replace('.', "-"),
+        now_iso().replace([':', '.'], "-"),
         &uuid[0..8],
         &uuid[8..12],
         &uuid[12..16],

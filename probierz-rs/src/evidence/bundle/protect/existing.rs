@@ -57,7 +57,7 @@ pub(super) fn reuse_existing_bundle(
         "reused": true,
     });
     if remove_source {
-        remove_plaintext_source(source, &manifest_path, retention_kind, &protected)?;
+        remove_plaintext_source(source, manifest_path, retention_kind, &protected)?;
     }
-    return Ok(protected);
+    Ok(protected)
 }

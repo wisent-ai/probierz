@@ -115,16 +115,26 @@ pub(crate) fn assert_physical_product_path(
     Ok(())
 }
 
+/// Where an authored spec is installed, each path relative to its root: the
+/// spec in the product's tree, and its registration in the harness.
+pub(crate) struct SpecPlacement<'a> {
+    pub(crate) product_relative: &'a str,
+    pub(crate) registration_relative: &'a str,
+}
+
 pub(crate) fn install_product_spec(
     harness: &Path,
     product_root: &Path,
     app_id: &str,
     journey: &str,
     target: &str,
-    product_relative: &str,
-    registration_relative: &str,
+    placement: SpecPlacement<'_>,
     bytes: &[u8],
 ) -> Result<(PathBuf, PathBuf, PathBuf), Failure> {
+    let SpecPlacement {
+        product_relative,
+        registration_relative,
+    } = placement;
     for relative in [product_relative, registration_relative] {
         let path = Path::new(relative);
         if path.is_absolute()

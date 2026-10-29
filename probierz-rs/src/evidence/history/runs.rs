@@ -228,10 +228,13 @@ pub(crate) fn compare_named(
                     }));
                 }
             }
-            (Some(old), Some(new)) => {
-                if old.get("sha256") != new.get("sha256") || old.get("bytes") != new.get("bytes") {
-                    changes.push(json!({ name: entry_name, "change": "content", "before": old, "after": new }));
-                }
+            (Some(old), Some(new))
+                if old.get("sha256") != new.get("sha256")
+                    || old.get("bytes") != new.get("bytes") =>
+            {
+                changes.push(
+                    json!({ name: entry_name, "change": "content", "before": old, "after": new }),
+                );
             }
             _ => {}
         }

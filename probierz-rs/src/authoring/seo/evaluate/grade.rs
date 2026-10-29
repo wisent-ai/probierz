@@ -153,10 +153,12 @@ fn invoke(
         &models.token,
         &models.agent_id,
         &models.agent_secret,
-        &contract.policy,
-        &contract.brief,
-        &crawled.evidence,
-        &crawled.deterministic,
+        SeoMaterial {
+            policy: &contract.policy,
+            brief: &contract.brief,
+            evidence: &crawled.evidence,
+            deterministic: &crawled.deterministic,
+        },
         task,
     )
 }

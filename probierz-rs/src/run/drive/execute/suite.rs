@@ -9,6 +9,16 @@ pub(crate) struct RunOptions {
     pub(crate) kind: Option<String>,
 }
 
+/// Where one run keeps its files: the artifacts directory, and the report
+/// and the runner's two logs inside it.
+#[derive(Clone, Copy)]
+pub(crate) struct RunFiles<'a> {
+    pub(crate) artifacts: &'a Path,
+    pub(crate) report: &'a Path,
+    pub(crate) stdout: &'a Path,
+    pub(crate) stderr: &'a Path,
+}
+
 /// The schema of a run's process exit accounting record.
 const PERFORMANCE_SCHEMA_VERSION: u64 = 2;
 
@@ -105,8 +115,7 @@ fn children_accounting() -> Option<(f64, f64)> {
         }
         usage.assume_init()
     };
-    let seconds =
-        |time: &Timeval| time.tv_sec as f64 + f64::from(time.tv_usec as i32) / 1_000_000.0;
+    let seconds = |time: &Timeval| time.tv_sec as f64 + time.tv_usec as f64 / 1_000_000.0;
     let cpu = seconds(&usage.ru_utime) + seconds(&usage.ru_stime);
     // macOS reports ru_maxrss in bytes, Linux in kibibytes.
     let peak_kib = if cfg!(target_os = "macos") {
@@ -122,12 +131,16 @@ pub(crate) fn execute_suite(
     script: &str,
     env: &BTreeMap<String, String>,
     redaction: manifest::Redaction,
-    stdout_path: &Path,
-    stderr_path: &Path,
+    files: RunFiles<'_>,
     target_name: &str,
     started_at: &str,
-    artifacts: &Path,
 ) -> Result<(std::process::ExitStatus, String, String, Value, Value), Failure> {
+    let RunFiles {
+        artifacts,
+        stdout: stdout_path,
+        stderr: stderr_path,
+        ..
+    } = files;
     let run_started = DateTime::parse_from_rfc3339(started_at)
         .map(|date| date.with_timezone(&Utc))
         .map_err(|error| {

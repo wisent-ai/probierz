@@ -43,8 +43,18 @@ pub fn author_spec(
         .map_err(|detail| Failure::unavailable("author-spec.probe", detail))?;
     let staged = directory.join(format!(".author-staging-{journey}{}", SPEC_EXTENSION));
     fs::create_dir_all(&directory)?;
-    let first_brief =
-        author_spec_brief(app_id, journey, target, desc, &probe, 1, rounds, None, &[]);
+    let first_brief = author_spec_brief(
+        app_id,
+        journey,
+        target,
+        desc,
+        &probe,
+        Round {
+            number: 1,
+            of: rounds,
+        },
+        None,
+    );
     if dry_run {
         return Ok(
             json!({ "ok": true, "dryRun": true, "brief": first_brief, "stagedPath": staged.to_string_lossy() }),
@@ -62,10 +72,13 @@ pub fn author_spec(
                 target,
                 desc,
                 &probe,
-                round,
-                rounds,
-                previous.as_deref(),
-                &failures,
+                Round {
+                    number: round,
+                    of: rounds,
+                },
+                previous
+                    .as_deref()
+                    .map(|previous| (previous, failures.as_slice())),
             )
         };
         Failure::discard("author-spec", &staged)?;

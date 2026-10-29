@@ -102,16 +102,16 @@ pub fn install_accepted_spec(
     Ok(json!({ "spec": destination.to_string_lossy(), "manifest": loaded.file.to_string_lossy() }))
 }
 
+/// The brief for one authoring round; `last_attempt` is the spec the round
+/// before drafted and the failures its run reported.
 pub(crate) fn author_spec_brief(
     app_id: &str,
     journey: &str,
     target: &str,
     desc: &str,
     probe: &str,
-    round: u32,
-    rounds: u32,
-    previous: Option<&str>,
-    failures: &[String],
+    round: Round,
+    last_attempt: Option<(&str, &[String])>,
 ) -> String {
     let mut brief = format!(
         "Write an e2e journey spec for the app \"{app_id}\" (target {target}), journey \"{journey}\".\n\
@@ -124,14 +124,14 @@ Hard rules:\n\
 - One focused journey; readable, deterministic, no sleeps beyond explicit waits for real conditions.\n\
 - The file must be self-contained and pass on the first run."
     );
-    if let Some(previous) = previous.filter(|_| !failures.is_empty()) {
+    if let Some((previous, failures)) = last_attempt.filter(|(_, failures)| !failures.is_empty()) {
         brief.push_str(&format!(
-            "\n\nRound {round} of {rounds}: your previous spec FAILED. Fix it based on the run failures.\n\
+            "\n\n{round}: your previous spec FAILED. Fix it based on the run failures.\n\
 --- PREVIOUS SPEC ---\n{previous}\n--- RUN FAILURES ---\n{}",
             failures.join("\n")
         ));
     } else {
-        brief.push_str(&format!("\n\nRound {round} of {rounds}."));
+        brief.push_str(&format!("\n\n{round}."));
     }
     brief.push_str("\n\nCall submit_probierz_spec exactly once with the complete spec, then stop.");
     brief

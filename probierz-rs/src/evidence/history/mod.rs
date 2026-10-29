@@ -6,7 +6,7 @@ mod runs;
 mod scan;
 mod secrets;
 
-pub use audit::*;
+pub(crate) use audit::*;
 pub use runs::*;
 pub use scan::*;
 pub use secrets::*;

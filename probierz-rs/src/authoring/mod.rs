@@ -12,6 +12,7 @@
 //! | [`seo`] | the declared SEO contract, the crawl, and the signed verdict |
 //! | [`talk`] | a rendered talk judged against the documents it presents |
 //! | [`repair`] | a recorded failure turned into a briefed, verified repair |
+//! | [`round`] | which round of a bounded authoring loop a brief is written for |
 //! | [`result`] | printing what any of the above decided |
 //!
 //! Every part opens with `use crate::authoring::*;`, so the list below is the
@@ -42,6 +43,7 @@ pub(crate) use crate::manifest;
 mod figure;
 mod repair;
 mod result;
+mod round;
 mod router;
 mod security;
 mod seo;
@@ -52,6 +54,7 @@ mod talk;
 pub use figure::*;
 pub use repair::*;
 pub use result::*;
+pub(crate) use round::Round;
 pub(crate) use router::*;
 pub use security::{evaluate_security, inspect_security_journal};
 pub use seo::*;

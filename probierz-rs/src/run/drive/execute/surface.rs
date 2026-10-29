@@ -56,6 +56,12 @@ pub(crate) fn run_surface(
     let manifest_path = artifacts.join("run-manifest.json");
     let stdout_path = artifacts.join("stdout.log");
     let stderr_path = artifacts.join("stderr.log");
+    let files = RunFiles {
+        artifacts: &artifacts,
+        report: &report_path,
+        stdout: &stdout_path,
+        stderr: &stderr_path,
+    };
     let build = build_identity(harness, &opts.env)?;
     let kind = segment(
         opts.kind
@@ -134,10 +140,8 @@ pub(crate) fn run_surface(
         harness,
         &app_id,
         &run_id,
-        &artifacts,
-        &report_path,
+        files,
         &journeys,
-        record,
         spec.as_deref(),
         &opts,
     );
@@ -251,11 +255,9 @@ pub(crate) fn run_surface(
         config.script,
         &env,
         redaction.clone().with_values(&opts.env),
-        &stdout_path,
-        &stderr_path,
+        files,
         name,
         &started_at,
-        &artifacts,
     );
     let validation = suite
         .as_ref()

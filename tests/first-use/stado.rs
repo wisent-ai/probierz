@@ -111,7 +111,7 @@ fn case_harness(case: &str, declaration: Option<&serde_yaml::Value>) -> PathBuf 
 /// the test with its cause, never reads as nothing installed.
 fn anything_installed(harness: &Path) -> bool {
     let runs = harness.join("test-results").join(APP).join("first-use");
-    let entries = match runs.read_dir() {
+    let mut entries = match runs.read_dir() {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return false,
         Err(error) => panic!(
@@ -119,12 +119,10 @@ fn anything_installed(harness: &Path) -> bool {
             runs.display()
         ),
     };
-    entries
-        .map(|entry| match entry {
-            Ok(run) => run.path().join("home").join(".stado").exists(),
-            Err(error) => panic!("a run under {} cannot be read: {error}", runs.display()),
-        })
-        .any(|installed| installed)
+    entries.any(|entry| match entry {
+        Ok(run) => run.path().join("home").join(".stado").exists(),
+        Err(error) => panic!("a run under {} cannot be read: {error}", runs.display()),
+    })
 }
 
 #[test]

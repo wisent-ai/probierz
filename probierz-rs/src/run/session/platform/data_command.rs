@@ -96,7 +96,7 @@ pub(crate) fn run_data_command(
     let stdout_text = text(&execution.stdout);
     // A command that printed nothing answers no result; otherwise its last
     // non-empty line is the JSON it answers with.
-    let Some(last) = stdout_text.lines().filter(|line| !line.is_empty()).last() else {
+    let Some(last) = stdout_text.lines().rfind(|line| !line.is_empty()) else {
         return json!({ "ok": true, "result": null });
     };
     match serde_json::from_str::<Value>(last) {

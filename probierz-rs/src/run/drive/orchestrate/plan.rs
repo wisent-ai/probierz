@@ -112,14 +112,12 @@ pub(crate) fn planned_cells(
     };
     let mut cells = Vec::new();
     for name in targets {
-        let surface = surfaces
-            .get(&serde_yaml::Value::String(name.clone()))
-            .ok_or_else(|| {
-                fail(
-                    "run.matrix",
-                    format!("matrix {profile} references unknown target: {name}"),
-                )
-            })?;
+        let surface = surfaces.get(name.as_str()).ok_or_else(|| {
+            fail(
+                "run.matrix",
+                format!("matrix {profile} references unknown target: {name}"),
+            )
+        })?;
         let mut dimensions = mapping(
             policy.get("dimensions"),
             format!("matrix {profile} dimensions"),

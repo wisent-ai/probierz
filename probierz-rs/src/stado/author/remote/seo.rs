@@ -95,18 +95,20 @@ pub(crate) fn submit_remote_seo(
     };
     let router = model_router_url(configured_router.as_deref())?;
     let script = seo_script(
-        app_id,
-        base_url,
-        &args.mode,
-        policy,
-        brief,
-        primary,
-        secondary,
-        adjudicator,
-        &args.agent_id,
-        &router,
-        args.production_evidence.is_some(),
-        signature,
+        SeoJob {
+            app_id,
+            base_url,
+            mode: &args.mode,
+            policy,
+            brief,
+            primary,
+            secondary,
+            adjudicator,
+            agent_id: &args.agent_id,
+            router_url: &router,
+            production_evidence: args.production_evidence.is_some(),
+            signature_required: signature,
+        },
         &packed.hash,
     );
     let script_file = work_path(&format!("probierz-seo-{}.sh", packed.hash))?;

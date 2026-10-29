@@ -94,7 +94,7 @@ impl Control {
             job.cancel_requested = true;
             (
                 answered(public_job(&job), "cancelRequested", Value::Bool(true))?,
-                job.child.clone(),
+                job.child,
             )
         };
         if let Some(child) = child {
@@ -200,7 +200,7 @@ impl Control {
                 continue;
             }
             job.cancel_requested = true;
-            if let Some(child) = job.child.clone() {
+            if let Some(child) = job.child {
                 drop(job);
                 terminate_tree(child);
             }

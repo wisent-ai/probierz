@@ -7,7 +7,7 @@
 //! directory. The key block is put together when the test runs, so this file
 //! carries no key text for a scanner reading the repository.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use serde_json::Value;
@@ -37,7 +37,7 @@ fn directory(case: &str, file: &str, body: &str) -> PathBuf {
     root
 }
 
-fn scan(root: &PathBuf) -> (Output, Value) {
+fn scan(root: &Path) -> (Output, Value) {
     let output = probierz(&["secrets", "scan", &root.to_string_lossy()]);
     let document = serde_json::from_slice(&output.stdout).expect("secrets scan prints JSON");
     (output, document)

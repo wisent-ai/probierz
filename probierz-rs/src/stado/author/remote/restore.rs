@@ -184,8 +184,10 @@ pub(crate) fn restore_remote_authoring(
         app_id,
         journey,
         target,
-        &expected_spec,
-        &expected_registration,
+        SpecPlacement {
+            product_relative: &expected_spec,
+            registration_relative: &expected_registration,
+        },
         &bytes,
     )?;
     let current = crate::authoring::app_source_identity(harness, app_id, Some(&product_root))?;

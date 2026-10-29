@@ -1,17 +1,29 @@
 use crate::authoring::*;
 use serde_json::json;
+/// What one SEO model call reads: the policy, the approved brief, and the
+/// crawled page evidence with its deterministic checks.
+pub(crate) struct SeoMaterial<'a> {
+    pub(crate) policy: &'a JsonValue,
+    pub(crate) brief: &'a JsonValue,
+    pub(crate) evidence: &'a JsonValue,
+    pub(crate) deterministic: &'a JsonValue,
+}
+
 pub(crate) fn invoke_seo_model(
     model: &str,
     url: &str,
     token: &str,
     agent_id: &str,
     agent_secret: &str,
-    policy: &JsonValue,
-    brief: &JsonValue,
-    evidence: &JsonValue,
-    deterministic: &JsonValue,
+    material: SeoMaterial<'_>,
     adjudication: Option<&JsonValue>,
 ) -> Result<JsonValue, Failure> {
+    let SeoMaterial {
+        policy,
+        brief,
+        evidence,
+        deterministic,
+    } = material;
     // An adjudication judges the two evaluations it was given; an evaluation
     // judges the brief, routes and page evidence.
     let compact = match adjudication {

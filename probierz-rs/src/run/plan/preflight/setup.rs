@@ -68,7 +68,9 @@ pub fn setup(harness: &Path, name: &str, args: &[String]) -> Answer {
     if target(name).is_none() {
         return Err(fail("cli.setup", format!("unknown target: {name}")));
     }
-    let opts = parse_run_args(args, false)?;
+    // Setup reads no run option, but an argument it does not know is still
+    // refused rather than ignored.
+    parse_run_args(args, false)?;
     let env = env_snapshot(&BTreeMap::new());
     let mut done = Vec::new();
     let mut failure: Option<(String, String, Option<String>)> = None;

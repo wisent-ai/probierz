@@ -85,7 +85,6 @@ pub(crate) fn decrypt_bundle_payload(
     }
     plaintext.flush()?;
     drop(plaintext);
-    drop(encrypted);
 
     let mut stored_tag = Vec::new();
     (&mut input)

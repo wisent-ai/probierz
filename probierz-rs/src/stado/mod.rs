@@ -27,7 +27,7 @@ pub(crate) use std::os::unix::process::ExitStatusExt;
 pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::{Command, Stdio};
 pub(crate) use std::thread;
-pub(crate) use std::time::{Instant, SystemTime, UNIX_EPOCH};
+pub(crate) use std::time::Instant;
 
 pub(crate) use chrono::Utc;
 pub(crate) use clap::{Args, Subcommand};

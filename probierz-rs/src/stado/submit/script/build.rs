@@ -1,17 +1,17 @@
 use crate::stado::*;
 pub(crate) fn run_script(
-    target: &str,
-    app_id: &str,
-    spec: Option<&str>,
+    plan: ScriptPlan<'_>,
     provision: Option<&Provision>,
     hash: &str,
     platform: Option<&str>,
-    mode: ScriptMode,
-    author: Option<(&str, &str, &str, &str)>,
-    model_router_url: Option<&str>,
-    record: bool,
-    environment: &[(String, String)],
 ) -> Result<String, Failure> {
+    let ScriptPlan {
+        target,
+        app_id,
+        mode,
+        environment,
+        ..
+    } = plan;
     let mut lines = vec![
         "set -euo pipefail".to_string(),
         "JOB_ROOT=\"$PWD\"".to_string(),
@@ -152,18 +152,6 @@ pub(crate) fn run_script(
     for (name, value) in environment {
         lines.push(format!("export {name}={}", shell_quote(value)));
     }
-    script_body(
-        target,
-        app_id,
-        hash,
-        spec,
-        provision,
-        mode,
-        author,
-        model_router_url,
-        record,
-        environment,
-        &mut lines,
-    )?;
+    script_body(plan, hash, provision, &mut lines)?;
     Ok(lines.join("\n"))
 }

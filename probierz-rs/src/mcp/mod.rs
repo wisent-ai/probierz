@@ -19,7 +19,7 @@
 
 pub(crate) use std::collections::HashMap;
 pub(crate) use std::fs;
-pub(crate) use std::io::{self, BufRead, Read, Write};
+pub(crate) use std::io::{self, BufRead, Write};
 pub(crate) use std::path::{Component, Path, PathBuf};
 pub(crate) use std::process::{Command, ExitStatus, Stdio};
 pub(crate) use std::sync::{Arc, Mutex};

@@ -47,19 +47,25 @@ pub(crate) fn request_json(
         request = request.set(name, value);
     }
     let place = format!("{method} {endpoint}");
+    // ureq's error is large, so the closure answers it boxed.
     let response = stado_wait::blocking(
         stado_wait::Kind::Network,
         "app hook request",
         &place,
-        || match body {
-            Some(body) => request.send_json(body),
-            None => request.call(),
+        || {
+            match body {
+                Some(body) => request.send_json(body),
+                None => request.call(),
+            }
+            .map_err(Box::new)
         },
     );
     match response {
         Ok(response) => response_json(response),
-        Err(ureq::Error::Status(_, response)) => response_json(response),
-        Err(error) => Err(Failure::unavailable("apphook.http", error.to_string())),
+        Err(error) => match *error {
+            ureq::Error::Status(_, response) => response_json(response),
+            other => Err(Failure::unavailable("apphook.http", other.to_string())),
+        },
     }
 }
 

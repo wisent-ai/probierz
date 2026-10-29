@@ -5,5 +5,4 @@ pub(crate) mod render;
 pub(crate) mod report;
 
 pub(crate) use changes::*;
-pub(crate) use render::*;
 pub(crate) use report::*;

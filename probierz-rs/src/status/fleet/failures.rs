@@ -105,7 +105,7 @@ pub(crate) fn failures_index(service: Option<&str>, limit: usize) -> Value {
         grouped.entry((service, code)).or_default().push(envelope);
     }
     let mut grouped = grouped.into_iter().collect::<Vec<_>>();
-    grouped.sort_by(|left, right| right.1.len().cmp(&left.1.len()));
+    grouped.sort_by_key(|group| std::cmp::Reverse(group.1.len()));
     let counts = grouped
         .into_iter()
         .map(|((service, code), members)| {

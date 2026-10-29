@@ -9,20 +9,39 @@ pub(crate) enum ScriptMode {
     Author,
 }
 
-#[allow(clippy::too_many_arguments)]
+/// What one remote job script is asked to do, apart from the host it runs on
+/// and the harness it is packed with: the target and app, the spec it runs or
+/// the journey it authors (journey, area, description, receipt id), the router
+/// an author reaches, whether the run records, and the environment forwarded
+/// to the job.
+#[derive(Clone, Copy)]
+pub(crate) struct ScriptPlan<'a> {
+    pub(crate) target: &'a str,
+    pub(crate) app_id: &'a str,
+    pub(crate) spec: Option<&'a str>,
+    pub(crate) mode: ScriptMode,
+    pub(crate) author: Option<(&'a str, &'a str, &'a str, &'a str)>,
+    pub(crate) model_router_url: Option<&'a str>,
+    pub(crate) record: bool,
+    pub(crate) environment: &'a [(String, String)],
+}
+
 pub(crate) fn script_body(
-    target: &str,
-    app_id: &str,
+    plan: ScriptPlan<'_>,
     hash: &str,
-    spec: Option<&str>,
     provision: Option<&Provision>,
-    mode: ScriptMode,
-    author: Option<(&str, &str, &str, &str)>,
-    model_router_url: Option<&str>,
-    record: bool,
-    environment: &[(String, String)],
     lines: &mut Vec<String>,
 ) -> Result<(), Failure> {
+    let ScriptPlan {
+        target,
+        app_id,
+        spec,
+        mode,
+        author,
+        model_router_url,
+        record,
+        environment,
+    } = plan;
     lines.extend([
         "cd \"$HARNESS\"".into(),
         "export PROBIERZ_SOURCE_IDENTITY=\"$JOB_ROOT/inputs/source-identity.json\"".into(),

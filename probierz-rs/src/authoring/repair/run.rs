@@ -69,8 +69,10 @@ pub fn repair_failed_run(
                 &loaded,
                 &run,
                 &evidence,
-                round,
-                rounds,
+                Round {
+                    number: round,
+                    of: rounds,
+                },
                 prior.as_ref(),
             );
             fs::write(repair_dir.join(format!("round-{round}-brief.txt")), &brief)

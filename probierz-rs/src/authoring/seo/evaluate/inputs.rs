@@ -25,8 +25,6 @@ pub(crate) struct Contract {
     pub(crate) policy_path: PathBuf,
     pub(crate) brief: JsonValue,
     pub(crate) brief_path: PathBuf,
-    /// The application manifest's `seo` section.
-    pub(crate) seo: YamlValue,
     /// Whether this mode's profile requires a signed report, as it states.
     signature_required: bool,
     pub(crate) loaded: manifest::Manifest,
@@ -51,19 +49,15 @@ impl Contract {
         let canonical = canonical_base_url(base_url)?;
 
         let loaded = manifest::load(harness, app_id)?;
-        let seo = loaded
-            .document
-            .get("seo")
-            .ok_or_else(|| {
-                Failure::config(
-                    "seo-evaluate",
-                    format!(
-                        "invalid SEO contract: {} seo section is required",
-                        loaded.file.display()
-                    ),
-                )
-            })?
-            .clone();
+        let seo = loaded.document.get("seo").ok_or_else(|| {
+            Failure::config(
+                "seo-evaluate",
+                format!(
+                    "invalid SEO contract: {} seo section is required",
+                    loaded.file.display()
+                ),
+            )
+        })?;
         // The mode's profile states whether its report must be signed; a
         // mode the manifest declares no profile for is refused, not unsigned.
         let signature_required = match seo
@@ -141,7 +135,6 @@ impl Contract {
             policy_path,
             brief,
             brief_path,
-            seo,
             signature_required,
             loaded,
         })

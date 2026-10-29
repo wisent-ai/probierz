@@ -77,13 +77,15 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
                 minimum,
             } => evidence::receipt(
                 harness,
-                app_id.as_deref(),
-                release.as_deref(),
-                expected_harness_sha.as_deref(),
-                expected_source_sha.as_deref(),
-                runs.as_deref(),
-                journeys.as_deref(),
-                minimum.as_deref(),
+                evidence::ReceiptRequest {
+                    app_id: app_id.as_deref(),
+                    release: release.as_deref(),
+                    expected_harness: expected_harness_sha.as_deref(),
+                    expected_source: expected_source_sha.as_deref(),
+                    runs_csv: runs.as_deref(),
+                    journeys_csv: journeys.as_deref(),
+                    minimum: minimum.as_deref(),
+                },
             ),
             ReceiptCommand::Verify {
                 file,

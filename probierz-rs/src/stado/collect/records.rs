@@ -60,17 +60,29 @@ pub(crate) fn read_author_submission(harness: &Path, job_id: &str) -> Option<Val
     }
 }
 
+/// The journey a remote authoring job writes: the app, the journey, the area
+/// it is filed under, and the surface it targets.
+pub(crate) struct AuthoredJourney<'a> {
+    pub(crate) app_id: &'a str,
+    pub(crate) journey: &'a str,
+    pub(crate) area: &'a str,
+    pub(crate) target: &'a str,
+}
+
 pub(crate) fn save_author_submission(
     harness: &Path,
     job_id: &str,
-    app_id: &str,
-    journey: &str,
-    area: &str,
-    target: &str,
+    authored: AuthoredJourney<'_>,
     product_root: &Path,
     test_directory: &str,
     identity: &Identity,
 ) -> Result<PathBuf, Failure> {
+    let AuthoredJourney {
+        app_id,
+        journey,
+        area,
+        target,
+    } = authored;
     let file = harness
         .join("test-results")
         .join(".remote")

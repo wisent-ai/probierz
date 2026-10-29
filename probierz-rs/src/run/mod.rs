@@ -18,12 +18,11 @@
 // was one file.
 pub(crate) use std::collections::{BTreeMap, BTreeSet, HashMap};
 pub(crate) use std::fs::{self, OpenOptions};
-pub(crate) use std::io::{BufRead, BufReader, Read, Write};
-pub(crate) use std::os::unix::fs::PermissionsExt;
+pub(crate) use std::io::{Read, Write};
 pub(crate) use std::path::{Component, Path, PathBuf};
 pub(crate) use std::process::{Command, ExitStatus, Stdio};
 pub(crate) use std::thread;
-pub(crate) use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+pub(crate) use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 pub(crate) use chrono::{DateTime, SecondsFormat, Utc};
 pub(crate) use flate2::read::DeflateDecoder;

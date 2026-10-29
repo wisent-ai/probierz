@@ -3,7 +3,7 @@
 //! before any model is asked, and the refusal says what to supply.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 const PROBIERZ: &str = env!("CARGO_BIN_EXE_probierz");
@@ -27,7 +27,7 @@ fn workspace(name: &str) -> PathBuf {
     root
 }
 
-fn evaluate(root: &PathBuf, extra: &[&str]) -> Output {
+fn evaluate(root: &Path, extra: &[&str]) -> Output {
     let slides = root.join("slides");
     let script = root.join("script.md");
     let mut words = vec![

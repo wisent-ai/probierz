@@ -145,7 +145,7 @@ pub fn status(harness: &Path, app_id: &str) -> Answer {
 }
 
 pub(crate) fn yaml_get<'a>(value: &'a Yaml, key: &str) -> Option<&'a Yaml> {
-    value.as_mapping()?.get(&Yaml::String(key.to_string()))
+    value.as_mapping()?.get(key)
 }
 
 pub(crate) fn yaml_string(value: Option<&Yaml>) -> Option<String> {

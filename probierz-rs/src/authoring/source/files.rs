@@ -51,7 +51,10 @@ pub(crate) fn source_git_failure(root: &Path, reason: String) -> Failure {
     let detail = if root.exists() {
         format!("git ls-files in {}: {reason}", root.display())
     } else {
-        format!("git ls-files in {}: {reason}", root.display())
+        format!(
+            "git ls-files in {}: {reason}; that directory does not exist",
+            root.display()
+        )
     };
     Failure::config("run.source", detail)
 }

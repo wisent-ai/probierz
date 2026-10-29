@@ -8,16 +8,28 @@ use serde_json::json;
 
 use checks::{check_artifacts, check_runs, exact_builds, journey_coverage};
 
-pub fn receipt(
-    harness: &Path,
-    app_id: Option<&str>,
-    release: Option<&str>,
-    expected_harness: Option<&str>,
-    expected_source: Option<&str>,
-    runs_csv: Option<&str>,
-    journeys_csv: Option<&str>,
-    minimum: Option<&str>,
-) -> Answer {
+/// What `probierz evidence receipt create` asks to sign, as its arguments
+/// give it; each required one is refused by name when absent.
+pub struct ReceiptRequest<'a> {
+    pub app_id: Option<&'a str>,
+    pub release: Option<&'a str>,
+    pub expected_harness: Option<&'a str>,
+    pub expected_source: Option<&'a str>,
+    pub runs_csv: Option<&'a str>,
+    pub journeys_csv: Option<&'a str>,
+    pub minimum: Option<&'a str>,
+}
+
+pub fn receipt(harness: &Path, request: ReceiptRequest<'_>) -> Answer {
+    let ReceiptRequest {
+        app_id,
+        release,
+        expected_harness,
+        expected_source,
+        runs_csv,
+        journeys_csv,
+        minimum,
+    } = request;
     let app_id = app_id.unwrap_or_default();
     let release = release.unwrap_or_default();
     let expected_harness = expected_harness.unwrap_or_default();

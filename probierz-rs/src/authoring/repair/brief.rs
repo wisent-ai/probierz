@@ -5,8 +5,7 @@ pub(crate) fn repair_brief(
     loaded: &manifest::Manifest,
     run: &JsonValue,
     evidence: &JsonValue,
-    round: u32,
-    rounds: u32,
+    round: Round,
     prior: Option<&JsonValue>,
 ) -> String {
     let journey = run
@@ -103,7 +102,7 @@ pub(crate) fn repair_brief(
             .map(str::to_string)
     });
     let mut sections = vec![
-        format!("Repair a recorded Probierz failure. Round {round} of {rounds}."),
+        format!("Repair a recorded Probierz failure. {round}."),
         format!("Application: {app_id}"),
         format!("Repository: {root}"),
         format!(

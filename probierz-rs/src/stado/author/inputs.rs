@@ -1,20 +1,38 @@
 use crate::stado::*;
 use serde_json::json;
-pub(crate) fn seo_script(
-    app_id: &str,
-    base_url: &str,
-    mode: &str,
-    policy: &str,
-    brief: &str,
-    primary: &str,
-    secondary: &str,
-    adjudicator: &str,
-    agent_id: &str,
-    router_url: &str,
-    production_evidence: bool,
-    signature_required: bool,
-    hash: &str,
-) -> String {
+/// The remote SEO evaluation one job script runs: the app and URL it judges,
+/// the policy and brief it reads, its three models, the router they are
+/// reached through, and what the mode's profile requires.
+pub(crate) struct SeoJob<'a> {
+    pub(crate) app_id: &'a str,
+    pub(crate) base_url: &'a str,
+    pub(crate) mode: &'a str,
+    pub(crate) policy: &'a str,
+    pub(crate) brief: &'a str,
+    pub(crate) primary: &'a str,
+    pub(crate) secondary: &'a str,
+    pub(crate) adjudicator: &'a str,
+    pub(crate) agent_id: &'a str,
+    pub(crate) router_url: &'a str,
+    pub(crate) production_evidence: bool,
+    pub(crate) signature_required: bool,
+}
+
+pub(crate) fn seo_script(job: SeoJob<'_>, hash: &str) -> String {
+    let SeoJob {
+        app_id,
+        base_url,
+        mode,
+        policy,
+        brief,
+        primary,
+        secondary,
+        adjudicator,
+        agent_id,
+        router_url,
+        production_evidence,
+        signature_required,
+    } = job;
     let mut lines = vec![
         "set -euo pipefail".to_string(),
         "JOB_ROOT=\"$PWD\"".into(),
@@ -86,7 +104,7 @@ pub(crate) fn provision_inputs(
                     "Remote native-binary provisioning needs --app-repo <path>.",
                 )
             })?;
-            if !crate::paths::present(&binary_path)? || !binary_path.is_file() {
+            if !crate::paths::present(binary_path)? || !binary_path.is_file() {
                 return Err(Failure::config("stado.pack", "The --app-binary-path you gave is not a file. Supply the signed native executable."));
             }
             let staged = work_path(&format!(

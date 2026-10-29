@@ -1,18 +1,27 @@
 use crate::stado::*;
 use serde_json::json;
+/// Where a remote job is sent and what it carries: the host, the app build it
+/// provisions, the product checkout it packs, and whether the call waits for
+/// the job to end.
+pub(crate) struct RemoteJob<'a> {
+    pub(crate) host: &'a str,
+    pub(crate) provision: Option<Provision>,
+    pub(crate) app_repo: Option<&'a Path>,
+    pub(crate) watch: bool,
+}
+
 pub(crate) fn submit_remote_run(
     harness: &Path,
-    target: &str,
-    app_id: &str,
-    spec: Option<&str>,
-    host_name: &str,
-    mut provision: Option<Provision>,
-    app_repo: Option<&Path>,
-    watch: bool,
-    mode: ScriptMode,
-    record: bool,
-    environment: &[(String, String)],
+    plan: ScriptPlan<'_>,
+    remote: RemoteJob<'_>,
 ) -> Result<Value, Failure> {
+    let ScriptPlan { target, app_id, .. } = plan;
+    let RemoteJob {
+        host: host_name,
+        mut provision,
+        app_repo,
+        watch,
+    } = remote;
     let selected = host(host_name, "stado.submit")?;
     require_gui_ready(target, &selected)?;
     let identity = pack_source_identity(harness, app_id, app_repo)?;
@@ -25,17 +34,10 @@ pub(crate) fn submit_remote_run(
     )?;
     let provisioned = provision_inputs(app_id, &mut provision, app_repo, false)?;
     let script = run_script(
-        target,
-        app_id,
-        spec,
+        plan,
         provision.as_ref(),
         &packed.hash,
         selected.platform.as_deref(),
-        mode,
-        None,
-        None,
-        record,
-        environment,
     )?;
     let script_file = work_path(&format!("probierz-run-{}.sh", packed.hash))?;
     fs::write(&script_file, script)?;

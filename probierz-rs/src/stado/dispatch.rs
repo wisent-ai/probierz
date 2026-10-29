@@ -30,20 +30,26 @@ pub(crate) fn dispatch_run(harness: &Path, args: RunArgs) -> Answer {
     }
     let result = submit_remote_run(
         harness,
-        target,
-        app_id,
-        args.spec.as_deref(),
-        &args.host,
-        provision,
-        args.app_repo.as_deref(),
-        !args.no_watch,
-        if args.script.is_some() {
-            ScriptMode::Script
-        } else {
-            ScriptMode::Run
+        ScriptPlan {
+            target,
+            app_id,
+            spec: args.spec.as_deref(),
+            mode: if args.script.is_some() {
+                ScriptMode::Script
+            } else {
+                ScriptMode::Run
+            },
+            author: None,
+            model_router_url: None,
+            record: args.record,
+            environment: &environment,
         },
-        args.record,
-        &environment,
+        RemoteJob {
+            host: &args.host,
+            provision,
+            app_repo: args.app_repo.as_deref(),
+            watch: !args.no_watch,
+        },
     )?;
     finish_remote(result)
 }
@@ -114,10 +120,12 @@ pub(crate) fn dispatch_author(harness: &Path, args: AuthorArgs) -> Answer {
             Some(area) => area,
             None => journey,
         },
-        &args.host,
-        provision,
-        args.app_repo.as_deref(),
-        !args.no_watch,
+        RemoteJob {
+            host: &args.host,
+            provision,
+            app_repo: args.app_repo.as_deref(),
+            watch: !args.no_watch,
+        },
     )?;
     finish_remote(result)
 }

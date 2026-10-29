@@ -7,11 +7,14 @@ pub(crate) fn submit_remote_author(
     target: &str,
     description: &str,
     area: &str,
-    host_name: &str,
-    mut provision: Option<Provision>,
-    app_repo: Option<&Path>,
-    watch: bool,
+    remote: RemoteJob<'_>,
 ) -> Result<Value, Failure> {
+    let RemoteJob {
+        host: host_name,
+        mut provision,
+        app_repo,
+        watch,
+    } = remote;
     let journey = safe_author_name(journey, "journey")?;
     let area = safe_author_name(area, "authoring area")?;
     if registration_directory(target).is_none() {
@@ -77,17 +80,19 @@ pub(crate) fn submit_remote_author(
         }
     };
     let script = run_script(
-        target,
-        app_id,
-        None,
+        ScriptPlan {
+            target,
+            app_id,
+            spec: None,
+            mode: ScriptMode::Author,
+            author: Some(author),
+            model_router_url: Some(&router),
+            record: false,
+            environment: &environment,
+        },
         provision.as_ref(),
         &packed.hash,
         selected.platform.as_deref(),
-        ScriptMode::Author,
-        Some(author),
-        Some(&router),
-        false,
-        &environment,
     )?;
     let script_file = work_path(&format!("probierz-author-{}.sh", packed.hash))?;
     fs::write(&script_file, script)?;
@@ -159,10 +164,12 @@ pub(crate) fn submit_remote_author(
     let source_receipt = save_author_submission(
         harness,
         &job_id,
-        app_id,
-        &journey,
-        &area,
-        target,
+        AuthoredJourney {
+            app_id,
+            journey: &journey,
+            area: &area,
+            target,
+        },
         &product_root,
         test_directory,
         &identity,

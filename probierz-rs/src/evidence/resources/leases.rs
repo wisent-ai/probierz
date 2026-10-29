@@ -131,13 +131,9 @@ pub(crate) fn acquire_one(
 /// Held resources; dropping the lease closes the files and releases them.
 pub struct ResourceLease {
     pub resources: Vec<String>,
-    files: Vec<fs::File>,
-}
-
-impl ResourceLease {
-    pub fn release(&mut self) {
-        self.files.clear();
-    }
+    /// The open lock files, kept only so their locks last as long as the
+    /// lease does.
+    _files: Vec<fs::File>,
 }
 
 /// Locks every resource in sorted order, so two runs that need overlapping
@@ -156,7 +152,7 @@ pub fn acquire_resources(
     }
     Ok(ResourceLease {
         resources: unique,
-        files,
+        _files: files,
     })
 }
 

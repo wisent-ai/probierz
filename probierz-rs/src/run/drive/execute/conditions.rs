@@ -75,10 +75,8 @@ pub(crate) fn suite_environment(
     harness: &Path,
     app_id: &str,
     run_id: &str,
-    artifacts: &Path,
-    report_path: &Path,
+    files: RunFiles<'_>,
     journeys: &[String],
-    record: bool,
     spec: Option<&str>,
     opts: &RunOptions,
 ) -> BTreeMap<String, String> {
@@ -91,11 +89,11 @@ pub(crate) fn suite_environment(
     );
     env.insert(
         "PROBIERZ_ARTIFACTS".into(),
-        artifacts.to_string_lossy().into_owned(),
+        files.artifacts.to_string_lossy().into_owned(),
     );
     env.insert(
         "PROBIERZ_REPORT_PATH".into(),
-        report_path.to_string_lossy().into_owned(),
+        files.report.to_string_lossy().into_owned(),
     );
     env.insert("PROBIERZ_JOURNEYS".into(), journeys.join(","));
     env.insert(
@@ -105,7 +103,7 @@ pub(crate) fn suite_environment(
             .to_string_lossy()
             .into_owned(),
     );
-    if record {
+    if opts.record {
         env.insert("PROBIERZ_RECORD".into(), "1".into());
     }
     if let Ok(binary) = std::env::current_exe() {
