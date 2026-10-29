@@ -1,4 +1,4 @@
-import { shared } from './wdio.shared.conf';
+import { shared, stated } from './wdio.shared.conf';
 import type { Options } from '@wdio/types';
 
 /**
@@ -11,7 +11,7 @@ export const config: Options.Testrunner = {
     {
       platformName: 'Android',
       'appium:automationName': 'UiAutomator2',
-      'appium:deviceName': process.env.ANDROID_DEVICE || 'Android Emulator',
+      'appium:deviceName': stated('ANDROID_DEVICE', 'the emulator or device name to run on (adb devices lists them)'),
       'appium:platformVersion': process.env.ANDROID_VERSION,
       ...(process.env.APP_ANDROID ? { 'appium:app': process.env.APP_ANDROID } : {}),
       ...(process.env.APP_PACKAGE ? { 'appium:appPackage': process.env.APP_PACKAGE } : {}),

@@ -1,4 +1,4 @@
-import { shared } from './wdio.shared.conf';
+import { shared, stated } from './wdio.shared.conf';
 import type { Options } from '@wdio/types';
 
 const locale = process.env.PROBIERZ_LOCALE || 'en';
@@ -21,7 +21,7 @@ export const config: Options.Testrunner = {
     {
       platformName: 'iOS',
       'appium:automationName': 'XCUITest',
-      'appium:deviceName': process.env.IOS_DEVICE || 'iPhone 15',
+      'appium:deviceName': stated('IOS_DEVICE', 'the simulator or device name to run on, e.g. "iPhone 17"'),
       ...(process.env.IOS_VERSION ? { 'appium:platformVersion': process.env.IOS_VERSION } : {}),
       ...(process.env.APP_IOS ? { 'appium:app': process.env.APP_IOS } : {}),
       'appium:enforceAppInstall': true,

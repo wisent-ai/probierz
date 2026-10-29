@@ -37,9 +37,10 @@ pub(super) fn source(path: &Path) -> Result<Source, Failure> {
         }
     };
     let bytes = read(path, "--source")?;
-    let text = match portable {
-        true => pdf_text(path, &bytes)?,
-        false => utf8(&bytes, path, "--source")?,
+    let text = if portable {
+        pdf_text(path, &bytes)?
+    } else {
+        utf8(&bytes, path, "--source")?
     };
     if text.trim().is_empty() {
         return Err(Failure::invalid(

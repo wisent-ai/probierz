@@ -93,7 +93,7 @@ pub(crate) fn complete_run(
     if analysis_error.is_none() {
         match total {
             None => errors.push(json!("the analysis states no executed-check total")),
-            Some(total) if std::num::NonZeroU64::new(total).is_none() => {
+            Some(0) => {
                 errors.push(json!("zero executed checks"))
             }
             Some(_) => {}

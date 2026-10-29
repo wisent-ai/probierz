@@ -1,6 +1,5 @@
 use crate::stado::*;
 use serde_json::json;
-use std::num::NonZeroU64;
 pub(crate) fn submit_remote_run(
     harness: &Path,
     target: &str,
@@ -138,9 +137,10 @@ pub(crate) fn submit_remote_run(
         named => named,
     };
     let remediation = listed("remediation", "; ");
-    let detail = match remediation.is_empty() {
-        true => format!("missing: {missing}"),
-        false => format!("missing: {missing}; remediation: {remediation}"),
+    let detail = if remediation.is_empty() {
+        format!("missing: {missing}")
+    } else {
+        format!("missing: {missing}; remediation: {remediation}")
     };
     let failure = Failure::config("stado.worker", detail);
     result.insert("preflight".into(), preflight.clone());
@@ -178,7 +178,7 @@ pub(crate) fn require_immutable_native(
         .and_then(Value::as_array)
         .and_then(|repositories| {
             repositories.iter().find(|value| {
-                value.get("index").and_then(Value::as_u64).is_some_and(|index| NonZeroU64::new(index).is_none())
+                value.get("index").and_then(Value::as_u64) == Some(0)
             })
         });
     let clean = primary

@@ -218,9 +218,10 @@ fn replaced_product(
         return Ok(None);
     }
     let target = fs::read_link(registration)?;
-    let candidate = match target.is_absolute() {
-        true => target,
-        false => registration_parent.join(target),
+    let candidate = if target.is_absolute() {
+        target
+    } else {
+        registration_parent.join(target)
     };
     let Some(candidate) = examined(fs::canonicalize(candidate))? else {
         return Ok(None);

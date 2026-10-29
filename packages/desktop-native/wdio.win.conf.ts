@@ -17,7 +17,14 @@ export const config: Options.Testrunner = {
   capabilities: [
     {
       platformName: 'windows',
-      app: process.env.WIN_APP || 'Microsoft.WindowsCalculator_8wekyb3d8bbwe!App',
+      app: (() => {
+        // The app under test is the caller's to state; none is picked for them.
+        const app = process.env.WIN_APP;
+        if (!app) {
+          throw new Error('WIN_APP is required: set it to the AppId or .exe path of the app to test, e.g. Microsoft.WindowsCalculator_8wekyb3d8bbwe!App');
+        }
+        return app;
+      })(),
       'appium:deviceName': 'WindowsPC',
     },
   ],

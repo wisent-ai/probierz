@@ -143,19 +143,13 @@ pub(crate) fn canonical_json(value: &JsonValue) -> String {
 pub(crate) fn sign_seo_payload(payload: &JsonValue, key: &[u8]) -> Result<JsonValue, Failure> {
     let text = String::from_utf8_lossy(key);
     // A PEM key announces itself with its BEGIN line; anything else is DER.
-    let signing = match text.contains("BEGIN") {
-        true => SigningKey::from_pkcs8_pem(text.trim()).map_err(|error| {
-            Failure::config(
-                "seo-evaluate.sign",
-                format!("invalid Ed25519 private key: {error}"),
-            )
-        })?,
-        false => SigningKey::from_pkcs8_der(key).map_err(|error| {
-            Failure::config(
-                "seo-evaluate.sign",
-                format!("invalid Ed25519 private key: {error}"),
-            )
-        })?,
+    let invalid = |error: &dyn std::fmt::Display| {
+        Failure::config("seo-evaluate.sign", format!("invalid Ed25519 private key: {error}"))
+    };
+    let signing = if text.contains("BEGIN") {
+        SigningKey::from_pkcs8_pem(text.trim()).map_err(|error| invalid(&error))?
+    } else {
+        SigningKey::from_pkcs8_der(key).map_err(|error| invalid(&error))?
     };
     let public = signing.verifying_key();
     let canonical = canonical_json(payload);

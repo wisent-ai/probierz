@@ -42,6 +42,19 @@ const specGlob = process.env.PROBIERZ_SPEC
   : ['./test/specs/**/*.e2e.ts'];
 
 /**
+ * The value of environment variable `name`, refused by name when it is unset
+ * or empty: the device or app under test is the caller's to state, never one
+ * this config picks for them.
+ */
+export function stated(name: string, what: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required: set it to ${what}`);
+  }
+  return value;
+}
+
+/**
  * Settings common to iOS and Android runs. Platform-specific configs spread
  * this and add their own `capabilities`.
  */

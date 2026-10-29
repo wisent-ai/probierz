@@ -99,6 +99,17 @@ path = "../tests/suites/run.rs"
 name = "intake_serve"
 path = "../tests/intake/serve.rs"
 
+# A result dropped with `let _ =` is a failure nobody hears of: a temporary
+# that stays, an audit that was not written, a kill that did not end a
+# process. Each such result is handled or said where it arises.
+[lints.rust]
+unused_must_use = "deny"
+
+[lints.clippy]
+let_underscore_must_use = "deny"
+# A `match` on a boolean is an if/else written to look like something else.
+match_bool = "deny"
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
