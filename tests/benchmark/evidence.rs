@@ -124,7 +124,9 @@ fn scout_reads_named_evidence_and_refuses_what_the_file_lacks() {
     write(&file, &evidence("other-topic", true));
     let other = scout();
     assert!(
-        stderr(&other).contains("holds the trend of topic \"other-topic\", not browser-agents"),
+        // The refusal travels as the probierz-failure JSON line, so the
+        // topic's quotes arrive escaped.
+        stderr(&other).contains(r#"holds the trend of topic \"other-topic\", not browser-agents"#),
         "{}",
         stderr(&other)
     );
@@ -150,7 +152,7 @@ fn scout_reads_named_evidence_and_refuses_what_the_file_lacks() {
     let unread = scout();
     assert!(!unread.status.success(), "{}", stderr(&unread));
     assert!(
-        stderr(&unread).contains("whose min_evidence is not a whole number: \"a few\""),
+        stderr(&unread).contains(r#"whose min_evidence is not a whole number: \"a few\""#),
         "{}",
         stderr(&unread)
     );
