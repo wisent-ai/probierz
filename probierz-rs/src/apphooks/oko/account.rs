@@ -4,16 +4,8 @@ pub(crate) fn ensure_technical_account(
     source: &BTreeMap<String, String>,
 ) -> Result<Value, Failure> {
     required(source, &OKO_ACCOUNT_REQUIRED, "missing E2E configuration")?;
-    let email = technical_email(
-        source
-            .get("OKO_E2E_EMAIL")
-            .map(String::as_str)
-            .unwrap_or_default(),
-    )?;
-    let base = source
-        .get("OKO_E2E_SUPABASE_URL")
-        .expect("required")
-        .trim_end_matches('/');
+    let email = technical_email(configured(source, "OKO_E2E_EMAIL")?)?;
+    let base = configured(source, "OKO_E2E_SUPABASE_URL")?.trim_end_matches('/');
     let headers = supabase_headers(source, None);
     let page = request_json(
         "GET",
@@ -61,16 +53,8 @@ pub(crate) fn ensure_technical_account(
 
 pub(crate) fn generate_admin_otp(source: &BTreeMap<String, String>) -> Result<String, Failure> {
     required(source, &OKO_ACCOUNT_REQUIRED, "missing E2E configuration")?;
-    let email = technical_email(
-        source
-            .get("OKO_E2E_EMAIL")
-            .map(String::as_str)
-            .unwrap_or_default(),
-    )?;
-    let base = source
-        .get("OKO_E2E_SUPABASE_URL")
-        .expect("required")
-        .trim_end_matches('/');
+    let email = technical_email(configured(source, "OKO_E2E_EMAIL")?)?;
+    let base = configured(source, "OKO_E2E_SUPABASE_URL")?.trim_end_matches('/');
     let body = request_json(
         "POST",
         &format!("{base}/auth/v1/admin/generate_link"),
@@ -121,13 +105,8 @@ pub(crate) fn oko_otp(
         return generate_admin_otp(source);
     }
     required(source, &OKO_BROKER_REQUIRED, "missing E2E configuration")?;
-    let email = technical_email(
-        source
-            .get("OKO_E2E_EMAIL")
-            .map(String::as_str)
-            .unwrap_or_default(),
-    )?;
-    let base = broker_url.expect("required").trim_end_matches('/');
+    let email = technical_email(configured(source, "OKO_E2E_EMAIL")?)?;
+    let base = configured(source, "OKO_E2E_OTP_BROKER_URL")?.trim_end_matches('/');
     let mut endpoint = Url::parse(&format!("{base}/v1/otp"))
         .map_err(|error| Failure::config("apphook.oko.otp", error.to_string()))?;
     {
@@ -146,7 +125,7 @@ pub(crate) fn oko_otp(
         endpoint.as_str(),
         &[(
             "Authorization",
-            format!("Bearer {}", broker_token.expect("required")),
+            format!("Bearer {}", configured(source, "OKO_E2E_OTP_BROKER_TOKEN")?),
         )],
         None,
     )?;

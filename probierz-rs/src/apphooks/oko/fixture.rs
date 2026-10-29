@@ -145,7 +145,12 @@ pub(crate) fn feedback_decision(run_id: &str) -> Value {
 
 pub(crate) fn technical_email(email: &str) -> Result<String, Failure> {
     let email = email.to_ascii_lowercase();
-    let local = email.split('@').next().unwrap_or_default();
+    // The local part is what precedes the address's first `@`; a text
+    // without one is all local part, which the check below then judges.
+    let local = match email.split_once('@') {
+        Some((local, _domain)) => local,
+        None => email.as_str(),
+    };
     if !local.contains("e2e") && !local.contains("probierz") {
         return Err(Failure::config(
             "apphook.oko.email",
@@ -158,25 +163,23 @@ pub(crate) fn technical_email(email: &str) -> Result<String, Failure> {
 pub(crate) fn scoped_oko_source(
     source: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, String>, Failure> {
-    let email = source
-        .get("OKO_E2E_EMAIL")
-        .map(String::as_str)
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    let mut pieces = email.split('@');
-    let address = pieces.next().unwrap_or_default();
-    let domain = pieces.next().unwrap_or_default();
-    if address.is_empty() || domain.is_empty() {
+    let email = configured(source, "OKO_E2E_EMAIL")?.to_ascii_lowercase();
+    let Some((address, domain)) = email.split_once('@').filter(|(address, domain)| {
+        !address.is_empty() && !domain.is_empty()
+    }) else {
         return Err(Failure::config(
             "apphook.oko.email",
-            "OKO_E2E_EMAIL must be a valid technical email address",
+            format!("OKO_E2E_EMAIL must be a valid technical email address, found {email:?}"),
         ));
-    }
-    let base = address.split('+').next().unwrap_or(address);
-    let run_id = source
-        .get("PROBIERZ_RUN_ID")
-        .map(String::as_str)
-        .unwrap_or_default();
+    };
+    // A sub-address `+tag` is replaced by this run's own tag.
+    let base = match address.split_once('+') {
+        Some((base, _tag)) => base,
+        None => address,
+    };
+    // The run id makes the address this run's own; without it every run
+    // would share one account, so a missing id is refused, never hashed as "".
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let mut scoped = source.clone();
     scoped.insert(
         "OKO_E2E_EMAIL".into(),

@@ -35,7 +35,7 @@ fn table_rows(answer: Value, table: &str) -> Result<Vec<Value>, Failure> {
 pub(crate) fn oko_writer_update(source: &BTreeMap<String, String>) -> Result<Value, Failure> {
     required_oko(source, false)?;
     let (path, mut state) = read_state(source)?;
-    let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let org_id = fixture_org_id(&state)?;
     let marker = format!("Probierz writer R+1 [{run_id}]");
     supabase(
@@ -63,7 +63,7 @@ pub(crate) fn oko_apply_feedback(source: &BTreeMap<String, String>) -> Result<Va
             "Slack feedback fixture was not selected for this run",
         ));
     }
-    let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let decision = feedback_decision(run_id);
     let slack_state = state.get("slack").expect("checked");
     let feedback_source = json!({
@@ -176,7 +176,7 @@ pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Va
     let events = table_rows(events, "oko_strategic_feedback_events")?;
     let capacity = capacity_sum(&initiatives, "capacity_percent", "the company_initiatives row")?;
     let seeded = seeded(&state)?;
-    let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let expected_statement = state
         .pointer("/strategy/expectedStatement")
         .or_else(|| state.pointer("/strategy/initial/northStar/statement"));
@@ -250,7 +250,7 @@ pub(crate) fn oko_cleanup(source: &BTreeMap<String, String>) -> Result<Value, Fa
             )?;
         }
     }
-    let run_id = source.get("PROBIERZ_RUN_ID").expect("required");
+    let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let org_id = match &state {
         Some(state) => fixture_org_id(state)?,
         // No state file: setup ended before writing one, and the organization
