@@ -19,7 +19,7 @@ mod walk;
 
 use std::path::Path;
 
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::failure::{now_iso, print_json, Answer, Code, Failure};
 
@@ -57,4 +57,79 @@ pub(crate) fn run(harness: &Path, app_id: &str) -> Answer {
             file.display()
         ),
     ))
+}
+
+/// Where an app's first-use journey stands, for the fleet overview:
+/// `undeclared` without a `first-use.yaml`, `never-run` when no run left a
+/// directory, `unrecorded` when the newest run stopped before writing its
+/// record, otherwise the newest record's `passed` or `failed`, with the
+/// directory of that run. Run directories are named by their start time, so
+/// the greatest name is the newest run.
+pub(crate) fn progress(harness: &Path, app_id: &str) -> Result<Value, Failure> {
+    let manifest = crate::manifest::load(harness, app_id)?;
+    if !declare::is_declared(&manifest) {
+        return Ok(json!({ "state": "undeclared" }));
+    }
+    let runs = harness
+        .join("test-results")
+        .join(&manifest.app_id)
+        .join("first-use");
+    let entries = match std::fs::read_dir(&runs) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(json!({ "state": "never-run" }));
+        }
+        Err(error) => {
+            return Err(Failure::config(
+                "first-use.progress",
+                format!("cannot list {}: {error}", runs.display()),
+            ))
+        }
+    };
+    let mut newest = None;
+    for entry in entries {
+        let path = entry
+            .map_err(|error| {
+                Failure::config(
+                    "first-use.progress",
+                    format!("cannot list {}: {error}", runs.display()),
+                )
+            })?
+            .path();
+        if path.is_dir()
+            && newest
+                .as_ref()
+                .is_none_or(|seen: &std::path::PathBuf| path > *seen)
+        {
+            newest = Some(path);
+        }
+    }
+    let Some(run) = newest else {
+        return Ok(json!({ "state": "never-run" }));
+    };
+    let record = run.join("record.json");
+    let text = match std::fs::read_to_string(&record) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(json!({ "state": "unrecorded", "run": run.display().to_string() }));
+        }
+        Err(error) => {
+            return Err(Failure::config(
+                "first-use.progress",
+                format!("cannot read {}: {error}", record.display()),
+            ))
+        }
+    };
+    let value: Value = serde_json::from_str(&text).map_err(|error| {
+        Failure::config(
+            "first-use.progress",
+            format!("{} is not JSON: {error}", record.display()),
+        )
+    })?;
+    let state = if value["passed"] == true {
+        "passed"
+    } else {
+        "failed"
+    };
+    Ok(json!({ "state": state, "run": run.display().to_string() }))
 }

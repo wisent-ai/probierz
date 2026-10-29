@@ -136,6 +136,9 @@ pub(crate) fn overview_value(
             "affectedJourneys": value_or(status.get("affectedJourneys"), json!([])),
             "eligible": value_or(status.pointer("/mergeEligibility/eligible"), Value::Null),
             "blockingReasons": value_or(status.pointer("/mergeEligibility/blockingReasons"), json!([])),
+            // Install → onboarding → import → first success, as the product's
+            // first-use journey last ran; an app that never declared one says so.
+            "firstUse": crate::firstuse::progress(harness, &app_id)?,
             "violations": if include_violations {
                 match root {
                     Some(root) => scanner::violations_for(root),
@@ -174,11 +177,12 @@ pub(crate) fn render_overview(report: &Value) -> String {
             _ => String::new(),
         };
         lines.push(format!(
-            "  {}: journeys {} (untested {}) | eligible: {}{}",
+            "  {}: journeys {} (untested {}) | eligible: {} | first use: {}{}",
             said(app.get("appId"), "app id"),
             said(app.get("journeys"), "journey count"),
             said(app.get("untested"), "untested count"),
             said(app.get("eligible"), "eligibility"),
+            said(app.pointer("/firstUse/state"), "first-use state"),
             violation,
         ));
         // Every blocking reason is shown: a reason left out is one the

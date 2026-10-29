@@ -96,6 +96,11 @@ fn first_use_file(manifest: &Manifest) -> PathBuf {
     manifest.beside(FIRST_USE_FILE)
 }
 
+/// Whether the app declares a first-use journey at all.
+pub(crate) fn is_declared(manifest: &Manifest) -> bool {
+    first_use_file(manifest).is_file()
+}
+
 fn refuse(manifest: &Manifest, what: impl std::fmt::Display) -> Failure {
     Failure::config(
         "first-use.manifest",
