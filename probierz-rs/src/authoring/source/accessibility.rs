@@ -14,12 +14,21 @@ const REPORT_SCHEMA_VERSION: u64 = 1;
 /// refused naming the field, never read as nothing to audit.
 pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue, Failure> {
     let loaded = manifest::load(harness, app_id)?;
-    let refused =
-        |detail: String| Failure::config("authoring.accessibility", format!("app {app_id} {detail}"));
+    let refused = |detail: String| {
+        Failure::config("authoring.accessibility", format!("app {app_id} {detail}"))
+    };
     let repositories = match loaded.document.get("repositories") {
         Some(YamlValue::Sequence(list)) => list,
-        Some(other) => return Err(refused(format!("declares repositories as {other:?}, not a list"))),
-        None => return Err(refused("declares no repositories, so there is no source to audit".to_string())),
+        Some(other) => {
+            return Err(refused(format!(
+                "declares repositories as {other:?}, not a list"
+            )))
+        }
+        None => {
+            return Err(refused(
+                "declares no repositories, so there is no source to audit".to_string(),
+            ))
+        }
     };
     let mut modifiers = Vec::new();
     let mut prefixes = BTreeSet::new();
@@ -42,19 +51,31 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
     let surfaces = match loaded.document.get("surfaces") {
         None => None,
         Some(YamlValue::Mapping(surfaces)) => Some(surfaces),
-        Some(other) => return Err(refused(format!("declares surfaces as {other:?}, not a mapping"))),
+        Some(other) => {
+            return Err(refused(format!(
+                "declares surfaces as {other:?}, not a mapping"
+            )))
+        }
     };
     let mut basenames = BTreeSet::new();
     for (name, surface) in surfaces.into_iter().flatten() {
         let spec = match crate::gate::yaml_get(surface, "spec") {
             None => continue,
             Some(YamlValue::String(spec)) => spec,
-            Some(other) => return Err(refused(format!("surface {name:?} declares spec as {other:?}, not text"))),
+            Some(other) => {
+                return Err(refused(format!(
+                    "surface {name:?} declares spec as {other:?}, not text"
+                )))
+            }
         };
         let basename = Path::new(spec)
             .file_name()
             .and_then(OsStr::to_str)
-            .ok_or_else(|| refused(format!("surface {name:?} declares spec {spec:?}, which names no file")))?;
+            .ok_or_else(|| {
+                refused(format!(
+                    "surface {name:?} declares spec {spec:?}, which names no file"
+                ))
+            })?;
         basenames.insert(basename.to_string());
     }
     let mut spec_files = files_below(&harness.join("packages"), ".ts")?;
@@ -132,7 +153,9 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
             && !prefixes.iter().any(|prefix| value.starts_with(prefix))
             && seen_missing.insert(value.as_str())
         {
-            missing.push(json!({ "kind": "missing-identifier", "identifier": value, "referencedAt": at }));
+            missing.push(
+                json!({ "kind": "missing-identifier", "identifier": value, "referencedAt": at }),
+            );
         }
     }
     let mut locations: BTreeMap<(&str, &str), Vec<&Found>> = BTreeMap::new();
@@ -160,7 +183,9 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
     let unused: Vec<&str> = modifiers
         .iter()
         .map(|found| found.value.as_str())
-        .filter(|identifier| identifier.starts_with(&app_prefix) && !referenced.contains(identifier))
+        .filter(|identifier| {
+            identifier.starts_with(&app_prefix) && !referenced.contains(identifier)
+        })
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();

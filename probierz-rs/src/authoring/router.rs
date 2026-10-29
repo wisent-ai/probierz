@@ -103,9 +103,12 @@ pub(crate) fn post_router(
             .header("x-agent-timestamp", timestamp)
             .header("x-agent-signature", signature);
     }
-    let response = stado_wait::blocking(stado_wait::Kind::Network, "model router request", &endpoint, || {
-        request.body(body.to_string()).send()
-    })
+    let response = stado_wait::blocking(
+        stado_wait::Kind::Network,
+        "model router request",
+        &endpoint,
+        || request.body(body.to_string()).send(),
+    )
     .map_err(|error| format!("model router request to {endpoint} failed: {error}"))?;
     let status = response.status().as_u16();
     let payload = response

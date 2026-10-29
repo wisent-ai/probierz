@@ -44,7 +44,9 @@ pub(crate) fn trace_events(
         let clock = trace_clock(&traces);
         let at_for = |value: f64| -> Result<String, String> {
             match (clock, measured(value)) {
-                (Some((wall, monotonic)), Some(value)) => millis_iso((wall + value - monotonic) as i64),
+                (Some((wall, monotonic)), Some(value)) => {
+                    millis_iso((wall + value - monotonic) as i64)
+                }
                 _ => Ok(recorded.to_owned()),
             }
         };
@@ -65,7 +67,10 @@ pub(crate) fn trace_events(
             let status = measured(js_number(snapshot.pointer("/response/status"))).map(number);
             let duration = measured(js_number(snapshot.get("time"))).map(number);
             let event = json!({ "type": "network", "source": source, "method": snapshot.pointer("/request/method"), "url": safe_url(url), "status": status, "durationMs": duration });
-            let at = at_for(first_nonzero(snapshot.get("_monotonicTime"), row.get("monotonicTime")));
+            let at = at_for(first_nonzero(
+                snapshot.get("_monotonicTime"),
+                row.get("monotonicTime"),
+            ));
             events.push(with_instant(event, "at", &at));
         }
         for row in &traces {
@@ -75,9 +80,15 @@ pub(crate) fn trace_events(
                 Some(params) => params,
                 None => row,
             };
-            let method = row.get("method").and_then(Value::as_str).map(str::to_ascii_lowercase);
+            let method = row
+                .get("method")
+                .and_then(Value::as_str)
+                .map(str::to_ascii_lowercase);
             let is_console = row.get("type").and_then(Value::as_str) == Some("console")
-                || matches!(method.as_deref(), Some("console" | "pageerror" | "page-error"));
+                || matches!(
+                    method.as_deref(),
+                    Some("console" | "pageerror" | "page-error")
+                );
             if !is_console {
                 continue;
             }
@@ -90,13 +101,20 @@ pub(crate) fn trace_events(
             };
             let mut event = json!({ "type": "console", "source": source, "severity": severity });
             if let Value::Object(fields) = &mut event {
-                match params.get("text").or_else(|| params.get("message")).and_then(Value::as_str) {
+                match params
+                    .get("text")
+                    .or_else(|| params.get("message"))
+                    .and_then(Value::as_str)
+                {
                     Some(message) => {
                         fields.insert("message".into(), json!(safe_message(message)));
                     }
                     None => {
                         fields.insert("message".into(), Value::Null);
-                        fields.insert("messageError".into(), json!("the console entry holds no text or message"));
+                        fields.insert(
+                            "messageError".into(),
+                            json!("the console entry holds no text or message"),
+                        );
                     }
                 }
             }

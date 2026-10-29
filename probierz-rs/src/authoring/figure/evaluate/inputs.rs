@@ -139,13 +139,19 @@ impl Destination {
         let directory = report.parent().ok_or_else(|| {
             Failure::invalid(
                 "figure-evaluate",
-                format!("figure evaluation --out {} names no directory", report.display()),
+                format!(
+                    "figure evaluation --out {} names no directory",
+                    report.display()
+                ),
             )
         })?;
         let stem = report.file_stem().and_then(OsStr::to_str).ok_or_else(|| {
             Failure::invalid(
                 "figure-evaluate",
-                format!("figure evaluation --out {} names no text file name", report.display()),
+                format!(
+                    "figure evaluation --out {} names no text file name",
+                    report.display()
+                ),
             )
         })?;
         let destination = Self {
@@ -162,7 +168,10 @@ impl Destination {
                 Ok(_) => {
                     return Err(Failure::invalid(
                         "figure-evaluate",
-                        format!("figure evaluation output already exists: {}", file.display()),
+                        format!(
+                            "figure evaluation output already exists: {}",
+                            file.display()
+                        ),
                     ))
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -189,7 +198,10 @@ pub(crate) fn work_directory(report: &Path) -> Result<PathBuf, Failure> {
     let name = report.file_name().ok_or_else(|| {
         Failure::invalid(
             "figure-evaluate",
-            format!("figure evaluation report {} names no file", report.display()),
+            format!(
+                "figure evaluation report {} names no file",
+                report.display()
+            ),
         )
     })?;
     let mut work_name = name.to_os_string();
@@ -244,15 +256,18 @@ fn setting(explicit: Option<&str>, name: &str) -> Result<Option<String>, Failure
 /// file under the current directory's results, named after the
 /// candidate.
 fn default_report_path(harness: &Path, candidate: &Path) -> Result<PathBuf, Failure> {
-    let stem = candidate.file_stem().and_then(OsStr::to_str).ok_or_else(|| {
-        Failure::invalid(
-            "figure-evaluate",
-            format!(
-                "candidate {} names no text file name to title its report",
-                candidate.display()
-            ),
-        )
-    })?;
+    let stem = candidate
+        .file_stem()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| {
+            Failure::invalid(
+                "figure-evaluate",
+                format!(
+                    "candidate {} names no text file name to title its report",
+                    candidate.display()
+                ),
+            )
+        })?;
     let stem = stem
         .chars()
         .map(|character| {

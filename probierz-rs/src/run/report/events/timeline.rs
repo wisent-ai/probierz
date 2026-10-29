@@ -42,7 +42,10 @@ fn assertion_event(
             })
         }),
     };
-    let status = match (test.get("status"), test.get("passed").and_then(Value::as_bool)) {
+    let status = match (
+        test.get("status"),
+        test.get("passed").and_then(Value::as_bool),
+    ) {
         (Some(status), _) => Ok(status.clone()),
         (None, Some(true)) => Ok(json!("passed")),
         (None, Some(false)) => Ok(json!("failed")),
@@ -86,8 +89,13 @@ fn media_events(
     let file = PathBuf::from(file);
     let (at, present) = match fs::metadata(&file) {
         Ok(_) => (modified_iso(&file), true),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (Ok(run_start.to_owned()), false),
-        Err(error) => (Err(format!("{} cannot be examined: {error}", file.display())), false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            (Ok(run_start.to_owned()), false)
+        }
+        Err(error) => (
+            Err(format!("{} cannot be examined: {error}", file.display())),
+            false,
+        ),
     };
     let missing = matches!(item.get("missing"), Some(Value::Bool(true)));
     let mut events = vec![with_instant(
@@ -118,17 +126,38 @@ pub(crate) fn build_timeline(
     let mut diagnostics = Vec::new();
     let run_start = parse_iso(started, &now_iso());
     let mut events = Vec::new();
-    events.extend(log_events(&artifacts.join("stdout.log"), "stdout", &mut diagnostics, redaction));
-    events.extend(log_events(&artifacts.join("stderr.log"), "stderr", &mut diagnostics, redaction));
+    events.extend(log_events(
+        &artifacts.join("stdout.log"),
+        "stdout",
+        &mut diagnostics,
+        redaction,
+    ));
+    events.extend(log_events(
+        &artifacts.join("stderr.log"),
+        "stderr",
+        &mut diagnostics,
+        redaction,
+    ));
     let tool = summary.get("tool").cloned();
     let mut previous_end = instant_ms(&run_start, "the run start");
-    for test in report.get("tests").and_then(Value::as_array).into_iter().flatten() {
+    for test in report
+        .get("tests")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let (event, end) = assertion_event(test, &tool, &previous_end);
         events.push(event);
         previous_end = end;
     }
     for item in media {
-        events.extend(media_events(item, &tool, &run_start, &mut diagnostics, redaction));
+        events.extend(media_events(
+            item,
+            &tool,
+            &run_start,
+            &mut diagnostics,
+            redaction,
+        ));
     }
     events.sort_by(|left, right| {
         left.get("at")
@@ -143,7 +172,12 @@ pub(crate) fn build_timeline(
     let mut counts = Map::new();
     let types: BTreeSet<String> = events
         .iter()
-        .filter_map(|event| event.get("type").and_then(Value::as_str).map(str::to_string))
+        .filter_map(|event| {
+            event
+                .get("type")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
         .collect();
     for kind in types {
         counts.insert(
@@ -169,7 +203,11 @@ pub(crate) fn error_line(value: &str) -> bool {
 /// The crash lines of the run's diagnostics logs. A log that could not be
 /// listed or read is a crash source whose content is unknown: it is entered
 /// with its error, so the crash list is never read as complete without it.
-fn diagnostics_log_crashes(artifacts: &Path, redaction: &manifest::Redaction, crashes: &mut Vec<Value>) {
+fn diagnostics_log_crashes(
+    artifacts: &Path,
+    redaction: &manifest::Redaction,
+    crashes: &mut Vec<Value>,
+) {
     let directory = artifacts.join("diagnostics");
     let entries = match fs::read_dir(&directory) {
         Ok(entries) => entries,
@@ -227,7 +265,10 @@ pub(crate) fn summarize_diagnostics(
         .iter()
         .filter(|event| event.get("type").and_then(Value::as_str) == Some("network"))
         .collect();
-    for event in events.iter().filter(|event| event.get("type").and_then(Value::as_str) == Some("log")) {
+    for event in events
+        .iter()
+        .filter(|event| event.get("type").and_then(Value::as_str) == Some("log"))
+    {
         let Some(message) = event.get("message").and_then(Value::as_str) else {
             crashes.push(json!({ "at": event["at"], "source": event["source"], "error": "timeline log event has no string message; crash classification is unavailable" }));
             continue;
@@ -242,7 +283,11 @@ pub(crate) fn summarize_diagnostics(
     for event in events.iter().filter(|event| {
         event.get("type").and_then(Value::as_str) == Some("console")
             && matches!(
-                event.get("severity").and_then(Value::as_str).map(str::to_ascii_lowercase).as_deref(),
+                event
+                    .get("severity")
+                    .and_then(Value::as_str)
+                    .map(str::to_ascii_lowercase)
+                    .as_deref(),
                 Some("assert" | "error")
             )
     }) {

@@ -76,7 +76,10 @@ pub(crate) fn decrypt_bundle_payload(
         }
         ghash_feed(&mut state, &mut tail, &buffer);
         stream.try_apply_keystream(&mut buffer).map_err(|_| {
-            Failure::invalid("evidence.restore", "encrypted evidence payload is too large")
+            Failure::invalid(
+                "evidence.restore",
+                "encrypted evidence payload is too large",
+            )
         })?;
         plaintext.write_all(&buffer)?;
     }
@@ -85,9 +88,14 @@ pub(crate) fn decrypt_bundle_payload(
     drop(encrypted);
 
     let mut stored_tag = Vec::new();
-    (&mut input).take(TAG_BYTES as u64).read_to_end(&mut stored_tag)?;
+    (&mut input)
+        .take(TAG_BYTES as u64)
+        .read_to_end(&mut stored_tag)?;
     if stored_tag.len() != TAG_BYTES {
-        return Err(Failure::invalid("evidence.restore", "truncated encrypted evidence bundle"));
+        return Err(Failure::invalid(
+            "evidence.restore",
+            "truncated encrypted evidence bundle",
+        ));
     }
     let computed_tag = finish_gcm_tag(
         state,

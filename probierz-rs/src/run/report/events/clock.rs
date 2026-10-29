@@ -55,7 +55,11 @@ pub(crate) fn normalized_iso(text: &str, what: &str) -> Result<String, String> {
 
 /// `event` with `field` set to `instant`, or to null beside `<field>Error`
 /// naming why the instant is unknown.
-pub(crate) fn with_instant(mut event: Value, field: &str, instant: &Result<String, String>) -> Value {
+pub(crate) fn with_instant(
+    mut event: Value,
+    field: &str,
+    instant: &Result<String, String>,
+) -> Value {
     if let Value::Object(fields) = &mut event {
         match instant {
             Ok(text) => {
