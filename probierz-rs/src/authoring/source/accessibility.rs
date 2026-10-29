@@ -1,26 +1,31 @@
 use crate::authoring::*;
 use serde_json::json;
 
-/// Static source/spec accessibility audit. Its JSON shape is the former JS contract.
+/// Audits the accessibility identifiers of `app_id` from source alone: every
+/// literal `.accessibilityIdentifier("…")` in the Swift files below each
+/// declared repository root, against every `<app>.…` identifier and `$(…)`
+/// selector the app's surface specs under `packages/` quote. The answer lists
+/// duplicate identifiers, referenced identifiers no source defines, and
+/// selectors that match visible text rather than an identifier. A manifest
+/// whose repositories, surfaces or specs are not of their declared shape is
+/// refused naming the field, never read as nothing to audit.
 pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue, Failure> {
     let loaded = manifest::load(harness, app_id)?;
-    let repositories = loaded
-        .document
-        .get("repositories")
-        .and_then(YamlValue::as_sequence)
-        .cloned()
-        .unwrap_or_default();
+    let refused =
+        |detail: String| Failure::config("authoring.accessibility", format!("app {app_id} {detail}"));
+    let repositories = match loaded.document.get("repositories") {
+        Some(YamlValue::Sequence(list)) => list,
+        Some(other) => return Err(refused(format!("declares repositories as {other:?}, not a list"))),
+        None => return Err(refused("declares no repositories, so there is no source to audit".to_string())),
+    };
     let mut modifiers = Vec::new();
     let mut prefixes = BTreeSet::new();
     let mut scanned_files = 0usize;
-    for repository in &repositories {
-        // Read as '', the audit scanned whatever directory it ran in.
-        let root = PathBuf::from(yaml_string(repository, "root").ok_or_else(|| {
-            Failure::config(
-                "authoring.accessibility",
-                format!("app {app_id} declares a repository without root"),
-            )
-        })?);
+    for repository in repositories {
+        let root = PathBuf::from(
+            crate::gate::yaml_string(crate::gate::yaml_get(repository, "root"))
+                .ok_or_else(|| refused("declares a repository without a text root".to_string()))?,
+        );
         for file in files_below(&root, ".swift")? {
             scanned_files += 1;
             let content = fs::read_to_string(&file)?;
@@ -31,20 +36,24 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
         }
     }
 
-    let basenames: BTreeSet<String> = loaded
-        .document
-        .get("surfaces")
-        .and_then(YamlValue::as_mapping)
-        .into_iter()
-        .flat_map(|surfaces| surfaces.values())
-        .filter_map(|surface| yaml_string(surface, "spec"))
-        .filter_map(|spec| {
-            Path::new(spec)
-                .file_name()
-                .and_then(OsStr::to_str)
-                .map(str::to_string)
-        })
-        .collect();
+    let surfaces = match loaded.document.get("surfaces") {
+        None => None,
+        Some(YamlValue::Mapping(surfaces)) => Some(surfaces),
+        Some(other) => return Err(refused(format!("declares surfaces as {other:?}, not a mapping"))),
+    };
+    let mut basenames = BTreeSet::new();
+    for (name, surface) in surfaces.into_iter().flatten() {
+        let spec = match crate::gate::yaml_get(surface, "spec") {
+            None => continue,
+            Some(YamlValue::String(spec)) => spec,
+            Some(other) => return Err(refused(format!("surface {name:?} declares spec as {other:?}, not text"))),
+        };
+        let basename = Path::new(spec)
+            .file_name()
+            .and_then(OsStr::to_str)
+            .ok_or_else(|| refused(format!("surface {name:?} declares spec {spec:?}, which names no file")))?;
+        basenames.insert(basename.to_string());
+    }
     let mut spec_files = files_below(&harness.join("packages"), ".ts")?;
     spec_files.retain(|file| {
         file.file_name()
@@ -52,14 +61,16 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
             .is_some_and(|name| basenames.contains(name))
     });
 
-    let mut references = Vec::new();
+    // Each referenced identifier with the spec file and line quoting it.
+    let mut references: Vec<(String, JsonValue)> = Vec::new();
     let mut forbidden = Vec::new();
     let app_prefix = format!("{app_id}.");
     for file in &spec_files {
         let content = fs::read_to_string(file)?;
         for (value, offset) in quoted_values(&content) {
             if value.starts_with(&app_prefix) && valid_identifier(&value, true) {
-                references.push(json!({ "value": value, "file": file.to_string_lossy(), "line": line_number(&content, offset) }));
+                let at = json!({ "file": file.to_string_lossy(), "line": line_number(&content, offset) });
+                references.push((value, at));
             }
         }
         let mut cursor = 0;
@@ -105,61 +116,51 @@ pub fn validate_accessibility(harness: &Path, app_id: &str) -> Result<JsonValue,
         }
     }
 
-    let defined: BTreeSet<String> = modifiers
+    // An identifier built by interpolation (`\(`) names no fixed identifier.
+    let defined: BTreeSet<&str> = modifiers
         .iter()
-        .filter_map(|item| item.get("value").and_then(JsonValue::as_str))
+        .map(|found| found.value.as_str())
         .filter(|value| !value.contains("\\("))
-        .map(str::to_string)
         .collect();
     let mut missing = Vec::new();
     let mut seen_missing = BTreeSet::new();
-    for item in &references {
-        let value = item["value"].as_str().unwrap_or_default();
-        if !defined.contains(value)
+    for (value, at) in &references {
+        if !defined.contains(value.as_str())
             && !prefixes.iter().any(|prefix| value.starts_with(prefix))
-            && seen_missing.insert(value.to_string())
+            && seen_missing.insert(value.as_str())
         {
-            missing.push(json!({ "kind": "missing-identifier", "identifier": value, "referencedAt": { "file": item["file"], "line": item["line"] } }));
+            missing.push(json!({ "kind": "missing-identifier", "identifier": value, "referencedAt": at }));
         }
     }
-    let mut locations: BTreeMap<(String, String), Vec<JsonValue>> = BTreeMap::new();
-    for item in &modifiers {
+    let mut locations: BTreeMap<(&str, &str), Vec<&Found>> = BTreeMap::new();
+    for found in &modifiers {
         locations
-            .entry((
-                item["repository"].as_str().unwrap_or_default().to_string(),
-                item["value"].as_str().unwrap_or_default().to_string(),
-            ))
+            .entry((found.repository.as_str(), found.value.as_str()))
             .or_default()
-            .push(json!({ "file": item["file"], "line": item["line"] }));
+            .push(found);
     }
     let mut duplicates = Vec::new();
     for ((_repository, identifier), entries) in locations {
-        let files: BTreeSet<&str> = entries
-            .iter()
-            .filter_map(|entry| entry["file"].as_str())
-            .collect();
+        let files: BTreeSet<&str> = entries.iter().map(|found| found.file.as_str()).collect();
         if files.len() > 1 {
+            let entries: Vec<JsonValue> = entries
+                .iter()
+                .map(|found| json!({ "file": found.file, "line": found.line }))
+                .collect();
             duplicates.push(json!({ "kind": "duplicate-identifier", "identifier": identifier, "locations": entries }));
         }
     }
     let mut errors = duplicates;
     errors.extend(missing);
     errors.extend(forbidden);
-    let referenced: BTreeSet<String> = references
+    let referenced: BTreeSet<&str> = references.iter().map(|(value, _)| value.as_str()).collect();
+    let unused: Vec<&str> = modifiers
         .iter()
-        .filter_map(|item| item["value"].as_str().map(str::to_string))
-        .collect();
-    let mut unused: Vec<String> = modifiers
-        .iter()
-        .filter_map(|item| item["value"].as_str())
-        .filter(|identifier| {
-            identifier.starts_with(&app_prefix) && !referenced.contains(*identifier)
-        })
-        .map(str::to_string)
+        .map(|found| found.value.as_str())
+        .filter(|identifier| identifier.starts_with(&app_prefix) && !referenced.contains(identifier))
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    unused.sort();
     Ok(json!({
         "schemaVersion": 1,
         "appId": app_id,

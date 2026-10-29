@@ -51,7 +51,9 @@ pub(crate) fn glob_matches(pattern: &str, value: &str) -> bool {
     )
 }
 
-pub(crate) fn yaml_string(value: &serde_yaml::Value) -> Option<String> {
+/// A YAML scalar as the text an environment value carries: a string as written,
+/// a number or boolean in its YAML spelling; a list, mapping or null is none.
+pub(crate) fn yaml_scalar_text(value: &serde_yaml::Value) -> Option<String> {
     match value {
         serde_yaml::Value::String(value) => Some(value.clone()),
         serde_yaml::Value::Number(value) => Some(value.to_string()),

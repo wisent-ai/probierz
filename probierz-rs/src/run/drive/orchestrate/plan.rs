@@ -23,7 +23,7 @@ pub(crate) fn matrix_expand(
         let items = items
             .iter()
             .map(|value| {
-                yaml_string(value)
+                yaml_scalar_text(value)
                     .ok_or_else(|| format!("dimension {name} value {value:?} is not a scalar"))
             })
             .collect::<Result<Vec<String>, String>>()?;

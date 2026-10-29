@@ -122,7 +122,7 @@ pub(crate) fn app_status_value(
                 "target": value_or(run.get("target"), Value::Null),
                 "status": value_or(run.get("status"), Value::Null),
                 "startedAt": value_or(run.get("startedAt"), Value::Null),
-                "evidenceLevel": evidence_level(run),
+                "evidenceLevel": crate::gate::run_evidence_level(run),
             }),
             None => Value::Null,
         };

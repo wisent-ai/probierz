@@ -1,5 +1,4 @@
 use crate::authoring::*;
-use serde_json::json;
 pub(crate) fn files_below(root: &Path, extension: &str) -> Result<Vec<PathBuf>, Failure> {
     let mut files = Vec::new();
     let mut pending = vec![root.to_path_buf()];
@@ -68,11 +67,20 @@ pub(crate) fn valid_identifier(value: &str, require_dot: bool) -> bool {
     })
 }
 
+/// An identifier the audit found: its text, the file and line it stands on,
+/// and the repository root the file was read below.
+pub(crate) struct Found {
+    pub(crate) value: String,
+    pub(crate) file: String,
+    pub(crate) line: usize,
+    pub(crate) repository: String,
+}
+
 pub(crate) fn explicit_accessibility_identifiers(
     content: &str,
     file: &Path,
     repository: &Path,
-) -> Vec<JsonValue> {
+) -> Vec<Found> {
     let needle = ".accessibilityIdentifier";
     let mut found = Vec::new();
     let mut cursor = 0;
@@ -108,7 +116,12 @@ pub(crate) fn explicit_accessibility_identifiers(
                 close += 1;
             }
             if content.as_bytes().get(close) == Some(&b')') {
-                found.push(json!({ "value": value, "file": file.to_string_lossy(), "line": line_number(content, start), "repository": repository.to_string_lossy() }));
+                found.push(Found {
+                    value,
+                    file: file.to_string_lossy().into_owned(),
+                    line: line_number(content, start),
+                    repository: repository.to_string_lossy().into_owned(),
+                });
             }
         }
         cursor = index.saturating_add(1);
@@ -149,8 +162,4 @@ pub(crate) fn quoted_values(content: &str) -> Vec<(String, usize)> {
         }
     }
     values
-}
-
-pub(crate) fn yaml_string<'a>(value: &'a YamlValue, key: &str) -> Option<&'a str> {
-    value.get(key).and_then(YamlValue::as_str)
 }

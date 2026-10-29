@@ -62,20 +62,7 @@ pub(super) fn bundle_header(inputs: HeaderInputs<'_>) -> Result<Value, Failure> 
             "screenId": journey.pointer("/publication/screenId").cloned().unwrap_or(Value::Null),
         }))
     }).collect::<Vec<_>>();
-    let evidence_level = if run.get("status").and_then(Value::as_str) != Some("passed") {
-        "E0"
-    } else if run.pointer("/conditions/record").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/report").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/analysis").and_then(Value::as_bool) == Some(true)
-        && run
-            .pointer("/evidence/capturePresent")
-            .and_then(Value::as_bool)
-            == Some(true)
-    {
-        "E3"
-    } else {
-        "E2"
-    };
+    let evidence_level = crate::gate::run_evidence_level(run);
     let started = run
         .get("completedAt")
         .or_else(|| run.get("startedAt"))

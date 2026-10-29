@@ -88,20 +88,12 @@ pub(super) fn extend(public: &mut Value, fields: Value) -> Result<(), Failure> {
     Ok(())
 }
 
-/// The evidence level a completed cell run reaches: none unless it passed,
-/// the full level only when it states it recorded, reported, analysed and
-/// captured.
+/// The evidence level a completed cell run reaches, by the one rule every
+/// reader applies: it passed when it states `passed` true.
 pub(super) fn cell_level(completed: &Value) -> &'static str {
-    let states = |pointer: &str| completed.pointer(pointer).and_then(Value::as_bool) == Some(true);
-    if !states("/passed") {
-        "E0"
-    } else if states("/conditions/record")
-        && states("/evidence/report")
-        && states("/evidence/analysis")
-        && states("/evidence/capturePresent")
-    {
-        "E3"
-    } else {
-        "E2"
-    }
+    crate::gate::level_of(
+        crate::gate::is_true(completed.get("passed")),
+        completed.get("conditions"),
+        completed.get("evidence"),
+    )
 }

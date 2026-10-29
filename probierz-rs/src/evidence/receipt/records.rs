@@ -183,20 +183,7 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Result<Value,
         .get("status")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    let evidence_level = if status != "passed" {
-        "E0"
-    } else if run.pointer("/conditions/record").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/report").and_then(Value::as_bool) == Some(true)
-        && run.pointer("/evidence/analysis").and_then(Value::as_bool) == Some(true)
-        && run
-            .pointer("/evidence/capturePresent")
-            .and_then(Value::as_bool)
-            == Some(true)
-    {
-        "E3"
-    } else {
-        "E2"
-    };
+    let evidence_level = crate::gate::level_of(status == "passed", run.get("conditions"), run.get("evidence"));
     let source_revision = run
         .pointer("/source/repositories")
         .and_then(Value::as_array)

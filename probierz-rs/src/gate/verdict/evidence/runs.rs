@@ -114,18 +114,7 @@ pub(crate) fn get_run(harness: &Path, app_id: &str, run_id: &str) -> Result<Run,
 }
 
 pub(crate) fn evidence_level(run: &Run) -> &'static str {
-    if run.status != "passed" {
-        return "E0";
-    }
-    let record = is_true(property(&run.conditions, "record"));
-    let report = is_true(property(&run.evidence, "report"));
-    let analysis = is_true(property(&run.evidence, "analysis"));
-    let capture = is_true(property(&run.evidence, "capturePresent"));
-    if record && report && analysis && capture {
-        "E3"
-    } else {
-        "E2"
-    }
+    level_of(run.status == "passed", Some(&run.conditions), Some(&run.evidence))
 }
 
 /// `path` made absolute against the working directory, with `.` and `..`

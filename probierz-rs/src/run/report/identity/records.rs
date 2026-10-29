@@ -113,7 +113,7 @@ pub(crate) fn yaml_map_strings(value: Option<&serde_yaml::Value>) -> BTreeMap<St
         .and_then(serde_yaml::Value::as_mapping)
         .map(|map| {
             map.iter()
-                .filter_map(|(key, value)| Some((key.as_str()?.to_string(), yaml_string(value)?)))
+                .filter_map(|(key, value)| Some((key.as_str()?.to_string(), yaml_scalar_text(value)?)))
                 .collect()
         })
         .unwrap_or_default()
@@ -122,7 +122,7 @@ pub(crate) fn yaml_ordered_strings(value: Option<&serde_yaml::Value>) -> Map<Str
     let mut result = Map::new();
     if let Some(values) = value.and_then(serde_yaml::Value::as_mapping) {
         for (name, value) in values {
-            if let (Some(name), Some(value)) = (name.as_str(), yaml_string(value)) {
+            if let (Some(name), Some(value)) = (name.as_str(), yaml_scalar_text(value)) {
                 result.insert(name.into(), Value::String(value));
             }
         }
