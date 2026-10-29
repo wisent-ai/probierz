@@ -50,7 +50,8 @@ fn inspect_run(
         errors.push(format!("{}: status is {}", run.run_id, run.status));
     }
     // An identity counts only when the run states it as non-empty text.
-    let stated = |value: &Value, name: &str| string_property(value, name).filter(|text| !text.is_empty());
+    let stated =
+        |value: &Value, name: &str| string_property(value, name).filter(|text| !text.is_empty());
     let harness_sha = stated(&run.harness, "sha256");
     let harness_complete = harness_sha.is_some()
         && stated(&run.harness, "gitSha").is_some()
@@ -87,7 +88,8 @@ fn inspect_run(
         .and_then(Value::as_array)
         .is_some_and(|items| {
             items.iter().all(|repository| {
-                stated(repository, "gitSha").is_some() && stated(repository, "worktreeSha256").is_some()
+                stated(repository, "gitSha").is_some()
+                    && stated(repository, "worktreeSha256").is_some()
             })
         });
     if source_sha.is_none() || !repositories_complete {
@@ -112,7 +114,10 @@ fn inspect_run(
     // At the E3 rank every artifact states its hash.
     if Some(required_rank) >= evidence_rank("E3")
         && (run.artifacts.is_empty()
-            || run.artifacts.iter().any(|artifact| stated(artifact, "sha256").is_none()))
+            || run
+                .artifacts
+                .iter()
+                .any(|artifact| stated(artifact, "sha256").is_none()))
     {
         errors.push(format!("{}: E3 artifact hashes are incomplete", run.run_id));
     }
@@ -129,19 +134,28 @@ fn inspect_run(
         let normalized_root = match normalize_absolute(artifact_root) {
             Ok(root) => root,
             Err(cause) => {
-                errors.push(format!("{}: artifacts cannot be located: {cause}", run.run_id));
+                errors.push(format!(
+                    "{}: artifacts cannot be located: {cause}",
+                    run.run_id
+                ));
                 return;
             }
         };
         for artifact in &run.artifacts {
             let Some(relative) = stated(artifact, "file") else {
-                errors.push(format!("{}: an artifact names no file: {artifact}", run.run_id));
+                errors.push(format!(
+                    "{}: an artifact names no file: {artifact}",
+                    run.run_id
+                ));
                 continue;
             };
             let file = match normalize_absolute(&artifact_root.join(&relative)) {
                 Ok(file) => file,
                 Err(cause) => {
-                    errors.push(format!("{}: artifact {relative} cannot be located: {cause}", run.run_id));
+                    errors.push(format!(
+                        "{}: artifact {relative} cannot be located: {cause}",
+                        run.run_id
+                    ));
                     continue;
                 }
             };
@@ -153,8 +167,13 @@ fn inspect_run(
                 continue;
             }
             match crate::evidence::sha256_file(&file) {
-                Ok(actual) if Some(actual.as_str()) != string_property(artifact, "sha256").as_deref() => {
-                    errors.push(format!("{}: artifact hash mismatch: {relative}", run.run_id))
+                Ok(actual)
+                    if Some(actual.as_str()) != string_property(artifact, "sha256").as_deref() =>
+                {
+                    errors.push(format!(
+                        "{}: artifact hash mismatch: {relative}",
+                        run.run_id
+                    ))
                 }
                 Ok(_) => {}
                 Err(error) => errors.push(format!(

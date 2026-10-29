@@ -47,10 +47,15 @@ pub(crate) fn request_json(
         request = request.set(name, value);
     }
     let place = format!("{method} {endpoint}");
-    let response = stado_wait::blocking(stado_wait::Kind::Network, "app hook request", &place, || match body {
-        Some(body) => request.send_json(body),
-        None => request.call(),
-    });
+    let response = stado_wait::blocking(
+        stado_wait::Kind::Network,
+        "app hook request",
+        &place,
+        || match body {
+            Some(body) => request.send_json(body),
+            None => request.call(),
+        },
+    );
     match response {
         Ok(response) => response_json(response),
         Err(ureq::Error::Status(_, response)) => response_json(response),
@@ -82,9 +87,15 @@ pub(crate) fn supabase_headers(
 /// checks its required names before it runs, so a missing one here is a hook
 /// reading a name its entry does not require: refused naming the key, not a
 /// panic of the whole Probierz process the MCP server shares.
-pub(crate) fn configured<'a>(source: &'a BTreeMap<String, String>, key: &str) -> Result<&'a str, Failure> {
+pub(crate) fn configured<'a>(
+    source: &'a BTreeMap<String, String>,
+    key: &str,
+) -> Result<&'a str, Failure> {
     source.get(key).map(String::as_str).ok_or_else(|| {
-        Failure::config("apphook", format!("the app hook needs {key}, which its configuration does not set"))
+        Failure::config(
+            "apphook",
+            format!("the app hook needs {key}, which its configuration does not set"),
+        )
     })
 }
 

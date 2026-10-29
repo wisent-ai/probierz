@@ -11,7 +11,11 @@ pub enum EvaluateCommand {
         #[arg(long = "app")]
         app_id: String,
         /// Exact Brama model route, including unrestricted or abliterated models.
-        #[arg(long, required_unless_present = "deterministic", conflicts_with = "deterministic")]
+        #[arg(
+            long,
+            required_unless_present = "deterministic",
+            conflicts_with = "deterministic"
+        )]
         model: Option<String>,
         /// Run declared checks without contacting a model or reading model credentials.
         #[arg(long, conflicts_with_all = ["model", "router_url", "agent_id", "router_token_stdin"])]

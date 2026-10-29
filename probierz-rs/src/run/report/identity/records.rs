@@ -113,7 +113,9 @@ pub(crate) fn yaml_map_strings(value: Option<&serde_yaml::Value>) -> BTreeMap<St
         .and_then(serde_yaml::Value::as_mapping)
         .map(|map| {
             map.iter()
-                .filter_map(|(key, value)| Some((key.as_str()?.to_string(), yaml_scalar_text(value)?)))
+                .filter_map(|(key, value)| {
+                    Some((key.as_str()?.to_string(), yaml_scalar_text(value)?))
+                })
                 .collect()
         })
         .unwrap_or_default()

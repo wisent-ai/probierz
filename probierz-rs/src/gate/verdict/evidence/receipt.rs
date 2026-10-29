@@ -71,16 +71,22 @@ pub(crate) fn release_receipt(
     {
         errors.push("receipt build identities do not match".to_string());
     }
-    let receipt_run_ids = value_strings(property(&verified, "runIds"), &format!("receipt {} runIds", receipt_file.display()))
-        .map_err(|detail| Failure::config("gate.receipt", detail))?;
+    let receipt_run_ids = value_strings(
+        property(&verified, "runIds"),
+        &format!("receipt {} runIds", receipt_file.display()),
+    )
+    .map_err(|detail| Failure::config("gate.receipt", detail))?;
     if !same_set(&receipt_run_ids, run_ids) {
         errors.push("receipt run IDs do not match gate run IDs".to_string());
     }
     if !is_true(property(&verified, "verdict").and_then(|verdict| property(verdict, "passed"))) {
         errors.push("receipt verdict is not passed".to_string());
     }
-    let signed_runs = value_array(property(&verified, "runs"), &format!("receipt {} runs", receipt_file.display()))
-        .map_err(|detail| Failure::config("gate.receipt", detail))?;
+    let signed_runs = value_array(
+        property(&verified, "runs"),
+        &format!("receipt {} runs", receipt_file.display()),
+    )
+    .map_err(|detail| Failure::config("gate.receipt", detail))?;
     let document = app.json()?;
     for run in runs {
         let signed = signed_runs.iter().find(|candidate| {

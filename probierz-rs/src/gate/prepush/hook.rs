@@ -31,8 +31,12 @@ pub fn prepush(harness: &Path, args: &PrepushArgs) -> Answer {
     )?;
     if args.hook && !args.json {
         let ok = passed(&result);
-        let app_id = string_property(&result, "appId")
-            .ok_or_else(|| Failure::invalid("gate.prepush", format!("the gate answered no appId: {result}")))?;
+        let app_id = string_property(&result, "appId").ok_or_else(|| {
+            Failure::invalid(
+                "gate.prepush",
+                format!("the gate answered no appId: {result}"),
+            )
+        })?;
         let note = match string_property(&result, "note") {
             Some(note) => format!(" ({note})"),
             None => String::new(),
@@ -94,7 +98,10 @@ pub(crate) fn managed(
     rust_command: &str,
 ) -> Result<bool, Failure> {
     let content = fs::read_to_string(file).map_err(|error| {
-        Failure::config("gate.hook", format!("{} cannot be read: {error}", file.display()))
+        Failure::config(
+            "gate.hook",
+            format!("{} cannot be read: {error}", file.display()),
+        )
     })?;
     Ok(content.contains(MANAGED_MARKER)
         || (content.contains(legacy_command) && content.contains("--hook --app"))
@@ -125,9 +132,7 @@ pub fn install(harness: &Path, args: &InstallArgs) -> Answer {
     if present(&backup)? && managed(&backup, &legacy_command, &rust_command)? {
         fs::remove_file(&backup)?;
     }
-    if present(&target)?
-        && !present(&backup)?
-        && !managed(&target, &legacy_command, &rust_command)?
+    if present(&target)? && !present(&backup)? && !managed(&target, &legacy_command, &rust_command)?
     {
         fs::rename(&target, &backup)?;
     }

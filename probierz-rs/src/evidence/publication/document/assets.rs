@@ -24,12 +24,18 @@ pub(crate) fn publication_assets(
     let mut seen = HashSet::new();
     let mut publication_assets: Vec<(String, Value)> = Vec::new();
     let rejected = |message: String| {
-        Failure::invalid("evidence.publication", format!("publication rejected: {message}"))
+        Failure::invalid(
+            "evidence.publication",
+            format!("publication rejected: {message}"),
+        )
     };
     let registrations = assets
         .as_array()
         .ok_or_else(|| rejected(format!("assets must be a list, not {assets}")))?;
-    let screen = require_string(policy.get("screenId"), "the journey policy states no screenId")?;
+    let screen = require_string(
+        policy.get("screenId"),
+        "the journey policy states no screenId",
+    )?;
     for (index, registration) in registrations.iter().enumerate() {
         require(
             registration.is_object(),
@@ -79,7 +85,10 @@ pub(crate) fn publication_assets(
             registration.get("contentSha256"),
             &format!("assets.{index}.contentSha256 is required"),
         )?;
-        require(is_sha256(content), format!("assets.{index}.contentSha256 is required"))?;
+        require(
+            is_sha256(content),
+            format!("assets.{index}.contentSha256 is required"),
+        )?;
         require(
             media.get("contentSha256").and_then(Value::as_str) == Some(content),
             format!("assets.{index}.contentSha256 does not match the signed receipt"),
@@ -129,5 +138,8 @@ pub(crate) fn publication_assets(
         publication_assets.push((artifact_id, Value::Object(asset)));
     }
     publication_assets.sort_by(|(left, _), (right, _)| left.cmp(right));
-    Ok(publication_assets.into_iter().map(|(_, asset)| asset).collect())
+    Ok(publication_assets
+        .into_iter()
+        .map(|(_, asset)| asset)
+        .collect())
 }

@@ -61,7 +61,9 @@ pub fn install_accepted_spec(
                 value.as_str().map(str::to_string).ok_or_else(|| {
                     Failure::config(
                         "author-spec.accept",
-                        format!("surface {target} declares a journey that is not a name: {value:?}"),
+                        format!(
+                            "surface {target} declares a journey that is not a name: {value:?}"
+                        ),
                     )
                 })
             })

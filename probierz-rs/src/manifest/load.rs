@@ -22,7 +22,10 @@ pub fn load(harness_root: &Path, app_id: &str) -> Result<Manifest, Failure> {
     let Some(declared) = string_of(&document, "appId") else {
         return Err(Failure::config(
             "manifest.load",
-            format!("{} declares no appId, so it is not the manifest of {clean}", file.display()),
+            format!(
+                "{} declares no appId, so it is not the manifest of {clean}",
+                file.display()
+            ),
         ));
     };
     if declared != clean {

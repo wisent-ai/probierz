@@ -24,7 +24,10 @@ pub(crate) fn work_path(name: &str) -> Result<PathBuf, Failure> {
         .join("work")
         .join("probierz");
     fs::create_dir_all(&directory)?;
-    fs::set_permissions(&directory, fs::Permissions::from_mode(u32::from(libc::S_IRWXU)))?;
+    fs::set_permissions(
+        &directory,
+        fs::Permissions::from_mode(u32::from(libc::S_IRWXU)),
+    )?;
     Ok(directory.join(name))
 }
 
@@ -64,8 +67,11 @@ pub(crate) fn pack_source_tree(root: &Path, file: &Path, label: &str) -> Result<
     ))?;
     fs::write(&list, source_file_list(root)?)
         .map_err(|error| Failure::from(error).discarding(&list))?;
-    fs::set_permissions(&list, fs::Permissions::from_mode(u32::from(libc::S_IRUSR | libc::S_IWUSR)))
-        .map_err(|error| Failure::from(error).discarding(&list))?;
+    fs::set_permissions(
+        &list,
+        fs::Permissions::from_mode(u32::from(libc::S_IRUSR | libc::S_IWUSR)),
+    )
+    .map_err(|error| Failure::from(error).discarding(&list))?;
     let args = vec![
         "-czf".to_string(),
         file.display().to_string(),

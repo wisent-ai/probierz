@@ -58,7 +58,10 @@ pub(crate) fn check(harness: &Path, repo: &Path) -> Answer {
     let kept = root.try_exists().map_err(|error| {
         Failure::unavailable(
             "suites.record",
-            format!("the kept runs {} cannot be examined: {error}", root.display()),
+            format!(
+                "the kept runs {} cannot be examined: {error}",
+                root.display()
+            ),
         )
     })?;
     let last = if kept {

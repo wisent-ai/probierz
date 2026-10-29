@@ -141,7 +141,9 @@ pub(crate) fn run_script(
             }
         }
     }
-    if mode == ScriptMode::Author && matches!(provision, None | Some(Provision::InstalledTui { .. })) {
+    if mode == ScriptMode::Author
+        && matches!(provision, None | Some(Provision::InstalledTui { .. }))
+    {
         lines.extend([
             format!("mkdir -p \"$JOB_ROOT/work/{app_id}\" && tar --no-same-owner -xzf \"$JOB_ROOT/inputs/{app_id}.tar.gz\" -C \"$JOB_ROOT/work/{app_id}\""),
             format!("export PROBIERZ_APP_SOURCE=\"$JOB_ROOT/work/{app_id}\""),

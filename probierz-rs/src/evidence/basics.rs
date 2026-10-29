@@ -137,7 +137,10 @@ pub(crate) fn tests_from(
         Some(path) => crate::json_file::read(Path::new(path))?,
         None => None,
     };
-    let report = match manifest_value.pointer("/paths/reportPath").and_then(Value::as_str) {
+    let report = match manifest_value
+        .pointer("/paths/reportPath")
+        .and_then(Value::as_str)
+    {
         Some(path) => crate::json_file::read(Path::new(path))?,
         None => None,
     };

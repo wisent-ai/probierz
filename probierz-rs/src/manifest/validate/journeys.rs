@@ -54,15 +54,28 @@ pub(crate) fn validate_journeys(
             file,
             &format!("journey {name} must be an object"),
         )?;
-        require(stated(journey, "owner"), file, &format!("journey {name} owner is required"))?;
+        require(
+            stated(journey, "owner"),
+            file,
+            &format!("journey {name} owner is required"),
+        )?;
         // No cutoff is required: `probierz run` waits for a suite to its own
         // end, and a `timeoutMs` a manifest still carries is read by nothing.
         let has_identity = serde_yaml::from_value::<Identity>(journey.clone())
-            .map_err(|error| invalid(file, &format!("journey {name} identity does not parse: {error}")))?
+            .map_err(|error| {
+                invalid(
+                    file,
+                    &format!("journey {name} identity does not parse: {error}"),
+                )
+            })?
             .declared();
         let first_use = name == "onboarding-first-use";
         if first_use || has_identity {
-            require(stated(journey, "journeyId"), file, &format!("journey {name} journeyId is required"))?;
+            require(
+                stated(journey, "journeyId"),
+                file,
+                &format!("journey {name} journeyId is required"),
+            )?;
             require(
                 stated(journey, "journeyVersion"),
                 file,
@@ -105,7 +118,10 @@ pub(crate) fn validate_journeys(
             // Artifact kinds are names; a kind that is not one is refused, not
             // left out of the list it is checked against.
             let mut kinds: Vec<String> = Vec::new();
-            for item in sequence_of(publication, "artifactKinds").into_iter().flatten() {
+            for item in sequence_of(publication, "artifactKinds")
+                .into_iter()
+                .flatten()
+            {
                 let kind = item.as_str();
                 require(
                     kind.is_some(),
@@ -134,7 +150,8 @@ pub(crate) fn validate_journeys(
             }
             // Publication needs at least E2 evidence and can ask for no more
             // than E3, the ranks the gate reads.
-            let rank = string_of(publication, "minimumEvidence").and_then(crate::gate::evidence_rank);
+            let rank =
+                string_of(publication, "minimumEvidence").and_then(crate::gate::evidence_rank);
             require(
                 rank.is_some()
                     && rank >= crate::gate::evidence_rank("E2")

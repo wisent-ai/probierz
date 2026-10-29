@@ -97,7 +97,10 @@ pub(crate) fn submit_remote_run(
     let left_evidence = watched_left_evidence(&watched);
     let completed = watched_completed(&watched);
     let Value::Object(watched) = watched else {
-        return Err(Failure::invalid("stado.watch", format!("the watch of job {job_id} answered no object")));
+        return Err(Failure::invalid(
+            "stado.watch",
+            format!("the watch of job {job_id} answered no object"),
+        ));
     };
     result.extend(watched);
     if !left_evidence {
@@ -105,7 +108,10 @@ pub(crate) fn submit_remote_run(
     }
     let retained = fetch_run_evidence(harness, &job_id)?;
     if let Some(path) = retained.results_dir {
-        result.insert("resultsDir".into(), Value::String(path.display().to_string()));
+        result.insert(
+            "resultsDir".into(),
+            Value::String(path.display().to_string()),
+        );
     }
     if let Some(error) = retained.artifact_error {
         result.insert("artifactError".into(), error);
@@ -113,7 +119,10 @@ pub(crate) fn submit_remote_run(
     if completed {
         if result.get("resultsDir").is_none() {
             result.insert("state".into(), Value::String("evidence-unavailable".into()));
-            result.insert("failure".into(), missing_evidence(&job_id, "artifact_error=null"));
+            result.insert(
+                "failure".into(),
+                missing_evidence(&job_id, "artifact_error=null"),
+            );
         }
         return Ok(Value::Object(result));
     }
@@ -127,7 +136,11 @@ pub(crate) fn submit_remote_run(
         return Ok(Value::Object(result));
     };
     let listed = |key: &str, separator: &str| match preflight.get(key).and_then(Value::as_array) {
-        Some(items) => items.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(separator),
+        Some(items) => items
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>()
+            .join(separator),
         None => String::new(),
     };
     // A worker that refused without naming what it lacked is said as such,
@@ -146,7 +159,12 @@ pub(crate) fn submit_remote_run(
     result.insert("preflight".into(), preflight.clone());
     result.insert(
         "failure".into(),
-        failure_summary(&failure, format!("Job {job_id} did not execute because the selected host is missing: {missing}.")),
+        failure_summary(
+            &failure,
+            format!(
+                "Job {job_id} did not execute because the selected host is missing: {missing}."
+            ),
+        ),
     );
     Ok(Value::Object(result))
 }
@@ -177,9 +195,9 @@ pub(crate) fn require_immutable_native(
         .pointer("/app/repositories")
         .and_then(Value::as_array)
         .and_then(|repositories| {
-            repositories.iter().find(|value| {
-                value.get("index").and_then(Value::as_u64) == Some(0)
-            })
+            repositories
+                .iter()
+                .find(|value| value.get("index").and_then(Value::as_u64) == Some(0))
         });
     let clean = primary
         .and_then(|value| value.get("gitSha"))
@@ -243,10 +261,16 @@ pub(crate) fn repository_root(
 /// (127.attacker.example) is not taken for one and sent the router token.
 pub(crate) fn model_router_url(value: Option<&str>) -> Result<String, Failure> {
     let Some(clean) = value.map(str::trim).filter(|text| !text.is_empty()) else {
-        return Err(Failure::config("stado.submit", "STADO_MODEL_ROUTER_URL is required"));
+        return Err(Failure::config(
+            "stado.submit",
+            "STADO_MODEL_ROUTER_URL is required",
+        ));
     };
     let parsed = url::Url::parse(clean).map_err(|error| {
-        Failure::config("stado.submit", format!("STADO_MODEL_ROUTER_URL {clean} is not a URL: {error}"))
+        Failure::config(
+            "stado.submit",
+            format!("STADO_MODEL_ROUTER_URL {clean} is not a URL: {error}"),
+        )
     })?;
     let loopback = match parsed.host() {
         Some(url::Host::Domain(name)) => name == "localhost",

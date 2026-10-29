@@ -170,12 +170,18 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
             (id, contender)
         })
         .collect();
-    let ours: Vec<&Contender> = contenders.values().filter(|contender| contender.ours).collect();
+    let ours: Vec<&Contender> = contenders
+        .values()
+        .filter(|contender| contender.ours)
+        .collect();
     let [ours] = ours.as_slice() else {
         let found = if ours.is_empty() {
             "none".to_string()
         } else {
-            ours.iter().map(|contender| contender.id.as_str()).collect::<Vec<_>>().join(", ")
+            ours.iter()
+                .map(|contender| contender.id.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         };
         return Err(refuse(
             manifest,
@@ -183,5 +189,9 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
         ));
     };
     let ours = (*ours).clone();
-    Ok(Declared { suites, contenders, ours })
+    Ok(Declared {
+        suites,
+        contenders,
+        ours,
+    })
 }

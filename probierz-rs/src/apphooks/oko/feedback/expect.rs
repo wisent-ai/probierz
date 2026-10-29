@@ -24,12 +24,15 @@ pub(super) struct Seeded {
 }
 
 fn seeded_list<'a>(strategy: &'a Value, pointer: &str) -> Result<&'a Vec<Value>, Failure> {
-    strategy.pointer(pointer).and_then(Value::as_array).ok_or_else(|| {
-        Failure::config(
-            "apphook.oko.state",
-            format!("the seeded strategy in the Oko fixture state holds no {pointer} list"),
-        )
-    })
+    strategy
+        .pointer(pointer)
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            Failure::config(
+                "apphook.oko.state",
+                format!("the seeded strategy in the Oko fixture state holds no {pointer} list"),
+            )
+        })
 }
 
 /// The seeded strategy's metric and initiative counts and the capacity its
@@ -58,7 +61,10 @@ pub(super) fn capacity_sum(rows: &[Value], field: &str, what: &str) -> Result<f6
         .iter()
         .map(|row| {
             row.get(field).and_then(Value::as_f64).ok_or_else(|| {
-                Failure::unavailable("apphook.oko.verify", format!("{what} {row} states no numeric {field}"))
+                Failure::unavailable(
+                    "apphook.oko.verify",
+                    format!("{what} {row} states no numeric {field}"),
+                )
             })
         })
         .collect::<Result<Vec<f64>, Failure>>()?;

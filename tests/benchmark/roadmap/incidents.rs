@@ -31,8 +31,19 @@ fn record(world: &World, claim: &str) -> String {
         &probierz(
             world,
             &[
-                "incident", "record", "--claim", claim, "--service", APP, "--failure-point",
-                "roadmap.journey", "--code", "journey_failure", "--detail", claim, "--json",
+                "incident",
+                "record",
+                "--claim",
+                claim,
+                "--service",
+                APP,
+                "--failure-point",
+                "roadmap.journey",
+                "--code",
+                "journey_failure",
+                "--detail",
+                claim,
+                "--json",
             ],
         ),
         "incident record",
@@ -44,7 +55,10 @@ fn record(world: &World, claim: &str) -> String {
 }
 
 fn show(world: &World, id: &str) -> Value {
-    answered(&probierz(world, &["incident", "show", id, "--json"]), "incident show")
+    answered(
+        &probierz(world, &["incident", "show", id, "--json"]),
+        "incident show",
+    )
 }
 
 fn cycle(world: &World) -> Value {
@@ -60,11 +74,20 @@ fn refusal(cycled: &Value) -> String {
     else {
         panic!("the cycle reported no roadmap change of {APP}: {cycled}");
     };
-    assert_eq!(change["written"], true, "{APP}'s roadmap change was not written: {cycled}");
-    let Some(refused) = change["refused"].as_array().filter(|refused| !refused.is_empty()) else {
+    assert_eq!(
+        change["written"], true,
+        "{APP}'s roadmap change was not written: {cycled}"
+    );
+    let Some(refused) = change["refused"]
+        .as_array()
+        .filter(|refused| !refused.is_empty())
+    else {
         panic!("no item of {APP}'s roadmap was refused: {cycled}");
     };
-    let said: Vec<String> = refused.iter().map(|sentence| sentence.to_string()).collect();
+    let said: Vec<String> = refused
+        .iter()
+        .map(|sentence| sentence.to_string())
+        .collect();
     said.join("; ")
 }
 
@@ -73,7 +96,15 @@ fn add_item(world: &World, item: Value) {
     answered(
         &stado_run(
             world,
-            &["product", "registry", "set", APP, "--add-roadmap", &item.to_string(), "--json"],
+            &[
+                "product",
+                "registry",
+                "set",
+                APP,
+                "--add-roadmap",
+                &item.to_string(),
+                "--json",
+            ],
         ),
         "stado product registry set",
     );
@@ -91,10 +122,16 @@ fn an_incident_is_planned_delivered_with_its_resolution_and_planned_again_when_r
     assert_eq!(planned["status"], "planned", "{planned}");
 
     answered(
-        &probierz(&world, &["incident", "resolve", &id, "--note", "the journey answers"]),
+        &probierz(
+            &world,
+            &["incident", "resolve", &id, "--note", "the journey answers"],
+        ),
         "incident resolve",
     );
-    let Some(resolved_at) = show(&world, &id)["resolution"]["resolved_at"].as_str().map(str::to_string) else {
+    let Some(resolved_at) = show(&world, &id)["resolution"]["resolved_at"]
+        .as_str()
+        .map(str::to_string)
+    else {
         panic!("the resolved incident states no resolved_at");
     };
     cycle(&world);
@@ -104,7 +141,16 @@ fn an_incident_is_planned_delivered_with_its_resolution_and_planned_again_when_r
     assert_eq!(delivered["decision"], decision.as_str(), "{delivered}");
 
     answered(
-        &probierz(&world, &["incident", "reopen", &id, "--note", "the journey fails again"]),
+        &probierz(
+            &world,
+            &[
+                "incident",
+                "reopen",
+                &id,
+                "--note",
+                "the journey fails again",
+            ],
+        ),
         "incident reopen",
     );
     let shown = show(&world, &id);
@@ -118,8 +164,15 @@ fn an_incident_is_planned_delivered_with_its_resolution_and_planned_again_when_r
     cycle(&world);
     let history = roadmap(&world);
     let kept = the_item(&history, &title);
-    assert_eq!(kept["status"], "delivered", "the delivered item stays delivered: {kept}");
-    assert_eq!(kept["decision"], decision.as_str(), "the delivered item keeps its decision: {kept}");
+    assert_eq!(
+        kept["status"], "delivered",
+        "the delivered item stays delivered: {kept}"
+    );
+    assert_eq!(
+        kept["decision"],
+        decision.as_str(),
+        "the delivered item keeps its decision: {kept}"
+    );
     let reopened = the_item(&history, &format!("{title}, reopened {reopened_at}"));
     assert_eq!(reopened["status"], "planned", "{reopened}");
 }
@@ -141,7 +194,11 @@ fn an_item_whose_incident_the_register_does_not_list_is_refused_alone() {
         "the refusal names the incident the register lacks: {said}"
     );
     let history = roadmap(&world);
-    assert_eq!(the_item(&history, ghost)["status"], "planned", "the unnamed item stays open");
+    assert_eq!(
+        the_item(&history, ghost)["status"],
+        "planned",
+        "the unnamed item stays open"
+    );
     assert_eq!(
         the_item(&history, &format!("Repair incident {id}"))["status"],
         "planned",
@@ -167,8 +224,16 @@ fn a_reopened_incident_without_a_recorded_reopening_is_refused() {
     );
     let history = roadmap(&world);
     assert_eq!(
-        history.iter().filter(|item| item["title"].as_str().is_some_and(|written| written.starts_with(&title))).count(),
-        history.iter().filter(|item| item["title"] == title.as_str()).count(),
+        history
+            .iter()
+            .filter(|item| item["title"]
+                .as_str()
+                .is_some_and(|written| written.starts_with(&title)))
+            .count(),
+        history
+            .iter()
+            .filter(|item| item["title"] == title.as_str())
+            .count(),
         "no new item was planned for the unnamed return: {history:?}"
     );
 }

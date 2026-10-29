@@ -94,7 +94,10 @@ pub(crate) fn titled(id: &str, product: &Json, prefix: &str) -> Result<Vec<Json>
 
 /// The open items of `items`, as `statuses` reads them; an item whose status
 /// is not declared is refused naming it.
-pub(crate) fn open_of<'a>(statuses: &Statuses, items: &'a [Json]) -> Result<Vec<&'a Json>, Failure> {
+pub(crate) fn open_of<'a>(
+    statuses: &Statuses,
+    items: &'a [Json],
+) -> Result<Vec<&'a Json>, Failure> {
     let mut open = Vec::new();
     for item in items {
         if statuses

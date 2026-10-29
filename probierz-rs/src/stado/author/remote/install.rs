@@ -178,7 +178,12 @@ pub(crate) fn install_product_spec(
             "the registration path has no parent directory",
         )
     })?;
-    let replaced_product = replaced_product(registration_parent, &registration, &product_spec, tests_root)?;
+    let replaced_product = replaced_product(
+        registration_parent,
+        &registration,
+        &product_spec,
+        tests_root,
+    )?;
     if let Some(parent) = product_spec.parent() {
         fs::create_dir_all(parent)?;
     }

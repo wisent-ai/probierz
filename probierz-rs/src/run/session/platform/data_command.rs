@@ -14,7 +14,11 @@ pub(crate) fn run_data_command(
     };
     let args = match config.get("args") {
         Some(value) => match value.as_sequence() {
-            Some(values) => match values.iter().map(yaml_scalar_text).collect::<Option<Vec<_>>>() {
+            Some(values) => match values
+                .iter()
+                .map(yaml_scalar_text)
+                .collect::<Option<Vec<_>>>()
+            {
                 Some(args) => args,
                 // Passed as '' it ran the command with an argument nobody wrote.
                 None => {

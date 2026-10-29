@@ -40,7 +40,10 @@ pub fn record(harness: &Path, recorded: Recorded<'_>, json_output: bool) -> Answ
         Some(source) => {
             let named = [
                 recorded.service.is_some().then_some("--service"),
-                recorded.failure_point.is_some().then_some("--failure-point"),
+                recorded
+                    .failure_point
+                    .is_some()
+                    .then_some("--failure-point"),
                 recorded.error_code.is_some().then_some("--code"),
                 recorded.detail.is_some().then_some("--detail"),
             ];
@@ -137,7 +140,11 @@ pub fn list(harness: &Path, state: &str, limit: usize, json_output: bool) -> Ans
     Ok(())
 }
 
-pub(super) fn list_rows(harness: &Path, state_named: &str, limit: usize) -> Result<Vec<Value>, Failure> {
+pub(super) fn list_rows(
+    harness: &Path,
+    state_named: &str,
+    limit: usize,
+) -> Result<Vec<Value>, Failure> {
     let _lock = lock(harness)?;
     let filter: Filter = serde_json::from_value(json!(state_named)).map_err(|error| {
         Failure::invalid(

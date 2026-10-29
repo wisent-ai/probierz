@@ -108,7 +108,9 @@ pub(crate) fn roadmap_of(harness: &Path, app_id: &str, suite_id: &str) -> Result
     }
     let delivered: Vec<Json> = open
         .iter()
-        .filter(|item| case_of(item, &prefix).is_some_and(|case| !lost.iter().any(|known| known == case)))
+        .filter(|item| {
+            case_of(item, &prefix).is_some_and(|case| !lost.iter().any(|known| known == case))
+        })
         .map(|item| ledger::delivered(item, &run_id))
         .collect();
     let written: Vec<Json> = planned.iter().chain(&delivered).cloned().collect();

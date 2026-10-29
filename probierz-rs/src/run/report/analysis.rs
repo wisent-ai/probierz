@@ -44,7 +44,10 @@ pub(crate) fn analyze_run(
     let mut summary = normalize_wdio(&report, tool);
     // normalize_wdio always lists the report's media, so a summary without
     // that list is refused rather than read as having none.
-    let report_media = match summary.as_object_mut().and_then(|summary| summary.remove("reportMedia")) {
+    let report_media = match summary
+        .as_object_mut()
+        .and_then(|summary| summary.remove("reportMedia"))
+    {
         Some(Value::Array(media)) => media,
         other => {
             return Err(fail(
@@ -159,7 +162,12 @@ pub(crate) fn analyze_run(
     };
     let mut output = match summary {
         Value::Object(summary) => summary,
-        other => return Err(fail("run.analyze", format!("the normalized report is not an object: {other}"))),
+        other => {
+            return Err(fail(
+                "run.analyze",
+                format!("the normalized report is not an object: {other}"),
+            ))
+        }
     };
     // A report that names no run, no artifacts directory, no timeline or no
     // diagnostics carries `null` for it; capture errors it does not list are
@@ -181,7 +189,9 @@ pub(crate) fn analyze_run(
     output.insert("media".into(), Value::Array(media));
     output.insert("artifacts".into(), Value::Array(inventory));
     let timeline_summary = match timeline.as_ref() {
-        Some(timeline) => json!({ "path": timeline_path, "counts": timeline["counts"], "diagnostics": timeline["diagnostics"] }),
+        Some(timeline) => {
+            json!({ "path": timeline_path, "counts": timeline["counts"], "diagnostics": timeline["diagnostics"] })
+        }
         None => Value::Null,
     };
     output.insert("timeline".into(), timeline_summary);

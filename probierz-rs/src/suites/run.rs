@@ -96,13 +96,19 @@ fn run_gate(repo: &Path, gate: &TestGate, directory: &Path) -> Result<Value, Fai
     let stdout = File::create(&stdout_path).map_err(|error| {
         Failure::config(
             "suites.run",
-            format!("{} could not be opened for stdout: {error}", stdout_path.display()),
+            format!(
+                "{} could not be opened for stdout: {error}",
+                stdout_path.display()
+            ),
         )
     })?;
     let stderr = File::create(&stderr_path).map_err(|error| {
         Failure::config(
             "suites.run",
-            format!("{} could not be opened for stderr: {error}", stderr_path.display()),
+            format!(
+                "{} could not be opened for stderr: {error}",
+                stderr_path.display()
+            ),
         )
     })?;
     let started_at = now_iso();

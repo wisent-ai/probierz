@@ -177,10 +177,12 @@ pub(crate) fn declared(manifest: &Manifest) -> Result<Declared, Failure> {
             .iter()
             .map(|argv| {
                 argv.iter()
-                    .map(|argument| if argument.starts_with("~/") {
-                        manifest.beside(argument).to_string_lossy().into_owned()
-                    } else {
-                        argument.clone()
+                    .map(|argument| {
+                        if argument.starts_with("~/") {
+                            manifest.beside(argument).to_string_lossy().into_owned()
+                        } else {
+                            argument.clone()
+                        }
                     })
                     .collect()
             })

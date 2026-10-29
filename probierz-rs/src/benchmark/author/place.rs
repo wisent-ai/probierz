@@ -33,7 +33,13 @@ fn root(manifest: &Manifest) -> Result<PathBuf, Failure> {
 /// path was written whole, naming the account the manifest is meant not to.
 pub(crate) fn written(path: &Path) -> Result<String, Failure> {
     let home = std::env::var("HOME").map_err(|cause| {
-        Failure::config("benchmark.author", format!("HOME cannot be read, so {} cannot be written under ~: {cause}", path.display()))
+        Failure::config(
+            "benchmark.author",
+            format!(
+                "HOME cannot be read, so {} cannot be written under ~: {cause}",
+                path.display()
+            ),
+        )
     })?;
     Ok(match path.strip_prefix(&home) {
         Ok(relative) => format!("~/{}", relative.display()),
@@ -152,7 +158,8 @@ pub(crate) fn driver(
     {
         use std::os::unix::fs::PermissionsExt;
         // The driver is run: its owner may change it, everyone may run it.
-        let runnable = libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH;
+        let runnable =
+            libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH;
         std::fs::set_permissions(&file, std::fs::Permissions::from_mode(u32::from(runnable)))?;
     }
     Ok(file)

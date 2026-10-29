@@ -19,11 +19,17 @@ pub(crate) fn is_true(value: Option<&Value>) -> bool {
 /// `E3` for a passed run whose conditions state `record` and whose evidence
 /// states `report`, `analysis` and `capturePresent` true; `E2` otherwise. A
 /// field the run does not state counts as not reached.
-pub(crate) fn level_of(passed: bool, conditions: Option<&Value>, evidence: Option<&Value>) -> &'static str {
+pub(crate) fn level_of(
+    passed: bool,
+    conditions: Option<&Value>,
+    evidence: Option<&Value>,
+) -> &'static str {
     if !passed {
         return "E0";
     }
-    let stated = |object: Option<&Value>, name: &str| is_true(object.and_then(|object| property(object, name)));
+    let stated = |object: Option<&Value>, name: &str| {
+        is_true(object.and_then(|object| property(object, name)))
+    };
     if stated(conditions, "record")
         && stated(evidence, "report")
         && stated(evidence, "analysis")

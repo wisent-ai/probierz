@@ -22,14 +22,22 @@ pub(crate) fn evaluate_value(harness: &Path, args: &GateArgs) -> Result<Value, F
     let require_protected = policy.flag("requireProtectedArtifacts")?;
     let require_secret_scan = policy.flag("requireSecretScan")?;
     let run_ids: Vec<String> = match args.runs.as_deref() {
-        Some(runs) => runs.split(',').filter(|value| !value.is_empty()).map(str::to_string).collect(),
+        Some(runs) => runs
+            .split(',')
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .collect(),
         None => Vec::new(),
     };
     let mut errors = Vec::new();
     if args.expected_harness_sha.is_empty() {
         errors.push("expected harness source SHA-256 is required".to_string());
     }
-    if !args.expected_source_sha.as_deref().is_some_and(|value| !value.is_empty()) {
+    if !args
+        .expected_source_sha
+        .as_deref()
+        .is_some_and(|value| !value.is_empty())
+    {
         errors.push("expected app source SHA-256 is required".to_string());
     }
     if run_ids.is_empty() {

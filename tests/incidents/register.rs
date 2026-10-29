@@ -55,7 +55,8 @@ fn append(root: &Path, record: &Value) {
         Err(error) => panic!("{} cannot be read: {error}", register(root).display()),
     };
     text.push_str(&format!("{record}\n"));
-    std::fs::create_dir_all(root.join("test-results/.incidents")).expect("the register's directory is made");
+    std::fs::create_dir_all(root.join("test-results/.incidents"))
+        .expect("the register's directory is made");
     std::fs::write(register(root), text).expect("the register is written");
 }
 
@@ -68,12 +69,23 @@ fn recorded(root: &Path) -> String {
     let output = probierz(
         root,
         &[
-            "record", "--claim", "the case's claim", "--service", "probierz", "--failure-point",
-            "incident.case", "--code", "case_failure", "--detail", "the case's detail", "--json",
+            "record",
+            "--claim",
+            "the case's claim",
+            "--service",
+            "probierz",
+            "--failure-point",
+            "incident.case",
+            "--code",
+            "case_failure",
+            "--detail",
+            "the case's detail",
+            "--json",
         ],
     );
     assert!(output.status.success(), "{}", said(&output));
-    let entry: Value = serde_json::from_slice(&output.stdout).expect("the record prints its entry as JSON");
+    let entry: Value =
+        serde_json::from_slice(&output.stdout).expect("the record prints its entry as JSON");
     let Some(id) = entry["incident_id"].as_str() else {
         panic!("the recorded incident names no incident_id: {entry}");
     };
@@ -86,8 +98,16 @@ fn a_resolution_of_an_incident_the_register_does_not_hold_is_refused_naming_its_
     append(&root, &resolution("no-such-incident", "closed"));
     let output = probierz(&root, &["list", "--state", "all", "--json"]);
     assert!(!output.status.success(), "{}", said(&output));
-    assert!(said(&output).contains("register.jsonl:"), "{}", said(&output));
-    assert!(said(&output).contains("which no earlier line records"), "{}", said(&output));
+    assert!(
+        said(&output).contains("register.jsonl:"),
+        "{}",
+        said(&output)
+    );
+    assert!(
+        said(&output).contains("which no earlier line records"),
+        "{}",
+        said(&output)
+    );
     std::fs::remove_dir_all(&root).expect("the case's harness is removed");
 }
 
@@ -100,7 +120,11 @@ fn a_second_resolution_is_refused_instead_of_skipped() {
     append(&root, &resolution(&id, "again"));
     let output = probierz(&root, &["show", &id, "--json"]);
     assert!(!output.status.success(), "{}", said(&output));
-    assert!(said(&output).contains("which is already resolved"), "{}", said(&output));
+    assert!(
+        said(&output).contains("which is already resolved"),
+        "{}",
+        said(&output)
+    );
     std::fs::remove_dir_all(&root).expect("the case's harness is removed");
 }
 
@@ -110,7 +134,11 @@ fn a_state_the_list_does_not_know_is_refused_naming_it() {
     recorded(&root);
     let output = probierz(&root, &["list", "--state", "closed"]);
     assert!(!output.status.success(), "{}", said(&output));
-    assert!(said(&output).contains("--state is open, resolved or all, not closed"), "{}", said(&output));
+    assert!(
+        said(&output).contains("--state is open, resolved or all, not closed"),
+        "{}",
+        said(&output)
+    );
     let listed = probierz(&root, &["list", "--state", "open", "--json"]);
     assert!(listed.status.success(), "{}", said(&listed));
     let answer: Value = serde_json::from_slice(&listed.stdout).expect("the list prints JSON");
@@ -118,6 +146,9 @@ fn a_state_the_list_does_not_know_is_refused_naming_it() {
         panic!("the list answers no incidents array: {answer}");
     };
     assert!(!incidents.is_empty(), "{answer}");
-    assert!(incidents.iter().all(|incident| incident["state"] == "open"), "{answer}");
+    assert!(
+        incidents.iter().all(|incident| incident["state"] == "open"),
+        "{answer}"
+    );
     std::fs::remove_dir_all(&root).expect("the case's harness is removed");
 }

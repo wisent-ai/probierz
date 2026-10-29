@@ -164,9 +164,10 @@ pub(crate) fn scoped_oko_source(
     source: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, String>, Failure> {
     let email = configured(source, "OKO_E2E_EMAIL")?.to_ascii_lowercase();
-    let Some((address, domain)) = email.split_once('@').filter(|(address, domain)| {
-        !address.is_empty() && !domain.is_empty()
-    }) else {
+    let Some((address, domain)) = email
+        .split_once('@')
+        .filter(|(address, domain)| !address.is_empty() && !domain.is_empty())
+    else {
         return Err(Failure::config(
             "apphook.oko.email",
             format!("OKO_E2E_EMAIL must be a valid technical email address, found {email:?}"),

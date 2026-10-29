@@ -195,7 +195,8 @@ fn a_checkout_s_own_suites_are_run_and_kept() {
     let unknown = case.probierz(&["run", &target, "undeclared"]);
     assert!(!unknown.status.success());
     assert!(
-        said(&unknown).contains(r#"no test gate named \"undeclared\"; declared: reported, failing"#),
+        said(&unknown)
+            .contains(r#"no test gate named \"undeclared\"; declared: reported, failing"#),
         "{}",
         said(&unknown)
     );
@@ -267,15 +268,22 @@ fn a_symlink_report_refuses_collection_but_keeps_the_run() {
     )
     .unwrap();
     git(&case.checkout, &["add", ".wisent-release.json"]);
-    git(&case.checkout, &["commit", "--quiet", "--message", "declare socket report"]);
+    git(
+        &case.checkout,
+        &["commit", "--quiet", "--message", "declare socket report"],
+    );
     // A socket's path must fit sockaddr_un (SUN_LEN), which the case's
     // absolute path below the package does not; cargo runs the test from the
     // package root, so the case is bound by its path relative to there.
     let socket = case.root.join("s");
     let here = std::env::current_dir().unwrap();
-    let short = socket
-        .strip_prefix(&here)
-        .unwrap_or_else(|_| panic!("{} is not below the test's directory {}", socket.display(), here.display()));
+    let short = socket.strip_prefix(&here).unwrap_or_else(|_| {
+        panic!(
+            "{} is not below the test's directory {}",
+            socket.display(),
+            here.display()
+        )
+    });
     let _socket = UnixListener::bind(short).unwrap();
     std::os::unix::fs::symlink(case.root.join("s"), case.checkout.join("report.sock")).unwrap();
 
@@ -284,11 +292,14 @@ fn a_symlink_report_refuses_collection_but_keeps_the_run() {
     let record: Value = serde_json::from_slice(&run.stdout).unwrap();
     assert_eq!(record["verdict"], "failed");
     let outcome = gate(&record, "socket-report");
-    assert!(outcome["exitCode"].is_number(), "the suite itself completed");
+    assert!(
+        outcome["exitCode"].is_number(),
+        "the suite itself completed"
+    );
     assert_eq!(outcome["passed"], false);
     let report = outcome["reports"].as_array().unwrap().first().unwrap();
-    let destination = Path::new(record["directory"].as_str().unwrap())
-        .join("socket-report/reports/report.sock");
+    let destination =
+        Path::new(record["directory"].as_str().unwrap()).join("socket-report/reports/report.sock");
     assert_eq!(report["destination"], destination.to_str().unwrap());
     assert!(report["error"].as_str().unwrap().contains("symbolic link"));
     assert_eq!(gate(&record, "following-gate")["passed"], true);

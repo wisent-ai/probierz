@@ -131,13 +131,16 @@ fn changes_of(
     let mut incidents = Vec::new();
     for row in open {
         let Some(incident) = row["incident_id"].as_str() else {
-            changes
-                .refused
-                .push(format!("an open incident of this product states no incident_id: {row}"));
+            changes.refused.push(format!(
+                "an open incident of this product states no incident_id: {row}"
+            ));
             continue;
         };
         incidents.push(incident);
-        if existing.iter().any(|item| incident_of(item) == Some(incident)) {
+        if existing
+            .iter()
+            .any(|item| incident_of(item) == Some(incident))
+        {
             continue;
         }
         match planned_item(row, incident, items) {

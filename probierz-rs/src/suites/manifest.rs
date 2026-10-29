@@ -173,13 +173,22 @@ pub(crate) fn test_gates(repo: &Path) -> Result<Vec<TestGate>, Failure> {
         if !checkout_relative(name) || name_parts.next().is_some() {
             return Err(Failure::config(
                 "suites.manifest",
-                format!("{}: gate {name:?} must have a single path-safe name", path.display()),
+                format!(
+                    "{}: gate {name:?} must have a single path-safe name",
+                    path.display()
+                ),
             ));
         }
-        if gates.iter().any(|existing: &TestGate| existing.name == name) {
+        if gates
+            .iter()
+            .any(|existing: &TestGate| existing.name == name)
+        {
             return Err(Failure::config(
                 "suites.manifest",
-                format!("{}: gate {name:?} is declared more than once", path.display()),
+                format!(
+                    "{}: gate {name:?} is declared more than once",
+                    path.display()
+                ),
             ));
         }
         let argv = match gate.get("argv") {

@@ -162,9 +162,9 @@ pub(crate) fn post_router(
     let (payload, status) = text
         .rsplit_once('\n')
         .ok_or_else(|| "model router returned no HTTP status".to_string())?;
-    let status = status
-        .parse::<u16>()
-        .map_err(|error| format!("model router returned an invalid HTTP status {status:?}: {error}"))?;
+    let status = status.parse::<u16>().map_err(|error| {
+        format!("model router returned an invalid HTTP status {status:?}: {error}")
+    })?;
     Ok((status, payload.to_string()))
 }
 

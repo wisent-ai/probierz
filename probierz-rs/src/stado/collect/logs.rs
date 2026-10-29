@@ -133,11 +133,7 @@ pub(crate) fn collect_remote_run(
     result.insert("collected".into(), Value::Bool(true));
     result.insert(
         "resultsDir".into(),
-        Value::from(
-            retained
-                .results_dir
-                .map(|path| path.display().to_string()),
-        ),
+        Value::from(retained.results_dir.map(|path| path.display().to_string())),
     );
     result.insert("manifest".into(), Value::from(retained.manifest));
     if let Some(Value::Object(authored)) = authored {
@@ -169,7 +165,8 @@ pub(crate) fn capture_remote_logs(
     let payload: Value = match serde_json::from_str(&page.stdout) {
         Ok(value) => value,
         Err(error) => {
-            let action = format!("Reading logs for job {job_id} returned invalid metadata ({error})");
+            let action =
+                format!("Reading logs for job {job_id} returned invalid metadata ({error})");
             return Ok((log_path, receipts, failed(action)));
         }
     };

@@ -92,7 +92,10 @@ impl Control {
                 return answered(public_job(&job), "cancelRequested", Value::Bool(false));
             }
             job.cancel_requested = true;
-            (answered(public_job(&job), "cancelRequested", Value::Bool(true))?, job.child.clone())
+            (
+                answered(public_job(&job), "cancelRequested", Value::Bool(true))?,
+                job.child.clone(),
+            )
         };
         if let Some(child) = child {
             terminate_tree(child);
@@ -213,6 +216,8 @@ fn answered(answer: Value, field: &str, value: Value) -> Result<Value, String> {
             object.insert(field.into(), value);
             Ok(Value::Object(object))
         }
-        other => Err(format!("a job was answered as {other}, not an object, so its {field} cannot be set")),
+        other => Err(format!(
+            "a job was answered as {other}, not an object, so its {field} cannot be set"
+        )),
     }
 }

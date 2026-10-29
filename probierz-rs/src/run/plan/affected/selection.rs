@@ -110,7 +110,10 @@ fn affected_fields(harness: &Path, files: &[String]) -> Result<Map<String, Value
     let mut by_package: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for name in target_list() {
         let Some(declared) = target(name) else {
-            return Err(fail("run.affected", format!("target {name} is listed but not declared")));
+            return Err(fail(
+                "run.affected",
+                format!("target {name} is listed but not declared"),
+            ));
         };
         by_package.entry(declared.pkg).or_default().push(name);
     }
@@ -175,7 +178,10 @@ fn affected_fields(harness: &Path, files: &[String]) -> Result<Map<String, Value
                 fields.shift_remove("input");
                 Ok(Value::Object(fields))
             }
-            other => Err(fail("run.affected", format!("an affected app journey is not an object: {other}"))),
+            other => Err(fail(
+                "run.affected",
+                format!("an affected app journey is not an object: {other}"),
+            )),
         })
         .collect::<Result<Vec<Value>, Failure>>()?;
     Ok(Map::from_iter([

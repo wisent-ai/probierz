@@ -79,7 +79,10 @@ fn collected(
     match joined {
         Ok(Ok(bytes)) => (bytes, None),
         Ok(Err(error)) => (Vec::new(), Some(format!("reading {name} failed: {error}"))),
-        Err(_panic) => (Vec::new(), Some(format!("the {name} reader thread panicked"))),
+        Err(_panic) => (
+            Vec::new(),
+            Some(format!("the {name} reader thread panicked")),
+        ),
     }
 }
 

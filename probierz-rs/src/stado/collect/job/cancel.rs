@@ -61,7 +61,9 @@ pub(crate) fn cancel_remote_run(
     let before_payload: Value = serde_json::from_str(&before.stdout).map_err(|error| {
         remote_failure(
             "stado.watch",
-            &format!("Reading the original state for job {job_id} returned invalid metadata ({error})"),
+            &format!(
+                "Reading the original state for job {job_id} returned invalid metadata ({error})"
+            ),
             &before,
         )
     })?;
@@ -89,13 +91,14 @@ pub(crate) fn cancel_remote_run(
         true,
         true,
     )?;
-    let cancellation_payload: Value = serde_json::from_str(&cancellation.stdout).map_err(|error| {
-        remote_failure(
-            "stado.watch",
-            &format!("Cancelling job {job_id} returned an invalid receipt ({error})"),
-            &cancellation,
-        )
-    })?;
+    let cancellation_payload: Value =
+        serde_json::from_str(&cancellation.stdout).map_err(|error| {
+            remote_failure(
+                "stado.watch",
+                &format!("Cancelling job {job_id} returned an invalid receipt ({error})"),
+                &cancellation,
+            )
+        })?;
     // The receipt's job, its state and whether it can still move are read
     // together; a receipt without any of them is a failed cancellation.
     let (true, Some(true), Some(job), Some(said), Some(terminal)) = (

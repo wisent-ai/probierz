@@ -144,7 +144,10 @@ pub(crate) fn sign_seo_payload(payload: &JsonValue, key: &[u8]) -> Result<JsonVa
     let text = String::from_utf8_lossy(key);
     // A PEM key announces itself with its BEGIN line; anything else is DER.
     let invalid = |error: &dyn std::fmt::Display| {
-        Failure::config("seo-evaluate.sign", format!("invalid Ed25519 private key: {error}"))
+        Failure::config(
+            "seo-evaluate.sign",
+            format!("invalid Ed25519 private key: {error}"),
+        )
     };
     let signing = if text.contains("BEGIN") {
         SigningKey::from_pkcs8_pem(text.trim()).map_err(|error| invalid(&error))?

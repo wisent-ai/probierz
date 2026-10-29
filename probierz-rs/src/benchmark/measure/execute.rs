@@ -146,7 +146,11 @@ pub(crate) fn attempt(
     // Encoded before the contender starts, so a task that cannot be encoded
     // never leaves a started contender behind.
     let task_bytes = serde_json::to_vec(&task)?;
-    let label = format!("contender {} ({})", contender.id, contender.program.display());
+    let label = format!(
+        "contender {} ({})",
+        contender.id,
+        contender.program.display()
+    );
     let started = Instant::now();
     let mut child = command.spawn().map_err(|error| {
         Failure::new(

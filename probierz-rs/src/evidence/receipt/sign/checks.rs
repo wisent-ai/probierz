@@ -28,7 +28,10 @@ pub(super) fn check_artifacts(
         };
         let manifest = PathBuf::from(manifest);
         let Some(artifact_root) = manifest.parent() else {
-            errors.push(format!("{run_id}: manifest {} lies in no directory", manifest.display()));
+            errors.push(format!(
+                "{run_id}: manifest {} lies in no directory",
+                manifest.display()
+            ));
             continue;
         };
         let protected = source
@@ -39,7 +42,9 @@ pub(super) fn check_artifacts(
             let protected_root =
                 absolute(&harness.join("test-results").join(".protected").join(app_id))?;
             match source.pointer("/protection/file").and_then(Value::as_str) {
-                None => errors.push(format!("{run_id}: the protected artifact bundle is not recorded")),
+                None => errors.push(format!(
+                    "{run_id}: the protected artifact bundle is not recorded"
+                )),
                 Some(file) => {
                     let bundle = absolute(Path::new(file))?;
                     if !bundle.starts_with(&protected_root) || !bundle.is_file() {

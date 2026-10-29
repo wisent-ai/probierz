@@ -49,7 +49,11 @@ pub(crate) fn render_app_status(status: &Value) -> String {
         .flatten()
     {
         let root = said(repository.get("root"), "root");
-        for (field, what) in [("headError", "HEAD"), ("baseError", "base"), ("diffError", "diff")] {
+        for (field, what) in [
+            ("headError", "HEAD"),
+            ("baseError", "base"),
+            ("diffError", "diff"),
+        ] {
             if let Some(cause) = string(repository.get(field)) {
                 lines.push(format!("  {root}: {what} could not be read: {cause}"));
             }

@@ -19,7 +19,10 @@ fn started(job: &Value) -> bool {
 /// Whether the state `watch_job` answered is one of `wanted`; an unreachable
 /// read, or a state outside the terminal ones, is none of them.
 fn watched_in(watched: &Value, wanted: &[Terminal]) -> bool {
-    match watched.get("state").map(|state| serde_json::from_value::<Terminal>(state.clone())) {
+    match watched
+        .get("state")
+        .map(|state| serde_json::from_value::<Terminal>(state.clone()))
+    {
         Some(Ok(state)) => wanted.contains(&state),
         Some(Err(_not_terminal)) => false,
         None => false,
@@ -34,15 +37,19 @@ pub(crate) fn watched_completed(watched: &Value) -> bool {
 /// Whether a watched job's worker ran to an end that left run evidence:
 /// completed or failed. A cancelled or unreachable job left none to fetch.
 pub(crate) fn watched_left_evidence(watched: &Value) -> bool {
-    watched_in(watched, &[Terminal::Completed, Terminal::Uploaded, Terminal::Failed])
+    watched_in(
+        watched,
+        &[Terminal::Completed, Terminal::Uploaded, Terminal::Failed],
+    )
 }
 
 pub(crate) fn terminal_failure(job_id: &str, state: &str, job: &Value) -> Value {
     let reported = job.get("error").filter(|value| !value.is_null());
     // Only the cancelled state, before any worker started, produced no run.
-    let cancelled_before_start =
-        matches!(serde_json::from_value::<Terminal>(json!(state)), Ok(Terminal::Cancelled))
-            && !started(job);
+    let cancelled_before_start = matches!(
+        serde_json::from_value::<Terminal>(json!(state)),
+        Ok(Terminal::Cancelled)
+    ) && !started(job);
     // The worker's error as it stated it: its text, or its JSON when it is
     // not text.
     let detail = match reported {
@@ -102,12 +109,18 @@ pub(crate) fn watch_job(job_id: &str) -> Result<Value, Failure> {
     }
     let refused = |detail: String| Failure::new("stado.watch", Code::Unknown, detail);
     let job = payload.pointer("/result/job").cloned().ok_or_else(|| {
-        refused(format!("stado machine status answered job {job_id} without the job: {payload}"))
+        refused(format!(
+            "stado machine status answered job {job_id} without the job: {payload}"
+        ))
     })?;
     let state_text = job
         .get("state")
         .and_then(Value::as_str)
-        .ok_or_else(|| refused(format!("stado machine status answered job {job_id} without its state: {job}")))?
+        .ok_or_else(|| {
+            refused(format!(
+                "stado machine status answered job {job_id} without its state: {job}"
+            ))
+        })?
         .to_ascii_lowercase();
     let state = serde_json::from_value::<Terminal>(json!(state_text)).map_err(|cause| {
         refused(format!(

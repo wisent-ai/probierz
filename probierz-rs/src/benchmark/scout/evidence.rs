@@ -71,7 +71,10 @@ pub(super) fn checked_trend(trend: Json, source: &str) -> Result<Json, Failure> 
     if !trend["verdict"].is_string() {
         return Err(Failure::config(
             POINT,
-            format!("{source} gave a trend whose verdict is not text: {}", trend["verdict"]),
+            format!(
+                "{source} gave a trend whose verdict is not text: {}",
+                trend["verdict"]
+            ),
         ));
     }
     if let Some(field) = TREND_COUNTS.iter().find(|field| !trend[**field].is_u64()) {
@@ -132,13 +135,16 @@ pub(super) fn candidates(records: &[Json], file: &Path) -> Result<Vec<Json>, Fai
             .arg(file),
         "the competitors CLI of wisent-ai/competitors-cli (its package bin) must be on PATH",
     )?;
-    let candidates: Vec<Json> = discovered["candidates"].as_array().cloned().ok_or_else(|| {
-        Failure::new(
-            POINT,
-            Code::Refused,
-            format!("competitors discover answered without a candidates list: {discovered}"),
-        )
-    })?;
+    let candidates: Vec<Json> = discovered["candidates"]
+        .as_array()
+        .cloned()
+        .ok_or_else(|| {
+            Failure::new(
+                POINT,
+                Code::Refused,
+                format!("competitors discover answered without a candidates list: {discovered}"),
+            )
+        })?;
     if candidates.is_empty() {
         return Err(Failure::new(
             POINT,

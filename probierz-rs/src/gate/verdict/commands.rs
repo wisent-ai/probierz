@@ -147,7 +147,8 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
         let errors = value_strings(
             property(&evaluation, "verdict").and_then(|value| property(value, "errors")),
             "gate evaluation verdict.errors",
-        ).map_err(|detail| Failure::config("gate.activate", detail))?;
+        )
+        .map_err(|detail| Failure::config("gate.activate", detail))?;
         return Err(Failure::invalid(
             "gate.activate",
             format!("gate activation refused: {}", errors.join("; ")),
@@ -174,13 +175,25 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
         (
             "activationEvidence",
             object([
-                ("expectedHarnessSha", stated(&evaluation, &["expectedHarnessSha"])?),
-                ("expectedSourceSha", stated(&evaluation, &["expectedSourceSha"])?),
+                (
+                    "expectedHarnessSha",
+                    stated(&evaluation, &["expectedHarnessSha"])?,
+                ),
+                (
+                    "expectedSourceSha",
+                    stated(&evaluation, &["expectedSourceSha"])?,
+                ),
                 ("release", stated(&evaluation, &["release"])?),
                 ("runIds", stated(&evaluation, &["evidence", "runIds"])?),
                 ("builds", stated(&evaluation, &["evidence", "builds"])?),
-                ("harnessSha256", stated(&evaluation, &["evidence", "harnessSha256"])?),
-                ("sourceSha256", stated(&evaluation, &["evidence", "sourceSha256"])?),
+                (
+                    "harnessSha256",
+                    stated(&evaluation, &["evidence", "harnessSha256"])?,
+                ),
+                (
+                    "sourceSha256",
+                    stated(&evaluation, &["evidence", "sourceSha256"])?,
+                ),
                 ("receiptFingerprint", receipt_fingerprint),
             ]),
         ),
@@ -213,7 +226,10 @@ pub fn activate(harness: &Path, args: &GateArgs) -> Answer {
                 "expectedHarnessSha",
                 Value::String(args.expected_harness_sha.clone()),
             ),
-            ("expectedSourceSha", Value::from(args.expected_source_sha.clone())),
+            (
+                "expectedSourceSha",
+                Value::from(args.expected_source_sha.clone()),
+            ),
             ("release", Value::from(args.release.clone())),
         ]),
     )?;

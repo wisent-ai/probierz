@@ -63,7 +63,10 @@ pub(crate) fn validate_repositories_and_surfaces(
         };
         for journey in surface_journeys {
             let Some(name) = journey.as_str() else {
-                return refuse(file, &format!("surface {target} journey {journey:?} must be a name"));
+                return refuse(
+                    file,
+                    &format!("surface {target} journey {journey:?} must be a name"),
+                );
             };
             require(
                 journeys.get(Value::from(name)).is_some(),
@@ -148,7 +151,10 @@ fn validate_override(
         &format!("surface {target} journeyOverrides.{index} must be an object"),
     )?;
     let Some(when) = map_of(override_entry, "when").filter(|map| !map.is_empty()) else {
-        return refuse(file, &format!("surface {target} journeyOverrides.{index}.when is required"));
+        return refuse(
+            file,
+            &format!("surface {target} journeyOverrides.{index}.when is required"),
+        );
     };
     let Some(override_journeys) = listed(sequence_of(override_entry, "journeys")) else {
         return refuse(
@@ -158,7 +164,10 @@ fn validate_override(
     };
     for (key, value) in when {
         let Some(name) = key.as_str() else {
-            return refuse(file, &format!("surface {target} journey override {key:?} must be a name"));
+            return refuse(
+                file,
+                &format!("surface {target} journey override {key:?} must be a name"),
+            );
         };
         require(
             !redaction.covers(name),

@@ -122,8 +122,13 @@ pub(in crate::benchmark::autonomy) fn measure(
     // pursued nothing and its record read as a product with no loss.
     let losses = match &standing["answer"]["losses"] {
         Json::Null => Ok(Vec::new()),
-        Json::Array(losses) => Ok(losses.iter().filter_map(|loss| loss["case"].as_str()).collect()),
-        other => Err(format!("benchmark standing answered losses that are no list: {other}")),
+        Json::Array(losses) => Ok(losses
+            .iter()
+            .filter_map(|loss| loss["case"].as_str())
+            .collect()),
+        other => Err(format!(
+            "benchmark standing answered losses that are no list: {other}"
+        )),
     };
     let pursued = match losses {
         Ok(cases) => Json::Array(

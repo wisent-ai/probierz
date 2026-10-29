@@ -174,15 +174,25 @@ pub(crate) fn oko_verify_fixture(source: &BTreeMap<String, String>) -> Result<Va
     let initiatives = table_rows(initiatives, "company_initiatives")?;
     let decisions = table_rows(decisions, "company_decisions")?;
     let events = table_rows(events, "oko_strategic_feedback_events")?;
-    let capacity = capacity_sum(&initiatives, "capacity_percent", "the company_initiatives row")?;
+    let capacity = capacity_sum(
+        &initiatives,
+        "capacity_percent",
+        "the company_initiatives row",
+    )?;
     let seeded = seeded(&state)?;
     let run_id = configured(source, "PROBIERZ_RUN_ID")?;
     let expected_statement = state
         .pointer("/strategy/expectedStatement")
         .or_else(|| state.pointer("/strategy/initial/northStar/statement"));
-    let feedback_applied = state.pointer("/feedback/applied").and_then(Value::as_bool).ok_or_else(|| {
-        Failure::config("apphook.oko.state", "the Oko fixture state says neither way whether feedback was applied")
-    })?;
+    let feedback_applied = state
+        .pointer("/feedback/applied")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            Failure::config(
+                "apphook.oko.state",
+                "the Oko fixture state says neither way whether feedback was applied",
+            )
+        })?;
     let decision_id = state.pointer("/feedback/decisionId");
     let checks = json!({
         "context": matches!(contexts.as_slice(), [_]),

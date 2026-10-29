@@ -103,7 +103,10 @@ pub(crate) fn run_onboarding(
         // The progress was written above when it was missing; one that is
         // gone again is refused, not restarted from an empty document.
         let Some(mut adopted_progress) = read_progress()? else {
-            return Err(fail("onboarding.state", "onboarding progress disappeared before adoption was recorded"));
+            return Err(fail(
+                "onboarding.state",
+                "onboarding progress disappeared before adoption was recorded",
+            ));
         };
         let object = adopted_progress
             .as_object_mut()
@@ -207,11 +210,21 @@ pub(crate) fn run_onboarding(
     }
     for (number, screen) in (std::num::NonZeroUsize::MIN.get()..).zip(screens.iter()) {
         let text = |presented: &str, key: &str| {
-            screen.pointer(presented).or_else(|| screen.get(key)).and_then(Value::as_str).ok_or_else(|| {
-                fail("onboarding.definition", format!("onboarding screen {number} names no {key}: {screen}"))
-            })
+            screen
+                .pointer(presented)
+                .or_else(|| screen.get(key))
+                .and_then(Value::as_str)
+                .ok_or_else(|| {
+                    fail(
+                        "onboarding.definition",
+                        format!("onboarding screen {number} names no {key}: {screen}"),
+                    )
+                })
         };
-        let (title, body) = (text("/presentation/title", "title_key")?, text("/presentation/body", "body_key")?);
+        let (title, body) = (
+            text("/presentation/title", "title_key")?,
+            text("/presentation/body", "body_key")?,
+        );
         println!("{number}/{}  {title}", screens.len());
         println!("       {body}");
         if let Some(command) = screen
@@ -223,7 +236,10 @@ pub(crate) fn run_onboarding(
         println!();
     }
     let Some(fact) = definition["first_success_fact"].as_str() else {
-        return Err(fail("onboarding.definition", "the onboarding journey names no first_success_fact"));
+        return Err(fail(
+            "onboarding.definition",
+            "the onboarding journey names no first_success_fact",
+        ));
     };
     if done {
         println!("First-run journey already complete: {fact} was observed on an earlier run.");
@@ -238,7 +254,10 @@ pub(crate) fn run_onboarding(
 /// its cause, rather than failing that operation or vanishing.
 pub fn record_passing_quality_evidence_written() {
     if let Err(failure) = passing_quality_evidence_written() {
-        eprintln!("probierz: onboarding progress was not recorded ({}): {}", failure.point, failure.detail);
+        eprintln!(
+            "probierz: onboarding progress was not recorded ({}): {}",
+            failure.point, failure.detail
+        );
     }
 }
 
@@ -254,16 +273,24 @@ fn passing_quality_evidence_written() -> Result<(), Failure> {
     }
     let definition = onboarding_definition();
     let Some(fact) = definition["first_success_fact"].as_str() else {
-        return Err(fail("onboarding.definition", "the onboarding journey names no first_success_fact"));
+        return Err(fail(
+            "onboarding.definition",
+            "the onboarding journey names no first_success_fact",
+        ));
     };
     let object = progress
         .as_object_mut()
         .ok_or_else(|| fail("onboarding.state", "onboarding progress is not an object"))?;
     object.insert("product_id".to_string(), definition["product_id"].clone());
     object.insert("journey_id".to_string(), definition["journey_id"].clone());
-    object.insert("journey_version".to_string(), definition["journey_version"].clone());
+    object.insert(
+        "journey_version".to_string(),
+        definition["journey_version"].clone(),
+    );
     object.insert("status".to_string(), Value::String("completed".to_string()));
-    let evidence = object.entry("evidence".to_string()).or_insert_with(|| json!({}));
+    let evidence = object
+        .entry("evidence".to_string())
+        .or_insert_with(|| json!({}));
     let evidence = evidence
         .as_object_mut()
         .ok_or_else(|| fail("onboarding.state", "onboarding evidence is not an object"))?;

@@ -42,16 +42,30 @@ pub fn source_file_list(root: &Path) -> Result<Vec<u8>, Failure> {
     if output.status != Some(EXIT_SUCCESS) {
         return Err(Failure::config(
             "run.source",
-            format!("git ls-files in {}: {}", root.display(), process_text(&output)),
+            format!(
+                "git ls-files in {}: {}",
+                root.display(),
+                process_text(&output)
+            ),
         ));
     }
     let mut files: Vec<String> = Vec::new();
-    for relative in output.stdout.split(char::from(SEPARATOR)).filter(|entry| !entry.is_empty()) {
+    for relative in output
+        .stdout
+        .split(char::from(SEPARATOR))
+        .filter(|entry| !entry.is_empty())
+    {
         let path = Path::new(relative);
-        if path.components().any(|part| matches!(part, Component::ParentDir)) {
+        if path
+            .components()
+            .any(|part| matches!(part, Component::ParentDir))
+        {
             return Err(Failure::config(
                 "run.source",
-                format!("git ls-files in {} listed {relative}, a path outside the tree", root.display()),
+                format!(
+                    "git ls-files in {} listed {relative}, a path outside the tree",
+                    root.display()
+                ),
             ));
         }
         if holds_secrets(path) {
@@ -66,12 +80,17 @@ pub fn source_file_list(root: &Path) -> Result<Vec<u8>, Failure> {
             Err(error) => {
                 return Err(Failure::config(
                     "run.source",
-                    format!("{} is listed by git but cannot be read: {error}", root.join(path).display()),
+                    format!(
+                        "{} is listed by git but cannot be read: {error}",
+                        root.join(path).display()
+                    ),
                 ))
             }
         }
     }
-    if root.join("package-lock.json").exists() && !files.iter().any(|path| path == "package-lock.json") {
+    if root.join("package-lock.json").exists()
+        && !files.iter().any(|path| path == "package-lock.json")
+    {
         files.push("package-lock.json".into());
     }
     files.sort();

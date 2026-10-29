@@ -22,7 +22,10 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
         InspectCommand::Cmd { target } => discovery::cmd(harness, &target),
         InspectCommand::Hosts => discovery::hosts(),
         InspectCommand::Journal { path } => {
-            println!("{}", serde_json::to_string_pretty(&authoring::inspect_security_journal(&path)?)?);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&authoring::inspect_security_journal(&path)?)?
+            );
             Ok(())
         }
         // PortAuthoring: authoring, evaluation, and identity
@@ -68,14 +71,30 @@ pub fn dispatch(harness: &Path, command: InspectCommand) -> Answer {
 /// evaluates, prints the verdict and fails when it does not pass.
 fn evaluate(harness: &Path, command: EvaluateCommand) -> Answer {
     match command {
-        EvaluateCommand::Security { app_id, model, deterministic: _, output, router_url, agent_id, router_token_stdin } => {
+        EvaluateCommand::Security {
+            app_id,
+            model,
+            deterministic: _,
+            output,
+            router_url,
+            agent_id,
+            router_token_stdin,
+        } => {
             let mut stdin = String::new();
             if router_token_stdin {
                 std::io::Read::read_to_string(&mut std::io::stdin(), &mut stdin)?;
             }
             let mut lines = stdin.lines();
-            let result = authoring::evaluate_security(harness, &app_id, &output, model.as_deref(),
-                router_url.as_deref(), lines.next(), agent_id.as_deref(), lines.next())?;
+            let result = authoring::evaluate_security(
+                harness,
+                &app_id,
+                &output,
+                model.as_deref(),
+                router_url.as_deref(),
+                lines.next(),
+                agent_id.as_deref(),
+                lines.next(),
+            )?;
             authoring::print_result("evaluate.security", "/pass", result)
         }
         EvaluateCommand::Figure {

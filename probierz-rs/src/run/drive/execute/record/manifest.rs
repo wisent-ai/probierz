@@ -30,7 +30,9 @@ pub(crate) fn complete_run(
         (None, other) => {
             return Err(fail(
                 "run.complete",
-                format!("run {run_id} completes with neither an analysis object nor its error: {other:?}"),
+                format!(
+                "run {run_id} completes with neither an analysis object nor its error: {other:?}"
+            ),
             ))
         }
     };
@@ -93,9 +95,7 @@ pub(crate) fn complete_run(
     if analysis_error.is_none() {
         match total {
             None => errors.push(json!("the analysis states no executed-check total")),
-            Some(0) => {
-                errors.push(json!("zero executed checks"))
-            }
+            Some(0) => errors.push(json!("zero executed checks")),
             Some(_) => {}
         }
         if failed.is_none() {
@@ -118,7 +118,11 @@ pub(crate) fn complete_run(
         ));
     }
     errors.extend(crashes.iter().map(|item| {
-        json!(match item.get("message").or_else(|| item.get("source")).and_then(Value::as_str) {
+        json!(match item
+            .get("message")
+            .or_else(|| item.get("source"))
+            .and_then(Value::as_str)
+        {
             Some(said) => format!("crash evidence: {said}"),
             None => format!("crash evidence that states neither message nor source: {item}"),
         })

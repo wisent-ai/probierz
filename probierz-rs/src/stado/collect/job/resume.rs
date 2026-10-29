@@ -52,14 +52,20 @@ pub(crate) fn resume_remote_run(
     }
     let retained = fetch_run_evidence(harness, job_id)?;
     if let Some(path) = &retained.results_dir {
-        result.insert("resultsDir".into(), Value::String(path.display().to_string()));
+        result.insert(
+            "resultsDir".into(),
+            Value::String(path.display().to_string()),
+        );
     }
     if let Some(error) = &retained.artifact_error {
         result.insert("artifactError".into(), error.clone());
     }
     if let Some(run) = &retained.manifest {
         let fields: RunFields = serde_json::from_value(run.clone()).map_err(|cause| {
-            Failure::invalid("stado.download", format!("job {job_id}: run manifest: {cause}"))
+            Failure::invalid(
+                "stado.download",
+                format!("job {job_id}: run manifest: {cause}"),
+            )
         })?;
         match serde_json::to_value(fields) {
             Ok(Value::Object(fields)) => result.extend(fields),
@@ -99,7 +105,10 @@ pub(crate) fn canonical_job_id(value: &str) -> bool {
 /// Whether `value` can name a job on the command line: it starts with a
 /// letter or digit and holds only those and `.`, `_`, `-`.
 pub(crate) fn safe_job_identifier(value: &str) -> bool {
-    value.bytes().next().is_some_and(|first| first.is_ascii_alphanumeric())
+    value
+        .bytes()
+        .next()
+        .is_some_and(|first| first.is_ascii_alphanumeric())
         && value
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))

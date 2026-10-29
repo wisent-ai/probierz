@@ -142,7 +142,10 @@ fn entries(harness: &Path) -> Result<Vec<Record>, Failure> {
     }
     let text = fs::read_to_string(&file)?;
     let refused = |line: usize, why: String| {
-        Failure::invalid("incident.register", format!("{}:{line} {why}", file.display()))
+        Failure::invalid(
+            "incident.register",
+            format!("{}:{line} {why}", file.display()),
+        )
     };
     let mut parsed = Vec::new();
     for (line, text) in (NonZeroUsize::MIN.get()..).zip(text.lines()) {
@@ -152,13 +155,25 @@ fn entries(harness: &Path) -> Result<Vec<Record>, Failure> {
         let entry: Value = serde_json::from_str(text)
             .map_err(|error| refused(line, format!("is not one JSON object: {error}")))?;
         let schema = match field(&entry, "schema") {
-            Some(schema @ (INCIDENT_SCHEMA | RESOLUTION_SCHEMA | REOPENING_SCHEMA)) => schema.to_string(),
-            Some(_) | None => return Err(refused(line, "carries an unsupported incident schema".into())),
+            Some(schema @ (INCIDENT_SCHEMA | RESOLUTION_SCHEMA | REOPENING_SCHEMA)) => {
+                schema.to_string()
+            }
+            Some(_) | None => {
+                return Err(refused(
+                    line,
+                    "carries an unsupported incident schema".into(),
+                ))
+            }
         };
         let Some(incident_id) = field(&entry, "incident_id").map(str::to_string) else {
             return Err(refused(line, "names no incident_id".into()));
         };
-        parsed.push(Record { line, schema, incident_id, entry });
+        parsed.push(Record {
+            line,
+            schema,
+            incident_id,
+            entry,
+        });
     }
     Ok(parsed)
 }
@@ -179,7 +194,10 @@ pub fn shown<'a>(entry: &'a Value, name: &str) -> &'a str {
 /// Where a folded row stands.
 pub(super) fn state(row: &Value) -> Result<State, Failure> {
     serde_json::from_value(row["state"].clone()).map_err(|error| {
-        Failure::invalid("incident.register", format!("a folded incident carries no state: {error}"))
+        Failure::invalid(
+            "incident.register",
+            format!("a folded incident carries no state: {error}"),
+        )
     })
 }
 
@@ -195,16 +213,28 @@ pub(super) fn state(row: &Value) -> Result<State, Failure> {
 pub fn folded(harness: &Path) -> Result<Vec<Value>, Failure> {
     let file = register_file(harness);
     let refused = |line: usize, why: String| {
-        Failure::invalid("incident.register", format!("{}:{line} {why}", file.display()))
+        Failure::invalid(
+            "incident.register",
+            format!("{}:{line} {why}", file.display()),
+        )
     };
     let mut rows: Vec<(String, State, Value)> = Vec::new();
-    for Record { line, schema, incident_id, entry } in entries(harness)? {
+    for Record {
+        line,
+        schema,
+        incident_id,
+        entry,
+    } in entries(harness)?
+    {
         if schema == INCIDENT_SCHEMA {
             rows.push((incident_id, State::Open, entry));
             continue;
         }
         let Some((_, state, row)) = rows.iter_mut().find(|(id, _, _)| *id == incident_id) else {
-            return Err(refused(line, format!("follows up incident {incident_id}, which no earlier line records")));
+            return Err(refused(
+                line,
+                format!("follows up incident {incident_id}, which no earlier line records"),
+            ));
         };
         match (schema.as_str(), *state) {
             (RESOLUTION_SCHEMA, State::Open) => {
@@ -222,10 +252,16 @@ pub fn folded(harness: &Path) -> Result<Vec<Value>, Failure> {
                 }
             }
             (RESOLUTION_SCHEMA, State::Resolved) => {
-                return Err(refused(line, format!("resolves incident {incident_id}, which is already resolved")));
+                return Err(refused(
+                    line,
+                    format!("resolves incident {incident_id}, which is already resolved"),
+                ));
             }
             (_, State::Open) | (_, State::Resolved) => {
-                return Err(refused(line, format!("reopens incident {incident_id}, which is open")));
+                return Err(refused(
+                    line,
+                    format!("reopens incident {incident_id}, which is open"),
+                ));
             }
         }
     }

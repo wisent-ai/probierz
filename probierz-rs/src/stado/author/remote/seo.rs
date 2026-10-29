@@ -5,7 +5,9 @@ use serde_json::json;
 pub(crate) fn uuid_v4() -> Result<String, Failure> {
     let mut bytes: uuid::Bytes = Default::default();
     File::open("/dev/urandom")?.read_exact(&mut bytes)?;
-    Ok(uuid::Builder::from_random_bytes(bytes).into_uuid().to_string())
+    Ok(uuid::Builder::from_random_bytes(bytes)
+        .into_uuid()
+        .to_string())
 }
 
 /// The yes/no `key` of an SEO profile: absent means the profile does not ask
@@ -159,7 +161,10 @@ pub(crate) fn submit_remote_seo(
     let left_evidence = watched_left_evidence(&watched);
     let completed = watched_completed(&watched);
     let Value::Object(watched) = watched else {
-        return Err(Failure::invalid("stado.watch", format!("the watch of job {job_id} answered no object")));
+        return Err(Failure::invalid(
+            "stado.watch",
+            format!("the watch of job {job_id} answered no object"),
+        ));
     };
     result.extend(watched);
     if !left_evidence {
@@ -167,14 +172,20 @@ pub(crate) fn submit_remote_seo(
     }
     let retained = fetch_run_evidence(harness, &job_id)?;
     if let Some(path) = retained.results_dir {
-        result.insert("resultsDir".into(), Value::String(path.display().to_string()));
+        result.insert(
+            "resultsDir".into(),
+            Value::String(path.display().to_string()),
+        );
     }
     if let Some(error) = retained.artifact_error {
         result.insert("artifactError".into(), error);
     }
     if completed && result.get("resultsDir").is_none() {
         result.insert("state".into(), Value::String("evidence-unavailable".into()));
-        result.insert("failure".into(), missing_evidence(&job_id, "artifact_error=null"));
+        result.insert(
+            "failure".into(),
+            missing_evidence(&job_id, "artifact_error=null"),
+        );
     }
     Ok(Value::Object(result))
 }

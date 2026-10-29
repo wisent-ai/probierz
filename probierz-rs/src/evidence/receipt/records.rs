@@ -183,7 +183,11 @@ pub(crate) fn signed_receipt_run(run: &Value, document: &Value) -> Result<Value,
         .get("status")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    let evidence_level = crate::gate::level_of(status == "passed", run.get("conditions"), run.get("evidence"));
+    let evidence_level = crate::gate::level_of(
+        status == "passed",
+        run.get("conditions"),
+        run.get("evidence"),
+    );
     let source_revision = run
         .pointer("/source/repositories")
         .and_then(Value::as_array)

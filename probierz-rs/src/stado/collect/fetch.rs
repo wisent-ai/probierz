@@ -219,13 +219,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         .iter()
         .find(|entry| entry.ends_with("/accepted.json"));
     let author_receipt_file = author_entry
-        .map(|entry| {
-            safe_child(
-                harness,
-                inside(entry),
-                "unsafe author receipt",
-            )
-        })
+        .map(|entry| safe_child(harness, inside(entry), "unsafe author receipt"))
         .transpose()?;
     let author_receipt = match author_receipt_file.as_deref() {
         Some(file) => crate::json_file::read(file)?,
@@ -240,11 +234,7 @@ pub(crate) fn fetch_run_evidence(harness: &Path, job_id: &str) -> Result<Retaine
         .iter()
         .filter(|entry| entry.ends_with("/run-manifest.json"))
     {
-        let file = safe_child(
-            harness,
-            inside(entry),
-            "unsafe run manifest",
-        )?;
+        let file = safe_child(harness, inside(entry), "unsafe run manifest")?;
         if let Some(candidate) = crate::json_file::read(&file)? {
             // With an author receipt, only the manifest of the run it
             // accepted; without one, the first manifest the archive holds.

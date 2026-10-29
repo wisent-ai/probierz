@@ -38,20 +38,27 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
     let analysis_path = string_property(&document, "analysisPath");
     // The journeys the app manifest declared for the run; a run without an
     // app manifest declared none. A journey that is not a name is refused.
-    let journeys = match property(&document, "appManifest").and_then(|value| property(value, "journeys")) {
-        None | Some(Value::Null) => Vec::new(),
-        Some(Value::Array(list)) => list
-            .iter()
-            .map(|journey| {
-                journey.as_str().map(str::to_string).ok_or_else(|| {
-                    format!("run manifest {} declares a journey that is not a name: {journey}", file.display())
+    let journeys =
+        match property(&document, "appManifest").and_then(|value| property(value, "journeys")) {
+            None | Some(Value::Null) => Vec::new(),
+            Some(Value::Array(list)) => list
+                .iter()
+                .map(|journey| {
+                    journey.as_str().map(str::to_string).ok_or_else(|| {
+                        format!(
+                            "run manifest {} declares a journey that is not a name: {journey}",
+                            file.display()
+                        )
+                    })
                 })
-            })
-            .collect::<Result<Vec<_>, _>>()?,
-        Some(other) => {
-            return Err(format!("run manifest {} declares journeys that are not a list: {other}", file.display()))
-        }
-    };
+                .collect::<Result<Vec<_>, _>>()?,
+            Some(other) => {
+                return Err(format!(
+                    "run manifest {} declares journeys that are not a list: {other}",
+                    file.display()
+                ))
+            }
+        };
     // A run is weighed by its id, target and kind, which every run writes; a
     // manifest stating none of them is refused, not weighed as run '' on
     // target '' or as an ad-hoc run.
@@ -88,7 +95,11 @@ pub(crate) fn run_from_file(file: &Path) -> Result<Option<Run>, String> {
         device: recorded("device"),
         conditions,
         evidence: recorded("evidence"),
-        artifacts: value_array(property(&document, "artifacts"), &format!("run manifest {} artifacts", file.display()))?.to_vec(),
+        artifacts: value_array(
+            property(&document, "artifacts"),
+            &format!("run manifest {} artifacts", file.display()),
+        )?
+        .to_vec(),
         protection: recorded("protection"),
         analysis_path,
     }))
@@ -114,7 +125,11 @@ pub(crate) fn get_run(harness: &Path, app_id: &str, run_id: &str) -> Result<Run,
 }
 
 pub(crate) fn evidence_level(run: &Run) -> &'static str {
-    level_of(run.status == "passed", Some(&run.conditions), Some(&run.evidence))
+    level_of(
+        run.status == "passed",
+        Some(&run.conditions),
+        Some(&run.evidence),
+    )
 }
 
 /// `path` made absolute against the working directory, with `.` and `..`
@@ -125,7 +140,12 @@ pub(crate) fn normalize_absolute(path: &Path) -> Result<PathBuf, String> {
         path.to_path_buf()
     } else {
         std::env::current_dir()
-            .map_err(|error| format!("the working directory cannot be read to resolve {}: {error}", path.display()))?
+            .map_err(|error| {
+                format!(
+                    "the working directory cannot be read to resolve {}: {error}",
+                    path.display()
+                )
+            })?
             .join(path)
     };
     let mut normalized = PathBuf::new();

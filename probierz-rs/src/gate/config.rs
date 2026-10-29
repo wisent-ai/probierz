@@ -76,9 +76,19 @@ pub(crate) fn strings(values: &[String]) -> Value {
 }
 
 pub(crate) fn config_file(manifest: &manifest::Manifest) -> Result<PathBuf, Failure> {
-    manifest.file.parent().map(|directory| directory.join("gates.json")).ok_or_else(|| {
-        Failure::config("gate.config", format!("manifest {} has no parent directory for gates.json", manifest.file.display()))
-    })
+    manifest
+        .file
+        .parent()
+        .map(|directory| directory.join("gates.json"))
+        .ok_or_else(|| {
+            Failure::config(
+                "gate.config",
+                format!(
+                    "manifest {} has no parent directory for gates.json",
+                    manifest.file.display()
+                ),
+            )
+        })
 }
 
 pub(crate) fn default_config(app_id: &str) -> Value {
@@ -167,7 +177,10 @@ pub(crate) fn string_property(value: &Value, name: &str) -> Option<String> {
 }
 
 /// Required evidence lists never become empty lists because their shape is wrong.
-pub(crate) fn value_array<'a>(value: Option<&'a Value>, location: &str) -> Result<&'a [Value], String> {
+pub(crate) fn value_array<'a>(
+    value: Option<&'a Value>,
+    location: &str,
+) -> Result<&'a [Value], String> {
     match value {
         Some(Value::Array(list)) => Ok(list.as_slice()),
         Some(other) => Err(format!("{location} must be an array, found {other}")),
@@ -176,8 +189,13 @@ pub(crate) fn value_array<'a>(value: Option<&'a Value>, location: &str) -> Resul
 }
 
 pub(crate) fn value_strings(value: Option<&Value>, location: &str) -> Result<Vec<String>, String> {
-    value_array(value, location)?.iter().map(|value| match value {
-        Value::String(text) if !text.trim().is_empty() => Ok(text.clone()),
-        other => Err(format!("{location} must contain non-empty text values, found {other}")),
-    }).collect()
+    value_array(value, location)?
+        .iter()
+        .map(|value| match value {
+            Value::String(text) if !text.trim().is_empty() => Ok(text.clone()),
+            other => Err(format!(
+                "{location} must contain non-empty text values, found {other}"
+            )),
+        })
+        .collect()
 }

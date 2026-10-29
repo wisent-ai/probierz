@@ -114,7 +114,10 @@ fn anything_installed(harness: &Path) -> bool {
     let entries = match runs.read_dir() {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return false,
-        Err(error) => panic!("the case's runs at {} cannot be listed: {error}", runs.display()),
+        Err(error) => panic!(
+            "the case's runs at {} cannot be listed: {error}",
+            runs.display()
+        ),
     };
     entries
         .map(|entry| match entry {

@@ -22,7 +22,9 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
             journey.as_deref(),
             newest(limit),
         ),
-        ReportingCommand::Dashboard { app_id, limit } => status::dashboard(harness, &app_id, newest(limit)),
+        ReportingCommand::Dashboard { app_id, limit } => {
+            status::dashboard(harness, &app_id, newest(limit))
+        }
         ReportingCommand::Status { app_id, base, json } => {
             status::status(harness, &app_id, base.as_deref(), !json)
         }

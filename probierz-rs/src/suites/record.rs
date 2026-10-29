@@ -117,7 +117,10 @@ fn inspect(path: &Path) -> Result<Option<std::fs::Metadata>, Failure> {
     if metadata.file_type().is_symlink() {
         return Err(Failure::config(
             "suites.record",
-            format!("{} is a symbolic link, not a report inside the checkout", path.display()),
+            format!(
+                "{} is a symbolic link, not a report inside the checkout",
+                path.display()
+            ),
         ));
     }
     Ok(Some(metadata))
@@ -127,7 +130,11 @@ fn copy_tree(source: &Path, target: &Path) -> Result<(), Failure> {
     let metadata = inspect(source)?.ok_or_else(|| {
         Failure::config(
             "suites.record",
-            format!("{} disappeared while copying to {}", source.display(), target.display()),
+            format!(
+                "{} disappeared while copying to {}",
+                source.display(),
+                target.display()
+            ),
         )
     })?;
     if metadata.is_dir() {
@@ -147,7 +154,10 @@ fn copy_tree(source: &Path, target: &Path) -> Result<(), Failure> {
             let entry = entry.map_err(|error| {
                 Failure::config(
                     "suites.record",
-                    format!("{} could not yield its next entry: {error}", source.display()),
+                    format!(
+                        "{} could not yield its next entry: {error}",
+                        source.display()
+                    ),
                 )
             })?;
             copy_tree(&entry.path(), &target.join(entry.file_name()))?;

@@ -126,7 +126,8 @@ fn manifest_schema() -> serde_yaml::Value {
 
 /// A contender that reads its task and answers `answer` under `/answer`.
 fn contender(answer: &str, ours: bool) -> Value {
-    let result = json!({"schema": RESULT_SCHEMA, "status": "completed", "output": {"answer": answer}});
+    let result =
+        json!({"schema": RESULT_SCHEMA, "status": "completed", "output": {"answer": answer}});
     json!({
         "program": "/bin/sh",
         "args": ["-c", format!("while read -r line; do :; done; printf '%s' '{result}'")],
@@ -223,7 +224,10 @@ pub(crate) fn roadmap(world: &World) -> Vec<Value> {
 
 /// The one item of `roadmap` titled `title`; none or several fail the test.
 pub(crate) fn the_item(roadmap: &[Value], title: &str) -> Value {
-    let titled: Vec<&Value> = roadmap.iter().filter(|item| item["title"] == title).collect();
+    let titled: Vec<&Value> = roadmap
+        .iter()
+        .filter(|item| item["title"] == title)
+        .collect();
     let [item] = titled.as_slice() else {
         panic!("the roadmap should hold exactly one item {title}: {roadmap:?}");
     };

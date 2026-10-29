@@ -44,11 +44,25 @@ fn a_won_case_stays_in_the_roadmap_as_delivered_with_its_run() {
     );
     let planned = the_item(&roadmap(&world), ITEM);
     assert_eq!(planned["status"], "planned", "{planned}");
-    assert!(planned.get("decision").is_none(), "an open item carries no decision: {planned}");
+    assert!(
+        planned.get("decision").is_none(),
+        "an open item carries no decision: {planned}"
+    );
 
     manifest(&world, "right");
     let won = answered(
-        &probierz(&world, &["benchmark", "run", APP, "--suite", SUITE, "--contender", "ours"]),
+        &probierz(
+            &world,
+            &[
+                "benchmark",
+                "run",
+                APP,
+                "--suite",
+                SUITE,
+                "--contender",
+                "ours",
+            ],
+        ),
         "the winning run",
     );
     let Some(run_id) = won["runId"].as_str() else {
@@ -84,8 +98,14 @@ fn a_won_case_stays_in_the_roadmap_as_delivered_with_its_run() {
     );
     let history = roadmap(&world);
     let kept = the_item(&history, ITEM);
-    assert_eq!(kept["status"], "delivered", "the delivered item stays delivered: {kept}");
-    assert_eq!(kept["decision"], run_id, "the delivered item keeps its run: {kept}");
+    assert_eq!(
+        kept["status"], "delivered",
+        "the delivered item stays delivered: {kept}"
+    );
+    assert_eq!(
+        kept["decision"], run_id,
+        "the delivered item keeps its run: {kept}"
+    );
     let returned = the_item(&history, &format!("{ITEM}, lost again in run {losing_run}"));
     assert_eq!(returned["status"], "planned", "{returned}");
     assert!(
