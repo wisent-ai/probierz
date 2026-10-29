@@ -50,8 +50,8 @@ pub(crate) fn setup_steps(harness: &Path, name: &str) -> Result<Vec<SetupStep>, 
         "mobile:android" => vec![npm, driver("uiautomator2", None)],
         "desktop:mac" => vec![npm, driver("mac2", Some("2.2.2")), native],
         "desktop:win" => vec![npm, driver("windows", None)],
-        // The daemon this surface needs is started by the driver itself, in
-        // `ensure_daemon`, so setup has nothing to install for it beyond the
+        // The cua-driver daemon this surface drives is the harness packages'
+        // to start, so setup has nothing to install for it beyond the
         // workspace dependencies its report tooling shares.
         "desktop:cua" => vec![npm],
         "tui" => vec![npm],

@@ -1,20 +1,7 @@
-//! The directory a path keeps its file in, and whether a path is there.
+//! Whether a path is there, a path that cannot be examined being an error.
 
 use std::io;
 use std::path::Path;
-
-/// The directory that holds `path`. A path that names no directory (the
-/// filesystem root or an empty path) is refused by name, never taken to mean
-/// the directory Probierz runs from. A bare file name is held by the empty
-/// relative directory, which is where the caller named it.
-pub(crate) fn directory_of(path: &Path) -> Result<&Path, String> {
-    path.parent().ok_or_else(|| {
-        format!(
-            "the path {:?} names no directory to hold it",
-            path.display().to_string()
-        )
-    })
-}
 
 /// Whether something is at `path`, a dangling link included; a path that
 /// cannot be examined is an error of the same kind naming the path.
