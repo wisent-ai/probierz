@@ -83,7 +83,7 @@ pub fn dispatch(harness: &Path, command: EvidenceCommand) -> Answer {
                 expected_source_sha.as_deref(),
                 runs.as_deref(),
                 journeys.as_deref(),
-                &minimum,
+                minimum.as_deref(),
             ),
             ReceiptCommand::Verify {
                 file,

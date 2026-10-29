@@ -16,7 +16,7 @@ pub fn receipt(
     expected_source: Option<&str>,
     runs_csv: Option<&str>,
     journeys_csv: Option<&str>,
-    minimum: &str,
+    minimum: Option<&str>,
 ) -> Answer {
     let app_id = app_id.unwrap_or_default();
     let release = release.unwrap_or_default();
@@ -49,10 +49,18 @@ pub fn receipt(
             "at least one runId is required",
         ));
     }
-    if !matches!(minimum, "E0" | "E1" | "E2" | "E3" | "E4" | "E5") {
+    // The level is the release policy's; none is assumed, and it is read by
+    // the one rank the gate, status and publication read.
+    let minimum = minimum.ok_or_else(|| {
+        Failure::invalid(
+            "evidence.receipt",
+            "--minimum is required: the lowest evidence level (E<n>) every signed run must reach, as the app's release policy states it",
+        )
+    })?;
+    if crate::gate::evidence_rank(minimum).is_none() {
         return Err(Failure::invalid(
             "evidence.receipt",
-            format!("unknown evidence level: {minimum}"),
+            format!("--minimum {minimum:?} is not an evidence level: write E followed by its rank, as the app's release policy does"),
         ));
     }
     let key_file = std::env::var_os("PROBIERZ_RECEIPT_PRIVATE_KEY_FILE").ok_or_else(|| {

@@ -139,9 +139,10 @@ pub enum ReceiptCommand {
         /// Comma-separated journeys the signed runs must cover.
         #[arg(long)]
         journeys: Option<String>,
-        /// Lowest evidence level accepted, `E0` to `E5`.
-        #[arg(long, default_value = "E3")]
-        minimum: String,
+        /// Lowest evidence level every signed run must reach, `E<n>`
+        /// (required): the release policy states it, no level is assumed.
+        #[arg(long)]
+        minimum: Option<String>,
     },
     /// Verify a receipt signature, payload hash, and trust anchor.
     Verify {
