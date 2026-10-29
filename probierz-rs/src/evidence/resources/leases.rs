@@ -1,5 +1,8 @@
 use crate::evidence::*;
 use serde_json::json;
+
+/// The schema of a resource lease's holder record.
+const HOLDER_SCHEMA_VERSION: u64 = 2;
 pub fn resources_for(target: &str, env: &BTreeMap<String, String>) -> Vec<String> {
     let value = |name: &str| {
         env.get(name)
@@ -93,7 +96,7 @@ pub(crate) fn acquire_one(
         )
     })?;
     // The holder's identity, for an operator reading who has the device now.
-    let holder = json!({ "schemaVersion": 2, "resource": resource, "runId": owner, "pid": std::process::id(), "acquiredAt": now_iso() });
+    let holder = json!({ "schemaVersion": HOLDER_SCHEMA_VERSION, "resource": resource, "runId": owner, "pid": std::process::id(), "acquiredAt": now_iso() });
     file.set_len(0).map_err(|error| {
         Failure::unavailable(
             "evidence.lock",

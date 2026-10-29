@@ -110,9 +110,13 @@ pub(crate) fn ordered_screens(definition: &Value) -> Vec<&Value> {
     ordered
 }
 
+/// The schema of the first-use journey definition, the one every reader of
+/// `onboarding_definition` is written for.
+const ONBOARDING_SCHEMA_VERSION: u64 = 1;
+
 pub(crate) fn onboarding_definition() -> Value {
     json!({
-        "schema_version": 1,
+        "schema_version": ONBOARDING_SCHEMA_VERSION,
         "product_id": "probierz",
         "journey_id": "first-use",
         "journey_version": "2026-09-03.2",

@@ -1,5 +1,10 @@
 use crate::evidence::*;
 use serde_json::json;
+
+/// The schema of the access audit listing `audit` prints.
+const AUDIT_LISTING_SCHEMA_VERSION: u64 = 1;
+/// The schema of the secret scan report `scan_secrets` answers.
+const SECRET_SCAN_SCHEMA_VERSION: u64 = 1;
 pub fn audit(
     harness: &Path,
     app_id: Option<&str>,
@@ -69,7 +74,7 @@ pub fn audit(
         .filter(|record| record.get("valid").and_then(Value::as_bool) == Some(true))
         .count();
     print_json(&json!({
-        "schemaVersion": 1,
+        "schemaVersion": AUDIT_LISTING_SCHEMA_VERSION,
         "filters": { "appId": app_id, "runId": run_id, "action": action },
         "total": total,
         "returned": records.len(),
@@ -170,7 +175,7 @@ pub fn scan_secrets(root: &Path) -> Result<Value, Failure> {
         }
     }
     Ok(json!({
-        "schemaVersion": 1,
+        "schemaVersion": SECRET_SCAN_SCHEMA_VERSION,
         "kind": "probierz-secret-scan",
         "root": root.to_string_lossy(),
         "scannedAt": now_iso(),

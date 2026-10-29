@@ -110,7 +110,7 @@ pub fn receipt(
             .cmp(b.as_str().unwrap_or_default())
     });
     let payload = json!({
-        "schemaVersion": 3, "kind": "probierz-evidence-receipt", "appId": app_id, "release": release,
+        "schemaVersion": super::RECEIPT_SCHEMA_VERSION, "kind": "probierz-evidence-receipt", "appId": app_id, "release": release,
         "expectedHarnessSha": expected_harness, "expectedSourceSha": expected_source, "builds": builds,
         "productId": document.get("productId").cloned().unwrap_or_else(|| json!(app_id)),
         "artifactPolicy": {

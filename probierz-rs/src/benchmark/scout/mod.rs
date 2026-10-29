@@ -34,6 +34,9 @@ use crate::failure::{print_json, Answer, Code, Failure};
 pub(crate) use adopt::adopt;
 
 pub(crate) const BRIEF_SCHEMA: &str = "ai.wisent.probierz.benchmark.opportunity.v1";
+/// The schema of the product creation request a brief carries, the one
+/// `stado product create` reads (Stado's creation protocol `SCHEMA_VERSION`).
+pub(crate) const CREATION_REQUEST_SCHEMA_VERSION: u64 = 1;
 const POINT: &str = "benchmark.scout";
 
 /// A Stado identity: lowercase letters, digits and inner hyphens, starting

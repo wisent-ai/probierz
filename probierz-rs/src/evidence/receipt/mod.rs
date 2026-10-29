@@ -11,3 +11,7 @@ pub(crate) use identity::*;
 pub(crate) use records::*;
 pub use sign::*;
 pub use verify::*;
+
+/// The schema of a signed evidence receipt: the one `receipt` signs, and the
+/// first that carries publication provenance, which a publication requires.
+pub(crate) const RECEIPT_SCHEMA_VERSION: u64 = 3;

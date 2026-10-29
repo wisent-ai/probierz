@@ -2,6 +2,9 @@
 
 use crate::status::*;
 
+/// The schema of a journey's run history.
+const HISTORY_SCHEMA_VERSION: u64 = 2;
+
 pub(crate) fn percentile(mut values: Vec<f64>, fraction: f64) -> Option<f64> {
     if values.is_empty() {
         return None;
@@ -235,7 +238,7 @@ pub(crate) fn run_history_value(
     let tests = test_history(&runs);
     let performance = performance_trend(&runs);
     Ok(json!({
-        "schemaVersion": 2,
+        "schemaVersion": HISTORY_SCHEMA_VERSION,
         "appId": app_id,
         "target": target,
         "journey": journey,

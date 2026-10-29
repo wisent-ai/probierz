@@ -9,6 +9,9 @@ pub(crate) struct RunOptions {
     pub(crate) kind: Option<String>,
 }
 
+/// The schema of a run's process exit accounting record.
+const PERFORMANCE_SCHEMA_VERSION: u64 = 2;
+
 pub(crate) fn drain_run_stream<R: Read>(
     mut stream: R,
     path: &Path,
@@ -199,7 +202,7 @@ pub(crate) fn execute_suite(
     };
     let accounting = children_accounting();
     let performance = json!({
-        "schemaVersion": 2,
+        "schemaVersion": PERFORMANCE_SCHEMA_VERSION,
         "subject": "run-process-exit-accounting",
         "firstOutputMs": first_output_ms,
         "wallSeconds": number(wall),

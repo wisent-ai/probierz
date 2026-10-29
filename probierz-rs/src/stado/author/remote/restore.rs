@@ -63,7 +63,8 @@ pub(crate) fn restore_remote_authoring(
         .and_then(serde_yaml::Value::as_str)
         .unwrap_or("tests");
     let manifest = retained.manifest.as_ref();
-    let matching = receipt.get("schemaVersion").and_then(Value::as_u64) == Some(1)
+    let matching = receipt.get("schemaVersion").and_then(Value::as_u64)
+        == Some(crate::stado::author::AUTHOR_RECEIPT_SCHEMA_VERSION)
         && receipt.get("appId").and_then(Value::as_str) == Some(app_id)
         && receipt.get("journey").and_then(Value::as_str) == Some(journey)
         && receipt.get("area").and_then(Value::as_str) == Some(area)

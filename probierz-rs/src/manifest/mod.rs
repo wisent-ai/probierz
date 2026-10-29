@@ -28,6 +28,10 @@ pub use redaction::Redaction;
 pub use seo_mode::SeoMode;
 pub use validate::*;
 
+/// The one schema of an app manifest: the one validation requires and a new
+/// manifest is written in.
+pub(crate) const MANIFEST_SCHEMA_VERSION: u64 = 1;
+
 /// The refusal of a manifest that does not hold what `what` says it must.
 pub(crate) fn invalid(file: &Path, what: &str) -> Failure {
     Failure::new(

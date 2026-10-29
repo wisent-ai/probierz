@@ -71,7 +71,7 @@ fn manifest_of(harness: &Path, id: &str, checkout: &str) -> Result<manifest::Man
         std::fs::create_dir_all(&directory)?;
         std::fs::write(
             &file,
-            format!("schemaVersion: 1\nappId: {id}\nproductId: {id}\nowner: {id} maintainers\nrepositories:\n  - root: {root}\n    mappings: []\nsurfaces: {{}}\njourneys: {{}}\n"),
+            format!("schemaVersion: {schema}\nappId: {id}\nproductId: {id}\nowner: {id} maintainers\nrepositories:\n  - root: {root}\n    mappings: []\nsurfaces: {{}}\njourneys: {{}}\n", schema = manifest::MANIFEST_SCHEMA_VERSION),
         )?;
     }
     manifest::load(harness, id)
@@ -86,11 +86,7 @@ pub(crate) fn adopt(
 ) -> Answer {
     let brief = read_brief(brief_file)?;
     let creation = &brief["creation"];
-    let id = named(
-        &creation["product"]["id"],
-        "the brief's creation.product.id",
-    )?
-    .to_string();
+    let id = named(&creation["product"]["id"], "the brief's creation.product.id")?.to_string();
     if !allow_create {
         return Err(Failure::invalid(
             POINT,
@@ -139,10 +135,7 @@ pub(crate) fn adopt(
     stado(&mut declare)?;
     let record = catalog::record(&id)?;
     let suite_id = named(
-        first(
-            &brief["benchmark"]["suites"],
-            "the brief's benchmark.suites",
-        )?,
+        first(&brief["benchmark"]["suites"], "the brief's benchmark.suites")?,
         "the brief's first benchmark suite",
     )?
     .to_string();

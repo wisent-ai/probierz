@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use serde_json::{json, Value as Json};
 
-use super::{identity, BRIEF_SCHEMA};
+use super::{identity, BRIEF_SCHEMA, CREATION_REQUEST_SCHEMA_VERSION};
 
 /// Stado's bound on a product description.
 const DESCRIPTION_BYTES: usize = 350;
@@ -283,7 +283,7 @@ pub(super) fn document(scouted: &Scouted, opportunity: &Opportunity, drafts: Jso
         "rivals": rivals,
         "benchmark": {"app": id, "suites": [opportunity.suite]},
         "creation": {
-            "schema_version": 1,
+            "schema_version": CREATION_REQUEST_SCHEMA_VERSION,
             "request_id": scouted.id,
             "initiative_id": format!("scout-{}", scouted.topic),
             "product": {"id": id, "name": product["name"], "description": product["description"], "family": "wisent", "visibility": "private"},

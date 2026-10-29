@@ -1,5 +1,8 @@
 use crate::evidence::*;
 use serde_json::json;
+
+/// The schema of a first-use publication document.
+const PUBLICATION_SCHEMA_VERSION: u64 = 1;
 pub(crate) fn create_publication(
     harness: &Path,
     receipt_file: &Path,
@@ -41,9 +44,8 @@ pub(crate) fn create_publication(
     require(
         signed_receipt
             .get("schemaVersion")
-            .and_then(Value::as_i64)
-            .unwrap_or(0)
-            >= 3,
+            .and_then(Value::as_u64)
+            .is_some_and(|version| version >= crate::evidence::receipt::RECEIPT_SCHEMA_VERSION),
         "receipt predates publication provenance",
     )?;
     let run = verification
@@ -215,7 +217,7 @@ pub(crate) fn create_publication(
         .unwrap_or_default();
     parse_iso(captured_at, "attempt.capturedAt")?;
     let unsigned = json!({
-        "schemaVersion": 1, "kind": "probierz-first-use-publication", "publishable": true, "productId": product,
+        "schemaVersion": PUBLICATION_SCHEMA_VERSION, "kind": "probierz-first-use-publication", "publishable": true, "productId": product,
         "journey": {
             "journeyId": identity.get("journeyId").cloned().unwrap_or(Value::Null), "journeyVersion": identity.get("journeyVersion").cloned().unwrap_or(Value::Null),
             "journeyVersionId": identity.get("journeyVersionId").cloned().unwrap_or(Value::Null), "firstSuccessFact": identity.get("firstSuccessFact").cloned().unwrap_or(Value::Null),

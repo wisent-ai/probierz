@@ -4,6 +4,9 @@
 use crate::evidence::*;
 use serde_json::json;
 
+/// The schema of an encrypted evidence bundle's header.
+const HEADER_SCHEMA_VERSION: u64 = 2;
+
 pub(super) struct HeaderInputs<'a> {
     pub(super) run: &'a Value,
     pub(super) document: &'a Value,
@@ -69,7 +72,7 @@ pub(super) fn bundle_header(inputs: HeaderInputs<'_>) -> Result<Value, Failure> 
         .and_then(Value::as_str)
         .unwrap_or_default();
     let header = json!({
-        "schemaVersion": 2,
+        "schemaVersion": HEADER_SCHEMA_VERSION,
         "kind": "probierz-encrypted-evidence",
         "algorithm": "AES-256-GCM",
         "appId": app_id,

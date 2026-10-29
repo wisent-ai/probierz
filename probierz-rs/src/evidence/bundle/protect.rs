@@ -7,6 +7,9 @@ mod header;
 use crate::evidence::*;
 use serde_json::json;
 
+/// The schema of a protected bundle's file index.
+const BUNDLE_INDEX_SCHEMA_VERSION: u64 = 1;
+
 use existing::reuse_existing_bundle;
 use header::{bundle_header, HeaderInputs};
 
@@ -158,7 +161,7 @@ pub(crate) fn protect_run(
     }
     let index = format!(
         "{}\n",
-        serde_json::to_string(&json!({ "schemaVersion": 1, "runId": run_id, "files": entries }))?
+        serde_json::to_string(&json!({ "schemaVersion": BUNDLE_INDEX_SCHEMA_VERSION, "runId": run_id, "files": entries }))?
     )
     .into_bytes();
     let index_hash = sha256_bytes(&index);

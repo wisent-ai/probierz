@@ -1,5 +1,7 @@
 use crate::run::*;
 use serde_json::json;
+/// The schema of the run manifest a surface run writes at its start.
+const RUN_MANIFEST_SCHEMA_VERSION: u64 = 2;
 pub(crate) fn run_surface(
     harness: &Path,
     name: &str,
@@ -107,7 +109,7 @@ pub(crate) fn run_surface(
     let platform = capture_text("node", &["-p", "process.platform"], None);
     write_json(
         &manifest_path,
-        &json!({"schemaVersion":2,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":configured_spec.clone().map(Value::String).unwrap_or(Value::Null),"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":text(&platform.stdout).trim(),"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
+        &json!({"schemaVersion":RUN_MANIFEST_SCHEMA_VERSION,"runId":run_id,"appId":app_id,"kind":kind,"target":name,"spec":configured_spec.clone().map(Value::String).unwrap_or(Value::Null),"status":"preflight","startedAt":started_at,"harness":harness_identity,"source":source,"sourceIdentityOrigin":origin,"build":build,"appVersion":opts.env.get("PROBIERZ_APP_VERSION"),"appManifest":app_manifest,"host":{"hostname":text(&host_name.stdout).trim(),"platform":text(&platform.stdout).trim(),"release":text(&release.stdout).trim(),"arch":node_arch(),"node":text(&node.stdout).trim()},"device":{"name":opts.env.get("IOS_DEVICE").or_else(||opts.env.get("ANDROID_DEVICE")),"runtime":opts.env.get("IOS_VERSION").or_else(||opts.env.get("ANDROID_VERSION"))},"conditions":conditions,"paths":{"artifactsDir":artifacts,"reportPath":report_path,"stdoutPath":stdout_path,"stderrPath":stderr_path}}),
     )?;
     update_json(&manifest_path, &json!({ "redaction": redaction.record() }))?;
     if !opts.force {

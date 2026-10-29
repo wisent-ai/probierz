@@ -1,5 +1,9 @@
 use crate::stado::*;
 use serde_json::json;
+
+/// The schema of a remote authoring submission record, the one this module
+/// writes and reads back.
+const SUBMISSION_SCHEMA_VERSION: u64 = 1;
 pub(crate) fn safe_child(root: &Path, relative: &str, message: &str) -> Result<PathBuf, Failure> {
     if relative.is_empty()
         || Path::new(relative).is_absolute()
@@ -34,7 +38,7 @@ pub(crate) fn author_submission(harness: &Path, job_id: &str) -> Result<Option<V
         return Ok(None);
     };
     Ok(
-        (value.get("schemaVersion").and_then(Value::as_u64) == Some(1)
+        (value.get("schemaVersion").and_then(Value::as_u64) == Some(SUBMISSION_SCHEMA_VERSION)
             && value.get("jobId").and_then(Value::as_str) == Some(job_id))
         .then_some(value),
     )
@@ -73,7 +77,7 @@ pub(crate) fn save_author_submission(
         .join(job_id)
         .join("authoring-submission.json");
     let value = json!({
-        "schemaVersion": 1,
+        "schemaVersion": SUBMISSION_SCHEMA_VERSION,
         "jobId": job_id,
         "appId": app_id,
         "journey": journey,

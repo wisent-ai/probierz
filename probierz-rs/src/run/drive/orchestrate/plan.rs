@@ -1,6 +1,9 @@
 use crate::run::*;
 use serde_json::json;
 
+/// The schema of the run plan this module answers.
+const PLAN_SCHEMA_VERSION: u64 = 1;
+
 /// Every combination of the dimensions' values. A dimension that is not a
 /// list, or a value that is not a scalar, is refused naming it: read as no
 /// values the target expanded to no cells and left the matrix without it, and
@@ -202,7 +205,7 @@ pub(crate) fn plan_matrix(harness: &Path, app_id: &str, profile: &str) -> Result
                 .map(|value| value as f64)
         });
     Ok(json!({
-        "schemaVersion": 1,
+        "schemaVersion": PLAN_SCHEMA_VERSION,
         "appId": app_id,
         "owner": declaration.owner()?,
         "profile": profile,

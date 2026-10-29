@@ -12,6 +12,8 @@ use crate::failure::Failure;
 const POINT: &str = "benchmark.autonomy";
 /// Where the policy lives in a harness when no file is named.
 pub(super) const POLICY_FILE: &str = "autonomy.yaml";
+/// The one schema of the autonomy policy this Probierz reads.
+const POLICY_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -63,10 +65,14 @@ pub(super) fn load(
             format!("{} is not a policy: {error}", file.display()),
         )
     })?;
-    if policy.schema_version != 1 {
+    if policy.schema_version != POLICY_SCHEMA_VERSION {
         return Err(Failure::config(
             POINT,
-            format!("{}: schemaVersion must be 1", file.display()),
+            format!(
+                "{}: schemaVersion must be {POLICY_SCHEMA_VERSION}, the one schema this Probierz reads; it is {}",
+                file.display(),
+                policy.schema_version
+            ),
         ));
     }
     if policy.observations == 0 || policy.rounds == 0 || policy.cases == 0 {

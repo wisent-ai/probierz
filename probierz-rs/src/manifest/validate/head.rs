@@ -5,10 +5,14 @@ use crate::manifest::*;
 /// them.
 pub fn validate(document: &Value, file: &Path) -> Answer {
     require(document.as_mapping().is_some(), file, "is not an object")?;
+    let schema = document.get("schemaVersion");
     require(
-        document.get("schemaVersion").and_then(Value::as_u64) == Some(1),
+        schema.and_then(Value::as_u64) == Some(MANIFEST_SCHEMA_VERSION),
         file,
-        "schemaVersion must be 1",
+        &format!(
+            "schemaVersion must be {MANIFEST_SCHEMA_VERSION}, the one app manifest schema this Probierz reads; it is {}",
+            schema.map_or_else(|| "absent".to_string(), |value| format!("{value:?}"))
+        ),
     )?;
     let app_id = string_of(document, "appId").unwrap_or_default();
     require(!app_id.is_empty(), file, "appId is required")?;

@@ -1,5 +1,8 @@
 use crate::apphooks::*;
 use serde_json::json;
+
+/// The schema of the reference strategy document this fixture writes.
+const STRATEGY_SCHEMA_VERSION: u64 = 2;
 pub(crate) fn strategy_document(run_id: &str) -> Value {
     let names = ["Activation", "Retention", "Revenue", "Reliability"];
     let metrics: Vec<Value> = names
@@ -87,7 +90,7 @@ pub(crate) fn strategy_document(run_id: &str) -> Value {
         })
         .collect();
     json!({
-        "schemaVersion": 2,
+        "schemaVersion": STRATEGY_SCHEMA_VERSION,
         "northStar": {
             "statement": format!("Probierz Oko reference strategy [{run_id}]"),
             "marketThesis": "Deterministic product evidence is a release requirement.",
@@ -164,10 +167,9 @@ pub(crate) fn scoped_oko_source(
     source: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, String>, Failure> {
     let email = configured(source, "OKO_E2E_EMAIL")?.to_ascii_lowercase();
-    let Some((address, domain)) = email
-        .split_once('@')
-        .filter(|(address, domain)| !address.is_empty() && !domain.is_empty())
-    else {
+    let Some((address, domain)) = email.split_once('@').filter(|(address, domain)| {
+        !address.is_empty() && !domain.is_empty()
+    }) else {
         return Err(Failure::config(
             "apphook.oko.email",
             format!("OKO_E2E_EMAIL must be a valid technical email address, found {email:?}"),

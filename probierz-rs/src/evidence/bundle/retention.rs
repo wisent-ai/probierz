@@ -1,5 +1,8 @@
 use crate::evidence::*;
 use serde_json::json;
+
+/// The schema of the evidence retention report.
+const RETENTION_REPORT_SCHEMA_VERSION: u64 = 1;
 pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: bool) -> Answer {
     let app_id = app_id
         .ok_or_else(|| Failure::invalid("evidence.retention", "retention needs an app ID"))?;
@@ -130,7 +133,7 @@ pub fn retention(harness: &Path, app_id: Option<&str>, at: Option<&str>, apply: 
         json!({ "expired": expired, "removed": removed.len(), "notRemoved": not_removed.len(), "at": at_text }),
     );
     print_json(&json!({
-        "schemaVersion": 1, "appId": app_id, "at": at_text, "expired": expired, "items": items,
+        "schemaVersion": RETENTION_REPORT_SCHEMA_VERSION, "appId": app_id, "at": at_text, "expired": expired, "items": items,
         "applied": apply, "removed": removed, "notRemoved": not_removed,
     }))?;
     allowed_audit_written(action, written)?;

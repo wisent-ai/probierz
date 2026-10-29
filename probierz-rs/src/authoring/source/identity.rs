@@ -1,5 +1,9 @@
 use crate::authoring::*;
 use serde_json::json;
+
+/// The schema of a source identity document, the one `app_source_identity`
+/// writes and `submitted_source_identity` reads.
+const IDENTITY_SCHEMA_VERSION: u64 = 1;
 pub(crate) fn repository_identity(
     root: &Path,
     name: &str,
@@ -71,10 +75,14 @@ pub(crate) fn submitted_source_identity(app_id: &str) -> Result<Option<JsonValue
     let file = PathBuf::from(file);
     let parsed = crate::json_file::required(&file)
         .map_err(|error| Failure::config("run.source", error.detail))?;
-    if parsed.get("schemaVersion").and_then(JsonValue::as_u64) != Some(1) {
+    if parsed.get("schemaVersion").and_then(JsonValue::as_u64) != Some(IDENTITY_SCHEMA_VERSION) {
         return Err(Failure::config(
             "run.source",
-            format!("{}: schemaVersion must be 1", file.display()),
+            format!(
+                "{}: schemaVersion must be {IDENTITY_SCHEMA_VERSION}, the source identity schema this Probierz writes and reads; it is {}",
+                file.display(),
+                parsed.get("schemaVersion").unwrap_or(&JsonValue::Null)
+            ),
         ));
     }
     if !parsed
@@ -179,7 +187,7 @@ pub fn app_source_identity(
         .collect();
     let app_sha = crate::evidence::sha256_bytes(&serde_json::to_vec(&concise)?);
     Ok(json!({
-        "schemaVersion": 1,
+        "schemaVersion": IDENTITY_SCHEMA_VERSION,
         "appId": app_id,
         "harness": repository_identity(harness, "probierz", None, true, true)?,
         "app": { "sha256": app_sha, "repositories": repository_values },

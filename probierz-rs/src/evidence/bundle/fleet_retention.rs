@@ -35,6 +35,9 @@ struct FleetObject {
     modified: Option<DateTime<Utc>>,
 }
 
+/// The schema of the fleet evidence retention report.
+const FLEET_RETENTION_SCHEMA_VERSION: u64 = 1;
+
 fn read_objects() -> Result<Vec<FleetObject>, Failure> {
     let listed = list_objects(RESULTS_ROOT.trim_end_matches(char::from(47)))?;
     let mut objects = Vec::new();
@@ -145,7 +148,7 @@ pub fn fleet_retention(
         items.push(record);
     }
     print_json(&json!({
-        "schemaVersion": 1,
+        "schemaVersion": FLEET_RETENTION_SCHEMA_VERSION,
         "root": RESULTS_ROOT,
         "appId": app_id,
         "at": at.to_rfc3339(),

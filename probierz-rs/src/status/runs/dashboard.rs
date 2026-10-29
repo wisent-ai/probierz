@@ -2,6 +2,9 @@
 
 use crate::status::*;
 
+/// The schema of the product run dashboard.
+const DASHBOARD_SCHEMA_VERSION: u64 = 2;
+
 pub(crate) fn manifest_object(
     harness: &Path,
     app_id: &str,
@@ -251,7 +254,7 @@ pub(crate) fn dashboard_value(
             .cmp(string(right.get("journey")).unwrap_or(""))
     });
     Ok(json!({
-        "schemaVersion": 2,
+        "schemaVersion": DASHBOARD_SCHEMA_VERSION,
         "generatedAt": now(),
         "product": {
             "appId": app_id,

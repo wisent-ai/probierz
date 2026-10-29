@@ -167,7 +167,7 @@ pub(crate) fn write_author_receipt(harness: &Path, args: AuthorReceiptArgs) -> A
         product_extension(&args.target),
     );
     let receipt = json!({
-        "schemaVersion": 1,
+        "schemaVersion": super::AUTHOR_RECEIPT_SCHEMA_VERSION,
         "appId": args.app,
         "journey": args.journey,
         "area": args.area,

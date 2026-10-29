@@ -1,6 +1,9 @@
 use crate::evidence::*;
 use serde_json::json;
 
+/// The schema of one access audit record.
+const ACCESS_AUDIT_SCHEMA_VERSION: u64 = 1;
+
 pub(crate) fn files_below(root: &Path, reject_symlinks: bool) -> Result<Vec<PathBuf>, Failure> {
     let mut pending = vec![root.to_path_buf()];
     let mut files = Vec::new();
@@ -80,7 +83,7 @@ pub(crate) fn audit_access(
     let event_id = random_uuid();
     let actor = crate::incidents::actor()?;
     let payload = json!({
-        "schemaVersion": 1,
+        "schemaVersion": ACCESS_AUDIT_SCHEMA_VERSION,
         "kind": "probierz-access-audit",
         "eventId": event_id,
         "at": at,

@@ -1,5 +1,8 @@
 use crate::evidence::*;
 use serde_json::json;
+
+/// The schema of the run comparison report.
+const COMPARISON_SCHEMA_VERSION: u64 = 2;
 /// The record the run manifest at `manifest_path` becomes; `None` when the
 /// manifest is gone. A manifest, analysis or report that is there but cannot
 /// be read is the failure naming it, never a run left out of the history.
@@ -163,7 +166,7 @@ pub fn compare(
         })
     };
     print_json(&json!({
-        "schemaVersion": 2,
+        "schemaVersion": COMPARISON_SCHEMA_VERSION,
         "appId": app_id,
         "left": side(&left),
         "right": side(&right),
