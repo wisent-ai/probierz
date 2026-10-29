@@ -21,7 +21,8 @@ fn started(job: &Value) -> bool {
 fn watched_in(watched: &Value, wanted: &[Terminal]) -> bool {
     match watched.get("state").map(|state| serde_json::from_value::<Terminal>(state.clone())) {
         Some(Ok(state)) => wanted.contains(&state),
-        Some(Err(_not_terminal)) | None => false,
+        Some(Err(_not_terminal)) => false,
+        None => false,
     }
 }
 

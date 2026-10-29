@@ -277,7 +277,7 @@ fn canonical_base_url(base_url: &str) -> Result<url::Url, Failure> {
         ));
     }
     if canonical.scheme() != "https"
-        && !(canonical.scheme() == "http" && canonical.host_str().is_some_and(loopback))
+        && !(canonical.scheme() == "http" && canonical.host_str().is_some_and(crate::evidence::loopback))
     {
         return Err(Failure::invalid(
             "seo-evaluate",

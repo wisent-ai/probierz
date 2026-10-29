@@ -60,7 +60,7 @@ impl Control {
             cancel_requested: false,
             child: None,
         }));
-        let answer = public_job(&locked(&job, "the new job's state")?);
+        let answer = public_job(&*locked(&job, "the new job's state")?);
         locked(&self.jobs, "the job table")?.insert(run_id, Arc::clone(&job));
 
         let control_args = args.clone();
@@ -78,7 +78,7 @@ impl Control {
     pub(crate) fn status(&self, args: &Map<String, Value>) -> Result<Value, String> {
         let run_id = non_empty(args.get("runId"), "runId")?;
         let job = self.job(run_id)?;
-        let answer = public_job(&locked(&job, &format!("job {run_id}"))?);
+        let answer = public_job(&*locked(&job, &format!("job {run_id}"))?);
         Ok(answer)
     }
 

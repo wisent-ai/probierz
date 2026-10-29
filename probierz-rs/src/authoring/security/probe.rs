@@ -22,7 +22,10 @@ impl Probe {
     }
     pub fn check(&self, scope: &Scope, check: &Check) -> Result<Value, String> {
         let url = self.origin.join(check.path()).map_err(|e| e.to_string())?;
-        stado_wait::blocking(stado_wait::Kind::Network, format!("owned check {}", check.id()), url.as_str(), || {
+        // The check's causes are text, which stado_wait::blocking cannot carry
+        // (it settles a std::error::Error), so the wait is begun and settled here.
+        let waiting = stado_wait::begin(stado_wait::Kind::Network, format!("owned check {}", check.id()), url.as_str());
+        let answer = (|| -> Result<Value, String> {
             let mut request = self.client.get(url.clone());
             if let Check::Cors { denied_origin, .. } = check {
                 request = request.header(reqwest::header::ORIGIN, denied_origin);
@@ -96,7 +99,12 @@ impl Probe {
             Ok(json!({"id": check.id(), "method": "GET", "path": check.path(), "status": status.as_u16(),
                 "pass": passed, "missingHeaders": missing, "failedAssertions": failed_assertions,
                 "failedCookies": failed_cookies, "redirectNotFollowed": status.is_redirection()}))
-        })
+        })();
+        match &answer {
+            Ok(_) => waiting.done(),
+            Err(cause) => waiting.failed(cause),
+        }
+        answer
     }
 }
 

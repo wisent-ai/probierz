@@ -3,7 +3,7 @@
 
 mod endpoint;
 
-pub(crate) use endpoint::{object_store_config, split_object_uri};
+pub(crate) use endpoint::{loopback, object_store_config, split_object_uri};
 
 use crate::evidence::*;
 

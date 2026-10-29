@@ -121,7 +121,8 @@ fn resolve_harness(explicit: Option<&Path>) -> Result<PathBuf, Failure> {
             let mut list = Vec::new();
             match std::env::var("PROBIERZ_HARNESS_DIR") {
                 Ok(from_env) if !from_env.trim().is_empty() => list.push(PathBuf::from(from_env)),
-                Ok(_blank) | Err(std::env::VarError::NotPresent) => {}
+                Ok(_blank) => {}
+                Err(std::env::VarError::NotPresent) => {}
                 Err(error) => {
                     return Err(Failure::config(
                         "harness.resolve",

@@ -45,8 +45,11 @@ impl Model {
         ]}).to_string();
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| e.to_string())?.as_secs().to_string();
         let digest = crate::evidence::sha256_bytes(body.as_bytes());
-        let signature = hmac_sha256(self.secret.as_bytes(), format!("{}:{timestamp}:{digest}", self.agent).as_bytes());
-        stado_wait::blocking(stado_wait::Kind::Network, "Brama security assessment", &self.url, || {
+        let signature = hmac_sha256(self.secret.as_bytes(), format!("{}:{timestamp}:{digest}", self.agent).as_bytes())?;
+        // The request's causes are text, which stado_wait::blocking cannot carry
+        // (it settles a std::error::Error), so the wait is begun and settled here.
+        let waiting = stado_wait::begin(stado_wait::Kind::Network, "Brama security assessment", &self.url);
+        let assessed = (|| -> Result<Value, String> {
             let response = self.client.post(format!("{}/v1/chat/completions", self.url))
                 .bearer_auth(&self.token).header("content-type", "application/json")
                 .header("x-agent-id", &self.agent).header("x-agent-timestamp", &timestamp)
@@ -61,6 +64,11 @@ impl Model {
             Ok(json!({"answer": answer, "modelRequested": self.name, "modelReturned": payload.get("model"),
                 "usage": payload.get("usage"), "requestSha256": digest,
                 "responseSha256": crate::evidence::sha256_bytes(raw.as_bytes())}))
-        })
+        })();
+        match &assessed {
+            Ok(_) => waiting.done(),
+            Err(cause) => waiting.failed(cause),
+        }
+        assessed
     }
 }

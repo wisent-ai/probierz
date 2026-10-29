@@ -97,7 +97,7 @@ fn gate_policy_refuses_missing_or_malformed_requirements_and_recovers() {
         assert!(detail.contains(cause) && detail.contains(file.to_string_lossy().as_ref()), "{name}: {detail}");
         assert_eq!(before_config, gate_configuration(&file.with_file_name("gates.json")), "policy evaluation changed gate activation");
     };
-    let refuse = |name, policy, cause| refuse_mode(name, "pullRequestPolicy", "pull-request", policy, cause);
+    let refuse = |name: &str, policy: Option<Value>, cause: &str| refuse_mode(name, "pullRequestPolicy", "pull-request", policy, cause);
     refuse_mode("missing-release-policy", "releasePolicy", "release", None, "releasePolicy is missing");
     refuse_mode("scalar-release-policy", "releasePolicy", "release", Some(Value::String("not a policy".into())), "releasePolicy must be a mapping");
     refuse("missing-policy", None, "pullRequestPolicy is missing");
