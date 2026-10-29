@@ -51,7 +51,17 @@ pub(crate) fn harness_root() -> PathBuf {
 }
 
 /// Serve the MCP protocol on stdio for `harness` until the client closes it.
+/// One process serves one harness: the first one recorded is the one every
+/// tool call reads, and a later call naming another is said and not served.
 pub(crate) fn serve(harness: &Path) {
-    let _ = HARNESS.set(harness.to_path_buf());
+    let serving = HARNESS.get_or_init(|| harness.to_path_buf());
+    if serving != harness {
+        eprintln!(
+            "probierz: this MCP server already serves the harness {}; {} is not served",
+            serving.display(),
+            harness.display()
+        );
+        return;
+    }
     protocol::serve();
 }

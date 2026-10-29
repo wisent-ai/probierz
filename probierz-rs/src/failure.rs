@@ -229,9 +229,10 @@ pub fn iso_timestamp(value: std::time::SystemTime) -> String {
 /// before any command prints. A `OnceLock`: the answer is runtime input.
 static TEXT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
-/// Record whether answers print as text for a person.
+/// Record whether answers print as text for a person. `main` calls it once;
+/// the first answer recorded is the one every print reads.
 pub fn answer_as_text(text: bool) {
-    let _ = TEXT.set(text);
+    TEXT.get_or_init(|| text);
 }
 
 use crate::capture::emit;

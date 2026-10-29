@@ -106,8 +106,11 @@ pub(crate) fn safe_message(value: &str, redaction: &manifest::Redaction) -> Stri
 /// token-shaped word, or follows a segment the run's redaction covers.
 pub(crate) fn safe_url(value: &str, redaction: &manifest::Redaction) -> String {
     if let Ok(mut url) = Url::parse(value) {
-        let _ = url.set_username("");
-        let _ = url.set_password(None);
+        // A URL without a host (mailto:, data:, file:) refuses credentials,
+        // so it holds none to clear; that refusal is the only error here.
+        match url.set_username("").and_then(|()| url.set_password(None)) {
+            Ok(()) | Err(()) => {}
+        }
         url.set_fragment(None);
         let source: Vec<(String, String)> = url
             .query_pairs()

@@ -18,10 +18,19 @@ pub(crate) fn drain_run_stream<R: Read>(
     let mut tail = String::new();
     let mut first_output_ms = None;
     let mut buffer = [0u8; 8192];
+    let mut log_failed = false;
     loop {
         let count = match stream.read(&mut buffer) {
-            Ok(0) | Err(_) => break,
+            Ok(0) => break,
             Ok(count) => count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => {
+                eprintln!(
+                    "probierz: the run's output for {} could not be read further, so the rest of it is not kept: {error}",
+                    path.display()
+                );
+                break;
+            }
         };
         if first_output_ms.is_none() {
             first_output_ms = Some(
@@ -30,7 +39,17 @@ pub(crate) fn drain_run_stream<R: Read>(
         }
         let safe = redaction.text(&String::from_utf8_lossy(&buffer[..count]));
         tail.push_str(&safe);
-        let _ = append_secure(path, stamped(&safe).as_bytes());
+        // The tail is still returned; a log that cannot be written is said
+        // once, since every later chunk fails the same way.
+        if let Err(error) = append_secure(path, stamped(&safe).as_bytes()) {
+            if !log_failed {
+                eprintln!(
+                    "probierz: the run log {} cannot be written, so it holds only part of the output: {error}",
+                    path.display()
+                );
+                log_failed = true;
+            }
+        }
     }
     (tail, first_output_ms)
 }
