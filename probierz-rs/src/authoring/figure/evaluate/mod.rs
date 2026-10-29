@@ -55,7 +55,7 @@ pub fn evaluate_figure(
     )?;
     let destination = Destination::resolve(harness, &pair, output)?;
 
-    let work = work_directory()?;
+    let work = work_directory(&destination.report)?;
     let evaluated = evaluate_in(&work, &pair, &rubric, &router, &destination, tex_preamble);
     // The report is kept before the working directory is taken back, so a
     // directory that stays is a refusal naming it without losing the verdict.

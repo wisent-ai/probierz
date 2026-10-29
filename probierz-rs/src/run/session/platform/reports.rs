@@ -22,9 +22,10 @@ pub(crate) fn report_identity(path: &Path, run_id: &str, started: SystemTime) ->
         Err(error) => return refused(format!("report unreadable: {error}")),
     };
     match report.pointer("/probierz/runId").and_then(Value::as_str) {
-        Some(actual) if actual == run_id => {
-            json!({ "ok": true, "runId": run_id, "mtime": system_time_iso(modified) })
-        }
+        Some(actual) if actual == run_id => match system_time_iso(modified) {
+            Ok(mtime) => json!({ "ok": true, "runId": run_id, "mtime": mtime }),
+            Err(error) => refused(format!("report modification time unreadable: {error}")),
+        },
         Some(actual) => refused(format!(
             "report run ID mismatch: expected {run_id}, got {actual}"
         )),

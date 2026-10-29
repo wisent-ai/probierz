@@ -1,6 +1,5 @@
 use crate::authoring::*;
 use hmac::{Hmac, Mac};
-use std::os::unix::fs::OpenOptionsExt;
 pub(crate) fn selected_setting(
     loaded: Option<&manifest::Manifest>,
     target: Option<&str>,
@@ -56,47 +55,11 @@ pub(crate) struct RouterReply {
     pub(crate) usage: JsonValue,
 }
 
-/// Remove a temporary this module wrote; the sentence saying it stays on
-/// disk when it cannot be removed.
-fn discard(path: &std::path::Path) -> Option<String> {
-    fs::remove_file(path)
-        .err()
-        .map(|error| format!("{} is left behind: {error}", path.display()))
-}
-
-/// `cause`, with the half-written `file` taken back, or said to stay.
-fn abandoned(file: &std::path::Path, cause: impl std::fmt::Display) -> String {
-    match discard(file) {
-        Some(left) => format!("{cause}; {left}"),
-        None => cause.to_string(),
-    }
-}
-
-/// A file holding `content` that only this user can read: it is created
-/// owner-only, never readable by others between creation and a later chmod,
-/// because the router headers it holds carry the bearer token.
-pub(crate) fn temp_file(label: &str, content: &[u8]) -> Result<PathBuf, String> {
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| error.to_string())?
-        .as_nanos();
-    let file =
-        std::env::temp_dir().join(format!("probierz-{label}-{}-{stamp}", std::process::id()));
-    let mut handle = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(u32::from(libc::S_IRUSR | libc::S_IWUSR))
-        .open(&file)
-        .map_err(|error| format!("{} cannot be created: {error}", file.display()))?;
-    handle
-        .write_all(content)
-        .map_err(|error| abandoned(&file, error))?;
-    Ok(file)
-}
-
 /// One chat completion through the Stado model router. The call waits for the
 /// router's own answer: the router owns provider deadlines and names its
-/// failure, so a clock here would only end a slow honest answer early.
+/// failure, so a clock here would only end a slow honest answer early. The
+/// bearer and the agent signature travel only in the request's headers; no
+/// file holding them is ever written.
 pub(crate) fn post_router(
     url: &str,
     token: &str,
@@ -110,7 +73,17 @@ pub(crate) fn post_router(
     if token.chars().any(char::is_whitespace) {
         return Err("STADO_MODEL_ROUTER_TOKEN must not contain whitespace".to_string());
     }
-    let mut headers = format!("Authorization: Bearer {token}\nContent-Type: application/json\n");
+    let client = reqwest::blocking::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(None)
+        .build()
+        .map_err(|error| format!("model router client cannot be built: {error}"))?;
+    let endpoint = format!("{url}/v1/chat/completions");
+    let mut request = client
+        .post(&endpoint)
+        .bearer_auth(token)
+        .header("content-type", "application/json");
     if !agent_id.trim().is_empty() || !agent_secret.trim().is_empty() {
         if agent_id.trim().is_empty() || agent_secret.trim().is_empty() {
             return Err("agent identity needs both an agent ID and an agent secret".to_string());
@@ -125,47 +98,20 @@ pub(crate) fn post_router(
             agent_secret.as_bytes(),
             format!("{agent_id}:{timestamp}:{digest}").as_bytes(),
         )?;
-        headers.push_str(&format!("x-agent-id: {agent_id}\nx-agent-timestamp: {timestamp}\nx-agent-signature: {signature}\n"));
+        request = request
+            .header("x-agent-id", agent_id)
+            .header("x-agent-timestamp", timestamp)
+            .header("x-agent-signature", signature);
     }
-    let header_file = temp_file("router-headers", headers.as_bytes())?;
-    let body_file = temp_file("router-body", body.as_bytes())
-        .map_err(|error| abandoned(&header_file, error))?;
-    let output = stado_wait::output(
-        Command::new("curl")
-            .args(["--silent", "--show-error", "--header"])
-            .arg(format!("@{}", header_file.display()))
-            .args(["--data-binary"])
-            .arg(format!("@{}", body_file.display()))
-            .args([
-                "--write-out",
-                "\n%{http_code}",
-                &format!("{url}/v1/chat/completions"),
-            ]),
-    );
-    // The header file carries the router's bearer token: one left on disk is
-    // refused by name, never dropped behind a successful answer.
-    let left: Vec<String> = [header_file.as_path(), body_file.as_path()]
-        .into_iter()
-        .filter_map(discard)
-        .collect();
-    if !left.is_empty() {
-        return Err(format!(
-            "model router request temporaries: {}",
-            left.join("; ")
-        ));
-    }
-    let output = output.map_err(|error| format!("model router request failed: {error}"))?;
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
-    }
-    let text = String::from_utf8_lossy(&output.stdout);
-    let (payload, status) = text
-        .rsplit_once('\n')
-        .ok_or_else(|| "model router returned no HTTP status".to_string())?;
-    let status = status.parse::<u16>().map_err(|error| {
-        format!("model router returned an invalid HTTP status {status:?}: {error}")
-    })?;
-    Ok((status, payload.to_string()))
+    let response = stado_wait::blocking(stado_wait::Kind::Network, "model router request", &endpoint, || {
+        request.body(body.to_string()).send()
+    })
+    .map_err(|error| format!("model router request to {endpoint} failed: {error}"))?;
+    let status = response.status().as_u16();
+    let payload = response
+        .text()
+        .map_err(|error| format!("model router answer HTTP {status} cannot be read: {error}"))?;
+    Ok((status, payload))
 }
 
 /// The model router's refusal: its `error.message` when it names one, else

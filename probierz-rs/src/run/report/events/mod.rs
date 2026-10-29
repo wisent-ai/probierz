@@ -3,9 +3,11 @@
 //! events and the logs beside them.
 
 mod archive;
+mod clock;
 mod timeline;
 mod traces;
 
 pub(crate) use archive::*;
+pub(crate) use clock::*;
 pub(crate) use timeline::*;
 pub(crate) use traces::*;

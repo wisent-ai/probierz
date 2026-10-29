@@ -30,7 +30,8 @@ pub(crate) fn decrypt_bundle_payload(
     aad: &[u8],
     offset: usize,
 ) -> Result<(TemporaryPlaintext, u64), Failure> {
-    let total_bytes = fs::metadata(file)?.len();
+    let metadata = fs::metadata(file)?;
+    let total_bytes = metadata.len();
     let overhead = (offset as u64)
         .checked_add(TAG_BYTES as u64)
         .ok_or_else(|| {
@@ -40,50 +41,54 @@ pub(crate) fn decrypt_bundle_payload(
         Failure::invalid("evidence.restore", "truncated encrypted evidence bundle")
     })?;
     let (mut stream, mut state, mask) = gcm_state(key, nonce, aad, "evidence.restore")?;
-    let mut tail = Vec::with_capacity(16);
-    let temporary = TemporaryPlaintext(
-        destination
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join(format!(
-                ".probierz-restore-{}-{}",
-                std::process::id(),
-                Utc::now().timestamp_millis(),
-            )),
-    );
+    let mut tail = Vec::new();
+    let directory = destination.parent().ok_or_else(|| {
+        Failure::invalid(
+            "evidence.restore",
+            format!(
+                "the restore destination {} names no directory to decrypt beside",
+                destination.display()
+            ),
+        )
+    })?;
+    let temporary = TemporaryPlaintext(directory.join(format!(
+        ".probierz-restore-{}-{}",
+        std::process::id(),
+        Utc::now().timestamp_millis(),
+    )));
     let mut plaintext = OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(temporary.path())?;
-    apply_mode(temporary.path(), 0o600)?;
+    apply_mode(temporary.path(), u32::from(libc::S_IRUSR | libc::S_IWUSR))?;
     let mut input = File::open(file)?;
     input.seek(SeekFrom::Start(offset as u64))?;
     let mut encrypted = (&mut input).take(ciphertext_bytes);
-    let mut buffer = vec![0u8; 128 * 1024];
+    // One read per file-system block of the bundle, as the file system
+    // reports it, so a large bundle streams without being held in memory.
+    let block = std::os::unix::fs::MetadataExt::blksize(&metadata);
+    let mut buffer = Vec::new();
     loop {
-        let count = encrypted.read(&mut buffer)?;
-        if count == 0 {
+        buffer.clear();
+        (&mut encrypted).take(block).read_to_end(&mut buffer)?;
+        if buffer.is_empty() {
             break;
         }
-        ghash_feed(&mut state, &mut tail, &buffer[..count]);
-        stream
-            .try_apply_keystream(&mut buffer[..count])
-            .map_err(|_| {
-                Failure::invalid(
-                    "evidence.restore",
-                    "encrypted evidence payload is too large",
-                )
-            })?;
-        plaintext.write_all(&buffer[..count])?;
+        ghash_feed(&mut state, &mut tail, &buffer);
+        stream.try_apply_keystream(&mut buffer).map_err(|_| {
+            Failure::invalid("evidence.restore", "encrypted evidence payload is too large")
+        })?;
+        plaintext.write_all(&buffer)?;
     }
     plaintext.flush()?;
     drop(plaintext);
     drop(encrypted);
 
-    let mut stored_tag = [0u8; TAG_BYTES];
-    input
-        .read_exact(&mut stored_tag)
-        .map_err(|_| Failure::invalid("evidence.restore", "truncated encrypted evidence bundle"))?;
+    let mut stored_tag = Vec::new();
+    (&mut input).take(TAG_BYTES as u64).read_to_end(&mut stored_tag)?;
+    if stored_tag.len() != TAG_BYTES {
+        return Err(Failure::invalid("evidence.restore", "truncated encrypted evidence bundle"));
+    }
     let computed_tag = finish_gcm_tag(
         state,
         &mut tail,
@@ -92,7 +97,7 @@ pub(crate) fn decrypt_bundle_payload(
         ciphertext_bytes,
         "evidence.restore",
     )?;
-    if computed_tag.ct_eq(&stored_tag).unwrap_u8() != 1 {
+    if !bool::from(computed_tag.as_slice().ct_eq(stored_tag.as_slice())) {
         return Err(Failure::invalid(
             "evidence.restore",
             "encrypted evidence authentication failed: Unsupported state or unable to authenticate data",

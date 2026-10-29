@@ -1,8 +1,33 @@
+//! The events a run's traces and logs hold, placed in time. An event the
+//! trace gives no clock or no time for stands at the trace's own recorded
+//! time; a time the trace states that cannot be read is an error on the
+//! event (`clock::with_instant`), never another instant put in its place.
+
 use crate::run::*;
 use serde_json::json;
+
+// Probierz's JSON observation trace format version:
+// https://github.com/wisent-ai/probierz/blob/main/guides/evidence.md
+const JSON_TRACE_SCHEMA_VERSION: u64 = 1;
+
+/// Where a Playwright trace's own clock stands: the wall time and the
+/// monotonic time its context options recorded together, when both were
+/// measured.
+fn trace_clock(traces: &[Value]) -> Option<(f64, f64)> {
+    traces.iter().find_map(|row| {
+        if row.get("type").and_then(Value::as_str) != Some("context-options") {
+            return None;
+        }
+        Some((
+            measured(js_number(row.get("wallTime")))?,
+            measured(js_number(row.get("monotonicTime")))?,
+        ))
+    })
+}
+
 pub(crate) fn trace_events(
     file: &Path,
-    fallback: &str,
+    recorded: &str,
     diagnostics: &mut Vec<Value>,
     redaction: &manifest::Redaction,
 ) -> Vec<Value> {
@@ -16,30 +41,14 @@ pub(crate) fn trace_events(
             .filter(|(name, _)| name.ends_with(".trace"))
             .flat_map(|(_, content)| json_lines(content))
             .collect();
-        let context = traces.iter().find(|row| {
-            row.get("type").and_then(Value::as_str) == Some("context-options")
-                && js_number(row.get("wallTime")) != 0.0
-                && js_number(row.get("monotonicTime")) != 0.0
-        });
-        let wall = context
-            .map(|row| js_number(row.get("wallTime")))
-            .unwrap_or(0.0);
-        let monotonic = context
-            .map(|row| js_number(row.get("monotonicTime")))
-            .unwrap_or(0.0);
-        let at_for = |value: f64| {
-            if wall != 0.0 && value != 0.0 {
-                DateTime::from_timestamp_millis((wall + value - monotonic) as i64)
-                    .map(|date| date.to_rfc3339_opts(SecondsFormat::Millis, true))
-                    .unwrap_or_else(|| fallback.into())
-            } else {
-                fallback.into()
+        let clock = trace_clock(&traces);
+        let at_for = |value: f64| -> Result<String, String> {
+            match (clock, measured(value)) {
+                (Some((wall, monotonic)), Some(value)) => millis_iso((wall + value - monotonic) as i64),
+                _ => Ok(recorded.to_owned()),
             }
         };
-        let source = file
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("");
+        let source = file.file_name().and_then(|name| name.to_str());
         let mut events = Vec::new();
         for row in entries
             .iter()
@@ -53,37 +62,46 @@ pub(crate) fn trace_events(
                 continue;
             };
             let snapshot = &row["snapshot"];
-            let status = js_number(snapshot.pointer("/response/status"));
-            let duration = js_number(snapshot.get("time"));
-            events.push(json!({ "at": at_for(first_nonzero(snapshot.get("_monotonicTime"), row.get("monotonicTime"))), "type": "network", "source": source, "method": snapshot.pointer("/request/method").cloned().unwrap_or(Value::Null), "url": safe_url(url), "status": if status == 0.0 { Value::Null } else { number(status) }, "durationMs": if duration == 0.0 { Value::Null } else { number(duration) } }));
+            let status = measured(js_number(snapshot.pointer("/response/status"))).map(number);
+            let duration = measured(js_number(snapshot.get("time"))).map(number);
+            let event = json!({ "type": "network", "source": source, "method": snapshot.pointer("/request/method"), "url": safe_url(url), "status": status, "durationMs": duration });
+            let at = at_for(first_nonzero(snapshot.get("_monotonicTime"), row.get("monotonicTime")));
+            events.push(with_instant(event, "at", &at));
         }
         for row in &traces {
-            let params = row.get("params").unwrap_or(row);
-            let method = row
-                .get("method")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .to_ascii_lowercase();
+            // Older traces write a console entry's fields beside its method
+            // rather than under `params`.
+            let params = match row.get("params") {
+                Some(params) => params,
+                None => row,
+            };
+            let method = row.get("method").and_then(Value::as_str).map(str::to_ascii_lowercase);
             let is_console = row.get("type").and_then(Value::as_str) == Some("console")
-                || matches!(method.as_str(), "console" | "pageerror" | "page-error");
+                || matches!(method.as_deref(), Some("console" | "pageerror" | "page-error"));
             if !is_console {
                 continue;
             }
-            let message = params
-                .get("text")
-                .or_else(|| params.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            let severity = if method.contains("error") {
-                "error"
-            } else {
-                params
+            let severity = match method.as_deref() {
+                Some(method) if method.contains("error") => Some("error"),
+                _ => params
                     .get("type")
                     .or_else(|| params.get("messageType"))
-                    .and_then(Value::as_str)
-                    .unwrap_or("log")
+                    .and_then(Value::as_str),
             };
-            events.push(json!({ "at": at_for(first_nonzero(row.get("time"), row.get("monotonicTime"))), "type": "console", "source": source, "severity": severity, "message": safe_message(message) }));
+            let mut event = json!({ "type": "console", "source": source, "severity": severity });
+            if let Value::Object(fields) = &mut event {
+                match params.get("text").or_else(|| params.get("message")).and_then(Value::as_str) {
+                    Some(message) => {
+                        fields.insert("message".into(), json!(safe_message(message)));
+                    }
+                    None => {
+                        fields.insert("message".into(), Value::Null);
+                        fields.insert("messageError".into(), json!("the console entry holds no text or message"));
+                    }
+                }
+            }
+            let at = at_for(first_nonzero(row.get("time"), row.get("monotonicTime")));
+            events.push(with_instant(event, "at", &at));
         }
         Ok(events)
     })();
@@ -98,14 +116,14 @@ pub(crate) fn trace_events(
 
 pub(crate) fn json_trace_events(
     file: &Path,
-    fallback: &str,
+    recorded: &str,
     diagnostics: &mut Vec<Value>,
     redaction: &manifest::Redaction,
 ) -> Vec<Value> {
     let safe_message = |text: &str| safe_message(text, redaction);
     let result = (|| -> Result<Value, String> {
         let document = crate::json_file::required(file).map_err(|error| error.detail)?;
-        if document.get("schemaVersion").and_then(Value::as_u64) != Some(1)
+        if document.get("schemaVersion").and_then(Value::as_u64) != Some(JSON_TRACE_SCHEMA_VERSION)
             || !document
                 .get("kind")
                 .and_then(Value::as_str)
@@ -117,14 +135,20 @@ pub(crate) fn json_trace_events(
         Ok(document)
     })();
     match result {
-        Ok(document) => vec![json!({
-            "at": parse_iso(document.get("completedAt").and_then(Value::as_str), fallback),
-            "type": "observation",
-            "source": file.file_name().map(|name| name.to_string_lossy().into_owned()),
-            "status": document["status"],
-            // The observation's reply whole, or null when it recorded none.
-            "message": document.pointer("/observation/reply").and_then(Value::as_str).map(safe_message),
-        })],
+        Ok(document) => {
+            let at = match document.get("completedAt").and_then(Value::as_str) {
+                Some(stated) => normalized_iso(stated, "the trace's completedAt"),
+                None => Ok(recorded.to_owned()),
+            };
+            let event = json!({
+                "type": "observation",
+                "source": file.file_name().map(|name| name.to_string_lossy().into_owned()),
+                "status": document["status"],
+                // The observation's reply whole, or null when it recorded none.
+                "message": document.pointer("/observation/reply").and_then(Value::as_str).map(safe_message),
+            });
+            vec![with_instant(event, "at", &at)]
+        }
         Err(error) => {
             diagnostics.push(json!({ "artifact": file, "error": error }));
             Vec::new()
@@ -134,7 +158,8 @@ pub(crate) fn json_trace_events(
 
 /// The timestamped lines of one run log. A log the run did not write has no
 /// events; one that exists and cannot be read is a diagnostic naming it, so
-/// the timeline does not look like a run that printed nothing.
+/// the timeline does not look like a run that printed nothing. A line whose
+/// time cannot be read carries that error beside its message.
 pub(crate) fn log_events(
     file: &Path,
     source: &str,
@@ -150,7 +175,14 @@ pub(crate) fn log_events(
             return Vec::new();
         }
     };
-    let fallback = modified_iso(file);
-    let expression = Regex::new(r"^(\d{4}-\d{2}-\d{2}T\S+)\s(.*)$").expect("regex");
-    content.lines().filter_map(|line| { let groups = expression.captures(line)?; Some(json!({ "at": parse_iso(Some(&groups[1]), &fallback), "type": "log", "source": source, "message": safe_message(&groups[2]) })) }).collect()
+    let expression =
+        Regex::new(r"^(?P<at>\d{4}-\d{2}-\d{2}T\S+)\s(?P<message>.*)$").expect("regex");
+    content
+        .lines()
+        .filter_map(|line| {
+            let groups = expression.captures(line)?;
+            let event = json!({ "type": "log", "source": source, "message": safe_message(&groups["message"]) });
+            Some(with_instant(event, "at", &normalized_iso(&groups["at"], "the log line's time")))
+        })
+        .collect()
 }
