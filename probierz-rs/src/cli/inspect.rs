@@ -77,7 +77,6 @@ pub enum InspectCommand {
         #[command(subcommand)]
         command: EvaluateCommand,
     },
-    // ReadmeGif
     /// Render a silent journey video as a looping README GIF.
     Gif {
         input: PathBuf,
