@@ -100,6 +100,24 @@ string message records that missing field explicitly instead of becoming an
 empty message or disappearing from the diagnostic summary. File-backed crash
 entries identify the source path.
 
+`diagnostics.json`, the timeline beside it and the JSON observation traces the
+timeline reads carry `schemaVersion` 1. The diagnostics summary reports the
+median (p50, fraction 0.5) and the 95th percentile (p95, fraction 0.95) of the
+run's assertion durations and of its network request durations, with their
+count and maximum. The summary names its `file` only once that file is
+written; a failed write reports `file: null`, the `attemptedFile` it was meant
+for and the `fileError` that stopped it, the same shape platform diagnostics
+use.
+
+A timeline event whose time the run's files do not state readably carries
+`at: null` beside `atError`, which names the time looked for and why it could
+not be read; it is never given another instant. A test with neither `status`
+nor `passed` carries `status: null` and `statusError`, and a console entry
+without text carries `message: null` and `messageError`. A test that states no
+start begins when the test before it ended (the run start for the first), and
+a trace event without its own clock stands at the trace file's recorded time.
+A media item without a file or kind is a timeline diagnostic, not an event.
+
 Desktop first use records completion when a real protected evidence bundle
 has been inspected. If that fact does not satisfy the current journey, the
 screen reports the refusal instead of silently returning. A storage or
