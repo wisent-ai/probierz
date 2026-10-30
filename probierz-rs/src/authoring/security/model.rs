@@ -1,5 +1,7 @@
-//! Brama plans declared checks and explains observations; it never executes code.
-use crate::authoring::{hmac_sha256, required_setting, router_refusal, stado_model_router_url};
+//! Brama, or the endpoint Stado's capability resolution hands out in its
+//! place, plans declared checks and explains observations; it never executes
+//! code.
+use crate::authoring::{hmac_sha256, required_setting, router_refusal, ModelRoute};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -7,8 +9,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct Model {
     url: String,
     token: String,
-    agent: String,
-    secret: String,
+    /// The agent id and secret Brama's requests are signed with; none for an
+    /// endpoint in Brama's place, which reads no signature.
+    signer: Option<(String, String)>,
     pub name: String,
     client: reqwest::blocking::Client,
 }
@@ -39,29 +42,38 @@ impl Model {
         if name.trim().is_empty() {
             return Err("--model must name a Brama route".into());
         }
-        let url = stado_model_router_url(setting(url, "STADO_MODEL_ROUTER_URL")?.as_deref())?;
+        let route = ModelRoute::select(setting(url, "STADO_MODEL_ROUTER_URL")?.as_deref())?;
+        let url = route.url.clone();
         // Use URL parsing rather than the legacy string-prefix loopback test.
-        let parsed = url::Url::parse(&url).map_err(|e| format!("Brama URL: {e}"))?;
-        let loopback = match parsed.host().ok_or("Brama URL has no host")? {
+        let parsed = url::Url::parse(&url).map_err(|e| format!("model router URL: {e}"))?;
+        let loopback = match parsed.host().ok_or("model router URL has no host")? {
             url::Host::Ipv4(address) => address.is_loopback(),
             url::Host::Ipv6(address) => address.is_loopback(),
             url::Host::Domain(domain) => domain == "localhost",
         };
         if parsed.scheme() != "https" && !loopback {
-            return Err("Brama URL requires HTTPS except literal loopback or localhost".into());
+            return Err(
+                "model router URL requires HTTPS except literal loopback or localhost".into(),
+            );
         }
         let token = required_setting(
-            setting(bearer, "STADO_MODEL_ROUTER_TOKEN")?,
+            route.bearer(setting(bearer, "STADO_MODEL_ROUTER_TOKEN")?),
             "STADO_MODEL_ROUTER_TOKEN",
         )?;
-        let agent = required_setting(
-            setting(agent, "PROBIERZ_MODEL_AGENT_ID")?,
-            "PROBIERZ_MODEL_AGENT_ID",
-        )?;
-        let secret = required_setting(
-            setting(secret, "PROBIERZ_MODEL_AGENT_SECRET")?,
-            "PROBIERZ_MODEL_AGENT_SECRET",
-        )?;
+        let signer = if route.signs() {
+            Some((
+                required_setting(
+                    setting(agent, "PROBIERZ_MODEL_AGENT_ID")?,
+                    "PROBIERZ_MODEL_AGENT_ID",
+                )?,
+                required_setting(
+                    setting(secret, "PROBIERZ_MODEL_AGENT_SECRET")?,
+                    "PROBIERZ_MODEL_AGENT_SECRET",
+                )?,
+            ))
+        } else {
+            None
+        };
         let client = reqwest::blocking::Client::builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
@@ -71,8 +83,7 @@ impl Model {
         Ok(Self {
             url,
             token,
-            agent,
-            secret,
+            signer,
             name: name.into(),
             client,
         })
@@ -81,48 +92,52 @@ impl Model {
         let body = json!({"model": self.name, "messages": [
             {"role": "system", "content": instruction}, {"role": "user", "content": data.to_string()}
         ]}).to_string();
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| e.to_string())?
-            .as_secs()
-            .to_string();
         let digest = crate::evidence::sha256_bytes(body.as_bytes());
-        let signature = hmac_sha256(
-            self.secret.as_bytes(),
-            format!("{}:{timestamp}:{digest}", self.agent).as_bytes(),
-        )?;
         // The request's causes are text, which stado_wait::blocking cannot carry
         // (it settles a std::error::Error), so the wait is begun and settled here.
         let waiting = stado_wait::begin(
             stado_wait::Kind::Network,
-            "Brama security assessment",
+            "model security assessment",
             &self.url,
         );
         let assessed = (|| -> Result<Value, String> {
-            let response = self
+            let mut request = self
                 .client
                 .post(format!("{}/v1/chat/completions", self.url))
                 .bearer_auth(&self.token)
-                .header("content-type", "application/json")
-                .header("x-agent-id", &self.agent)
-                .header("x-agent-timestamp", &timestamp)
-                .header("x-agent-signature", signature)
+                .header("content-type", "application/json");
+            if let Some((agent, secret)) = &self.signer {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(|e| e.to_string())?
+                    .as_secs()
+                    .to_string();
+                let signature = hmac_sha256(
+                    secret.as_bytes(),
+                    format!("{agent}:{timestamp}:{digest}").as_bytes(),
+                )?;
+                request = request
+                    .header("x-agent-id", agent)
+                    .header("x-agent-timestamp", timestamp)
+                    .header("x-agent-signature", signature);
+            }
+            let response = request
                 .body(body)
                 .send()
-                .map_err(|e| format!("Brama request failed: {e}"))?;
+                .map_err(|e| format!("model router request to {} failed: {e}", self.url))?;
             let status = response.status();
             let raw = response
                 .text()
-                .map_err(|e| format!("Brama response HTTP {status}: {e}"))?;
+                .map_err(|e| format!("model router response HTTP {status}: {e}"))?;
             let payload: Value = serde_json::from_str(&raw)
-                .map_err(|e| format!("Brama HTTP {status} returned invalid JSON: {e}"))?;
+                .map_err(|e| format!("model router HTTP {status} returned invalid JSON: {e}"))?;
             if !status.is_success() {
                 return Err(router_refusal(status.as_u16(), &payload, &raw));
             }
             let content = payload
                 .pointer("/choices/0/message/content")
                 .and_then(Value::as_str)
-                .ok_or("Brama returned no assistant content")?;
+                .ok_or("the model router returned no assistant content")?;
             let answer: Value = serde_json::from_str(content)
                 .map_err(|e| format!("model returned invalid assessment JSON: {e}"))?;
             Ok(

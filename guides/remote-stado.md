@@ -49,13 +49,17 @@ probierz remote run tui --app stado \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
 
-STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
 probierz remote author stado <journey> \
   --target tui --desc "<journey goal>" \
   --host stado:<target> \
   --app-binary-path /absolute/path/to/signed/stado \
   --app-repo /absolute/path/to/the/matching/stado/source
 ```
+
+The worker is handed the model router `STADO_MODEL_ROUTER_URL` names, else
+Brama's route as `stado capabilities resolve inference --consumer probierz`
+hands it out; an endpoint declared in Brama's place is refused for remote
+authoring, naming how to hand its key to the worker.
 
 `stado:<target>` is any local-consumer host in the Stado registry; `probierz
 hosts` lists them, read from `stado registry pull` on every call, next to

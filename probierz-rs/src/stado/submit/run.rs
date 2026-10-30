@@ -257,6 +257,29 @@ pub(crate) fn repository_root(
     Ok(PathBuf::from(root))
 }
 
+/// The model router a remote worker is handed: the one named, else Brama's
+/// route as Stado's capability resolution hands it out. The worker is sent
+/// the router token the app's secret references materialize, so an endpoint
+/// Stado resolves in Brama's place, whose key lives in this machine's
+/// credential store, is refused naming how to hand it to the worker.
+pub(crate) fn remote_router(value: Option<&str>) -> Result<String, Failure> {
+    if value.is_some_and(|text| !text.trim().is_empty()) {
+        return model_router_url(value);
+    }
+    let route = crate::authoring::ModelRoute::select(None)
+        .map_err(|detail| Failure::config("stado.submit", detail))?;
+    match route.in_place {
+        None => Ok(route.url),
+        Some(endpoint) => Err(Failure::config(
+            "stado.submit",
+            format!(
+                "STADO_MODEL_ROUTER_URL is not set and {} at {} answers in Brama's place, but a remote worker is sent the router token the app's secretRefs materialize, not that endpoint's key; set STADO_MODEL_ROUTER_URL to {} and store the endpoint's key as the probierz-model-router token",
+                endpoint.provider, route.url, route.url
+            ),
+        )),
+    }
+}
+
 /// The model router's address: HTTPS, or HTTP to this machine's loopback
 /// interface, with no credentials, query or fragment. The host is judged by
 /// the parsed URL, so a name that merely begins like a loopback address

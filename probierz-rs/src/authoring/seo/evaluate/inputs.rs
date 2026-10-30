@@ -194,7 +194,7 @@ impl ModelSettings {
         router_bearer: Option<&str>,
         agent_secret: Option<&str>,
     ) -> Result<Self, Failure> {
-        let (primary, secondary, router_url) = seo_prerequisites(
+        let (primary, secondary, route) = seo_prerequisites(
             harness,
             app_id,
             Some(SURFACE),
@@ -206,11 +206,13 @@ impl ModelSettings {
 
         // The agent identity signs requests for Brama; another
         // OpenAI-compatible provider takes the bearer alone, which
-        // invoke_seo_model reads from an empty identity pair.
+        // invoke_seo_model reads from an empty identity pair. An endpoint
+        // Stado hands out in Brama's place is never sent the identity.
         let (agent_id, agent_secret) = match (
             contract.optional_setting(agent_id, "PROBIERZ_MODEL_AGENT_ID"),
             contract.optional_setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET"),
         ) {
+            _ if !route.signs() => (String::new(), String::new()),
             (Some(agent_id), Some(agent_secret)) => (agent_id, agent_secret),
             (None, None) => (String::new(), String::new()),
             _ => {
@@ -220,11 +222,15 @@ impl ModelSettings {
                 ))
             }
         };
+        let token = match route.bearer(None) {
+            Some(key) => key,
+            None => contract.setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?,
+        };
         Ok(Self {
             primary,
             secondary,
-            router_url,
-            token: contract.setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?,
+            router_url: route.url,
+            token,
             agent_id,
             agent_secret,
         })

@@ -12,7 +12,17 @@ reaches for, and how it behaves when something fails.
 - **Credentials:** local discovery requires none. Model authoring and figure
   evaluation reach Brama through `STADO_MODEL_ROUTER_URL`, a router-scoped
   `STADO_MODEL_ROUTER_TOKEN`, and a signed Probierz identity
-  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). Without Brama,
+  (`PROBIERZ_MODEL_AGENT_ID` and `PROBIERZ_MODEL_AGENT_SECRET`). With
+  `STADO_MODEL_ROUTER_URL` unset and no surface condition naming it, Probierz
+  never dials Brama itself: it asks `stado capabilities resolve inference
+  --consumer probierz`, uses Brama's route when Brama answers, and otherwise
+  the OpenAI-compatible endpoint declared in its place
+  (`capabilities.inference.endpoint.url`), asked for that endpoint's model
+  unless one is named, with the `token` of the role
+  `capabilities.inference.endpoint.key_role` names and no signature. When no
+  alternative answers, the refusal names each with its route and cause. Remote
+  jobs are handed Brama's resolved route only: an endpoint in Brama's place is
+  refused there, naming how to hand its key to the worker. Without Brama,
   point `STADO_MODEL_ROUTER_URL` at any OpenAI-compatible provider, put its key in
   `STADO_MODEL_ROUTER_TOKEN` and leave both identity variables unset: local
   authoring, figure evaluation and SEO evaluation then send unsigned requests to

@@ -19,23 +19,29 @@ impl TalkRouter {
         agent_id: Option<&str>,
         agent_secret: Option<&str>,
     ) -> Result<Self, Failure> {
-        let model = setting(model, "PROBIERZ_TALK_MODEL")?.ok_or_else(|| {
-            Failure::config(
-                "evaluate.talk",
-                "--model or PROBIERZ_TALK_MODEL names the vision model that judges the talk",
-            )
-        })?;
-        let url = stado_model_router_url(setting(router_url, "STADO_MODEL_ROUTER_URL")?.as_deref())
+        let route = ModelRoute::select(setting(router_url, "STADO_MODEL_ROUTER_URL")?.as_deref())
             .map_err(|detail| Failure::config("evaluate.talk", detail))?;
-        let token = setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?.ok_or_else(|| {
-            Failure::config(
-                "evaluate.talk",
-                "STADO_MODEL_ROUTER_TOKEN or --router-token-stdin gives the router bearer",
-            )
-        })?;
+        let model = route
+            .model(setting(model, "PROBIERZ_TALK_MODEL")?)
+            .ok_or_else(|| {
+                Failure::config(
+                    "evaluate.talk",
+                    "--model or PROBIERZ_TALK_MODEL names the vision model that judges the talk",
+                )
+            })?;
+        let token = route
+            .bearer(setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?)
+            .ok_or_else(|| {
+                Failure::config(
+                    "evaluate.talk",
+                    "STADO_MODEL_ROUTER_TOKEN or --router-token-stdin gives the router bearer",
+                )
+            })?;
         let agent_id = setting(agent_id, "PROBIERZ_MODEL_AGENT_ID")?;
         let agent_secret = setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET")?;
         let (agent_id, agent_secret) = match (agent_id, agent_secret) {
+            // An endpoint Stado hands out in Brama's place reads no signature.
+            _ if !route.signs() => (String::new(), String::new()),
             (Some(id), Some(secret)) => (id, secret),
             (None, None) => (String::new(), String::new()),
             _ => {
@@ -47,7 +53,7 @@ impl TalkRouter {
         };
         Ok(Self {
             model,
-            url,
+            url: route.url,
             token,
             agent_id,
             agent_secret,

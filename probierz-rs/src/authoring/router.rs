@@ -27,11 +27,199 @@ pub(crate) fn selected_setting(
     std::env::var_os(name).map(|value| value.to_string_lossy().trim().to_string())
 }
 
-/// The router URL authoring calls: the one check `stado submit` uses, which
-/// judges the host from the parsed URL, so 127.attacker.example is not taken
-/// for this machine and sent the router token over plain HTTP.
-pub(crate) fn stado_model_router_url(raw: Option<&str>) -> Result<String, String> {
-    crate::stado::model_router_url(raw).map_err(|failure| failure.detail)
+/// Where authoring's model work goes. A router URL the caller, the app's
+/// surface conditions or `STADO_MODEL_ROUTER_URL` names is used as named;
+/// with none named Probierz never dials Brama itself: Stado's capability
+/// resolution (`stado capabilities resolve inference --consumer probierz`)
+/// hands out Brama's route, or the OpenAI-compatible endpoint declared in its
+/// place with its model and the role of the item holding its key.
+pub(crate) struct ModelRoute {
+    pub(crate) url: String,
+    /// The endpoint answering in Brama's place, when Stado handed one out.
+    pub(crate) in_place: Option<InPlace>,
+}
+
+/// The endpoint Stado hands out in Brama's place: its provider, the model it
+/// declares and the key its role holds. It reads no agent signature.
+pub(crate) struct InPlace {
+    pub(crate) provider: String,
+    pub(crate) model: String,
+    pub(crate) key: String,
+}
+
+/// The consumer Probierz asks Stado's capability resolution as.
+const CONSUMER: &str = "probierz";
+
+impl ModelRoute {
+    /// The route for `raw`, the URL named for this work, checked as
+    /// `stado submit` checks it (the host judged from the parsed URL, so
+    /// 127.attacker.example is not taken for this machine and sent the
+    /// router token over plain HTTP); Stado's resolution when none is named.
+    pub(crate) fn select(raw: Option<&str>) -> Result<Self, String> {
+        if raw.is_some_and(|value| !value.trim().is_empty()) {
+            let url = crate::stado::model_router_url(raw).map_err(|failure| failure.detail)?;
+            return Ok(Self {
+                url,
+                in_place: None,
+            });
+        }
+        resolve()
+    }
+
+    /// The bearer this route is sent: the endpoint's own key in Brama's
+    /// place, else the router token the caller names.
+    pub(crate) fn bearer(&self, named: Option<String>) -> Option<String> {
+        match &self.in_place {
+            Some(endpoint) => Some(endpoint.key.clone()),
+            None => named,
+        }
+    }
+
+    /// The model asked for: the one the caller names, else the model the
+    /// endpoint in Brama's place declares.
+    pub(crate) fn model(&self, named: Option<String>) -> Option<String> {
+        named.filter(|model| !model.trim().is_empty()).or_else(|| {
+            self.in_place
+                .as_ref()
+                .map(|endpoint| endpoint.model.clone())
+        })
+    }
+
+    /// Whether requests carry Probierz's agent signature: Brama reads it;
+    /// an endpoint in its place is never sent one.
+    pub(crate) fn signs(&self) -> bool {
+        self.in_place.is_none()
+    }
+}
+
+/// One Stado command's output, or the refusal naming it.
+fn stado(words: &[&str]) -> Result<std::process::Output, String> {
+    stado_wait::output(Command::new(crate::stado::STADO_BIN).args(words)).map_err(|error| {
+        format!(
+            "STADO_MODEL_ROUTER_URL is not set and `stado {}` could not run: {error}; name the model router or install Stado",
+            words.join(" ")
+        )
+    })
+}
+
+/// Ask Stado where authoring's model work goes.
+fn resolve() -> Result<ModelRoute, String> {
+    let words = [
+        "capabilities",
+        "resolve",
+        "inference",
+        "--consumer",
+        CONSUMER,
+        "--json",
+    ];
+    let output = stado(&words)?;
+    if !output.status.success() {
+        let named = [&output.stdout, &output.stderr]
+            .into_iter()
+            .filter_map(|bytes| serde_json::from_slice::<JsonValue>(bytes).ok())
+            .find_map(|envelope| {
+                envelope
+                    .pointer("/details/unreachable")?
+                    .as_array()
+                    .cloned()
+            })
+            .map(|items| {
+                items
+                    .iter()
+                    .map(|item| {
+                        format!(
+                            "{} at {}: {}",
+                            item["product"].as_str().unwrap_or("an alternative"),
+                            item["route"].as_str().unwrap_or("its route"),
+                            item["cause"].as_str().unwrap_or("no cause given")
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            })
+            .filter(|named| !named.is_empty());
+        return Err(match named {
+            Some(named) => format!(
+                "STADO_MODEL_ROUTER_URL is not set and no inference alternative answers {CONSUMER}: {named}; name the model router, or declare an endpoint in Brama's place (stado config set capabilities.inference.endpoint.url <url>, capabilities.inference.endpoint.model <model> and capabilities.inference.endpoint.key_role <role>)"
+            ),
+            None => format!(
+                "STADO_MODEL_ROUTER_URL is not set and `stado {}` exited {}: {}",
+                words.join(" "),
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+        });
+    }
+    let answer: JsonValue = serde_json::from_slice(&output.stdout).map_err(|error| {
+        format!(
+            "`stado {}` printed an answer that is not JSON: {error}",
+            words.join(" ")
+        )
+    })?;
+    let text = |field: &str| {
+        answer[field]
+            .as_str()
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_owned)
+    };
+    let (Some(provider), Some(route)) = (text("provider"), text("route")) else {
+        return Err(format!(
+            "`stado {}` answered no provider and route: {answer}",
+            words.join(" ")
+        ));
+    };
+    let url = crate::stado::model_router_url(Some(&route)).map_err(|failure| {
+        format!(
+            "the {provider} route Stado resolved is refused: {}",
+            failure.detail
+        )
+    })?;
+    if provider == "brama" {
+        return Ok(ModelRoute {
+            url,
+            in_place: None,
+        });
+    }
+    let model = text("model").ok_or_else(|| {
+        format!(
+            "{provider} at {route} answers in Brama's place but declares no model: set capabilities.inference.endpoint.model"
+        )
+    })?;
+    // Authoring's model boundary is authenticated: an endpoint is sent the
+    // key its role holds, never nothing and never the router's token.
+    let role = text("key_role").ok_or_else(|| {
+        format!(
+            "{provider} at {route} answers in Brama's place but names no key role; Probierz sends every model request a bearer: set capabilities.inference.endpoint.key_role"
+        )
+    })?;
+    let words = ["credentials", "get", "--role", &role, "--field", "token"];
+    let output = stado(&words)?;
+    if !output.status.success() {
+        return Err(format!(
+            "{provider} at {route} answers in Brama's place, but `stado {}` exited {}: {}",
+            words.join(" "),
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let key = String::from_utf8(output.stdout)
+        .map_err(|_| format!("the key of role {role} is not UTF-8"))?
+        .trim_end_matches(['\r', '\n'])
+        .to_owned();
+    if key.is_empty() {
+        return Err(format!(
+            "the item playing role {role} holds no value in field token"
+        ));
+    }
+    Ok(ModelRoute {
+        url,
+        in_place: Some(InPlace {
+            provider,
+            model,
+            key,
+        }),
+    })
 }
 
 pub(crate) fn required_setting(value: Option<String>, name: &str) -> Result<String, String> {

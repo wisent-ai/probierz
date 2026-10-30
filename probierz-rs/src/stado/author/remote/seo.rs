@@ -93,7 +93,7 @@ pub(crate) fn submit_remote_seo(
             ))
         }
     };
-    let router = model_router_url(configured_router.as_deref())?;
+    let router = remote_router(configured_router.as_deref())?;
     let script = seo_script(
         SeoJob {
             app_id,

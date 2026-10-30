@@ -49,7 +49,7 @@ pub(crate) fn submit_remote_author(
             }
         },
     };
-    let router = model_router_url(configured_router.as_deref())?;
+    let router = remote_router(configured_router.as_deref())?;
     let product_root = repository_root(harness, app_id, app_repo)?;
     let identity = pack_source_identity(harness, app_id, Some(&product_root))?;
     require_immutable_native(target, provision.as_ref(), app_repo, &identity)?;

@@ -30,23 +30,41 @@ pub(crate) fn draft_structured_artifact(
     // manifest is still being authored has none; one that exists and cannot
     // be loaded is refused with its cause, never read as stating nothing.
     let loaded = manifest::load_if_declared(harness, app_id).map_err(|failure| failure.detail)?;
-    let url = stado_model_router_url(
+    let route = ModelRoute::select(
         selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_URL", None).as_deref(),
     )?;
     let token = required_setting(
-        selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_TOKEN", None),
+        route.bearer(selected_setting(
+            loaded.as_ref(),
+            target,
+            "STADO_MODEL_ROUTER_TOKEN",
+            None,
+        )),
         "STADO_MODEL_ROUTER_TOKEN",
     )?;
     // Brama needs a signed agent identity; another OpenAI-compatible provider
     // named by STADO_MODEL_ROUTER_URL takes the bearer alone, so the pair is
-    // optional here and `post_router` refuses only half of it.
-    let agent_id = selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_ID", None)
-        .unwrap_or_default();
-    let agent_secret =
-        selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_SECRET", None)
-            .unwrap_or_default();
-    let model = selected_setting(loaded.as_ref(), target, "PROBIERZ_AUTHOR_MODEL", None)
+    // optional here and `post_router` refuses only half of it. An endpoint
+    // Stado hands out in Brama's place is never sent the identity.
+    let (agent_id, agent_secret) = if route.signs() {
+        (
+            selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_ID", None)
+                .unwrap_or_default(),
+            selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_SECRET", None)
+                .unwrap_or_default(),
+        )
+    } else {
+        (String::new(), String::new())
+    };
+    let model = route
+        .model(selected_setting(
+            loaded.as_ref(),
+            target,
+            "PROBIERZ_AUTHOR_MODEL",
+            None,
+        ))
         .unwrap_or_else(|| "any".to_string());
+    let url = route.url;
     let body = json!({
         "model": model,
         "messages": [

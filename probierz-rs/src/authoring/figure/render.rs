@@ -6,31 +6,31 @@ pub(crate) fn figure_prerequisites(
     target: Option<&str>,
     model: Option<&str>,
     router_url: Option<&str>,
-) -> Result<(String, String), String> {
+) -> Result<(String, ModelRoute), String> {
     // A named app's manifest states its figure settings; one that cannot be
     // loaded is refused with its cause, never read as stating nothing.
     let loaded = app_id
         .map(|id| manifest::load(harness, id))
         .transpose()
         .map_err(|failure| failure.detail)?;
-    let selected_model = selected_setting(
-        loaded.as_ref(),
-        target,
-        "PROBIERZ_FIGURE_VISION_MODEL",
-        model,
-    )
-    .filter(|value| !value.is_empty())
-    .ok_or_else(|| "--model or PROBIERZ_FIGURE_VISION_MODEL is required".to_string())?;
     let selected_url = selected_setting(
         loaded.as_ref(),
         target,
         "STADO_MODEL_ROUTER_URL",
         router_url,
     );
-    Ok((
-        selected_model,
-        stado_model_router_url(selected_url.as_deref())?,
-    ))
+    let route = ModelRoute::select(selected_url.as_deref())?;
+    // The vision model is the one named, else the one the endpoint Stado
+    // hands out in Brama's place declares.
+    let selected_model = route
+        .model(selected_setting(
+            loaded.as_ref(),
+            target,
+            "PROBIERZ_FIGURE_VISION_MODEL",
+            model,
+        ))
+        .ok_or_else(|| "--model or PROBIERZ_FIGURE_VISION_MODEL is required".to_string())?;
+    Ok((selected_model, route))
 }
 
 /// The rubric a figure is judged by: named dimensions, each a criterion the

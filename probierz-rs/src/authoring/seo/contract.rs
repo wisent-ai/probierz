@@ -7,7 +7,7 @@ pub(crate) fn seo_prerequisites(
     primary: Option<&str>,
     secondary: Option<&str>,
     router_url: Option<&str>,
-) -> Result<(String, String, String), String> {
+) -> Result<(String, String, ModelRoute), String> {
     // The app's manifest states its SEO settings; one that cannot be loaded
     // is refused with its cause, never read as a manifest stating nothing.
     let loaded = Some(manifest::load(harness, app_id).map_err(|failure| failure.detail)?);
@@ -32,7 +32,9 @@ pub(crate) fn seo_prerequisites(
     if primary == secondary {
         return Err("SEO primary and secondary model IDs must differ".to_string());
     }
-    let url = stado_model_router_url(
+    // Two independent graders are named models even when an endpoint answers
+    // in Brama's place: the route supplies where they are asked and its key.
+    let route = ModelRoute::select(
         selected_setting(
             loaded.as_ref(),
             target,
@@ -41,7 +43,7 @@ pub(crate) fn seo_prerequisites(
         )
         .as_deref(),
     )?;
-    Ok((primary, secondary, url))
+    Ok((primary, secondary, route))
 }
 
 pub(crate) fn resolved_contract_file(

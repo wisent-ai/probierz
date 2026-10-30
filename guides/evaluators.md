@@ -5,10 +5,15 @@ contract: the scientific-figure comparison, the talk given to a review panel,
 and the SEO contract. None can be talked out of a deterministic blocker by a
 model.
 
+Each evaluator asks the model router `STADO_MODEL_ROUTER_URL` names. Unset,
+it asks `stado capabilities resolve inference --consumer probierz` and uses
+Brama's route, or the endpoint declared in Brama's place with that endpoint's
+key and, unless a model is named, its model.
+
 ## Evaluate a figure
 
 ```bash
-STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_URL='<model-router-url>' \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_FIGURE_VISION_MODEL='<vision-model-id>' \
 PROBIERZ_FIGURE_RENDER_DENSITY='<dots-per-inch>' \
@@ -55,7 +60,7 @@ lines only, with no document class or document body.
 ## Evaluate a talk
 
 ```bash
-STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_URL='<model-router-url>' \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_TALK_MODEL='<vision-model-id>' \
 probierz evaluate talk \
@@ -109,7 +114,7 @@ and a throttled mobile lab profile for LCP, CLS, TBT, failed resources, and
 runtime errors. Production evidence adds CrUX p75 INP.
 
 ```bash
-STADO_MODEL_ROUTER_URL=https://brama.wisent.com \
+STADO_MODEL_ROUTER_URL='<model-router-url>' \
 STADO_MODEL_ROUTER_TOKEN='<scoped-token>' \
 PROBIERZ_MODEL_AGENT_ID=probierz \
 PROBIERZ_MODEL_AGENT_SECRET='<agent-secret>' \

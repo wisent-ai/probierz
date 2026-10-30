@@ -68,15 +68,17 @@ impl Router {
         agent_id: Option<&str>,
         agent_secret: Option<&str>,
     ) -> Result<Self, Failure> {
-        let (model, url) = figure_prerequisites(harness, None, None, model, router_url)
+        let (model, route) = figure_prerequisites(harness, None, None, model, router_url)
             .map_err(|detail| Failure::config("figure-evaluate", detail))?;
 
-        let token = setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?.ok_or_else(|| {
-            Failure::config(
-                "figure-evaluate",
-                "STADO_MODEL_ROUTER_TOKEN or an explicit router bearer is required",
-            )
-        })?;
+        let token = route
+            .bearer(setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?)
+            .ok_or_else(|| {
+                Failure::config(
+                    "figure-evaluate",
+                    "STADO_MODEL_ROUTER_TOKEN or an explicit router bearer is required",
+                )
+            })?;
         if token.chars().any(char::is_whitespace) {
             return Err(Failure::invalid(
                 "figure-evaluate",
@@ -88,6 +90,8 @@ impl Router {
             setting(agent_id, "PROBIERZ_MODEL_AGENT_ID")?,
             setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET")?,
         ) {
+            // An endpoint Stado hands out in Brama's place reads no signature.
+            _ if !route.signs() => (String::new(), String::new()),
             (Some(id), Some(secret)) => (id, secret),
             (None, None) => (String::new(), String::new()),
             _ => {
@@ -97,6 +101,7 @@ impl Router {
                 ))
             }
         };
+        let url = route.url;
 
         Ok(Self {
             model,
