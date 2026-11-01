@@ -1,9 +1,9 @@
 name: Rust gates
 
 # Probierz's crate held to the gates every Wisent Rust repository answers to:
-# rustfmt's form, clippy with warnings denied and a locked release build, on
-# every push and pull request, so a main that does not compile cannot land
-# unseen. The gates are quality-control's reusable workflow, pinned to one
+# a locked release build on every push and pull request, so a main that does
+# not compile cannot land unseen. The gates are quality-control's reusable
+# workflow, pinned to one
 # revision, so a change of the gates reaches Probierz as a reviewed bump. They
 # run on the fleet's self-hosted macOS runner: Probierz ships as a macOS build
 # and part of it (the Accessibility query, the kqueue process records)
@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   gates:
-    uses: wisent-ai/quality-control/.github/workflows/rust-gates.yml@bc191bd36d5ac27cd3e272675c42b1650d0a76e0
+    uses: wisent-ai/quality-control/.github/workflows/rust-gates.yml@90a668cc614a43e95289b4233e420f14a546353c
     with:
       runs-on: '["self-hosted", "macOS", "stado"]'
       working-directory: probierz-rs
