@@ -106,15 +106,14 @@ pub(crate) fn script_body(
                 "remote authoring needs its journey contract",
             )
         })?;
-        let router = model_router_url
-            .ok_or_else(|| Failure::config("stado.submit", "STADO_MODEL_ROUTER_URL is required"))?;
-        lines.extend([
-            format!("export STADO_MODEL_ROUTER_URL={}", shell_quote(router)),
-            ": \"${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}\"".into(),
-            "export PROBIERZ_MODEL_AGENT_ID=probierz".into(),
-            ": \"${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}\"".into(),
-            format!("export PROBIERZ_AUTHOR_RECEIPT_ID={}", shell_quote(receipt_id)),
-        ]);
+        lines.extend(crate::stado::submit::router_lines(
+            model_router_url,
+            "probierz",
+        ));
+        lines.push(format!(
+            "export PROBIERZ_AUTHOR_RECEIPT_ID={}",
+            shell_quote(receipt_id)
+        ));
         let app_path = if target == "web" {
             String::new()
         } else if target == "tui" {

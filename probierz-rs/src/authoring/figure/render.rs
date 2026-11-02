@@ -20,16 +20,14 @@ pub(crate) fn figure_prerequisites(
         router_url,
     );
     let route = ModelRoute::select(selected_url.as_deref())?;
-    // The vision model is the one named, else the one the endpoint Stado
-    // hands out in Brama's place declares.
-    let selected_model = route
-        .model(selected_setting(
-            loaded.as_ref(),
-            target,
-            "PROBIERZ_FIGURE_VISION_MODEL",
-            model,
-        ))
-        .ok_or_else(|| "--model or PROBIERZ_FIGURE_VISION_MODEL is required".to_string())?;
+    let selected_model = selected_setting(
+        loaded.as_ref(),
+        target,
+        "PROBIERZ_FIGURE_VISION_MODEL",
+        model,
+    )
+    .filter(|model| !model.is_empty())
+    .ok_or_else(|| "--model or PROBIERZ_FIGURE_VISION_MODEL is required".to_string())?;
     Ok((selected_model, route))
 }
 

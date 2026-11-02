@@ -27,7 +27,7 @@ pub(crate) fn grade_talk(
 ) -> Result<Graded, Failure> {
     let body = request_body(talk, rubric, router)?;
     let (status, raw) = post_router(
-        &router.url,
+        &router.route,
         &router.token,
         &router.agent_id,
         &router.agent_secret,

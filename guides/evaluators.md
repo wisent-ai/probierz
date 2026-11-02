@@ -6,9 +6,12 @@ and the SEO contract. None can be talked out of a deterministic blocker by a
 model.
 
 Each evaluator asks the model router `STADO_MODEL_ROUTER_URL` names. Unset,
-it asks `stado capabilities resolve inference --consumer probierz` and uses
-Brama's route, or the endpoint declared in Brama's place with that endpoint's
-key and, unless a model is named, its model.
+it names no model service: each request is handed to `stado capabilities
+call inference --consumer probierz`, which sends it to the first alternative
+in Stado's selected order that answers it — Brama, or a statement recorded
+for that exact request (`stado capabilities attestation`) — so neither a
+router token nor an agent identity is needed, and an alternative Stado adds
+or an order it selects changes what the evaluators reach with no change here.
 
 ## Evaluate a figure
 

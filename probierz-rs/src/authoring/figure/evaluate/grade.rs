@@ -50,7 +50,7 @@ pub(crate) fn grade_figure(
         candidate_geometry,
     )?;
     let (status, raw) = post_router(
-        &router.url,
+        &router.route,
         &router.token,
         &router.agent_id,
         &router.agent_secret,

@@ -53,7 +53,7 @@ impl FigurePair {
 /// with.
 pub(crate) struct Router {
     pub(crate) model: String,
-    pub(crate) url: String,
+    pub(crate) route: ModelRoute,
     pub(crate) token: String,
     pub(crate) agent_id: String,
     pub(crate) agent_secret: String,
@@ -71,14 +71,17 @@ impl Router {
         let (model, route) = figure_prerequisites(harness, None, None, model, router_url)
             .map_err(|detail| Failure::config("figure-evaluate", detail))?;
 
-        let token = route
-            .bearer(setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?)
-            .ok_or_else(|| {
+        // Stado presents the bearer the alternative it asks needs.
+        let token = if route.needs_bearer() {
+            setting(router_bearer, "STADO_MODEL_ROUTER_TOKEN")?.ok_or_else(|| {
                 Failure::config(
                     "figure-evaluate",
                     "STADO_MODEL_ROUTER_TOKEN or an explicit router bearer is required",
                 )
-            })?;
+            })?
+        } else {
+            String::new()
+        };
         if token.chars().any(char::is_whitespace) {
             return Err(Failure::invalid(
                 "figure-evaluate",
@@ -90,7 +93,7 @@ impl Router {
             setting(agent_id, "PROBIERZ_MODEL_AGENT_ID")?,
             setting(agent_secret, "PROBIERZ_MODEL_AGENT_SECRET")?,
         ) {
-            // An endpoint Stado hands out in Brama's place reads no signature.
+            // Stado signs what it sends for Probierz itself.
             _ if !route.signs() => (String::new(), String::new()),
             (Some(id), Some(secret)) => (id, secret),
             (None, None) => (String::new(), String::new()),
@@ -101,11 +104,9 @@ impl Router {
                 ))
             }
         };
-        let url = route.url;
-
         Ok(Self {
             model,
-            url,
+            route,
             token,
             agent_id,
             agent_secret,

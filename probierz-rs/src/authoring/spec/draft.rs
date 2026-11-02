@@ -33,19 +33,19 @@ pub(crate) fn draft_structured_artifact(
     let route = ModelRoute::select(
         selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_URL", None).as_deref(),
     )?;
-    let token = required_setting(
-        route.bearer(selected_setting(
-            loaded.as_ref(),
-            target,
+    // A named router is sent its named bearer; Stado presents the one the
+    // alternative it asks needs, so none of Probierz's is required.
+    let token = match &route {
+        ModelRoute::Named(_) => required_setting(
+            selected_setting(loaded.as_ref(), target, "STADO_MODEL_ROUTER_TOKEN", None),
             "STADO_MODEL_ROUTER_TOKEN",
-            None,
-        )),
-        "STADO_MODEL_ROUTER_TOKEN",
-    )?;
+        )?,
+        ModelRoute::Stado => String::new(),
+    };
     // Brama needs a signed agent identity; another OpenAI-compatible provider
     // named by STADO_MODEL_ROUTER_URL takes the bearer alone, so the pair is
-    // optional here and `post_router` refuses only half of it. An endpoint
-    // Stado hands out in Brama's place is never sent the identity.
+    // optional here and `post_router` refuses only half of it. Stado signs
+    // what it sends for Probierz itself.
     let (agent_id, agent_secret) = if route.signs() {
         (
             selected_setting(loaded.as_ref(), target, "PROBIERZ_MODEL_AGENT_ID", None)
@@ -56,15 +56,9 @@ pub(crate) fn draft_structured_artifact(
     } else {
         (String::new(), String::new())
     };
-    let model = route
-        .model(selected_setting(
-            loaded.as_ref(),
-            target,
-            "PROBIERZ_AUTHOR_MODEL",
-            None,
-        ))
+    let model = selected_setting(loaded.as_ref(), target, "PROBIERZ_AUTHOR_MODEL", None)
+        .filter(|model| !model.is_empty())
         .unwrap_or_else(|| "any".to_string());
-    let url = route.url;
     let body = json!({
         "model": model,
         "messages": [
@@ -75,7 +69,7 @@ pub(crate) fn draft_structured_artifact(
             "type": "object", "properties": { "content": { "type": "string", "description": "Complete artifact contents, without Markdown fences." } }, "required": ["content"], "additionalProperties": false
         }}}]
     }).to_string();
-    let (status, raw) = post_router(&url, &token, &agent_id, &agent_secret, &body)?;
+    let (status, raw) = post_router(&route, &token, &agent_id, &agent_secret, &body)?;
     let payload: JsonValue = serde_json::from_str(&raw).map_err(|error| {
         format!(
             "Stado model router returned non-JSON ({status}, {error}): {}",

@@ -28,198 +28,88 @@ pub(crate) fn selected_setting(
 }
 
 /// Where authoring's model work goes. A router URL the caller, the app's
-/// surface conditions or `STADO_MODEL_ROUTER_URL` names is used as named;
-/// with none named Probierz never dials Brama itself: Stado's capability
-/// resolution (`stado capabilities resolve inference --consumer probierz`)
-/// hands out Brama's route, or the OpenAI-compatible endpoint declared in its
-/// place with its model and the role of the item holding its key.
-pub(crate) struct ModelRoute {
-    pub(crate) url: String,
-    /// The endpoint answering in Brama's place, when Stado handed one out.
-    pub(crate) in_place: Option<InPlace>,
+/// surface conditions or `STADO_MODEL_ROUTER_URL` names is asked as named,
+/// with the bearer and agent identity named beside it. With none named,
+/// Probierz names no model service at all: each request is handed to
+/// `stado capabilities call inference --consumer probierz`, which sends it
+/// to the first alternative in Stado's selected order that answers it —
+/// Brama, or a statement recorded for that exact request — so an
+/// alternative added to Stado, or another order, changes what Probierz's
+/// requests reach without Probierz changing.
+#[derive(Clone, Debug)]
+pub(crate) enum ModelRoute {
+    /// The router URL named for this work.
+    Named(String),
+    /// Stado's alternatives, through `stado capabilities call`.
+    Stado,
 }
 
-/// The endpoint Stado hands out in Brama's place: its provider, the model it
-/// declares and the key its role holds. It reads no agent signature.
-pub(crate) struct InPlace {
-    pub(crate) provider: String,
-    pub(crate) model: String,
-    pub(crate) key: String,
-}
-
-/// The consumer Probierz asks Stado's capability resolution as.
-const CONSUMER: &str = "probierz";
+/// The consumer Probierz asks Stado's capabilities as.
+pub(crate) const CONSUMER: &str = "probierz";
 
 impl ModelRoute {
     /// The route for `raw`, the URL named for this work, checked as
     /// `stado submit` checks it (the host judged from the parsed URL, so
     /// 127.attacker.example is not taken for this machine and sent the
-    /// router token over plain HTTP); Stado's resolution when none is named.
+    /// router token over plain HTTP); Stado's alternatives when none is named.
     pub(crate) fn select(raw: Option<&str>) -> Result<Self, String> {
         if raw.is_some_and(|value| !value.trim().is_empty()) {
             let url = crate::stado::model_router_url(raw).map_err(|failure| failure.detail)?;
-            return Ok(Self {
-                url,
-                in_place: None,
-            });
+            return Ok(Self::Named(url));
         }
-        resolve()
+        Ok(Self::Stado)
     }
 
-    /// The bearer this route is sent: the endpoint's own key in Brama's
-    /// place, else the router token the caller names.
-    pub(crate) fn bearer(&self, named: Option<String>) -> Option<String> {
-        match &self.in_place {
-            Some(endpoint) => Some(endpoint.key.clone()),
-            None => named,
-        }
+    /// Whether this route needs Probierz's own bearer: a named router does;
+    /// Stado presents the one the alternative it asks needs.
+    pub(crate) fn needs_bearer(&self) -> bool {
+        matches!(self, Self::Named(_))
     }
 
-    /// The model asked for: the one the caller names, else the model the
-    /// endpoint in Brama's place declares.
-    pub(crate) fn model(&self, named: Option<String>) -> Option<String> {
-        named.filter(|model| !model.trim().is_empty()).or_else(|| {
-            self.in_place
-                .as_ref()
-                .map(|endpoint| endpoint.model.clone())
-        })
-    }
-
-    /// Whether requests carry Probierz's agent signature: Brama reads it;
-    /// an endpoint in its place is never sent one.
+    /// Whether Probierz signs its requests with its agent identity: for a
+    /// named router; Stado signs the requests it sends for Probierz itself.
     pub(crate) fn signs(&self) -> bool {
-        self.in_place.is_none()
+        matches!(self, Self::Named(_))
     }
 }
 
-/// One Stado command's output, or the refusal naming it.
-fn stado(words: &[&str]) -> Result<std::process::Output, String> {
-    stado_wait::output(Command::new(crate::stado::STADO_BIN).args(words)).map_err(|error| {
+/// Hand one chat-completions request to Stado's inference alternatives and
+/// read the answer: HTTP 200 and the answer when one answered; the refusal
+/// naming each alternative and why it could not answer, otherwise.
+fn call_stado(body: &str) -> Result<(u16, String), String> {
+    let words = ["capabilities", "call", "inference", "--consumer", CONSUMER];
+    let line = format!("{} {}", crate::stado::STADO_BIN, words.join(" "));
+    let arguments: Vec<&OsStr> = words.iter().map(OsStr::new).collect();
+    let here = std::env::current_dir()
+        .map_err(|error| format!("`{line}` has no directory to run in: {error}"))?;
+    let output = process_with_input(
+        OsStr::new(crate::stado::STADO_BIN),
+        &arguments,
+        &here,
+        Some(body),
+    )
+    .map_err(|error| {
         format!(
-            "STADO_MODEL_ROUTER_URL is not set and `stado {}` could not run: {error}; name the model router or install Stado",
-            words.join(" ")
-        )
-    })
-}
-
-/// Ask Stado where authoring's model work goes.
-fn resolve() -> Result<ModelRoute, String> {
-    let words = [
-        "capabilities",
-        "resolve",
-        "inference",
-        "--consumer",
-        CONSUMER,
-        "--json",
-    ];
-    let output = stado(&words)?;
-    if !output.status.success() {
-        let named = [&output.stdout, &output.stderr]
-            .into_iter()
-            .filter_map(|bytes| serde_json::from_slice::<JsonValue>(bytes).ok())
-            .find_map(|envelope| {
-                envelope
-                    .pointer("/details/unreachable")?
-                    .as_array()
-                    .cloned()
-            })
-            .map(|items| {
-                items
-                    .iter()
-                    .map(|item| {
-                        format!(
-                            "{} at {}: {}",
-                            item["product"].as_str().unwrap_or("an alternative"),
-                            item["route"].as_str().unwrap_or("its route"),
-                            item["cause"].as_str().unwrap_or("no cause given")
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("; ")
-            })
-            .filter(|named| !named.is_empty());
-        return Err(match named {
-            Some(named) => format!(
-                "STADO_MODEL_ROUTER_URL is not set and no inference alternative answers {CONSUMER}: {named}; name the model router, or declare an endpoint in Brama's place (stado config set capabilities.inference.endpoint.url <url>, capabilities.inference.endpoint.model <model> and capabilities.inference.endpoint.key_role <role>)"
-            ),
-            None => format!(
-                "STADO_MODEL_ROUTER_URL is not set and `stado {}` exited {}: {}",
-                words.join(" "),
-                output.status,
-                String::from_utf8_lossy(&output.stderr).trim()
-            ),
-        });
-    }
-    let answer: JsonValue = serde_json::from_slice(&output.stdout).map_err(|error| {
-        format!(
-            "`stado {}` printed an answer that is not JSON: {error}",
-            words.join(" ")
+            "STADO_MODEL_ROUTER_URL is not set and `{line}` could not run: {error}; name the model router or install Stado"
         )
     })?;
-    let text = |field: &str| {
-        answer[field]
-            .as_str()
-            .map(str::trim)
-            .filter(|text| !text.is_empty())
-            .map(str::to_owned)
-    };
-    let (Some(provider), Some(route)) = (text("provider"), text("route")) else {
-        return Err(format!(
-            "`stado {}` answered no provider and route: {answer}",
-            words.join(" ")
-        ));
-    };
-    let url = crate::stado::model_router_url(Some(&route)).map_err(|failure| {
-        format!(
-            "the {provider} route Stado resolved is refused: {}",
-            failure.detail
-        )
-    })?;
-    if provider == "brama" {
-        return Ok(ModelRoute {
-            url,
-            in_place: None,
-        });
+    if output.status.success() {
+        let answer = String::from_utf8(output.stdout)
+            .map_err(|_| format!("`{line}` answered bytes that are not UTF-8"))?;
+        return Ok((200, answer));
     }
-    let model = text("model").ok_or_else(|| {
-        format!(
-            "{provider} at {route} answers in Brama's place but declares no model: set capabilities.inference.endpoint.model"
-        )
-    })?;
-    // Authoring's model boundary is authenticated: an endpoint is sent the
-    // key its role holds, never nothing and never the router's token.
-    let role = text("key_role").ok_or_else(|| {
-        format!(
-            "{provider} at {route} answers in Brama's place but names no key role; Probierz sends every model request a bearer: set capabilities.inference.endpoint.key_role"
-        )
-    })?;
-    let words = ["credentials", "get", "--role", &role, "--field", "token"];
-    let output = stado(&words)?;
-    if !output.status.success() {
-        return Err(format!(
-            "{provider} at {route} answers in Brama's place, but `stado {}` exited {}: {}",
-            words.join(" "),
-            output.status,
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    let key = String::from_utf8(output.stdout)
-        .map_err(|_| format!("the key of role {role} is not UTF-8"))?
-        .trim_end_matches(['\r', '\n'])
-        .to_owned();
-    if key.is_empty() {
-        return Err(format!(
-            "the item playing role {role} holds no value in field token"
-        ));
-    }
-    Ok(ModelRoute {
-        url,
-        in_place: Some(InPlace {
-            provider,
-            model,
-            key,
-        }),
-    })
+    let said = String::from_utf8_lossy(&output.stderr);
+    let cause = said
+        .lines()
+        .rev()
+        .find_map(|line| line.strip_prefix("Error: "))
+        .or_else(|| said.lines().rev().find(|line| !line.trim().is_empty()))
+        .unwrap_or("it said nothing")
+        .trim();
+    Err(format!(
+        "STADO_MODEL_ROUTER_URL is not set and no inference alternative answered `{line}` ({}): {cause}",
+        output.status
+    ))
 }
 
 pub(crate) fn required_setting(value: Option<String>, name: &str) -> Result<String, String> {
@@ -243,18 +133,22 @@ pub(crate) struct RouterReply {
     pub(crate) usage: JsonValue,
 }
 
-/// One chat completion through the Stado model router. The call waits for the
-/// router's own answer: the router owns provider deadlines and names its
-/// failure, so a clock here would only end a slow honest answer early. The
-/// bearer and the agent signature travel only in the request's headers; no
-/// file holding them is ever written.
+/// One chat completion: to the named model router, or handed to Stado's
+/// inference alternatives. The call waits for the answer: the router owns
+/// provider deadlines and names its failure, so a clock here would only end
+/// a slow honest answer early. The bearer and the agent signature travel only
+/// in the request's headers; no file holding them is ever written.
 pub(crate) fn post_router(
-    url: &str,
+    route: &ModelRoute,
     token: &str,
     agent_id: &str,
     agent_secret: &str,
     body: &str,
 ) -> Result<(u16, String), String> {
+    let url = match route {
+        ModelRoute::Stado => return call_stado(body),
+        ModelRoute::Named(url) => url,
+    };
     if token.trim().is_empty() {
         return Err("STADO_MODEL_ROUTER_TOKEN is required".to_string());
     }

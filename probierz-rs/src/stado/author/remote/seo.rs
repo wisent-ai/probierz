@@ -105,7 +105,7 @@ pub(crate) fn submit_remote_seo(
             secondary,
             adjudicator,
             agent_id: &args.agent_id,
-            router_url: &router,
+            router_url: router.as_deref(),
             production_evidence: args.production_evidence.is_some(),
             signature_required: signature,
         },

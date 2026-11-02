@@ -149,7 +149,7 @@ fn invoke(
 ) -> Result<JsonValue, Failure> {
     invoke_seo_model(
         model,
-        &models.router_url,
+        &models.route,
         &models.token,
         &models.agent_id,
         &models.agent_secret,

@@ -11,7 +11,7 @@ pub(crate) struct SeoMaterial<'a> {
 
 pub(crate) fn invoke_seo_model(
     model: &str,
-    url: &str,
+    route: &ModelRoute,
     token: &str,
     agent_id: &str,
     agent_secret: &str,
@@ -78,7 +78,7 @@ pub(crate) fn invoke_seo_model(
     }
     let body = request.to_string();
     let request_sha = crate::evidence::sha256_bytes(body.as_bytes());
-    let (status, raw) = post_router(url, token, agent_id, agent_secret, &body)
+    let (status, raw) = post_router(route, token, agent_id, agent_secret, &body)
         .map_err(|detail| Failure::unavailable("seo-evaluate.model", detail))?;
     let payload: JsonValue = serde_json::from_str(&raw).map_err(|error| {
         Failure::unavailable(

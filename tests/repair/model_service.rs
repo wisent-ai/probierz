@@ -9,10 +9,10 @@
 //! The service is declared on a host that resolves to nothing, so the
 //! request is sent and refused by the service's own unreachability, named
 //! with the URL, not by a Brama lookup. With no service named, the repair
-//! asks the real Stado (`PROBIERZ_TEST_STADO`) in a home of its own: with no
-//! alternative answering it is refused naming each, and with the real
-//! endpoint `PROBIERZ_TEST_MODEL_SERVICE_URL` declared in Brama's place it is
-//! sent there with that endpoint's model and key.
+//! hands its request to the real Stado (`PROBIERZ_TEST_STADO`) in a home of
+//! its own, whose registry places Brama nowhere: refused, it names each
+//! alternative and the commands that answer the request; with the statement
+//! recorded for that request, the repair is answered by it.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -231,9 +231,9 @@ impl Stado {
             .env("WC_LOCAL_STORAGE_PATH", self.home.join("storage"))
             .env("PATH", &self.path);
         for name in [
-            "STADO_INFERENCE_ENDPOINT_URL",
-            "STADO_INFERENCE_ENDPOINT_MODEL",
-            "STADO_INFERENCE_ENDPOINT_KEY_ROLE",
+            "STADO_INFERENCE_ORDER",
+            "STADO_ATTESTATIONS",
+            "STADO_CAPABILITIES_RECORD",
             "STADO_CREDENTIALS_STORE",
         ] {
             command.env_remove(name);
@@ -268,91 +268,125 @@ impl Stado {
     }
 }
 
+/// The kept requests of the isolated home's attestation alternative.
+fn kept_requests(stado: &Stado) -> Vec<serde_json::Value> {
+    let listed: serde_json::Value = serde_json::from_str(&stado.run(
+        &[
+            "capabilities",
+            "attestation",
+            "list",
+            "inference",
+            "--consumer",
+            "probierz",
+            "--json",
+        ],
+        "",
+    ))
+    .expect("stado answers JSON");
+    listed.as_array().cloned().unwrap_or_default()
+}
+
+/// With no router named, the repair's request is handed to Stado, which asks
+/// each inference alternative in order: Brama, placed nowhere here, and the
+/// attestation alternative, which keeps the request and refuses it naming
+/// the commands that answer it. The repair names both, with no bearer of its
+/// own asked for.
 #[test]
 fn a_repair_with_no_router_named_and_no_alternative_answering_is_refused_naming_each() {
     let root = harness("undeclared");
     let stado = Stado::isolated(&root);
     let output = repair(&root, |command| {
         stado.apply(command);
-        command.env("STADO_MODEL_ROUTER_TOKEN", BEARER);
     });
     let result = answer(&output);
     assert_eq!(result["ok"], false, "{result}");
     let detail = detail(&result);
     for named in [
-        "STADO_MODEL_ROUTER_URL is not set and no inference alternative answers probierz",
+        "STADO_MODEL_ROUTER_URL is not set and no inference alternative answered `stado capabilities call inference --consumer probierz`",
         "brama at ",
-        "model-endpoint at capabilities.inference.endpoint.url",
+        "stado capabilities attestation record inference --consumer probierz",
     ] {
         assert!(detail.contains(named), "{named:?} is not named: {result}");
     }
+    assert!(
+        !detail.contains("STADO_MODEL_ROUTER_TOKEN"),
+        "no bearer of Probierz's own is asked for: {result}"
+    );
+    assert_eq!(kept_requests(&stado).len(), 1, "the request is kept");
     std::fs::remove_dir_all(&root).expect("remove the harness");
 }
 
-/// With no router named, the repair is sent to the real OpenAI-compatible
-/// endpoint `PROBIERZ_TEST_MODEL_SERVICE_URL` Stado resolves in Brama's
-/// place, asking its model `PROBIERZ_TEST_MODEL_SERVICE_MODEL` with the key
-/// (from the owner-only file `PROBIERZ_TEST_MODEL_SERVICE_KEY_FILE`) its role
-/// holds in the case's own credential store, and its answer is what decides.
+/// The statement recorded for the request the repair made answers that same
+/// request when the repair runs again: the repair is decided by it, through
+/// Stado, and Stado records the attestation alternative as what served
+/// Probierz. Nothing in Probierz names the alternative.
 #[test]
-fn a_repair_with_no_router_named_is_sent_to_the_endpoint_stado_resolves_in_bramas_place() {
-    let endpoint = std::env::var("PROBIERZ_TEST_MODEL_SERVICE_URL")
-        .expect("declare the real model service URL");
-    let model = std::env::var("PROBIERZ_TEST_MODEL_SERVICE_MODEL")
-        .expect("declare the real model service model");
-    let key = read(Path::new(
-        &std::env::var("PROBIERZ_TEST_MODEL_SERVICE_KEY_FILE")
-            .expect("declare the owner-only real model service bearer file"),
-    ));
-    let root = harness("resolved");
+fn a_repair_request_is_answered_by_the_statement_recorded_for_it() {
+    let root = harness("attested");
     let stado = Stado::isolated(&root);
-    let store = root.join("credentials.json");
-    stado.run(
+    let first = answer(&repair(&root, |command| {
+        stado.apply(command);
+    }));
+    assert_eq!(first["ok"], false, "{first}");
+    let kept = kept_requests(&stado);
+    let [request] = kept.as_slice() else {
+        panic!("one request is kept: {kept:?}");
+    };
+    let digest = request["request"].as_str().expect("a digest").to_owned();
+    let shown: serde_json::Value = serde_json::from_str(&stado.run(
         &[
-            "config",
-            "set",
-            "credentials.store",
-            &format!("file://{}", store.display()),
+            "capabilities",
+            "attestation",
+            "show",
+            "inference",
+            "--consumer",
+            "probierz",
+            &digest,
         ],
         "",
+    ))
+    .expect("stado answers JSON");
+    assert!(
+        shown["asked"]["messages"].is_array(),
+        "the kept request is the repair's: {shown}"
     );
     stado.run(
-        &["credentials", "put", "--role", "probierz-journey-endpoint"],
-        &json!({ "token": key.trim() }).to_string(),
+        &[
+            "capabilities",
+            "attestation",
+            "record",
+            "inference",
+            "--consumer",
+            "probierz",
+            &digest,
+            "--checked",
+            "read the failed run and the product source the brief names",
+        ],
+        // The request forces submit_probierz_repair, whose one argument,
+        // `content`, is the repair decision as JSON text.
+        &json!({
+            "content": json!({
+                "verdict": "not_auto_fixable",
+                "reason": "the evidence does not name the faulty code",
+                "explanation": "the failed run reports nothing for a planted violation and no source is named",
+            })
+            .to_string()
+        })
+        .to_string(),
     );
-    for (field, value) in [
-        ("capabilities.inference.endpoint.url", endpoint.as_str()),
-        ("capabilities.inference.endpoint.model", model.as_str()),
-        (
-            "capabilities.inference.endpoint.key_role",
-            "probierz-journey-endpoint",
-        ),
-    ] {
-        stado.run(&["config", "set", field, value], "");
-    }
-    let output = repair(&root, |command| {
+    let second = answer(&repair(&root, |command| {
         stado.apply(command);
-    });
-    let result = answer(&output);
-    let said = match &result["failure"]["detail"] {
-        serde_json::Value::String(detail) => detail.clone(),
-        _ => result.to_string(),
-    };
-    assert!(
-        a_brief_was_written(&root),
-        "the brief was written before the request: {result}"
-    );
-    assert!(
-        !said.contains("STADO_MODEL_ROUTER_URL")
-            && !said.contains("STADO_MODEL_ROUTER_TOKEN")
-            && !said.contains("model router request to"),
-        "the repair reached the resolved endpoint and was decided by its answer: {result}"
+    }));
+    assert_eq!(second["verdict"], "not_auto_fixable", "{second}");
+    assert_eq!(
+        second["reason"], "the evidence does not name the faulty code",
+        "the repair was decided by the statement: {second}"
     );
     let record: serde_json::Value =
         serde_json::from_str(&stado.run(&["capabilities", "inference", "--json"], ""))
             .expect("stado answers JSON");
     assert_eq!(
-        record["alternatives"][0]["served"]["probierz"]["provider"], "model-endpoint",
+        record["alternatives"][0]["served"]["probierz"]["provider"], "attestation",
         "{record}"
     );
     std::fs::remove_dir_all(&root).expect("remove the harness");

@@ -86,7 +86,7 @@ pub(crate) fn submit_remote_author(
             spec: None,
             mode: ScriptMode::Author,
             author: Some(author),
-            model_router_url: Some(&router),
+            model_router_url: router.as_deref(),
             record: false,
             environment: &environment,
         },

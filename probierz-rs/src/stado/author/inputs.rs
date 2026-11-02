@@ -13,7 +13,7 @@ pub(crate) struct SeoJob<'a> {
     pub(crate) secondary: &'a str,
     pub(crate) adjudicator: &'a str,
     pub(crate) agent_id: &'a str,
-    pub(crate) router_url: &'a str,
+    pub(crate) router_url: Option<&'a str>,
     pub(crate) production_evidence: bool,
     pub(crate) signature_required: bool,
 }
@@ -45,11 +45,8 @@ pub(crate) fn seo_script(job: SeoJob<'_>, hash: &str) -> String {
         "cargo build --locked --release --manifest-path \"$JOB_ROOT/work/probierz/probierz-rs/Cargo.toml\" --bin probierz".into(),
         "PROBIERZ=\"$JOB_ROOT/work/probierz/probierz-rs/target/release/probierz\"".into(),
         "HARNESS=\"$JOB_ROOT/work/probierz\"".into(),
-        format!("export STADO_MODEL_ROUTER_URL={}", shell_quote(router_url)),
-        format!("export PROBIERZ_MODEL_AGENT_ID={}", shell_quote(agent_id)),
-        ": \"${STADO_MODEL_ROUTER_TOKEN:?STADO_MODEL_ROUTER_TOKEN was not materialized by Stado}\"".into(),
-        ": \"${PROBIERZ_MODEL_AGENT_SECRET:?PROBIERZ_MODEL_AGENT_SECRET was not materialized by Stado}\"".into(),
     ];
+    lines.extend(router_lines(router_url, agent_id));
     if signature_required {
         lines.push(": \"${PROBIERZ_SEO_RECEIPT_PRIVATE_KEY:?PROBIERZ_SEO_RECEIPT_PRIVATE_KEY was not materialized by Stado}\"".into());
     }
