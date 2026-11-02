@@ -62,13 +62,17 @@ fn main() {
     // The failure intake and its reader are host-level: they keep envelopes
     // under ~/.probierz and never read a harness, so a service started with no
     // project directory - launchd starts it in / - is not refused for lacking
-    // one.
+    // one. A talk evaluation given its report path reads only the slides,
+    // the script and the sources it is given, so it is judged from any
+    // directory.
     let host_level = matches!(
         parsed.command,
         cli::Command::Reporting(
             cli::reporting::ReportingCommand::Intake { .. }
                 | cli::reporting::ReportingCommand::Failures { .. }
-        )
+        ) | cli::Command::Inspect(cli::inspect::InspectCommand::Evaluate {
+            command: cli::inspect::EvaluateCommand::Talk { output: Some(_), .. }
+        })
     );
     let harness = if host_level {
         PathBuf::new()
