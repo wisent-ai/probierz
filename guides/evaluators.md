@@ -71,8 +71,9 @@ probierz evaluate talk \
 ```
 
 `--slides` is the directory of `slide-<number>.png` pictures and `--script` the
-speaker script that `lem-cli talk render --slides <dir> --slide-width <px>
---notes <script.md>` writes. The numbers order the slides and must run from the
+speaker script that `slajd render --slides <dir> --slide-width <px> --notes
+<script.md>` writes; `slajd review` makes the same pictures from a PDF, `.pptx`,
+`.key` or `.odp` presentation and calls this evaluation. The numbers order the slides and must run from the
 first without a gap; a picture named any other way, or a missing slide, is
 refused naming it. `--source` names a document the talk presents and is
 required at least once: Markdown, text and TeX are read as written, a PDF

@@ -87,10 +87,10 @@ pub enum EvaluateCommand {
     },
     /// Judge a rendered talk's slides and speaker script against the documents it presents.
     Talk {
-        /// The directory of slide-<number>.png pictures `lem-cli talk render --slides` writes.
+        /// The directory of slide-<number>.png pictures `slajd render --slides` writes.
         #[arg(long)]
         slides: PathBuf,
-        /// The speaker script Markdown `lem-cli talk render --notes` writes.
+        /// The speaker script Markdown `slajd render --notes` writes.
         #[arg(long)]
         script: PathBuf,
         /// A document the talk must stay true to (Markdown, text, TeX or PDF); repeat for each.

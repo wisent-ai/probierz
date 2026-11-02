@@ -1,0 +1,49 @@
+schemaVersion: 1
+appId: slajd
+productId: slajd
+owner: Slajd maintainers
+
+# The terminal surface of Slajd: the slajd command. A talk is what a person
+# presents in front of others with a time limit, so its journeys are the render
+# a speaker takes into the room and the review that tells them, before the
+# panel does, whether the presentation says what its documents say.
+repositories:
+  - root: ~/Documents/CodingProjects/Wisent/slajd
+    mappings:
+      - paths:
+          - src/talk/**
+          - src/render/**
+          - src/theme.rs
+          - src/submission.rs
+          - src/main.rs
+          - src/api.rs
+          - src/error.rs
+          - Cargo.toml
+          - tests/cli/**
+          - tests/api/**
+        journeys:
+          - talk-render
+      - paths:
+          - src/review.rs
+          - src/render/**
+          - src/main.rs
+          - src/api.rs
+        journeys:
+          - presentation-review
+
+surfaces:
+  tui:
+    spec: slajd-*
+    journeys:
+      - talk-render
+      - presentation-review
+
+journeys:
+  talk-render:
+    owner: Slajd maintainers
+    description: 'A speaker renders a Markdown talk continued in a second file with a backup slide through slajd render, gets one PDF page and one PNG per slide and a speaker script holding the backup answer, and a talk over its duration is refused with every slide''s minutes and leaves no PDF.'
+    value: 'The talk a speaker presents is checked against its time limit and set by TeX in the Wisent design before it reaches the room, so an overlong talk or a slide that does not fit is caught on the command line instead of in front of the audience.'
+  presentation-review:
+    owner: Slajd maintainers
+    description: 'A speaker has slajd review judge a presentation against the document it presents, both one Slajd rendered and an external PDF given without a speaker script; every rubric criterion comes back judged with evidence, the report carries the digest of every slide and the source, and a presentation that misstates its source''s cost is not passed and fails source fidelity.'
+    value: 'Before a presentation reaches a review panel, wherever it was made, a model that reads the source document checks that every figure on the slides is the document''s own, that the argument holds and that the text does not read as generated, instead of the presenters finding out from the panel.'

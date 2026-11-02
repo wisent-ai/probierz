@@ -1,5 +1,5 @@
 //! The slide pictures of a talk, in the order they are shown. Slides are the
-//! `slide-<number>.png` pictures `lem-cli talk render --slides` writes; their
+//! `slide-<number>.png` pictures `slajd render --slides` writes; their
 //! order comes from those numbers, which must run from the first slide without
 //! a gap: a picture named any other way, a repeated number or a missing slide
 //! is refused rather than ordered by a guess.
@@ -39,7 +39,7 @@ pub(super) fn ordered_slides(directory: &Path) -> Result<Vec<PathBuf>, Failure> 
         return Err(Failure::invalid(
             "evaluate.talk",
             format!(
-                "--slides {} holds no {SLIDE_PREFIX}<number>.{SLIDE_EXTENSION} pictures; render them with lem-cli talk render --slides",
+                "--slides {} holds no {SLIDE_PREFIX}<number>.{SLIDE_EXTENSION} pictures; render them with slajd render --slides, or have slajd review turn a presentation file into them",
                 directory.display()
             ),
         ));

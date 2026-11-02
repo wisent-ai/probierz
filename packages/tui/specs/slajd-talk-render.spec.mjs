@@ -1,12 +1,12 @@
 // Journey talk-render: a speaker renders a timed talk with backup slides
-// through the installed lem-cli and gets one PDF page per slide, a PNG per
-// slide and the speaker script; a talk over its time limit is refused with every
+// through the installed slajd and gets one PDF page per slide, a PNG per slide
+// and the speaker script; a talk over its time limit is refused with every
 // slide's minutes and leaves no PDF.
 //
 // Declarations the journey reads, each refused by name when missing:
-// TUI_CMD, the lem-cli executable under test; LEM_WISENT_TOKENS, the
-// wisent-components tokens.json the talk is set in; LEM_TALK_SLIDE_WIDTH, the
-// width in pixels the slide PNGs are asked at.
+// TUI_CMD, the slajd executable under test; SLAJD_TOKENS, the
+// wisent-components tokens.json the talk is set in; SLAJD_SLIDE_WIDTH, the
+// width in pixels the slide PNGs are asked at. pdfinfo (poppler) reads the PDF.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -29,11 +29,11 @@ function count(text, pattern, what) {
   return found.length;
 }
 
-const lem = declared("TUI_CMD");
-const tokens = declared("LEM_WISENT_TOKENS");
-const width = declared("LEM_TALK_SLIDE_WIDTH");
+const slajd = declared("TUI_CMD");
+const tokens = declared("SLAJD_TOKENS");
+const width = declared("SLAJD_SLIDE_WIDTH");
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..", "test-results", `lem-talk-${process.pid}`);
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "test-results", `slajd-talk-${process.pid}`);
 rmSync(root, { recursive: true, force: true });
 mkdirSync(root, { recursive: true });
 
@@ -80,15 +80,15 @@ const backups = count(questions, /<!-- backup -->/g, "the questions");
 writeFileSync(join(root, "talk.md"), talk);
 writeFileSync(join(root, "questions.md"), questions);
 
-function lemCli(args) {
-  return spawnSync(lem, ["talk", ...args], { cwd: root, encoding: "utf8" });
+function run(args) {
+  return spawnSync(slajd, args, { cwd: root, encoding: "utf8" });
 }
 
 function fail(message) {
   throw new Error(`talk-render: ${message}`);
 }
 
-const rendered = lemCli([
+const rendered = run([
   "render",
   "--talk", "talk.md",
   "--talk", "questions.md",
@@ -98,12 +98,16 @@ const rendered = lemCli([
   "--slide-width", width,
   "--notes", "script.md",
 ]);
-if (rendered.error) fail(`lem-cli could not run: ${rendered.error.message}`);
-if (rendered.status) fail(`lem-cli talk render exited ${rendered.status}: ${rendered.stderr}`);
+if (rendered.error) fail(`slajd could not run: ${rendered.error.message}`);
+if (rendered.status) fail(`slajd render exited ${rendered.status}: ${rendered.stderr}`);
 const report = JSON.parse(rendered.stdout);
 if (report.slides !== slides) fail(`the report counts ${report.slides} slides for ${slides}`);
 if (report.backup_slides !== backups) fail(`the report counts ${report.backup_slides} backup slides for ${backups}`);
-const pages = count(readFileSync(join(root, "talk.pdf"), "latin1"), /\/Type\s*\/Page\b/g, "talk.pdf");
+// XeLaTeX writes its page objects into compressed object streams, so pages are
+// counted the way a PDF reader counts them.
+const info = spawnSync("pdfinfo", [join(root, "talk.pdf")], { encoding: "utf8" });
+if (info.error || info.status) fail(`pdfinfo could not read talk.pdf: ${info.error?.message ?? info.stderr}`);
+const pages = Number(/^Pages:\s+(\d+)$/m.exec(info.stdout)?.[1]);
 if (pages !== slides) fail(`talk.pdf holds ${pages} pages for ${slides} slides`);
 const pictures = readdirSync(join(root, "slides")).filter((name) => name.endsWith(".png"));
 if (pictures.length !== slides) fail(`slides/ holds ${pictures.length} PNGs for ${slides} slides`);
@@ -114,10 +118,10 @@ if (!script.includes("The prepared answer.") || !script.includes("A question? (b
 
 rmSync(join(root, "talk.pdf"));
 writeFileSync(join(root, "long.md"), talk.replace("duration: 2", "duration: 1"));
-const refused = lemCli(["render", "--talk", "long.md", "--output", "talk.pdf", "--tokens", tokens]);
+const refused = run(["render", "--talk", "long.md", "--output", "talk.pdf", "--tokens", tokens]);
 const expected =
-  "lem-cli: the talk slides take 2 minutes but the talk's duration is 1; shorten slides (minutes by slide: 1: 1, 2: 1)";
-if (!refused.status) fail("a talk over its duration was rendered");
+  "the talk slides take 2 minutes but the talk's duration is 1; shorten slides (minutes by slide: 1: 1, 2: 1)";
+if (refused.status !== 1) fail(`a talk over its duration exited ${refused.status}, not 1`);
 if (refused.stderr.trim() !== expected) fail(`the over-duration refusal reads:\n${refused.stderr}`);
 if (existsSync(join(root, "talk.pdf"))) fail("a refused talk still wrote its PDF");
 

@@ -89,3 +89,6 @@ apps/weles-apple/*
 !apps/landing-cli/
 apps/landing-cli/*
 !apps/landing-cli/probierz.yaml
+!apps/slajd/
+apps/slajd/*
+!apps/slajd/probierz.yaml
