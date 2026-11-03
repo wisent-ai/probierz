@@ -92,3 +92,7 @@ apps/landing-cli/*
 !apps/slajd/
 apps/slajd/*
 !apps/slajd/probierz.yaml
+!apps/kasa/
+apps/kasa/*
+!apps/kasa/probierz.yaml
+!apps/kasa/first-use.yaml

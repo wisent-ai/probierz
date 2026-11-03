@@ -1,0 +1,10 @@
+# Kasa's first use as a new user meets it: the CLI journey Kasa ships
+# (src/onboarding/first_use.json), installed the way Kasa's README says
+# (Stado installs the CLI surface), ending when a first valuation is shown.
+definition: ~/Documents/CodingProjects/Wisent/kasa/src/onboarding/first_use.json
+install:
+- [stado, product, install, kasa, --surface, cli]
+path: [.local/bin]
+progress:
+  file: .local/state/kasa/onboarding.json
+  fact: /evidence/valuation_shown

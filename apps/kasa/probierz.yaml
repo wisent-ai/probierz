@@ -1,0 +1,100 @@
+schemaVersion: 1
+appId: kasa
+productId: kasa
+owner: Kasa maintainers
+
+# The terminal surface of Kasa: the kasa command. A company is valued from
+# its code, its intellectual property and its traction, so its journeys are
+# the first use that ends at a valuation shown, and each object's verbs,
+# measurement and methods on their own.
+repositories:
+  - root: ~/Documents/CodingProjects/Wisent/kasa
+    mappings:
+      - paths:
+          - src/**
+          - tests/**
+          - Cargo.toml
+        journeys:
+          - first-use
+      - paths:
+          - src/objects/company.rs
+          - src/ledger/**
+          - src/cli/company.rs
+          - tests/company/**
+          - tests/ledger/**
+        journeys:
+          - company
+      - paths:
+          - src/measure/**
+          - src/objects/repository.rs
+          - src/cli/records/**
+          - tests/repository/**
+          - tests/signal/**
+        journeys:
+          - measurement
+      - paths:
+          - src/objects/signal.rs
+          - src/objects/comparable.rs
+          - src/objects/inputs/**
+          - src/cli/inputs/**
+          - tests/comparable/**
+          - tests/assumption/**
+          - tests/asset/**
+          - tests/package/**
+        journeys:
+          - figures
+      - paths:
+          - src/valuation/**
+          - src/cli/valuation.rs
+          - tests/valuation/**
+        journeys:
+          - valuation
+      - paths:
+          - src/api/**
+          - src/doctor.rs
+          - src/errors/**
+          - src/onboarding/**
+          - src/cli/tools/**
+          - tests/api/**
+          - tests/doctor/**
+          - tests/errors/**
+          - tests/onboarding/**
+        journeys:
+          - surfaces
+
+surfaces:
+  tui:
+    spec: kasa-*
+    journeys:
+      - first-use
+      - company
+      - measurement
+      - figures
+      - valuation
+      - surfaces
+
+journeys:
+  first-use:
+    owner: Kasa maintainers
+    description: 'A new user installs Kasa, runs doctor, adds a company with its currency, code owner and code language, discovers and measures its checkouts, records one spend reading and one assumption, computes a valuation and shows it; the journey completes when the valuation is shown.'
+    value: 'A person with a company to value gets from an empty ledger to a report that names every figure it read and every figure it lacks, with the command that supplies each, without reading the documentation first.'
+  company:
+    owner: Kasa maintainers
+    description: 'A company is added with its currency, code owner and code languages, shown with its holdings, edited (a code owner cleared with --no-code-owner), exported to a bundle, imported into an empty state directory with its measurements intact, and removed with --confirm after a remove without it printed what it would take and changed nothing.'
+    value: 'The company valued and everything it holds moves whole between machines and advisers, and nothing is removed by accident.'
+  measurement:
+    owner: Kasa maintainers
+    description: 'A checkout is discovered and measured at a committed revision: an uncommitted file is not counted, a file marked linguist-vendored at that revision is left out with that reason, a shebang script without an extension is counted as shell, commits and authors are read, a shallow clone and a revision that does not exist are refused naming them; signal measure reads stars, forks and downloads from the public forge and registries with the URL read as each source.'
+    value: 'What a company''s code and traction are is measured from the committed revision and the public sources, never typed, with every file left out named by reason.'
+  figures:
+    owner: Kasa maintainers
+    description: 'Signals, comparables, assumptions, assets and packages are added with their sources, edited, cleared with --no-* flags and removed with --confirm; a money figure without a currency, a count with one, an amount that is not a number, a day the calendar does not have and a table with an unknown column are each refused naming the problem and writing nothing.'
+    value: 'Every figure a method reads has a source and a currency where it is money, so a valuation rests on what was read, not on what was guessed.'
+  valuation:
+    owner: Kasa maintainers
+    description: 'A valuation is computed with --rebuild-scope company and again with repository, giving the two documented COCOMO results; a cocomo-b with bounds gives a range; a spend reading in another currency makes spent name both currencies; a seed filter leaves a series-A comparable out naming its round; the report is shown unchanged after a signal was edited; two valuations are compared naming the one reading that differs.'
+    value: 'Four methods, each with its inputs and sources, its range and what it lacks, read back figure by figure and compared across time, so a valuation can be defended line by line.'
+  surfaces:
+    owner: Kasa maintainers
+    description: 'kasa serve answers every CLI operation as a route with the same JSON, streams a measure line by line, and refuses a missing token, a wrong token, an unknown route and a bad body with their statuses; doctor names git and the ledger and exits 69 without git; errors check passes on the source and errors show prints each cause with its test.'
+    value: 'Kasa Desktop and any client get the same answers, progress and refusals the CLI gives, through one address behind one token.'
