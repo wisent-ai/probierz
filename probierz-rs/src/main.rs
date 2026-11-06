@@ -15,6 +15,7 @@
 mod adoption;
 mod apphooks;
 mod discovery;
+mod errors;
 mod failure;
 mod json_file;
 mod manifest;
