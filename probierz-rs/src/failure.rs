@@ -21,6 +21,9 @@ pub(crate) fn ended(status: &std::process::ExitStatus) -> String {
     }
 }
 
+/// The exit status of a failure that is neither retryable nor a usage error.
+pub const FAILURE_EXIT: i32 = 1;
+
 /// The vocabulary a failure may carry. Every code answers one question: whose
 /// problem is this, and is retrying worth anything.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,17 +56,24 @@ impl Code {
 
     /// Whether a second attempt can change the answer.
     pub fn retryable(self) -> bool {
-        matches!(self, Code::Unavailable)
+        self.fleet().retryable()
     }
 
-    /// The exit code a shell reads. `75` (EX_TEMPFAIL) means "ours, try
-    /// again"; `1` means "yours, do not".
-    pub fn exit_code(self) -> i32 {
-        if self.retryable() {
-            75
-        } else {
-            1
+    /// The fleet's code for this one (`wisent_errors::Code`), which decides
+    /// whether it is retryable and the exit status a shell reads.
+    pub fn fleet(self) -> wisent_errors::Code {
+        match self {
+            Code::Invalid | Code::Refused => wisent_errors::Code::Refused,
+            Code::Config | Code::Prerequisite => wisent_errors::Code::Config,
+            Code::Unavailable => wisent_errors::Code::InfraDown,
+            Code::Unknown => wisent_errors::Code::Unknown,
         }
+    }
+
+    /// The exit code a shell reads: the fleet's retry status (69) when a
+    /// second attempt can help, else [`FAILURE_EXIT`].
+    pub fn exit_code(self) -> i32 {
+        self.fleet().exit_code(FAILURE_EXIT)
     }
 
     /// The sentence an operator reads under the structured line.

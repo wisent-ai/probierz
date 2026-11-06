@@ -99,6 +99,10 @@ path = "../tests/suites/run.rs"
 name = "intake_serve"
 path = "../tests/intake/serve.rs"
 
+[[test]]
+name = "errors"
+path = "../tests/errors/main.rs"
+
 # A result dropped with `let _ =` is a failure nobody hears of: a temporary
 # that stays, an audit that was not written, a kill that did not end a
 # process. Each such result is handled or said where it arises.
@@ -146,6 +150,7 @@ fs2 = "0.4.3"
 # File mode bits by their POSIX names (S_IRUSR...), never written as octal.
 libc = "0.2"
 stado-wait = { git = "https://github.com/wisent-ai/stado.git", rev = "692c0438d24117735c61373c0c178f1c1e21b080" }
+wisent-errors = { git = "https://github.com/wisent-ai/wisent-errors", rev = "48b951d024b37972e53e60f98c2582e2f65fb92a" }
 
 [dev-dependencies]
 tempfile = "3"

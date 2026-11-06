@@ -34,6 +34,7 @@ pub fn dispatch(harness: &Path, command: ReportingCommand) -> Answer {
         ReportingCommand::Errors { app_ids, json } => {
             status::overview(harness, &app_ids, !json, false)
         }
+        ReportingCommand::Refusals { command } => crate::errors::cli::run(harness, command),
         ReportingCommand::Intake { command } => match command {
             IntakeCommand::Serve { bind } => status::intake_serve(&bind),
         },

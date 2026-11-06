@@ -101,7 +101,7 @@ fn running_pid(printed: &str) -> Option<i32> {
 
 /// `launchctl bootout` can return while the Node intake still holds its
 /// listener: the declared intake's next bind then fails with `Address already
-/// in use`, exits 75, and `stado service ensure` reports the unit loaded with
+/// in use`, exits with the retry status, and `stado service ensure` reports the unit loaded with
 /// no pid until launchd's restart binds the port. Binding waits for that
 /// process's exit through the kernel's process-exit event (kqueue
 /// `EVFILT_PROC`/`NOTE_EXIT`): no timer, no polling. A pid that is already

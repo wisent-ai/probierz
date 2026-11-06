@@ -60,6 +60,12 @@ pub enum ReportingCommand {
         #[arg(long)]
         json: bool,
     },
+    /// The declared ways a Probierz command refuses, each cause with its
+    /// fix, exit status and the test that provokes it.
+    Refusals {
+        #[command(subcommand)]
+        command: RefusalsCommand,
+    },
     /// Receive failure envelopes from desktop applications.
     Intake {
         #[command(subcommand)]
@@ -213,4 +219,29 @@ pub fn newest(limit: Option<usize>) -> usize {
         Some(limit) => limit,
         None => usize::MAX,
     }
+}
+
+#[derive(Debug, Subcommand)]
+pub enum RefusalsCommand {
+    /// Every operation that declares its refusals.
+    List {
+        /// Print the documentation page's sections instead of a list.
+        #[arg(long)]
+        markdown: bool,
+    },
+    /// One operation's causes, each with its fix, exit status and test.
+    Show {
+        /// The operation's id, as `probierz refusals list` names it.
+        id: String,
+        /// Print the operation's documentation section.
+        #[arg(long)]
+        markdown: bool,
+    },
+    /// Hold the declarations to the error standard: every cause declared
+    /// whole, and each test it names present under the checkout.
+    Check {
+        /// The checkout whose `tests/` the causes name; the harness when omitted.
+        #[arg(long, value_name = "DIR")]
+        root: Option<std::path::PathBuf>,
+    },
 }
