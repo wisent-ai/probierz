@@ -60,8 +60,8 @@ pub enum ReportingCommand {
         #[arg(long)]
         json: bool,
     },
-    /// Every way a Probierz command refuses: the declared causes, each with
-    /// its fix, exit status and the test that provokes it.
+    /// The declared ways a Probierz command refuses, each cause with its
+    /// fix, exit status and the test that provokes it.
     Refusals {
         #[command(subcommand)]
         command: RefusalsCommand,

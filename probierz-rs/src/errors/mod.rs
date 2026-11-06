@@ -1,8 +1,10 @@
-//! Every way a Probierz command refuses, declared once as a
-//! `wisent_errors::Operation`: each cause names what failed, why, the state
-//! the refusal shows, the fix and the real test that provokes it. `probierz
-//! refusals list|show|check` prints the declarations and holds them to the
-//! standard: a cause without its test is refused.
+//! The ways a Probierz command refuses that are declared, each once as a
+//! cause of a `wisent_errors::Operation` naming what failed, why, the state
+//! the refusal shows, the fix and the real test that provokes it. Probierz
+//! declares the causes its tests provoke; a failure point not listed is not
+//! declared yet. `probierz refusals list|show|check` prints the
+//! declarations and holds them to the standard: a cause without its test is
+//! refused.
 
 pub mod cli;
 
