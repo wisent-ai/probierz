@@ -6,7 +6,7 @@ mod scope;
 
 use crate::authoring::{app_source_identity, manifest, Failure};
 pub use journal::inspect_security_journal;
-use journal::Journal;
+use journal::{Journal, Operation};
 use model::{Model, Plan};
 use probe::Probe;
 use scope::Scope;
@@ -77,17 +77,17 @@ pub fn evaluate_security(
     let mut journal = Journal::create(output, app, &identity);
     let mut outcome: Result<(), String> = (|| {
         let journal = journal.as_mut().map_err(|error| error.clone())?;
-        journal.begin("resolve-scope", None)?;
+        journal.begin(Operation::ResolveScope, None)?;
         // Reject out-of-scope DNS before contacting either a target or a model.
         let probe = Probe::new(&scope)?;
         if model.is_some() {
-            journal.begin("model-configuration", None)?;
+            journal.begin(Operation::ModelConfiguration, None)?;
         }
         let reviewer = model
             .map(|route| Model::new(route, router_url, bearer, agent, secret))
             .transpose()?;
         let selected = if let Some(reviewer) = &reviewer {
-            journal.begin("model-plan", None)?;
+            journal.begin(Operation::ModelPlan, None)?;
             let declared: Vec<_> = scope
                 .checks
                 .iter()
@@ -101,7 +101,7 @@ pub fn evaluate_security(
             scope.checks.iter().collect()
         };
         for check in selected {
-            journal.begin("check", Some(check.id()))?;
+            journal.begin(Operation::Check, Some(check.id()))?;
             let observation = probe
                 .check(&scope, check)
                 .map_err(|error| format!("check {}: {error}", check.id()))?;
@@ -110,7 +110,7 @@ pub fn evaluate_security(
             persisted?;
         }
         if let Some(reviewer) = &reviewer {
-            journal.begin("model-advice", None)?;
+            journal.begin(Operation::ModelAdvice, None)?;
             analysis = reviewer.ask("Explain these authorized security observations. Return only JSON {\"summary\":\"text\",\"recommendations\":[{\"check\":\"declared-id\",\"explanation\":\"text\",\"remediation\":\"text\"}]}. Do not claim untested vulnerabilities or complete security. Never suggest probing other systems. Advice is not executable; the deterministic observations are authoritative.", &json!({"observations": observations}))?;
             let advice: Advice = serde_json::from_value(analysis["answer"].clone())
                 .map_err(|e| format!("invalid model advice: {e}"))?;
@@ -145,7 +145,7 @@ pub fn evaluate_security(
         "scope": scope, "modelRequested": model, "plan": plan, "analysis": analysis,
         "mode": if model.is_some() { "model-assisted" } else { "deterministic" },
         "journal": journal.as_ref().ok().map(|journal| &journal.path),
-        "failedOperation": (!complete).then(|| journal.as_ref().map(|journal| journal.operation).unwrap_or("journal-create")),
+        "failedOperation": (!complete).then(|| journal.as_ref().map(|journal| json!(journal.operation)).unwrap_or(json!("journal-create"))),
         "failedCheck": if complete { None } else { journal.as_ref().ok().and_then(|journal| journal.check) },
         "observations": observations, "complete": complete, "error": outcome.err(),
         "pass": complete && observations.iter().all(|check| check["pass"] == true),

@@ -16,11 +16,27 @@ enum State {
     Finished,
 }
 
+/// What an evaluation was doing when an event was recorded: it initializes
+/// the journal, resolves its scope, configures and asks the model, runs each
+/// check, and completes. A journal naming any other operation is refused when
+/// it is read, so no reader compares an operation it does not know.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum Operation {
+    Initialize,
+    ResolveScope,
+    ModelConfiguration,
+    ModelPlan,
+    Check,
+    ModelAdvice,
+    Complete,
+}
+
 #[derive(Deserialize, Serialize)]
 struct Event {
     kind: String,
     at: String,
-    operation: String,
+    operation: Operation,
     check: Option<String>,
     state: State,
     detail: Value,
@@ -30,7 +46,7 @@ pub struct Journal<'a> {
     file: File,
     write_failed: bool,
     pub path: PathBuf,
-    pub operation: &'static str,
+    pub operation: Operation,
     pub check: Option<&'a str>,
 }
 
@@ -45,7 +61,7 @@ impl<'a> Journal<'a> {
             file,
             write_failed: false,
             path,
-            operation: "initialize",
+            operation: Operation::Initialize,
             check: None,
         };
         journal.append(
@@ -76,7 +92,7 @@ impl<'a> Journal<'a> {
         result
     }
 
-    pub fn begin(&mut self, operation: &'static str, check: Option<&'a str>) -> Result<(), String> {
+    pub fn begin(&mut self, operation: Operation, check: Option<&'a str>) -> Result<(), String> {
         self.operation = operation;
         self.check = check;
         self.append(State::Started, &Value::Null)
@@ -88,7 +104,7 @@ impl<'a> Journal<'a> {
 
     pub fn finish(&mut self, error: Option<&str>) -> Result<(), String> {
         if error.is_none() {
-            self.operation = "complete";
+            self.operation = Operation::Complete;
             self.check = None;
         }
         self.append(
@@ -124,11 +140,11 @@ pub fn inspect_security_journal(path: &Path) -> Result<Value, crate::authoring::
         }
         let event: Event = serde_json::from_slice(record)
             .map_err(|error| refuse(format!("invalid complete journal record: {error}")))?;
-        if event.kind != "probierz-security-event" || event.operation.is_empty() {
+        if event.kind != "probierz-security-event" {
             return Err(refuse("invalid security journal event".into()));
         }
         if events.is_empty()
-            && (event.operation != "initialize"
+            && (event.operation != Operation::Initialize
                 || event.state != State::Started
                 || event.detail["appId"].as_str().is_none())
         {
@@ -137,7 +153,7 @@ pub fn inspect_security_journal(path: &Path) -> Result<Value, crate::authoring::
             ));
         }
         if event.state == State::Observed
-            && (event.operation != "check"
+            && (event.operation != Operation::Check
                 || event.check.is_none()
                 || event.detail["path"].as_str().is_none()
                 || event.detail["status"].as_i64().is_none()
